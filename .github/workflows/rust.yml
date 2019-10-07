@@ -1,0 +1,26 @@
+name: Rust
+
+on: [push]
+
+jobs:
+  build:
+    name: build and test backend
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    
+    - name: install WASM target
+      run: rustup target add wasm32-unknown-unknown
+      
+    - name: build example
+      run: |
+        cd example-bot
+        cargo build --release
+        cd ..
+      
+    - name: build
+      run: cargo build
+      
+    - name: run tests
+      run: cargo test

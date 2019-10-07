@@ -1,0 +1,10 @@
+[workspace]
+
+members = [
+    "api",
+    "engine",
+    "worker",
+]
+
+[profile.dev]
+opt-level = 1

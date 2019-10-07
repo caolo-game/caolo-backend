@@ -1,0 +1,26 @@
+FROM rust:latest
+
+EXPOSE 8000
+
+RUN USER=root cargo new --bin worker
+
+WORKDIR /worker
+COPY ./api/ ./api/
+COPY ./example-bot/ ./example-bot/
+
+WORKDIR /worker/example-bot
+RUN rustup target add wasm32-unknown-unknown
+RUN cargo build --release
+
+WORKDIR /worker
+COPY ./Cargo.toml ./Cargo.toml
+COPY ./Cargo.lock ./Cargo.lock
+COPY ./rust-toolchain ./rust-toolchain
+
+COPY ./worker/ ./worker/
+COPY ./engine/ ./engine/
+
+WORKDIR /worker
+RUN cargo build --release
+
+CMD ./target/release/caolo-worker

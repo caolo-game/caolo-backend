@@ -4,6 +4,7 @@ members = [
     "api",
     "engine",
     "worker",
+    "cao-lang",
 ]
 
 [profile.dev]

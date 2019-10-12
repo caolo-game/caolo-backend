@@ -13,12 +13,6 @@ jobs:
     - name: install WASM target
       run: rustup target add wasm32-unknown-unknown
       
-    - name: build example
-      run: |
-        cd example-bot
-        cargo build --release
-        cd ..
-      
     - name: build
       run: cargo build
       

@@ -87,7 +87,7 @@ impl VM {
     pub fn get_value<T: ByteEncodeProperties>(&self, ptr: TPointer) -> Option<T> {
         let size: usize = T::BYTELEN;
         if ptr + size <= self.memory.len() {
-            T::decode(&self.memory[ptr..])
+            T::decode(&self.memory[ptr..ptr+size])
         } else {
             None
         }
@@ -103,13 +103,11 @@ impl VM {
 
     pub fn set_value_at<T: ByteEncodeProperties>(&mut self, ptr: TPointer, val: T) {
         let bytes = val.encode();
-
-        self.memory[ptr..bytes.len()].copy_from_slice(&bytes);
+        self.memory[ptr..ptr+bytes.len()].copy_from_slice(&bytes[..]);
     }
 
     pub fn run(&mut self, program: &[u8]) -> Result<(), ExecutionError> {
         let mut ptr = 0;
-
         while ptr < program.len() {
             let instr = Instruction::try_from(program[ptr]).map_err(|_| {
                 ExecutionError::InvalidInstruction
@@ -117,33 +115,19 @@ impl VM {
             self.stack.push(instr);
             match instr {
                 Instruction::Add => {
-                    let len = TPointer::BYTELEN;
-                    let ptr1 = ptr + 1;
-                    let ptr2 = ptr1 + len;
-                    ptr = ptr2 + len;
-                    let ptr1 = TPointer::decode(&program[ptr1..ptr1+len]).unwrap();
-                    let ptr2 = TPointer::decode(&program[ptr2..ptr2+len]).unwrap();
-                    let a = self
-                        .get_value::<i32>(ptr1)
+                    ptr += 1;
+                    let (ptr1, a) = self.load::<i32>(&mut ptr, program)
                         .ok_or(ExecutionError::InvalidArgument)?;
-                    let b = self
-                        .get_value::<i32>(ptr2)
+                    let (_, b) = self.load::<i32>(&mut ptr, program)
                         .ok_or(ExecutionError::InvalidArgument)?;
                     self.set_value_at(ptr1, a + b);
                     self.stack.pop();
                 }
                 Instruction::Sub => {
-                    let len = TPointer::BYTELEN;
-                    let ptr1 = ptr + 1;
-                    let ptr2 = ptr1 + TPointer::BYTELEN;
-                    ptr = ptr2 + len;
-                    let ptr1 = TPointer::decode(&program[ptr1..ptr1+len]).unwrap();
-                    let ptr2 = TPointer::decode(&program[ptr2..ptr2+len]).unwrap();
-                    let a = self
-                        .get_value::<i32>(ptr1)
+                    ptr += 1;
+                    let (ptr1, a) = self.load::<i32>(&mut ptr, program)
                         .ok_or(ExecutionError::InvalidArgument)?;
-                    let b = self
-                        .get_value::<i32>(ptr2)
+                    let (_, b) = self.load::<i32>(&mut ptr, program)
                         .ok_or(ExecutionError::InvalidArgument)?;
                     self.set_value_at(ptr1, a - b);
                     self.stack.pop();
@@ -152,6 +136,14 @@ impl VM {
         }
 
         Ok(())
+    }
+
+    fn load<T: ByteEncodeProperties>(&self, ptr: &mut usize, program: &[u8]) -> Option<(TPointer, T)> {
+        let len = TPointer::BYTELEN;
+        let p = *ptr;
+        let ptr1 = TPointer::decode(&program[p..p+len])?;
+        *ptr = *ptr + len;
+        self.get_value::<T>(ptr1).map(|x|(ptr1, x))
     }
 }
 

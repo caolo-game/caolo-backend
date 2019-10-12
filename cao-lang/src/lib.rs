@@ -1,6 +1,6 @@
-mod trait_impl;
+mod traits;
 
-pub use trait_impl::*;
+pub use traits::*;
 
 use arrayvec::ArrayVec;
 use serde_derive::{Deserialize, Serialize};

@@ -37,29 +37,28 @@ pub struct VM {
     memory: Vec<u8>,
 }
 
-pub trait ByteEncodeProperties: Sized {
-    fn bytelen() -> usize {
-        mem::size_of::<Self>()
-    }
+pub trait ByteEncodeProperties: Sized + Clone + Copy {
+    const BYTELEN: usize = mem::size_of::<Self>();
 
     fn encode(self) -> Vec<u8> {
-        let size: usize = Self::bytelen();
+        let size: usize = Self::BYTELEN;
 
         let mut result = vec![0; size];
-        let ptr = result.as_mut_ptr();
-        let ptr = ptr as *mut Self;
         unsafe {
-            *ptr = self;
+            let dayum = std::mem::transmute::<*const Self, *const u8>(&self as *const Self);
+            for i in 0..size {
+                result[i] = *(dayum.add(i));
+            }
         }
         result
     }
 
-    fn decode<'a>(bytes: &'a [u8]) -> Option<&'a Self> {
-        let size: usize = Self::bytelen();
+    fn decode(bytes: &[u8]) -> Option<Self> {
+        let size: usize = Self::BYTELEN;
         if bytes.len() < size {
             None
         } else {
-            let result = unsafe { &*(bytes.as_ptr() as *const Self) };
+            let result = unsafe { *(bytes.as_ptr() as *const Self) };
             Some(result)
         }
     }
@@ -75,22 +74,7 @@ impl ByteEncodeProperties for u32 {}
 impl ByteEncodeProperties for u64 {}
 impl ByteEncodeProperties for f32 {}
 impl ByteEncodeProperties for f64 {}
-impl ByteEncodeProperties for TPointer {
-    fn bytelen() -> usize {
-        mem::size_of::<u32>()
-    }
-
-    fn encode(self) -> Vec<u8> {
-        <u32 as ByteEncodeProperties>::encode(self as u32)
-    }
-
-    fn decode<'a>(bytes: &'a [u8]) -> Option<&'a Self> {
-        <u32 as ByteEncodeProperties>::decode(bytes).map(|x| unsafe {
-            let x = x as *const _ as *const Self;
-            &*x
-        })
-    }
-}
+impl ByteEncodeProperties for TPointer {}
 
 impl VM {
     pub fn new() -> Self {
@@ -100,8 +84,8 @@ impl VM {
         }
     }
 
-    pub fn get_value<T: ByteEncodeProperties>(&self, ptr: TPointer) -> Option<&T> {
-        let size: usize = T::bytelen();
+    pub fn get_value<T: ByteEncodeProperties>(&self, ptr: TPointer) -> Option<T> {
+        let size: usize = T::BYTELEN;
         if ptr + size <= self.memory.len() {
             T::decode(&self.memory[ptr..])
         } else {
@@ -128,36 +112,37 @@ impl VM {
 
         while ptr < program.len() {
             let instr = Instruction::try_from(program[ptr]).map_err(|_| {
-                println!("???? ptr: {} proglen: {} {:?}", ptr, program.len(), program);
                 ExecutionError::InvalidInstruction
             })?;
             self.stack.push(instr);
             match instr {
                 Instruction::Add => {
+                    let len = TPointer::BYTELEN;
                     let ptr1 = ptr + 1;
-                    let ptr2 = ptr1 + TPointer::bytelen();
-                    ptr = ptr2 + 1;
-                    let ptr1 = *TPointer::decode(&program[ptr1..]).unwrap();
-                    let ptr2 = *TPointer::decode(&program[ptr2..]).unwrap();
-                    let a = *self
+                    let ptr2 = ptr1 + len;
+                    ptr = ptr2 + len;
+                    let ptr1 = TPointer::decode(&program[ptr1..ptr1+len]).unwrap();
+                    let ptr2 = TPointer::decode(&program[ptr2..ptr2+len]).unwrap();
+                    let a = self
                         .get_value::<i32>(ptr1)
                         .ok_or(ExecutionError::InvalidArgument)?;
-                    let b = *self
+                    let b = self
                         .get_value::<i32>(ptr2)
                         .ok_or(ExecutionError::InvalidArgument)?;
                     self.set_value_at(ptr1, a + b);
                     self.stack.pop();
                 }
                 Instruction::Sub => {
+                    let len = TPointer::BYTELEN;
                     let ptr1 = ptr + 1;
-                    let ptr2 = ptr1 + TPointer::bytelen();
-                    ptr = ptr2 + 1;
-                    let ptr1 = *TPointer::decode(&program[ptr1..]).unwrap();
-                    let ptr2 = *TPointer::decode(&program[ptr2..]).unwrap();
-                    let a = *self
+                    let ptr2 = ptr1 + TPointer::BYTELEN;
+                    ptr = ptr2 + len;
+                    let ptr1 = TPointer::decode(&program[ptr1..ptr1+len]).unwrap();
+                    let ptr2 = TPointer::decode(&program[ptr2..ptr2+len]).unwrap();
+                    let a = self
                         .get_value::<i32>(ptr1)
                         .ok_or(ExecutionError::InvalidArgument)?;
-                    let b = *self
+                    let b = self
                         .get_value::<i32>(ptr2)
                         .ok_or(ExecutionError::InvalidArgument)?;
                     self.set_value_at(ptr1, a - b);
@@ -175,11 +160,21 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_encode(){
+        let value: TPointer = 12342;
+        let encoded = value.encode();
+        println!("{:?}", encoded);
+        let decoded = TPointer::decode(&encoded).unwrap();
+
+        assert_eq!(value, decoded);
+    }
+
+    #[test]
     fn test_add() {
         let mut vm = VM::new();
 
-        let ptr = vm.set_value(512);
-        let ptr2 = vm.set_value(42);
+        let ptr = vm.set_value::<i32>(512);
+        let ptr2 = vm.set_value::<i32>(42);
 
         let mut program = vec![Instruction::Add as u8];
         program.append(&mut <TPointer as ByteEncodeProperties>::encode(ptr));
@@ -191,15 +186,15 @@ mod tests {
             .get_value::<i32>(ptr)
             .expect("Expected to read the result");
 
-        assert_eq!(*result, 512 + 42);
+        assert_eq!(result, 512 + 42);
     }
 
     #[test]
     fn test_sub() {
         let mut vm = VM::new();
 
-        let ptr = vm.set_value(512);
-        let ptr2 = vm.set_value(42);
+        let ptr = vm.set_value::<i32>(512);
+        let ptr2 = vm.set_value::<i32>(42);
 
         let mut program = vec![Instruction::Sub as u8];
         program.append(&mut <TPointer as ByteEncodeProperties>::encode(ptr));
@@ -211,6 +206,6 @@ mod tests {
             .get_value::<i32>(ptr)
             .expect("Expected to read the result");
 
-        assert_eq!(*result, 512 - 42);
+        assert_eq!(result, 512 - 42);
     }
 }

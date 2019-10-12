@@ -1,10 +1,10 @@
-use crate::{TPointer};
+use crate::TPointer;
 use std::mem;
 
-pub trait ByteEncodeProperties : Sized {
+pub trait ByteEncodeProperties: Sized {
     const BYTELEN: usize = mem::size_of::<Self>();
 
-    fn encode(self) -> Vec<u8> ;
+    fn encode(self) -> Vec<u8>;
     fn decode(bytes: &[u8]) -> Option<Self>;
 }
 
@@ -21,10 +21,8 @@ impl AutoByteEncodeProperties for TPointer {}
 impl AutoByteEncodeProperties for caolo_api::point::Point {}
 impl AutoByteEncodeProperties for caolo_api::EntityId {}
 
-impl<T : Sized + Clone + Copy+AutoByteEncodeProperties> ByteEncodeProperties for T { 
-
+impl<T: Sized + Clone + Copy + AutoByteEncodeProperties> ByteEncodeProperties for T {
     fn encode(self) -> Vec<u8> {
-
         let size: usize = Self::BYTELEN;
 
         let mut result = vec![0; size];
@@ -43,7 +41,7 @@ impl<T : Sized + Clone + Copy+AutoByteEncodeProperties> ByteEncodeProperties for
             None
         } else {
             let result = unsafe { *(bytes.as_ptr() as *const Self) };
-           Some(result)
+            Some(result)
         }
     }
 }

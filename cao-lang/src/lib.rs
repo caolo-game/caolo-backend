@@ -28,11 +28,11 @@ pub enum Instruction {
     /// Multiply two numbers, write the result in the first memory location
     Mul = 5,
     /// Multiply two numbers, write the result in the first memory location
-    MulFloat=6,
+    MulFloat = 6,
     /// Divide the first number by the second
-    Div=7,
+    Div = 7,
     /// Divide the first number by the second
-    DivFloat=8,
+    DivFloat = 8,
 }
 
 impl TryFrom<u8> for Instruction {
@@ -45,7 +45,7 @@ impl TryFrom<u8> for Instruction {
             2 => Ok(SubInt),
             3 => Ok(AddFloat),
             4 => Ok(SubFloat),
-            5 => Ok(Mul) ,
+            5 => Ok(Mul),
             6 => Ok(MulFloat),
             7 => Ok(Div),
             8 => Ok(DivFloat),
@@ -72,7 +72,7 @@ impl VM {
     pub fn get_value<T: ByteEncodeProperties>(&self, ptr: TPointer) -> Option<T> {
         let size: usize = T::BYTELEN;
         if ptr + size <= self.memory.len() {
-            T::decode(&self.memory[ptr..ptr+size])
+            T::decode(&self.memory[ptr..ptr + size])
         } else {
             None
         }
@@ -88,48 +88,47 @@ impl VM {
 
     pub fn set_value_at<T: ByteEncodeProperties>(&mut self, ptr: TPointer, val: T) {
         let bytes = val.encode();
-        self.memory[ptr..ptr+bytes.len()].copy_from_slice(&bytes[..]);
+        self.memory[ptr..ptr + bytes.len()].copy_from_slice(&bytes[..]);
     }
 
     pub fn run(&mut self, program: &[u8]) -> Result<(), ExecutionError> {
         let mut ptr = 0;
         while ptr < program.len() {
-            let instr = Instruction::try_from(program[ptr]).map_err(|_| {
-                ExecutionError::InvalidInstruction
-            })?;
+            let instr = Instruction::try_from(program[ptr])
+                .map_err(|_| ExecutionError::InvalidInstruction)?;
             self.stack.push(instr);
             match instr {
                 Instruction::AddInt => {
                     ptr += 1;
-                    self.binary_op::<i32, _>(&mut ptr, |a,b|a+b, program)?;
+                    self.binary_op::<i32, _>(&mut ptr, |a, b| a + b, program)?;
                 }
                 Instruction::SubInt => {
                     ptr += 1;
-                    self.binary_op::<i32, _>(&mut ptr, |a,b|a-b, program)?;
+                    self.binary_op::<i32, _>(&mut ptr, |a, b| a - b, program)?;
                 }
                 Instruction::AddFloat => {
                     ptr += 1;
-                    self.binary_op::<f32, _>(&mut ptr, |a,b|a+b, program)?;
+                    self.binary_op::<f32, _>(&mut ptr, |a, b| a + b, program)?;
                 }
                 Instruction::SubFloat => {
                     ptr += 1;
-                    self.binary_op::<f32, _>(&mut ptr, |a,b|a-b, program)?;
+                    self.binary_op::<f32, _>(&mut ptr, |a, b| a - b, program)?;
                 }
                 Instruction::Mul => {
                     ptr += 1;
-                    self.binary_op::<i32, _>(&mut ptr, |a,b|a*b, program)?;
+                    self.binary_op::<i32, _>(&mut ptr, |a, b| a * b, program)?;
                 }
                 Instruction::MulFloat => {
                     ptr += 1;
-                    self.binary_op::<f32, _>(&mut ptr, |a,b|a*b, program)?;
+                    self.binary_op::<f32, _>(&mut ptr, |a, b| a * b, program)?;
                 }
-                Instruction::Div=> {
+                Instruction::Div => {
                     ptr += 1;
-                    self.binary_op::<i32, _>(&mut ptr, |a,b|a/b, program)?;
+                    self.binary_op::<i32, _>(&mut ptr, |a, b| a / b, program)?;
                 }
                 Instruction::DivFloat => {
                     ptr += 1;
-                    self.binary_op::<f32, _>(&mut ptr, |a,b|a/b, program)?;
+                    self.binary_op::<f32, _>(&mut ptr, |a, b| a / b, program)?;
                 }
             }
         }
@@ -137,22 +136,33 @@ impl VM {
         Ok(())
     }
 
-    fn binary_op<T: ByteEncodeProperties, F: Fn(T,T)->T>(&mut self, ptr: &mut TPointer, op: F, program: &[u8]) -> Result<(), ExecutionError> {
-        let (ptr1, a) = self.load::<T>(ptr, program)
+    fn binary_op<T: ByteEncodeProperties, F: Fn(T, T) -> T>(
+        &mut self,
+        ptr: &mut TPointer,
+        op: F,
+        program: &[u8],
+    ) -> Result<(), ExecutionError> {
+        let (ptr1, a) = self
+            .load::<T>(ptr, program)
             .ok_or(ExecutionError::InvalidArgument)?;
-        let (_, b) = self.load::<T>(ptr, program)
+        let (_, b) = self
+            .load::<T>(ptr, program)
             .ok_or(ExecutionError::InvalidArgument)?;
         self.set_value_at(ptr1, op(a, b));
         self.stack.pop();
         Ok(())
     }
 
-    fn load<T: ByteEncodeProperties>(&self, ptr: &mut usize, program: &[u8]) -> Option<(TPointer, T)> {
+    fn load<T: ByteEncodeProperties>(
+        &self,
+        ptr: &mut usize,
+        program: &[u8],
+    ) -> Option<(TPointer, T)> {
         let len = TPointer::BYTELEN;
         let p = *ptr;
-        let ptr1 = TPointer::decode(&program[p..p+len])?;
+        let ptr1 = TPointer::decode(&program[p..p + len])?;
         *ptr = *ptr + len;
-        self.get_value::<T>(ptr1).map(|x|(ptr1, x))
+        self.get_value::<T>(ptr1).map(|x| (ptr1, x))
     }
 }
 
@@ -161,7 +171,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_encode(){
+    fn test_encode() {
         let value: TPointer = 12342;
         let encoded = value.encode();
         println!("{:?}", encoded);
@@ -171,7 +181,7 @@ mod tests {
     }
 
     #[test]
-    fn test_binary_operatons () {
+    fn test_binary_operatons() {
         let mut vm = VM::new();
 
         let ptr1 = vm.set_value::<i32>(512);
@@ -181,14 +191,20 @@ mod tests {
         program.append(&mut <TPointer as ByteEncodeProperties>::encode(ptr1));
         program.append(&mut <TPointer as ByteEncodeProperties>::encode(ptr2));
         let mut ptr = 0;
-        vm.binary_op::<i32, _>(&mut ptr, |a,b|(a+a/b)*b, &program).unwrap();
+        vm.binary_op::<i32, _>(&mut ptr, |a, b| (a + a / b) * b, &program)
+            .unwrap();
         let result = vm
             .get_value::<i32>(ptr1)
             .expect("Expected to read the result");
-        assert_eq!(result, (512 + 512 / 42)*42);
+        assert_eq!(result, (512 + 512 / 42) * 42);
     }
 
-    fn test_binary_op<T: ByteEncodeProperties+PartialEq+std::fmt::Debug>(val1: T, val2: T, expected: T, inst: Instruction) {
+    fn test_binary_op<T: ByteEncodeProperties + PartialEq + std::fmt::Debug>(
+        val1: T,
+        val2: T,
+        expected: T,
+        inst: Instruction,
+    ) {
         let mut vm = VM::new();
 
         let ptr1 = vm.set_value::<T>(val1);
@@ -206,21 +222,21 @@ mod tests {
 
     #[test]
     fn test_add() {
-        test_binary_op::<i32>(512, 42, 512+42, Instruction::AddInt);
+        test_binary_op::<i32>(512, 42, 512 + 42, Instruction::AddInt);
     }
 
     #[test]
     fn test_sub() {
-        test_binary_op::<i32>(512, 42, 512-42, Instruction::SubInt);
+        test_binary_op::<i32>(512, 42, 512 - 42, Instruction::SubInt);
     }
 
     #[test]
     fn test_fadd() {
-        test_binary_op::<f32>(512., 42., 512.+42., Instruction::AddFloat);
+        test_binary_op::<f32>(512., 42., 512. + 42., Instruction::AddFloat);
     }
 
     #[test]
     fn test_fsub() {
-        test_binary_op::<f32>(512., 42., 512.-42., Instruction::SubFloat);
+        test_binary_op::<f32>(512., 42., 512. - 42., Instruction::SubFloat);
     }
 }

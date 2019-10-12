@@ -1,6 +1,4 @@
-use crate::{
-    intents,  model, profile, storage::Storage, UserId, 
-};
+use crate::{intents, model, profile, storage::Storage, UserId};
 use rayon::prelude::*;
 
 pub type ExecutionResult = Result<Vec<intents::Intent>, String>;
@@ -43,7 +41,6 @@ pub fn execute_single_script(userid: &UserId, storage: &Storage) -> ExecutionRes
         debug!("User {:?} has no compiledscript!", userid);
         return Err("User has no compiled script".into());
     }
-
 
     unimplemented!();
     let intents = vec![];

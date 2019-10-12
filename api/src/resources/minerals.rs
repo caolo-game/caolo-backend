@@ -3,7 +3,7 @@ use crate::rmps::{self, Serializer};
 use crate::EntityId;
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
-#[serde(rename_all="camelCase")]
+#[serde(rename_all = "camelCase")]
 pub struct Mineral {
     pub id: EntityId,
     pub position: Point,

@@ -10,6 +10,6 @@ pub use self::bots::*;
 pub use self::pathfinding::*;
 pub use self::resources::*;
 pub use self::structures::*;
-use crate::{ intents};
+use crate::intents;
 use caolo_api::{self, OperationResult};
 use rand::Rng;

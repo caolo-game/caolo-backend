@@ -3,7 +3,6 @@ use caolo_engine::storage::Storage;
 use caolo_engine::tables::{PositionTable, Table, UserDataTable};
 use rand::Rng;
 
-
 pub fn init_storage(n_fake_users: usize, storage: &mut Storage) {
     debug!("Init InMemoryStorage");
 

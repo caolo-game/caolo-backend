@@ -4,7 +4,10 @@ use crate::storage::Storage;
 /// Spawns a bot from a spawn.
 /// Removes the spawning bot from the spawn and initializes a bot in the world
 pub fn spawn_bot(spawn_id: EntityId, entity_id: EntityId, storage: &mut Storage) {
-    debug!("spawn_bot spawn_id: {:?} entity_id: {:?}", spawn_id, entity_id);
+    debug!(
+        "spawn_bot spawn_id: {:?} entity_id: {:?}",
+        spawn_id, entity_id
+    );
 
     let bot = storage
         .entity_table_mut::<super::SpawnBotComponent>()
@@ -42,5 +45,8 @@ pub fn spawn_bot(spawn_id: EntityId, entity_id: EntityId, storage: &mut Storage)
         .expect("Spawn should have position");
     positions.insert(entity_id, pos);
 
-    debug!("spawn_bot spawn_id: {:?} entity_id: {:?} - done", spawn_id, entity_id);
+    debug!(
+        "spawn_bot spawn_id: {:?} entity_id: {:?} - done",
+        spawn_id, entity_id
+    );
 }

@@ -1,7 +1,7 @@
 use super::*;
 use crate::intents::{check_dropoff_intent, check_mine_intent, check_move_intent};
-use crate::profile;
 use crate::model::{self, EntityId};
+use crate::profile;
 use crate::storage::Storage;
 use crate::tables::BotTable;
 use rayon::prelude::*;

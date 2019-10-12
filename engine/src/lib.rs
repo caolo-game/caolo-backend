@@ -11,8 +11,8 @@ mod systems;
 mod utils;
 
 use caolo_api::{EntityId, UserId};
-use systems::execution::{execute_intents, execute_scripts};
 use systems::execute_world_update;
+use systems::execution::{execute_intents, execute_scripts};
 
 pub fn forward(storage: &mut storage::Storage) -> Result<(), Box<dyn std::error::Error>> {
     let users = storage.users().collect::<Vec<_>>();

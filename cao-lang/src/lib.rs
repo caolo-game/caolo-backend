@@ -12,6 +12,8 @@ pub type TPointer = usize;
 pub enum ExecutionError {
     InvalidInstruction,
     InvalidArgument,
+    FunctionNotFound(String),
+    OutOfMemory,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -62,11 +64,17 @@ impl TryFrom<u8> for Instruction {
 #[derive(Debug)]
 pub struct VM {
     memory: Vec<u8>,
+    memory_limit: usize,
+    callables: HashMap<&'static str, Box<dyn Callable>>,
 }
 
 impl VM {
     pub fn new() -> Self {
-        Self { memory: vec![] }
+        Self {
+            memory: Vec::with_capacity(512),
+            callables: HashMap::with_capacity(128),
+            memory_limit: 40000,
+        }
     }
 
     pub fn get_value<T: ByteEncodeProperties>(&self, ptr: TPointer) -> Option<T> {
@@ -78,6 +86,7 @@ impl VM {
         }
     }
 
+    // TODO: check if maximum size was exceeded
     pub fn set_value<T: ByteEncodeProperties>(&mut self, val: T) -> TPointer {
         let result = self.memory.len();
         let bytes = val.encode();
@@ -86,6 +95,7 @@ impl VM {
         result
     }
 
+    // TODO: check if maximum size was exceeded
     pub fn set_value_at<T: ByteEncodeProperties>(&mut self, ptr: TPointer, val: T) {
         let bytes = val.encode();
         self.memory[ptr..ptr + bytes.len()].copy_from_slice(&bytes[..]);
@@ -98,38 +108,47 @@ impl VM {
                 .map_err(|_| ExecutionError::InvalidInstruction)?;
             ptr += 1;
             match instr {
-                Instruction::AddInt => {
-                    self.binary_op::<i32, _>(&mut ptr, |a, b| a + b, program)?;
-                }
+                Instruction::AddInt => self.binary_op::<i32, _>(&mut ptr, |a, b| a + b, program)?,
                 Instruction::AddFloat => {
-                    self.binary_op::<f32, _>(&mut ptr, |a, b| a + b, program)?;
+                    self.binary_op::<f32, _>(&mut ptr, |a, b| a + b, program)?
                 }
-                Instruction::SubInt => {
-                    self.binary_op::<i32, _>(&mut ptr, |a, b| a - b, program)?;
-                }
+                Instruction::SubInt => self.binary_op::<i32, _>(&mut ptr, |a, b| a - b, program)?,
                 Instruction::SubFloat => {
-                    self.binary_op::<f32, _>(&mut ptr, |a, b| a - b, program)?;
+                    self.binary_op::<f32, _>(&mut ptr, |a, b| a - b, program)?
                 }
-                Instruction::Mul => {
-                    self.binary_op::<i32, _>(&mut ptr, |a, b| a * b, program)?;
-                }
+                Instruction::Mul => self.binary_op::<i32, _>(&mut ptr, |a, b| a * b, program)?,
                 Instruction::MulFloat => {
-                    self.binary_op::<f32, _>(&mut ptr, |a, b| a * b, program)?;
+                    self.binary_op::<f32, _>(&mut ptr, |a, b| a * b, program)?
                 }
-                Instruction::Div => {
-                    self.binary_op::<i32, _>(&mut ptr, |a, b| a / b, program)?;
-                }
+                Instruction::Div => self.binary_op::<i32, _>(&mut ptr, |a, b| a / b, program)?,
                 Instruction::DivFloat => {
-                    self.binary_op::<f32, _>(&mut ptr, |a, b| a / b, program)?;
+                    self.binary_op::<f32, _>(&mut ptr, |a, b| a / b, program)?
                 }
                 Instruction::Call => {
-                    let bot_id = self
-                        .load::<caolo_api::EntityId>(&mut ptr, program)
-                        .ok_or(ExecutionError::InvalidArgument)?;
-                    let point = self
-                        .load::<caolo_api::point::Point>(&mut ptr, program)
-                        .ok_or(ExecutionError::InvalidArgument)?;
+                    // read fn name
+                    let fun_name: String =
+                        Self::read_str(&mut ptr, program).ok_or(ExecutionError::InvalidArgument)?;
+                    let mut fun = self
+                        .callables
+                        .remove(fun_name.as_str())
+                        .ok_or_else(|| ExecutionError::FunctionNotFound(fun_name))?;
+
+                    let n_inputs = fun.num_params();
+                    let mut inputs = Vec::with_capacity(n_inputs as usize);
+                    for _ in 0..n_inputs {
+                        inputs.push(
+                            Self::read_pointer(&mut ptr, program)
+                                .ok_or(ExecutionError::InvalidArgument)?,
+                        )
+                    }
+                    let outptr = self.memory.len();
+                    let res_size = fun.call(self, &inputs, outptr)?;
+                    self.memory.resize_with(outptr + res_size, Default::default);
+                    self.callables.insert(fun.name(), fun);
                 }
+            }
+            if self.memory.len() > self.memory_limit {
+                return Err(ExecutionError::OutOfMemory);
             }
         }
 
@@ -157,11 +176,22 @@ impl VM {
         ptr: &mut usize,
         program: &[u8],
     ) -> Option<(TPointer, T)> {
+        let ptr1 = Self::read_pointer(ptr, program)?;
+        self.get_value::<T>(ptr1).map(|x| (ptr1, x))
+    }
+
+    fn read_pointer(ptr: &mut usize, program: &[u8]) -> Option<TPointer> {
         let len = TPointer::BYTELEN;
         let p = *ptr;
-        let ptr1 = TPointer::decode(&program[p..p + len])?;
-        *ptr = *ptr + len;
-        self.get_value::<T>(ptr1).map(|x| (ptr1, x))
+        *ptr += len;
+        TPointer::decode(&program[p..p + len])
+    }
+
+    fn read_str(ptr: &mut usize, program: &[u8]) -> Option<String> {
+        let p = *ptr;
+        let s = std::str::from_utf8(&program[p..p + MAX_STR_LEN]).ok()?;
+        *ptr += s.len();
+        Some(s.to_owned())
     }
 }
 

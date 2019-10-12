@@ -1,11 +1,25 @@
-use crate::TPointer;
+use crate::{ExecutionError, TPointer};
 use std::mem;
+
+pub const MAX_STR_LEN: usize = 512;
 
 pub trait ByteEncodeProperties: Sized {
     const BYTELEN: usize = mem::size_of::<Self>();
 
     fn encode(self) -> Vec<u8>;
     fn decode(bytes: &[u8]) -> Option<Self>;
+}
+
+impl ByteEncodeProperties for String {
+    const BYTELEN: usize = MAX_STR_LEN;
+
+    fn encode(self) -> Vec<u8> {
+        self.chars().map(|c| c as u8).collect()
+    }
+    fn decode(bytes: &[u8]) -> Option<Self> {
+        let string = bytes.iter().map(|c| *c as char).collect();
+        Some(string)
+    }
 }
 
 /// Opts in for the default implementation of ByteEncodeProperties
@@ -51,9 +65,21 @@ impl<T: Sized + Clone + Copy + AutoByteEncodeProperties> ByteEncodeProperties fo
 }
 
 pub trait Callable {
-    const NUM_PARAMS: u8;
-
     /// Take in the VM, parameters and output pointer in parameters and return the length of the
     /// result
-    fn call(&mut self, vm: &mut crate::VM, params: &[TPointer], output: TPointer) -> usize;
+    fn call(
+        &mut self,
+        vm: &mut crate::VM,
+        params: &[TPointer],
+        output: TPointer,
+    ) -> Result<usize, ExecutionError>;
+
+    fn num_params(&self) -> u8;
+    fn name(&self) -> &'static str;
+}
+
+impl std::fmt::Debug for Box<dyn Callable> {
+    fn fmt(&self, writer: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(writer, "{}", self.name())
+    }
 }

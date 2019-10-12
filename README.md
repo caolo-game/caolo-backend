@@ -13,13 +13,6 @@ Then open the client in your browser by visiting [http://localhost:3000](http://
 
 ## Building and running
 
-- Init the example bot
-    ```
-    rustup target add wasm32-unknown-unknown
-    cd example-bot
-    cargo build --release
-    ```
-
 - Running the worker
     ```
     cargo run

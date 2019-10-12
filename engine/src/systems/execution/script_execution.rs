@@ -1,10 +1,7 @@
 use crate::{
-    intents, make_import, model, profile, storage::Storage, UserId, CURRENT_USER_ID, INTENTS,
-    STORAGE,
+    intents,  model, profile, storage::Storage, UserId, 
 };
 use rayon::prelude::*;
-use wasmer_runtime::{cache::Artifact, Func};
-use wasmer_runtime_core::load_cache_with;
 
 pub type ExecutionResult = Result<Vec<intents::Intent>, String>;
 
@@ -47,32 +44,9 @@ pub fn execute_single_script(userid: &UserId, storage: &Storage) -> ExecutionRes
         return Err("User has no compiled script".into());
     }
 
-    let import_object = make_import();
 
-    let module = udata
-        .compiled
-        .and_then(|compiled| {
-            let artifact = Artifact::deserialize(&compiled).ok()?;
-            unsafe { load_cache_with(artifact, &wasmer_runtime::default_compiler()).ok() }
-        })
-        .ok_or_else(|| "Failed to get a user script")?;
-
-    let mut instance = module
-        .instantiate(&import_object)
-        .map_err(|e| format!("{:?}", e))?;
-
-    let mut intents = Vec::<intents::Intent>::with_capacity(16);
-
-    let ctx = instance.context_mut();
-    ctx.set_internal(&INTENTS, &mut intents as *mut _ as u64);
-    ctx.set_internal(&STORAGE, storage as *const Storage as u64);
-    ctx.set_internal(&CURRENT_USER_ID, userid as *const _ as u64);
-
-    let mainfn: Func<(), ()> = instance.func("run").map_err(|e| format!("{:?}", e))?;
-
-    mainfn
-        .call()
-        .map_err(|e| format!("Run call failure {:?}", e))?;
+    unimplemented!();
+    let intents = vec![];
 
     debug!("User [{}] script was executed successfully", userid);
 

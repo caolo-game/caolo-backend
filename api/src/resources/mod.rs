@@ -2,7 +2,6 @@ mod minerals;
 
 pub use minerals::*;
 
-use crate::external;
 use crate::point::Circle;
 use crate::point::Point;
 use crate::rmps::{self, Serializer};
@@ -52,30 +51,3 @@ impl Resource {
     }
 }
 
-pub fn find_resources_in_range(range: Circle) -> Result<Resources, OperationResult> {
-    let mut buff = vec![0; range.radius as usize * 6 * std::mem::size_of::<Mineral>()];
-
-    let result = unsafe {
-        external::_find_resources_in_range(
-            range.center.x,
-            range.center.y,
-            range.radius as i32,
-            buff.as_mut_ptr(),
-        )
-    };
-
-    if result < 0 {
-        let result = OperationResult::from(result);
-        return Err(result);
-    }
-
-    let len = result;
-    if len == 0 {
-        return Ok(Resources::default());
-    }
-
-    let resources =
-        Resources::deserialize(&buff[..len as usize]).expect("Failed to deserialize resources");
-
-    Ok(resources)
-}

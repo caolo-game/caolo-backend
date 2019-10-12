@@ -3,8 +3,6 @@ use caolo_engine::storage::Storage;
 use caolo_engine::tables::{PositionTable, Table, UserDataTable};
 use rand::Rng;
 
-const WASM_TEST: &[u8] =
-    include_bytes!("../../example-bot/target/wasm32-unknown-unknown/release/caolo_example.wasm");
 
 pub fn init_storage(n_fake_users: usize, storage: &mut Storage) {
     debug!("Init InMemoryStorage");
@@ -39,7 +37,7 @@ pub fn init_storage(n_fake_users: usize, storage: &mut Storage) {
     }
     for _ in 0..n_fake_users {
         let pos = uncontested_pos(&positions_table, &mut rng);
-        let ud = UserData::new(Some(WASM_TEST.to_vec()), None);
+        let ud = UserData::new(None, None);
         let id = userdata.create_new(ud);
         users.push(id);
         // init spawn

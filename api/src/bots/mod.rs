@@ -4,61 +4,8 @@ mod intents;
 pub use bot::*;
 pub use intents::*;
 
-use crate::external;
 use crate::rmps::{self, Serializer};
-use crate::{point::Point, OperationResult, UserId};
-
-pub fn move_to(bot: &Bot, pos: Point) -> OperationResult {
-    let path = crate::pathfinding::find_path(bot.position, pos);
-
-    if path.as_ref().map(|p| p.path.is_empty()).unwrap_or(true) {
-        return OperationResult::OperationFailed;
-    }
-
-    let intent = MoveIntent {
-        id: bot.id,
-        position: path.unwrap().path[0],
-    };
-
-    send_move_intent(intent)
-}
-
-pub fn send_move_intent(intent: MoveIntent) -> OperationResult {
-    let data = intent.serialize();
-    let len = data.len();
-
-    let result = unsafe { external::_send_move_intent(data.as_ptr(), len as i32) };
-    OperationResult::from(result)
-}
-
-pub fn send_mine_intent(intent: MineIntent) -> OperationResult {
-    let data = intent.serialize();
-    let len = data.len();
-
-    let result = unsafe { external::_send_mine_intent(data.as_ptr(), len as i32) };
-    OperationResult::from(result)
-}
-
-pub fn send_dropoff_intent(intent: DropoffIntent) -> OperationResult {
-    let data = intent.serialize();
-    let len = data.len();
-
-    let result = unsafe { external::_send_dropoff_intent(data.as_ptr(), len as i32) };
-    OperationResult::from(result)
-}
-
-pub fn get_my_bots() -> Vec<Bot> {
-    const ENTITIY_SIZE: usize = std::mem::size_of::<Bot>();
-    let len = unsafe { external::_get_my_bots_len() as usize };
-    if len == 0 {
-        return vec![];
-    }
-    let len = len as f32 * 1.5 * ENTITIY_SIZE as f32;
-    let mut data = vec![0; len as usize];
-    let len = unsafe { external::_get_my_bots(data.as_mut_ptr()) as usize };
-    let bots = Bots::deserialize(&data[0..len]).expect("Failed to deserialize bots");
-    bots.bots
-}
+use crate::{point::Point, UserId};
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

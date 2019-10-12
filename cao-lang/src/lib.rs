@@ -1,9 +1,11 @@
+mod trait_impl;
+
+pub use trait_impl::*;
+
 use arrayvec::ArrayVec;
 use serde_derive::{Deserialize, Serialize};
 use std::convert::TryFrom;
-use std::mem;
 
-pub type NodeId = i64;
 pub type TPointer = usize;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -57,43 +59,6 @@ pub struct VM {
     stack: ArrayVec<[Instruction; 512]>,
     memory: Vec<u8>,
 }
-
-pub trait ByteEncodeProperties: Sized + Clone + Copy {
-    const BYTELEN: usize = mem::size_of::<Self>();
-
-    fn encode(self) -> Vec<u8> {
-        let size: usize = Self::BYTELEN;
-
-        let mut result = vec![0; size];
-        unsafe {
-            let dayum = std::mem::transmute::<*const Self, *const u8>(&self as *const Self);
-            for i in 0..size {
-                result[i] = *(dayum.add(i));
-            }
-        }
-        result
-    }
-
-    fn decode(bytes: &[u8]) -> Option<Self> {
-        let size: usize = Self::BYTELEN;
-        if bytes.len() < size {
-            None
-        } else {
-            let result = unsafe { *(bytes.as_ptr() as *const Self) };
-            Some(result)
-        }
-    }
-}
-
-impl ByteEncodeProperties for i8 {}
-impl ByteEncodeProperties for i16 {}
-impl ByteEncodeProperties for i32 {}
-impl ByteEncodeProperties for u8 {}
-impl ByteEncodeProperties for u16 {}
-impl ByteEncodeProperties for u32 {}
-impl ByteEncodeProperties for f32 {}
-impl ByteEncodeProperties for TPointer {}
-
 
 impl VM {
     pub fn new() -> Self {

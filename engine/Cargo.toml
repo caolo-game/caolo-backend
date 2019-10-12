@@ -15,8 +15,6 @@ log_tables = []
 [dependencies]
 caolo-api = { path = "../api" }
 
-wasmer-runtime = "0.6"
-wasmer-runtime-core = "0.6"
 log = "0.4"
 rand = "0.7"
 chrono = "0.4"

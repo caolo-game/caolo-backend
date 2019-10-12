@@ -54,6 +54,7 @@ impl TryFrom<u8> for Instruction {
     }
 }
 
+/// Cao-Lang bytecode interpreter
 #[derive(Debug)]
 pub struct VM {
     stack: ArrayVec<[Instruction; 512]>,

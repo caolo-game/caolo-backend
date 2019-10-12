@@ -2,8 +2,8 @@ mod traits;
 
 pub use traits::*;
 
-use arrayvec::ArrayVec;
 use serde_derive::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::convert::TryFrom;
 
 pub type TPointer = usize;
@@ -33,6 +33,9 @@ pub enum Instruction {
     Div = 7,
     /// Divide the first number by the second
     DivFloat = 8,
+    /// Moves the bot with entity id to the point and writes an OperationResult to the first
+    /// pointer
+    Call = 9,
 }
 
 impl TryFrom<u8> for Instruction {
@@ -49,6 +52,7 @@ impl TryFrom<u8> for Instruction {
             6 => Ok(MulFloat),
             7 => Ok(Div),
             8 => Ok(DivFloat),
+            9 => Ok(Call),
             _ => Err(format!("Unrecognized instruction [{}]", c)),
         }
     }
@@ -57,16 +61,12 @@ impl TryFrom<u8> for Instruction {
 /// Cao-Lang bytecode interpreter
 #[derive(Debug)]
 pub struct VM {
-    stack: ArrayVec<[Instruction; 512]>,
     memory: Vec<u8>,
 }
 
 impl VM {
     pub fn new() -> Self {
-        Self {
-            stack: Default::default(),
-            memory: vec![],
-        }
+        Self { memory: vec![] }
     }
 
     pub fn get_value<T: ByteEncodeProperties>(&self, ptr: TPointer) -> Option<T> {
@@ -96,39 +96,39 @@ impl VM {
         while ptr < program.len() {
             let instr = Instruction::try_from(program[ptr])
                 .map_err(|_| ExecutionError::InvalidInstruction)?;
-            self.stack.push(instr);
+            ptr += 1;
             match instr {
                 Instruction::AddInt => {
-                    ptr += 1;
                     self.binary_op::<i32, _>(&mut ptr, |a, b| a + b, program)?;
                 }
-                Instruction::SubInt => {
-                    ptr += 1;
-                    self.binary_op::<i32, _>(&mut ptr, |a, b| a - b, program)?;
-                }
                 Instruction::AddFloat => {
-                    ptr += 1;
                     self.binary_op::<f32, _>(&mut ptr, |a, b| a + b, program)?;
                 }
+                Instruction::SubInt => {
+                    self.binary_op::<i32, _>(&mut ptr, |a, b| a - b, program)?;
+                }
                 Instruction::SubFloat => {
-                    ptr += 1;
                     self.binary_op::<f32, _>(&mut ptr, |a, b| a - b, program)?;
                 }
                 Instruction::Mul => {
-                    ptr += 1;
                     self.binary_op::<i32, _>(&mut ptr, |a, b| a * b, program)?;
                 }
                 Instruction::MulFloat => {
-                    ptr += 1;
                     self.binary_op::<f32, _>(&mut ptr, |a, b| a * b, program)?;
                 }
                 Instruction::Div => {
-                    ptr += 1;
                     self.binary_op::<i32, _>(&mut ptr, |a, b| a / b, program)?;
                 }
                 Instruction::DivFloat => {
-                    ptr += 1;
                     self.binary_op::<f32, _>(&mut ptr, |a, b| a / b, program)?;
+                }
+                Instruction::Call => {
+                    let bot_id = self
+                        .load::<caolo_api::EntityId>(&mut ptr, program)
+                        .ok_or(ExecutionError::InvalidArgument)?;
+                    let point = self
+                        .load::<caolo_api::point::Point>(&mut ptr, program)
+                        .ok_or(ExecutionError::InvalidArgument)?;
                 }
             }
         }
@@ -149,7 +149,6 @@ impl VM {
             .load::<T>(ptr, program)
             .ok_or(ExecutionError::InvalidArgument)?;
         self.set_value_at(ptr1, op(a, b));
-        self.stack.pop();
         Ok(())
     }
 

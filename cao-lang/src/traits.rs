@@ -8,6 +8,8 @@ pub trait ByteEncodeProperties: Sized {
     fn decode(bytes: &[u8]) -> Option<Self>;
 }
 
+/// Opts in for the default implementation of ByteEncodeProperties
+/// Note that using this with pointers, arrays etc. will not work as one might expect!
 pub trait AutoByteEncodeProperties {}
 
 impl AutoByteEncodeProperties for i8 {}
@@ -19,7 +21,9 @@ impl AutoByteEncodeProperties for u32 {}
 impl AutoByteEncodeProperties for f32 {}
 impl AutoByteEncodeProperties for TPointer {}
 impl AutoByteEncodeProperties for caolo_api::point::Point {}
+impl AutoByteEncodeProperties for caolo_api::bots::Bot {}
 impl AutoByteEncodeProperties for caolo_api::EntityId {}
+impl AutoByteEncodeProperties for caolo_api::OperationResult {}
 
 impl<T: Sized + Clone + Copy + AutoByteEncodeProperties> ByteEncodeProperties for T {
     fn encode(self) -> Vec<u8> {
@@ -44,4 +48,12 @@ impl<T: Sized + Clone + Copy + AutoByteEncodeProperties> ByteEncodeProperties fo
             Some(result)
         }
     }
+}
+
+pub trait Callable {
+    const NUM_PARAMS: u8;
+
+    /// Take in the VM, parameters and output pointer in parameters and return the length of the
+    /// result
+    fn call(&mut self, vm: &mut crate::VM, params: &[TPointer], output: TPointer) -> usize;
 }

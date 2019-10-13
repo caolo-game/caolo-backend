@@ -39,8 +39,11 @@ pub enum Instruction {
     /// pointer
     Call = 9,
 
+    /// Push an int to the stack
     LiteralInt = 10,
+    /// Push a float to the stack
     LiteralFloat = 11,
+    /// Push a ptr to the stack
     LiteralPtr = 12,
 }
 

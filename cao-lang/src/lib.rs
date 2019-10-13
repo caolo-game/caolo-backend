@@ -45,6 +45,9 @@ pub enum Instruction {
     LiteralFloat = 11,
     /// Push a ptr to the stack
     LiteralPtr = 12,
+    /// Pop the next N (positive integer) number of items from the stack and write them to memory
+    /// Push the pointer to the beginning of the array to the stack
+    LiteralArray = 13,
 }
 
 impl TryFrom<u8> for Instruction {
@@ -65,6 +68,7 @@ impl TryFrom<u8> for Instruction {
             10 => Ok(LiteralInt),
             11 => Ok(LiteralFloat),
             12 => Ok(LiteralPtr),
+            13 => Ok(LiteralArray),
             _ => Err(format!("Unrecognized instruction [{}]", c)),
         }
     }
@@ -144,12 +148,14 @@ impl VM {
                     ptr += len;
                 }
                 Instruction::LiteralPtr => {
-                    let len = TPointer::BYTELEN;
-                    self.stack.push(Value::Pointer(
-                        TPointer::decode(&program[ptr..ptr + len])
-                            .ok_or(ExecutionError::InvalidArgument)?,
-                    ));
-                    ptr += len;
+                    // TODO: pop the stack, write it to memory and push the ptr to the top of the
+                    // stack
+                    unimplemented!()
+                }
+                Instruction::LiteralArray => {
+                    // TODO: pop n values off the stack, write them to memory and push the ptr to the top of the
+                    // stack
+                    unimplemented!()
                 }
                 Instruction::AddInt => self.binary_op::<i32, _, _>(
                     |a, b| Value::IValue(a + b),
@@ -312,8 +318,7 @@ mod tests {
         let value = vm.stack.last().unwrap();
         match value {
             Value::IValue(i) => assert_eq!(*i, 512 - 42 + 68),
-            _ => panic!("Invalid value in the stack")
+            _ => panic!("Invalid value in the stack"),
         }
-
     }
 }

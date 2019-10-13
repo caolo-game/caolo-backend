@@ -81,6 +81,8 @@ enum Value {
     FValue(f32),
 }
 
+impl AutoByteEncodeProperties for Value {}
+
 /// Cao-Lang bytecode interpreter
 #[derive(Debug)]
 pub struct VM {
@@ -148,14 +150,25 @@ impl VM {
                     ptr += len;
                 }
                 Instruction::LiteralPtr => {
-                    // TODO: pop the stack, write it to memory and push the ptr to the top of the
-                    // stack
-                    unimplemented!()
+                    let val = self.stack.pop().unwrap();
+                    let ptr = self.memory.len();
+                    self.memory.append(&mut val.encode());
+                    self.stack.push(Value::Pointer(ptr));
                 }
                 Instruction::LiteralArray => {
-                    // TODO: pop n values off the stack, write them to memory and push the ptr to the top of the
-                    // stack
-                    unimplemented!()
+                    let len = self
+                        .load_int_from_stack()
+                        .ok_or(ExecutionError::InvalidArgument)?;
+                    if len > 128 || len > self.stack.len() as i32 {
+                        return Err(ExecutionError::InvalidArgument)?;
+                    }
+                    let ptr = self.memory.len();
+                    self.stack.pop();
+                    for _ in 0..len {
+                        let val = self.stack.pop().unwrap();
+                        self.memory.append(&mut val.encode());
+                    }
+                    self.stack.push(Value::Pointer(ptr));
                 }
                 Instruction::AddInt => self.binary_op::<i32, _, _>(
                     |a, b| Value::IValue(a + b),

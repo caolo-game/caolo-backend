@@ -38,6 +38,10 @@ pub enum Instruction {
     /// Moves the bot with entity id to the point and writes an OperationResult to the first
     /// pointer
     Call = 9,
+
+    LiteralInt = 10,
+    LiteralFloat = 11,
+    LiteralPtr = 12,
 }
 
 impl TryFrom<u8> for Instruction {
@@ -55,9 +59,19 @@ impl TryFrom<u8> for Instruction {
             7 => Ok(Div),
             8 => Ok(DivFloat),
             9 => Ok(Call),
+            10 => Ok(LiteralInt),
+            11 => Ok(LiteralFloat),
+            12 => Ok(LiteralPtr),
             _ => Err(format!("Unrecognized instruction [{}]", c)),
         }
     }
+}
+
+#[derive(Debug, Clone, Copy)]
+enum Value {
+    Pointer(TPointer),
+    IValue(i32),
+    FValue(f32),
 }
 
 /// Cao-Lang bytecode interpreter
@@ -66,6 +80,7 @@ pub struct VM {
     memory: Vec<u8>,
     memory_limit: usize,
     callables: HashMap<&'static str, Box<dyn Callable>>,
+    stack: Vec<Value>,
 }
 
 impl VM {
@@ -74,6 +89,7 @@ impl VM {
             memory: Vec::with_capacity(512),
             callables: HashMap::with_capacity(128),
             memory_limit: 40000,
+            stack: Vec::with_capacity(128),
         }
     }
 
@@ -108,22 +124,62 @@ impl VM {
                 .map_err(|_| ExecutionError::InvalidInstruction)?;
             ptr += 1;
             match instr {
-                Instruction::AddInt => self.binary_op::<i32, _>(&mut ptr, |a, b| a + b, program)?,
-                Instruction::AddFloat => {
-                    self.binary_op::<f32, _>(&mut ptr, |a, b| a + b, program)?
+                Instruction::LiteralInt => {
+                    let len = i32::BYTELEN;
+                    self.stack.push(Value::IValue(
+                        i32::decode(&program[ptr..ptr + len])
+                            .ok_or(ExecutionError::InvalidArgument)?,
+                    ));
+                    ptr += len;
                 }
-                Instruction::SubInt => self.binary_op::<i32, _>(&mut ptr, |a, b| a - b, program)?,
-                Instruction::SubFloat => {
-                    self.binary_op::<f32, _>(&mut ptr, |a, b| a - b, program)?
+                Instruction::LiteralFloat => {
+                    let len = f32::BYTELEN;
+                    self.stack.push(Value::FValue(
+                        f32::decode(&program[ptr..ptr + len])
+                            .ok_or(ExecutionError::InvalidArgument)?,
+                    ));
+                    ptr += len;
                 }
-                Instruction::Mul => self.binary_op::<i32, _>(&mut ptr, |a, b| a * b, program)?,
-                Instruction::MulFloat => {
-                    self.binary_op::<f32, _>(&mut ptr, |a, b| a * b, program)?
+                Instruction::LiteralPtr => {
+                    let len = TPointer::BYTELEN;
+                    self.stack.push(Value::Pointer(
+                        TPointer::decode(&program[ptr..ptr + len])
+                            .ok_or(ExecutionError::InvalidArgument)?,
+                    ));
+                    ptr += len;
                 }
-                Instruction::Div => self.binary_op::<i32, _>(&mut ptr, |a, b| a / b, program)?,
-                Instruction::DivFloat => {
-                    self.binary_op::<f32, _>(&mut ptr, |a, b| a / b, program)?
-                }
+                Instruction::AddInt => self.binary_op::<i32, _, _>(
+                    |a, b| Value::IValue(a + b),
+                    |s| s.load_int_from_stack(),
+                )?,
+                Instruction::AddFloat => self.binary_op::<f32, _, _>(
+                    |a, b| Value::FValue(a + b),
+                    |s| s.load_float_from_stack(),
+                )?,
+                Instruction::SubInt => self.binary_op::<i32, _, _>(
+                    |a, b| Value::IValue(a - b),
+                    |s| s.load_int_from_stack(),
+                )?,
+                Instruction::SubFloat => self.binary_op::<f32, _, _>(
+                    |a, b| Value::FValue(a - b),
+                    |s| s.load_float_from_stack(),
+                )?,
+                Instruction::Mul => self.binary_op::<i32, _, _>(
+                    |a, b| Value::IValue(a * b),
+                    |s| s.load_int_from_stack(),
+                )?,
+                Instruction::MulFloat => self.binary_op::<f32, _, _>(
+                    |a, b| Value::FValue(a * b),
+                    |s| s.load_float_from_stack(),
+                )?,
+                Instruction::Div => self.binary_op::<i32, _, _>(
+                    |a, b| Value::IValue(a / b),
+                    |s| s.load_int_from_stack(),
+                )?,
+                Instruction::DivFloat => self.binary_op::<f32, _, _>(
+                    |a, b| Value::FValue(a / b),
+                    |s| s.load_float_from_stack(),
+                )?,
                 Instruction::Call => {
                     // read fn name
                     let fun_name: String =
@@ -155,29 +211,35 @@ impl VM {
         Ok(())
     }
 
-    fn binary_op<T: ByteEncodeProperties, F: Fn(T, T) -> T>(
-        &mut self,
-        ptr: &mut TPointer,
-        op: F,
-        program: &[u8],
-    ) -> Result<(), ExecutionError> {
-        let (ptr1, a) = self
-            .load::<T>(ptr, program)
-            .ok_or(ExecutionError::InvalidArgument)?;
-        let (_, b) = self
-            .load::<T>(ptr, program)
-            .ok_or(ExecutionError::InvalidArgument)?;
-        self.set_value_at(ptr1, op(a, b));
-        Ok(())
+    fn load_int_from_stack(&self) -> Option<i32> {
+        let val = self.stack.last()?;
+        match val {
+            Value::IValue(i) => Some(*i),
+            Value::Pointer(p) => self.get_value(*p),
+            _ => None,
+        }
     }
 
-    fn load<T: ByteEncodeProperties>(
-        &self,
-        ptr: &mut usize,
-        program: &[u8],
-    ) -> Option<(TPointer, T)> {
-        let ptr1 = Self::read_pointer(ptr, program)?;
-        self.get_value::<T>(ptr1).map(|x| (ptr1, x))
+    fn load_float_from_stack(&self) -> Option<f32> {
+        let val = self.stack.last()?;
+        match val {
+            Value::FValue(i) => Some(*i),
+            Value::Pointer(p) => self.get_value(*p),
+            _ => None,
+        }
+    }
+
+    fn binary_op<T: ByteEncodeProperties, F: Fn(T, T) -> Value, FLoader: Fn(&Self) -> Option<T>>(
+        &mut self,
+        op: F,
+        loader: FLoader,
+    ) -> Result<(), ExecutionError> {
+        let b = loader(self).ok_or(ExecutionError::InvalidArgument)?;
+        self.stack.pop().unwrap();
+        let a = loader(self).ok_or(ExecutionError::InvalidArgument)?;
+        self.stack.pop().unwrap();
+        self.stack.push(op(a, b));
+        Ok(())
     }
 
     fn read_pointer(ptr: &mut usize, program: &[u8]) -> Option<TPointer> {
@@ -203,7 +265,6 @@ mod tests {
     fn test_encode() {
         let value: TPointer = 12342;
         let encoded = value.encode();
-        println!("{:?}", encoded);
         let decoded = TPointer::decode(&encoded).unwrap();
 
         assert_eq!(value, decoded);
@@ -213,59 +274,43 @@ mod tests {
     fn test_binary_operatons() {
         let mut vm = VM::new();
 
-        let ptr1 = vm.set_value::<i32>(512);
-        let ptr2 = vm.set_value::<i32>(42);
+        vm.stack.push(Value::IValue(512));
+        vm.stack.push(Value::IValue(42));
 
-        let mut program = vec![];
-        program.append(&mut <TPointer as ByteEncodeProperties>::encode(ptr1));
-        program.append(&mut <TPointer as ByteEncodeProperties>::encode(ptr2));
-        let mut ptr = 0;
-        vm.binary_op::<i32, _>(&mut ptr, |a, b| (a + a / b) * b, &program)
-            .unwrap();
-        let result = vm
-            .get_value::<i32>(ptr1)
-            .expect("Expected to read the result");
-        assert_eq!(result, (512 + 512 / 42) * 42);
+        vm.binary_op::<i32, _, _>(
+            |a, b| Value::IValue((a + a / b) * b),
+            |s| s.load_int_from_stack(),
+        )
+        .unwrap();
+
+        let result = vm.stack.last().expect("Expected to read the result");
+        match result {
+            Value::IValue(result) => assert_eq!(*result, (512 + 512 / 42) * 42),
+            _ => panic!("Invalid result type"),
+        }
     }
 
-    fn test_binary_op<T: ByteEncodeProperties + PartialEq + std::fmt::Debug>(
-        val1: T,
-        val2: T,
-        expected: T,
-        inst: Instruction,
-    ) {
+    #[test]
+    fn test_simple_program() {
         let mut vm = VM::new();
 
-        let ptr1 = vm.set_value::<T>(val1);
-        let ptr2 = vm.set_value::<T>(val2);
+        let mut program = Vec::with_capacity(512);
+        program.push(Instruction::LiteralInt as u8);
+        program.append(&mut (512 as i32).encode());
+        program.push(Instruction::LiteralInt as u8);
+        program.append(&mut (42 as i32).encode());
+        program.push(Instruction::SubInt as u8);
+        program.push(Instruction::LiteralInt as u8);
+        program.append(&mut (68 as i32).encode());
+        program.push(Instruction::AddInt as u8);
 
-        let mut program = vec![inst as u8];
-        program.append(&mut <TPointer as ByteEncodeProperties>::encode(ptr1));
-        program.append(&mut <TPointer as ByteEncodeProperties>::encode(ptr2));
         vm.run(&program).unwrap();
-        let result = vm
-            .get_value::<T>(ptr1)
-            .expect("Expected to read the result");
-        assert_eq!(result, expected);
-    }
+        assert_eq!(vm.stack.len(), 1);
+        let value = vm.stack.last().unwrap();
+        match value {
+            Value::IValue(i) => assert_eq!(*i, 512 - 42 + 68),
+            _ => panic!("Invalid value in the stack")
+        }
 
-    #[test]
-    fn test_add() {
-        test_binary_op::<i32>(512, 42, 512 + 42, Instruction::AddInt);
-    }
-
-    #[test]
-    fn test_sub() {
-        test_binary_op::<i32>(512, 42, 512 - 42, Instruction::SubInt);
-    }
-
-    #[test]
-    fn test_fadd() {
-        test_binary_op::<f32>(512., 42., 512. + 42., Instruction::AddFloat);
-    }
-
-    #[test]
-    fn test_fsub() {
-        test_binary_op::<f32>(512., 42., 512. - 42., Instruction::SubFloat);
     }
 }

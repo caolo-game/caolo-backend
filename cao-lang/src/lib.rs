@@ -1,6 +1,8 @@
-mod traits;
+pub mod prelude;
+pub mod traits;
+pub mod value;
 
-pub use traits::*;
+use prelude::*;
 
 use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -13,6 +15,7 @@ pub enum ExecutionError {
     InvalidInstruction,
     InvalidArgument,
     FunctionNotFound(String),
+    Unimplemented,
     OutOfMemory,
 }
 
@@ -39,14 +42,14 @@ pub enum Instruction {
     /// pointer
     Call = 9,
 
-    /// Push an int to the stack
+    /// Push an int onto the stack
     LiteralInt = 10,
-    /// Push a float to the stack
+    /// Push a float onto the stack
     LiteralFloat = 11,
-    /// Push a ptr to the stack
+    /// Push a ptr onto the stack
     LiteralPtr = 12,
     /// Pop the next N (positive integer) number of items from the stack and write them to memory
-    /// Push the pointer to the beginning of the array to the stack
+    /// Push the pointer to the beginning of the array onto the stack
     LiteralArray = 13,
 }
 
@@ -74,21 +77,12 @@ impl TryFrom<u8> for Instruction {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-enum Value {
-    Pointer(TPointer),
-    IValue(i32),
-    FValue(f32),
-}
-
-impl AutoByteEncodeProperties for Value {}
-
 /// Cao-Lang bytecode interpreter
 #[derive(Debug)]
 pub struct VM {
     memory: Vec<u8>,
     memory_limit: usize,
-    callables: HashMap<&'static str, Box<dyn Callable>>,
+    callables: HashMap<String, FunctionObject>,
     stack: Vec<Value>,
 }
 
@@ -100,6 +94,11 @@ impl VM {
             memory_limit: 40000,
             stack: Vec::with_capacity(128),
         }
+    }
+
+    pub fn register_function<C: Callable + 'static>(&mut self, name: &str, f: C) {
+        self.callables
+            .insert(name.to_owned(), FunctionObject::new(f));
     }
 
     pub fn get_value<T: ByteEncodeProperties>(&self, ptr: TPointer) -> Option<T> {
@@ -123,7 +122,10 @@ impl VM {
     // TODO: check if maximum size was exceeded
     pub fn set_value_at<T: ByteEncodeProperties>(&mut self, ptr: TPointer, val: T) {
         let bytes = val.encode();
-        self.memory[ptr..ptr + bytes.len()].copy_from_slice(&bytes[..]);
+        if ptr + bytes.len() > self.memory.len() {
+            self.memory.resize(ptr + bytes.len(), 0);
+        }
+        self.memory.as_mut_slice()[ptr..ptr + bytes.len()].copy_from_slice(&bytes[..]);
     }
 
     pub fn run(&mut self, program: &[u8]) -> Result<(), ExecutionError> {
@@ -203,26 +205,23 @@ impl VM {
                     |s| s.load_float_from_stack(),
                 )?,
                 Instruction::Call => {
-                    // read fn name
-                    let fun_name: String =
+                    let fun_name =
                         Self::read_str(&mut ptr, program).ok_or(ExecutionError::InvalidArgument)?;
-                    let mut fun = self
-                        .callables
-                        .remove(fun_name.as_str())
-                        .ok_or_else(|| ExecutionError::FunctionNotFound(fun_name))?;
+                    let mut fun = self.callables.remove(fun_name.as_str()).ok_or_else(|| {
+                        ExecutionError::FunctionNotFound(fun_name.as_str().to_owned())
+                    })?;
 
                     let n_inputs = fun.num_params();
                     let mut inputs = Vec::with_capacity(n_inputs as usize);
                     for _ in 0..n_inputs {
-                        inputs.push(
-                            Self::read_pointer(&mut ptr, program)
-                                .ok_or(ExecutionError::InvalidArgument)?,
-                        )
+                        inputs.push(self.stack.pop().ok_or(ExecutionError::InvalidArgument)?)
                     }
                     let outptr = self.memory.len();
                     let res_size = fun.call(self, &inputs, outptr)?;
                     self.memory.resize_with(outptr + res_size, Default::default);
-                    self.callables.insert(fun.name(), fun);
+                    self.stack.push(Value::Pointer(outptr));
+
+                    self.callables.insert(fun_name, fun);
                 }
             }
             if self.memory.len() > self.memory_limit {
@@ -264,17 +263,11 @@ impl VM {
         Ok(())
     }
 
-    fn read_pointer(ptr: &mut usize, program: &[u8]) -> Option<TPointer> {
-        let len = TPointer::BYTELEN;
-        let p = *ptr;
-        *ptr += len;
-        TPointer::decode(&program[p..p + len])
-    }
-
     fn read_str(ptr: &mut usize, program: &[u8]) -> Option<String> {
         let p = *ptr;
-        let s = std::str::from_utf8(&program[p..p + MAX_STR_LEN]).ok()?;
-        *ptr += s.len();
+        let limit = program.len().min(p + MAX_STR_LEN);
+        let s = String::decode(&program[p..limit])?;
+        *ptr += s.len() + i32::BYTELEN;
         Some(s.to_owned())
     }
 }
@@ -282,6 +275,7 @@ impl VM {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use traits::FunctionWrapper;
 
     #[test]
     fn test_encode() {
@@ -314,8 +308,6 @@ mod tests {
 
     #[test]
     fn test_simple_program() {
-        let mut vm = VM::new();
-
         let mut program = Vec::with_capacity(512);
         program.push(Instruction::LiteralInt as u8);
         program.append(&mut (512 as i32).encode());
@@ -326,6 +318,7 @@ mod tests {
         program.append(&mut (68 as i32).encode());
         program.push(Instruction::AddInt as u8);
 
+        let mut vm = VM::new();
         vm.run(&program).unwrap();
         assert_eq!(vm.stack.len(), 1);
         let value = vm.stack.last().unwrap();
@@ -333,5 +326,41 @@ mod tests {
             Value::IValue(i) => assert_eq!(*i, 512 - 42 + 68),
             _ => panic!("Invalid value in the stack"),
         }
+    }
+
+    #[test]
+    fn test_function_call() {
+        let mut program = Vec::with_capacity(512);
+        program.push(Instruction::LiteralFloat as u8);
+        program.append(&mut (42.0 as f32).encode());
+        program.push(Instruction::LiteralInt as u8);
+        program.append(&mut (512 as i32).encode());
+        program.push(Instruction::Call as u8);
+        program.append(&mut "foo".to_owned().encode());
+
+        let mut vm = VM::new();
+
+        fn foo(vm: &mut VM, (a, b): (i32, f32), out: TPointer) -> Result<usize, ExecutionError> {
+            let res = a as f32 * b % 13.;
+            let res = res as i32;
+
+            vm.set_value_at(out, res);
+            Ok(i32::BYTELEN)
+        };
+
+        vm.register_function("foo", FunctionWrapper::new(foo));
+        vm.register_function(
+            "bar",
+            FunctionWrapper::new(|_vm: &mut VM, _a: i32, _out: TPointer| {
+                Err::<usize, _>(ExecutionError::Unimplemented)
+            }),
+        );
+
+        vm.run(&program).unwrap();
+
+        let ptr = 0;
+        let res = vm.get_value::<i32>(ptr).unwrap();
+
+        assert_eq!(res, ((512. as f32) * (42. as f32) % 13.) as i32);
     }
 }

@@ -201,3 +201,27 @@ where
         2
     }
 }
+
+impl<F, T1, T2, T3> Callable for FunctionWrapper<F, (T1, T2, T3)>
+where
+    F: Fn(&mut crate::VM, (T1, T2, T3), TPointer) -> Result<usize, ExecutionError>,
+    T1: TryFrom<Value>,
+    T2: TryFrom<Value>,
+    T3: TryFrom<Value>,
+{
+    fn call(
+        &mut self,
+        vm: &mut crate::VM,
+        params: &[Value],
+        output: TPointer,
+    ) -> Result<usize, ExecutionError> {
+        let a = T1::try_from(params[0]).map_err(|_| ExecutionError::InvalidArgument)?;
+        let b = T2::try_from(params[1]).map_err(|_| ExecutionError::InvalidArgument)?;
+        let c = T3::try_from(params[1]).map_err(|_| ExecutionError::InvalidArgument)?;
+        (self.f)(vm, (a, b, c), output)
+    }
+
+    fn num_params(&self) -> u8 {
+        3
+    }
+}

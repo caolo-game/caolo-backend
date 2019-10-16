@@ -21,6 +21,7 @@ impl TryFrom<Value> for i32 {
         }
     }
 }
+
 impl TryFrom<Value> for f32 {
     type Error = Value;
 
@@ -31,6 +32,7 @@ impl TryFrom<Value> for f32 {
         }
     }
 }
+
 impl TryFrom<Value> for TPointer {
     type Error = Value;
 

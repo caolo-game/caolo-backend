@@ -1,8 +1,9 @@
 use crate::traits::AutoByteEncodeProperties;
 use crate::TPointer;
+use serde_derive::{Deserialize, Serialize};
 use std::convert::TryFrom;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum Value {
     Pointer(TPointer),
     IValue(i32),

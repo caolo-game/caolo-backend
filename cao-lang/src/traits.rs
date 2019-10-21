@@ -36,6 +36,7 @@ impl ByteEncodeProperties for String {
     }
 }
 
+
 /// Opts in for the default implementation of ByteEncodeProperties
 /// Note that using this with pointers, arrays etc. will not work as one might expect!
 pub trait AutoByteEncodeProperties {}

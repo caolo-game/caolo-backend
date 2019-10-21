@@ -11,4 +11,4 @@ caolo-api = { path = "../api" }
 
 serde = "1.0"
 serde_derive = "1.0"
-arrayvec="0.4.11"
+arrayvec= { version="0.5", features=["serde", "array-sizes-33-128"] }

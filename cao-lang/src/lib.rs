@@ -1,3 +1,4 @@
+pub mod ast;
 pub mod prelude;
 pub mod traits;
 pub mod value;
@@ -41,7 +42,6 @@ pub enum Instruction {
     /// Moves the bot with entity id to the point and writes an OperationResult to the first
     /// pointer
     Call = 9,
-
     /// Push an int onto the stack
     LiteralInt = 10,
     /// Push a float onto the stack
@@ -51,6 +51,8 @@ pub enum Instruction {
     /// Pop the next N (positive integer) number of items from the stack and write them to memory
     /// Push the pointer to the beginning of the array onto the stack
     LiteralArray = 13,
+    /// Empty instruction that has no effects
+    Pass = 14,
 }
 
 impl TryFrom<u8> for Instruction {
@@ -72,6 +74,7 @@ impl TryFrom<u8> for Instruction {
             11 => Ok(LiteralFloat),
             12 => Ok(LiteralPtr),
             13 => Ok(LiteralArray),
+            14 => Ok(Pass),
             _ => Err(format!("Unrecognized instruction [{}]", c)),
         }
     }
@@ -135,6 +138,7 @@ impl VM {
                 .map_err(|_| ExecutionError::InvalidInstruction)?;
             ptr += 1;
             match instr {
+                Instruction::Pass => {}
                 Instruction::LiteralInt => {
                     let len = i32::BYTELEN;
                     self.stack.push(Value::IValue(

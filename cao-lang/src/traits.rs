@@ -16,11 +16,9 @@ impl ByteEncodeProperties for String {
     const BYTELEN: usize = MAX_STR_LEN;
 
     fn encode(self) -> Vec<u8> {
-        let mut res: Vec<u8> = self.chars().map(|c| c as u8).collect();
-        assert!(res.len() < MAX_STR_LEN);
-        let len = res.len() as i32;
-        let mut rr = len.encode();
-        rr.append(&mut res);
+        assert!(self.len() < Self::BYTELEN);
+        let mut rr = (self.len() as i32).encode();
+        rr.extend(self.chars().map(|c| c as u8));
         rr
     }
 
@@ -35,7 +33,6 @@ impl ByteEncodeProperties for String {
         Some(string)
     }
 }
-
 
 /// Opts in for the default implementation of ByteEncodeProperties
 /// Note that using this with pointers, arrays etc. will not work as one might expect!

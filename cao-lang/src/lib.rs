@@ -53,6 +53,9 @@ pub enum Instruction {
     LiteralArray = 13,
     /// Empty instruction that has no effects
     Pass = 14,
+    /// Clones the last element on the stack
+    /// Does nothing if no elements are on the stack
+    CopyLast = 15,
 }
 
 impl TryFrom<u8> for Instruction {
@@ -75,6 +78,7 @@ impl TryFrom<u8> for Instruction {
             12 => Ok(LiteralPtr),
             13 => Ok(LiteralArray),
             14 => Ok(Pass),
+            15 => Ok(CopyLast),
             _ => Err(format!("Unrecognized instruction [{}]", c)),
         }
     }
@@ -138,6 +142,11 @@ impl VM {
                 .map_err(|_| ExecutionError::InvalidInstruction)?;
             ptr += 1;
             match instr {
+                Instruction::CopyLast => {
+                    if !self.stack.is_empty() {
+                        self.stack.push(self.stack.last().cloned().unwrap());
+                    }
+                }
                 Instruction::Pass => {}
                 Instruction::LiteralInt => {
                     let len = i32::BYTELEN;

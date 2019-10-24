@@ -1,7 +1,7 @@
 use crate::{Instruction, Value};
 use arrayvec::{ArrayString, ArrayVec};
 use serde_derive::{Deserialize, Serialize};
-use std::collections::{HashMap, VecDeque};
+use std::collections::HashMap;
 use std::fmt::Debug;
 
 /// Unique id of each nodes in a single compilation
@@ -59,8 +59,7 @@ pub fn input_per_instruction(inst: Instruction) -> Option<u8> {
     use Instruction::*;
     match inst {
         AddInt | SubInt | AddFloat | SubFloat | Mul | MulFloat | Div | DivFloat => Some(2),
-        LiteralInt | LiteralFloat | LiteralPtr => Some(1),
-        Pass | CopyLast => Some(0),
+        LiteralInt | LiteralFloat | LiteralPtr | Pass | CopyLast => Some(0),
         Call | LiteralArray => None,
     }
 }
@@ -89,22 +88,29 @@ impl Compiler {
         if unit.nodes.is_empty() {
             return Err("Can not compile program with no entry point!".to_owned());
         }
-        let compiler = Compiler { unit };
-        let mut todo: Vec<NodeId> = compiler
+        let mut compiler = Compiler { unit };
+        let todo: Vec<NodeId> = compiler
             .unit
             .nodes
             .iter()
-            .filter(|(k, v)| {
-                //
+            .map(|(k, _)| k)
+            .filter(|k| {
+                for it in compiler.unit.inputs.values() {
+                    for n in it {
+                        if n == *k {
+                            return false;
+                        }
+                    }
+                }
                 true
             })
-            .map(|(k, _)| k)
             .cloned()
             .collect();
 
         let mut compiled_programs = Vec::with_capacity(4);
-        for nodeid in todo {
-            // TODO: todo should be leaf nodes
+        for nodeid in todo.into_iter() {
+            let program = compiler.compile_node(nodeid)?;
+            compiled_programs.push(program);
         }
 
         Ok(compiled_programs)
@@ -121,26 +127,44 @@ impl Compiler {
     }
 
     fn process_node(&mut self, nodeid: NodeId, bytes: &mut Vec<u8>) -> Result<(), String> {
+        use crate::traits::ByteEncodeProperties;
+        use Instruction::*;
+
         Compiler::validate_node(nodeid, &mut self.unit)?;
 
-        for nodeid in self.unit.inputs[&nodeid].clone().into_iter() {
-            self.process_node(nodeid, bytes)?;
+        if let Some(inputs) = self.unit.inputs.get(&nodeid) {
+            for nodeid in inputs.clone().into_iter() {
+                self.process_node(nodeid, bytes)?;
+            }
         }
         let node = &self.unit.nodes[&nodeid];
-        {
-            use crate::traits::ByteEncodeProperties;
-            use Instruction::*;
-            match node.instruction {
-                Call => {
-                    bytes.push(node.instruction as u8);
-                    bytes.append(&mut self.unit.strings[&nodeid].encode());
-                }
-                LiteralArray | LiteralPtr | LiteralFloat | LiteralInt => {
-                    bytes.push(node.instruction as u8);
-                    bytes.append(&mut self.unit.values[&nodeid].encode());
-                }
-                _ => bytes.push(node.instruction as u8),
+        match node.instruction {
+            Call => {
+                bytes.push(node.instruction as u8);
+                bytes.append(&mut self.unit.strings[&nodeid].encode());
             }
+            LiteralArray | LiteralPtr | LiteralFloat | LiteralInt => {
+                bytes.push(node.instruction as u8);
+                match (node.instruction, self.unit.values[&nodeid]) {
+                    (Instruction::LiteralInt, Value::IValue(v)) => {
+                        bytes.append(&mut v.encode());
+                    }
+                    (Instruction::LiteralFloat, Value::FValue(v)) => {
+                        bytes.append(&mut v.encode());
+                    }
+                    (Instruction::LiteralPtr, Value::Pointer(v)) => {
+                        bytes.append(&mut v.encode());
+                    }
+                    (Instruction::LiteralArray, Value::IValue(v)) => {
+                        bytes.append(&mut v.encode());
+                    }
+                    _ => panic!(
+                        "Literal {:?} got invalid value {:?}",
+                        node.instruction, self.unit.values[&nodeid]
+                    ),
+                }
+            }
+            _ => bytes.push(node.instruction as u8),
         }
         Ok(())
     }
@@ -157,5 +181,73 @@ impl Compiler {
             }
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::VM;
+
+    #[test]
+    fn test_compiling_simple_program() {
+        let nodes: Nodes = [
+            (
+                0,
+                AstNode {
+                    instruction: Instruction::LiteralFloat,
+                },
+            ),
+            (
+                1,
+                AstNode {
+                    instruction: Instruction::LiteralFloat,
+                },
+            ),
+            (
+                2,
+                AstNode {
+                    instruction: Instruction::AddFloat,
+                },
+            ),
+        ]
+        .into_iter()
+        .cloned()
+        .collect();
+        let values: Values = [(0, Value::FValue(42.0)), (1, Value::FValue(512.0))]
+            .into_iter()
+            .map(|x| *x)
+            .collect();
+        let inputs: Inputs = [(2, [0, 1].into_iter().cloned().collect())]
+            .into_iter()
+            .cloned()
+            .collect();
+        let strings: Strings = [].into_iter().cloned().collect();
+        let program = CompilationUnit {
+            nodes,
+            values,
+            inputs,
+            strings,
+        };
+
+        let programs = Compiler::compile(program).unwrap();
+        assert_eq!(programs.len(), 1);
+        let program = &programs[0];
+        assert_eq!(program.leafid, 2);
+
+        println!("{:?}", program);
+
+        // Compilation was successful
+
+        let mut vm = VM::new();
+        vm.run(&program.bytecode).unwrap();
+
+        assert_eq!(vm.stack.len(), 1);
+
+        let value = vm.stack.last().unwrap();
+        match value {
+            Value::FValue(i) => assert_eq!(*i, 42.0 + 512.0),
+            _ => panic!("Invalid value in the stack"),
+        }
     }
 }

@@ -10,6 +10,17 @@ pub enum Value {
     FValue(f32),
 }
 
+impl Value {
+    pub fn as_bool(self) -> bool {
+        use Value::*;
+        match self {
+            Pointer(i) => i != 0,
+            IValue(i) => i != 0,
+            FValue(i) => i != 0.0,
+        }
+    }
+}
+
 impl AutoByteEncodeProperties for Value {}
 
 impl TryFrom<Value> for i32 {

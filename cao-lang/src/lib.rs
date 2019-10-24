@@ -1,4 +1,4 @@
-pub mod ast;
+pub mod compiler;
 pub mod prelude;
 pub mod traits;
 pub mod value;
@@ -22,6 +22,7 @@ pub enum ExecutionError {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[repr(u8)]
+/// Single instruction of the interpreter
 pub enum Instruction {
     /// Add two numbers, write the result in the first memory location
     AddInt = 1,
@@ -56,6 +57,10 @@ pub enum Instruction {
     /// Clones the last element on the stack
     /// Does nothing if no elements are on the stack
     CopyLast = 15,
+    /// Branching (If-Else) instruction
+    /// If the value at the top of the stack is truthy jumps to the
+    /// first index else jumps to the second index
+    Branch = 16,
 }
 
 impl TryFrom<u8> for Instruction {
@@ -79,6 +84,7 @@ impl TryFrom<u8> for Instruction {
             13 => Ok(LiteralArray),
             14 => Ok(Pass),
             15 => Ok(CopyLast),
+            16 => Ok(Branch),
             _ => Err(format!("Unrecognized instruction [{}]", c)),
         }
     }
@@ -142,6 +148,25 @@ impl VM {
                 .map_err(|_| ExecutionError::InvalidInstruction)?;
             ptr += 1;
             match instr {
+                Instruction::Branch => {
+                    if self.stack.is_empty() || self.stack.len() < 3 {
+                        return Err(ExecutionError::InvalidArgument);
+                    }
+                    let [iffalse, iftrue, cond] = [
+                        self.stack.pop().unwrap(),
+                        self.stack.pop().unwrap(),
+                        self.stack.pop().unwrap(),
+                    ];
+                    let iftrue: i32 =
+                        i32::try_from(iftrue).map_err(|_| ExecutionError::InvalidArgument)?;
+                    let iffalse: i32 =
+                        i32::try_from(iffalse).map_err(|_| ExecutionError::InvalidArgument)?;
+                    if cond.as_bool() {
+                        ptr = iftrue as usize;
+                    } else {
+                        ptr = iffalse as usize;
+                    }
+                }
                 Instruction::CopyLast => {
                     if !self.stack.is_empty() {
                         self.stack.push(self.stack.last().cloned().unwrap());

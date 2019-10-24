@@ -59,6 +59,7 @@ pub fn input_per_instruction(inst: Instruction) -> Option<u8> {
     use Instruction::*;
     match inst {
         AddInt | SubInt | AddFloat | SubFloat | Mul | MulFloat | Div | DivFloat => Some(2),
+        Branch => Some(3),
         LiteralInt | LiteralFloat | LiteralPtr | Pass | CopyLast => Some(0),
         Call | LiteralArray => None,
     }
@@ -81,6 +82,7 @@ pub struct CompiledProgram {
 
 pub struct Compiler {
     unit: CompilationUnit,
+    labels: HashMap<NodeId, usize>, // Marks the position of the node in the bytecode
 }
 
 impl Compiler {
@@ -88,7 +90,10 @@ impl Compiler {
         if unit.nodes.is_empty() {
             return Err("Can not compile program with no entry point!".to_owned());
         }
-        let mut compiler = Compiler { unit };
+        let mut compiler = Compiler {
+            unit,
+            labels: HashMap::with_capacity(512),
+        };
         let todo: Vec<NodeId> = compiler
             .unit
             .nodes
@@ -137,29 +142,49 @@ impl Compiler {
                 self.process_node(nodeid, bytes)?;
             }
         }
-        let node = &self.unit.nodes[&nodeid];
-        match node.instruction {
+        let instruction = {
+            let node = &self.unit.nodes[&nodeid];
+            node.instruction
+        };
+        if input_per_instruction(instruction)
+            .map(usize::from)
+            .map(|n| {
+                n != 0
+                    && self
+                        .unit
+                        .inputs
+                        .get(&nodeid)
+                        .map(|x| x.len() != n)
+                        .unwrap_or(true)
+            })
+            .unwrap_or(false)
+        {
+            return Err(format!(
+                "{:?} received invalid input. Expected: {:?} Actual: {:?}",
+                instruction,
+                input_per_instruction(instruction),
+                self.unit.inputs.get(&nodeid)
+            ));
+        }
+
+        match instruction {
+            Branch => {
+                self.push_node(nodeid, bytes);
+                // TODO: push label in the program
+                unimplemented!();
+            }
             Pass | CopyLast => {
-                bytes.push(node.instruction as u8);
+                self.push_node(nodeid, bytes);
             }
             Call => {
-                bytes.push(node.instruction as u8);
+                self.push_node(nodeid, bytes);
                 bytes.append(&mut self.unit.strings[&nodeid].encode());
             }
             AddFloat | AddInt | SubFloat | SubInt | Mul | MulFloat | Div | DivFloat => {
-                if self
-                    .unit
-                    .inputs
-                    .get(&nodeid)
-                    .map(|x| x.len() != 2)
-                    .unwrap_or(true)
-                {
-                    return Err("Binary operation received invalid input".to_owned());
-                }
-                bytes.push(node.instruction as u8);
+                self.push_node(nodeid, bytes);
             }
             LiteralArray => {
-                bytes.push(node.instruction as u8);
+                self.push_node(nodeid, bytes);
                 match self.unit.values[&nodeid] {
                     Value::IValue(v) => {
                         if self
@@ -181,8 +206,8 @@ impl Compiler {
                 }
             }
             LiteralPtr | LiteralFloat | LiteralInt => {
-                bytes.push(node.instruction as u8);
-                match (node.instruction, self.unit.values[&nodeid]) {
+                self.push_node(nodeid, bytes);
+                match (instruction, self.unit.values[&nodeid]) {
                     (Instruction::LiteralInt, Value::IValue(v)) => {
                         bytes.append(&mut v.encode());
                     }
@@ -197,12 +222,18 @@ impl Compiler {
                     }
                     _ => panic!(
                         "Literal {:?} got invalid value {:?}",
-                        node.instruction, self.unit.values[&nodeid]
+                        instruction, self.unit.values[&nodeid]
                     ),
                 }
             }
         }
         Ok(())
+    }
+
+    fn push_node(&mut self, nodeid: NodeId, bytes: &mut Vec<u8>) {
+        let node = &self.unit.nodes[&nodeid];
+        self.labels.insert(nodeid, bytes.len());
+        bytes.push(node.instruction as u8);
     }
 
     pub fn validate_node(node: NodeId, cu: &CompilationUnit) -> Result<(), String> {

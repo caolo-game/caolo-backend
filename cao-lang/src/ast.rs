@@ -158,7 +158,29 @@ impl Compiler {
                 }
                 bytes.push(node.instruction as u8);
             }
-            LiteralArray | LiteralPtr | LiteralFloat | LiteralInt => {
+            LiteralArray => {
+                bytes.push(node.instruction as u8);
+                match self.unit.values[&nodeid] {
+                    Value::IValue(v) => {
+                        if self
+                            .unit
+                            .inputs
+                            .get(&nodeid)
+                            .map(|x| x.len() != v as usize)
+                            .unwrap_or(v != 0)
+                        {
+                            return Err("Array literal got invalid inputs".to_owned());
+                        }
+
+                        bytes.append(&mut v.encode());
+                    }
+                    _ => panic!(
+                        "LiteralArray got invalid value {:?}",
+                        self.unit.values[&nodeid]
+                    ),
+                }
+            }
+            LiteralPtr | LiteralFloat | LiteralInt => {
                 bytes.push(node.instruction as u8);
                 match (node.instruction, self.unit.values[&nodeid]) {
                     (Instruction::LiteralInt, Value::IValue(v)) => {

@@ -139,9 +139,24 @@ impl Compiler {
         }
         let node = &self.unit.nodes[&nodeid];
         match node.instruction {
+            Pass | CopyLast => {
+                bytes.push(node.instruction as u8);
+            }
             Call => {
                 bytes.push(node.instruction as u8);
                 bytes.append(&mut self.unit.strings[&nodeid].encode());
+            }
+            AddFloat | AddInt | SubFloat | SubInt | Mul | MulFloat | Div | DivFloat => {
+                if self
+                    .unit
+                    .inputs
+                    .get(&nodeid)
+                    .map(|x| x.len() != 2)
+                    .unwrap_or(true)
+                {
+                    return Err("Binary operation received invalid input".to_owned());
+                }
+                bytes.push(node.instruction as u8);
             }
             LiteralArray | LiteralPtr | LiteralFloat | LiteralInt => {
                 bytes.push(node.instruction as u8);
@@ -164,7 +179,6 @@ impl Compiler {
                     ),
                 }
             }
-            _ => bytes.push(node.instruction as u8),
         }
         Ok(())
     }

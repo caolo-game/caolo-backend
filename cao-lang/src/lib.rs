@@ -5,6 +5,7 @@ pub mod value;
 
 use prelude::*;
 
+use crate::compiler::NodeId;
 use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::convert::TryFrom;

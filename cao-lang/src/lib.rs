@@ -11,8 +11,16 @@ use std::convert::TryFrom;
 
 pub type TPointer = usize;
 
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct CompiledProgram {
+    pub leafid: NodeId,
+    pub bytecode: Vec<u8>,
+    pub labels: HashMap<NodeId, usize>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ExecutionError {
+    InvalidLabel,
     InvalidInstruction,
     InvalidArgument,
     FunctionNotFound(String),
@@ -141,10 +149,10 @@ impl VM {
         self.memory.as_mut_slice()[ptr..ptr + bytes.len()].copy_from_slice(&bytes[..]);
     }
 
-    pub fn run(&mut self, program: &[u8]) -> Result<(), ExecutionError> {
+    pub fn run(&mut self, program: &CompiledProgram) -> Result<(), ExecutionError> {
         let mut ptr = 0;
-        while ptr < program.len() {
-            let instr = Instruction::try_from(program[ptr])
+        while ptr < program.bytecode.len() {
+            let instr = Instruction::try_from(program.bytecode[ptr])
                 .map_err(|_| ExecutionError::InvalidInstruction)?;
             ptr += 1;
             match instr {
@@ -161,11 +169,11 @@ impl VM {
                         i32::try_from(iftrue).map_err(|_| ExecutionError::InvalidArgument)?;
                     let iffalse: i32 =
                         i32::try_from(iffalse).map_err(|_| ExecutionError::InvalidArgument)?;
-                    if cond.as_bool() {
-                        ptr = iftrue as usize;
-                    } else {
-                        ptr = iffalse as usize;
-                    }
+                    let label = if cond.as_bool() { iftrue } else { iffalse };
+                    ptr = *program
+                        .labels
+                        .get(&label)
+                        .ok_or(ExecutionError::InvalidLabel)?;
                 }
                 Instruction::CopyLast => {
                     if !self.stack.is_empty() {
@@ -176,7 +184,7 @@ impl VM {
                 Instruction::LiteralInt => {
                     let len = i32::BYTELEN;
                     self.stack.push(Value::IValue(
-                        i32::decode(&program[ptr..ptr + len])
+                        i32::decode(&program.bytecode[ptr..ptr + len])
                             .ok_or(ExecutionError::InvalidArgument)?,
                     ));
                     ptr += len;
@@ -184,7 +192,7 @@ impl VM {
                 Instruction::LiteralFloat => {
                     let len = f32::BYTELEN;
                     self.stack.push(Value::FValue(
-                        f32::decode(&program[ptr..ptr + len])
+                        f32::decode(&program.bytecode[ptr..ptr + len])
                             .ok_or(ExecutionError::InvalidArgument)?,
                     ));
                     ptr += len;
@@ -243,8 +251,8 @@ impl VM {
                     |s| s.load_float_from_stack(),
                 )?,
                 Instruction::Call => {
-                    let fun_name =
-                        Self::read_str(&mut ptr, program).ok_or(ExecutionError::InvalidArgument)?;
+                    let fun_name = Self::read_str(&mut ptr, &program.bytecode)
+                        .ok_or(ExecutionError::InvalidArgument)?;
                     let mut fun = self.callables.remove(fun_name.as_str()).ok_or_else(|| {
                         ExecutionError::FunctionNotFound(fun_name.as_str().to_owned())
                     })?;
@@ -346,15 +354,17 @@ mod tests {
 
     #[test]
     fn test_simple_program() {
-        let mut program = Vec::with_capacity(512);
-        program.push(Instruction::LiteralInt as u8);
-        program.append(&mut (512 as i32).encode());
-        program.push(Instruction::LiteralInt as u8);
-        program.append(&mut (42 as i32).encode());
-        program.push(Instruction::SubInt as u8);
-        program.push(Instruction::LiteralInt as u8);
-        program.append(&mut (68 as i32).encode());
-        program.push(Instruction::AddInt as u8);
+        let mut bytecode = Vec::with_capacity(512);
+        bytecode.push(Instruction::LiteralInt as u8);
+        bytecode.append(&mut (512 as i32).encode());
+        bytecode.push(Instruction::LiteralInt as u8);
+        bytecode.append(&mut (42 as i32).encode());
+        bytecode.push(Instruction::SubInt as u8);
+        bytecode.push(Instruction::LiteralInt as u8);
+        bytecode.append(&mut (68 as i32).encode());
+        bytecode.push(Instruction::AddInt as u8);
+        let mut program = CompiledProgram::default();
+        program.bytecode = bytecode;
 
         let mut vm = VM::new();
         vm.run(&program).unwrap();
@@ -368,13 +378,16 @@ mod tests {
 
     #[test]
     fn test_function_call() {
-        let mut program = Vec::with_capacity(512);
-        program.push(Instruction::LiteralFloat as u8);
-        program.append(&mut (42.0 as f32).encode());
-        program.push(Instruction::LiteralInt as u8);
-        program.append(&mut (512 as i32).encode());
-        program.push(Instruction::Call as u8);
-        program.append(&mut "foo".to_owned().encode());
+        let mut bytecode = Vec::with_capacity(512);
+        bytecode.push(Instruction::LiteralFloat as u8);
+        bytecode.append(&mut (42.0 as f32).encode());
+        bytecode.push(Instruction::LiteralInt as u8);
+        bytecode.append(&mut (512 as i32).encode());
+        bytecode.push(Instruction::Call as u8);
+        bytecode.append(&mut "foo".to_owned().encode());
+
+        let mut program = CompiledProgram::default();
+        program.bytecode = bytecode;
 
         let mut vm = VM::new();
 

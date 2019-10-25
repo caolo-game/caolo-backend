@@ -1,4 +1,4 @@
-use crate::{Instruction, Value};
+use crate::{CompiledProgram, Instruction, Value};
 use arrayvec::{ArrayString, ArrayVec};
 use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -74,12 +74,6 @@ pub struct CompilationUnit {
     strings: Strings,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CompiledProgram {
-    pub leafid: NodeId,
-    pub bytecode: Vec<u8>,
-}
-
 pub struct Compiler {
     unit: CompilationUnit,
     labels: HashMap<NodeId, usize>, // Marks the position of the node in the bytecode
@@ -121,12 +115,22 @@ impl Compiler {
         Ok(compiled_programs)
     }
 
+    fn clear(&mut self) {
+        self.labels.clear();
+    }
+
     fn compile_node(&mut self, node: NodeId) -> Result<CompiledProgram, String> {
-        let mut compiled = CompiledProgram {
-            bytecode: Vec::new(),
+        self.clear();
+
+        let mut bytecode = Vec::new();
+        self.process_node(node, &mut bytecode)?;
+
+        let labels = self.labels.clone();
+        let compiled = CompiledProgram {
+            bytecode,
+            labels,
             leafid: node,
         };
-        self.process_node(node, &mut compiled.bytecode)?;
 
         Ok(compiled)
     }
@@ -168,20 +172,13 @@ impl Compiler {
         }
 
         match instruction {
-            Branch => {
-                self.push_node(nodeid, bytes);
-                // TODO: push label in the program
-                unimplemented!();
-            }
-            Pass | CopyLast => {
+            Pass | CopyLast | Branch | AddFloat | AddInt | SubFloat | SubInt | Mul | MulFloat
+            | Div | DivFloat => {
                 self.push_node(nodeid, bytes);
             }
             Call => {
                 self.push_node(nodeid, bytes);
                 bytes.append(&mut self.unit.strings[&nodeid].encode());
-            }
-            AddFloat | AddInt | SubFloat | SubInt | Mul | MulFloat | Div | DivFloat => {
-                self.push_node(nodeid, bytes);
             }
             LiteralArray => {
                 self.push_node(nodeid, bytes);
@@ -307,7 +304,7 @@ mod tests {
         // Compilation was successful
 
         let mut vm = VM::new();
-        vm.run(&program.bytecode).unwrap();
+        vm.run(&program).unwrap();
 
         assert_eq!(vm.stack.len(), 1);
 
@@ -316,5 +313,10 @@ mod tests {
             Value::FValue(i) => assert_eq!(*i, 42.0 + 512.0),
             _ => panic!("Invalid value in the stack"),
         }
+    }
+
+    #[test]
+    fn test_branching() {
+        unimplemented!()
     }
 }

@@ -160,13 +160,14 @@ impl VM {
     }
 
     pub fn run(&mut self, program: &CompiledProgram) -> Result<(), ExecutionError> {
+        debug!("Running program");
         let mut ptr = 0;
         while ptr < program.bytecode.len() {
             let instr = Instruction::try_from(program.bytecode[ptr]).map_err(|_| {
                 error!("Byte at {} was not a valid instruction", ptr);
                 ExecutionError::InvalidInstruction
             })?;
-            debug!("{:?}", instr);
+            debug!("Instruction: {:?} Pointer: {:?}", instr, ptr);
             ptr += 1;
             match instr {
                 Instruction::Exit => {
@@ -182,14 +183,16 @@ impl VM {
                     return Ok(());
                 }
                 Instruction::Branch => {
-                    if self.stack.is_empty() || self.stack.len() < 3 {
+                    if self.stack.len() < 3 {
+                        error!(
+                            "Branch called with missing arguments, stack: {:?}",
+                            self.stack
+                        );
                         return Err(ExecutionError::InvalidArgument);
                     }
-                    let [iffalse, iftrue, cond] = [
-                        self.stack.pop().unwrap(),
-                        self.stack.pop().unwrap(),
-                        self.stack.pop().unwrap(),
-                    ];
+                    let iffalse = self.stack.pop().unwrap();
+                    let iftrue = self.stack.pop().unwrap();
+                    let cond = self.stack.pop().unwrap();
                     debug!("Branch if {:?} then {:?} else {:?}", cond, iftrue, iffalse);
                     let label = if cond.as_bool() {
                         NodeId::try_from(iftrue).map_err(|_| ExecutionError::InvalidArgument)?

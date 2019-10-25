@@ -6,6 +6,7 @@ pub mod value;
 use prelude::*;
 
 use crate::compiler::NodeId;
+use log::{debug, error};
 use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::convert::TryFrom;
@@ -14,13 +15,14 @@ pub type TPointer = usize;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct CompiledProgram {
-    pub leafid: NodeId,
     pub bytecode: Vec<u8>,
     pub labels: HashMap<NodeId, usize>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ExecutionError {
+    UnexpectedEndOfInput,
+    ExitCode(i32),
     InvalidLabel,
     InvalidInstruction,
     InvalidArgument,
@@ -58,6 +60,8 @@ pub enum Instruction {
     LiteralFloat = 11,
     /// Push a ptr onto the stack
     LiteralPtr = 12,
+    /// Push a label onto the stack
+    LiteralLabel = 17,
     /// Pop the next N (positive integer) number of items from the stack and write them to memory
     /// Push the pointer to the beginning of the array onto the stack
     LiteralArray = 13,
@@ -70,6 +74,9 @@ pub enum Instruction {
     /// If the value at the top of the stack is truthy jumps to the
     /// first index else jumps to the second index
     Branch = 16,
+    /// Quit the program
+    /// Implicitly inserted by the compiler after every leaf node
+    Exit = 18,
 }
 
 impl TryFrom<u8> for Instruction {
@@ -94,6 +101,8 @@ impl TryFrom<u8> for Instruction {
             14 => Ok(Pass),
             15 => Ok(CopyLast),
             16 => Ok(Branch),
+            17 => Ok(LiteralLabel),
+            18 => Ok(Exit),
             _ => Err(format!("Unrecognized instruction [{}]", c)),
         }
     }
@@ -153,10 +162,25 @@ impl VM {
     pub fn run(&mut self, program: &CompiledProgram) -> Result<(), ExecutionError> {
         let mut ptr = 0;
         while ptr < program.bytecode.len() {
-            let instr = Instruction::try_from(program.bytecode[ptr])
-                .map_err(|_| ExecutionError::InvalidInstruction)?;
+            let instr = Instruction::try_from(program.bytecode[ptr]).map_err(|_| {
+                error!("Byte at {} was not a valid instruction", ptr);
+                ExecutionError::InvalidInstruction
+            })?;
+            debug!("{:?}", instr);
             ptr += 1;
             match instr {
+                Instruction::Exit => {
+                    debug!("Exit called");
+                    if let Some(Value::IValue(code)) = self.stack.last() {
+                        let code = *code;
+                        self.stack.pop();
+                        if code != 0 {
+                            debug!("Exit code {:?}", code);
+                            return Err(ExecutionError::ExitCode(code));
+                        }
+                    }
+                    return Ok(());
+                }
                 Instruction::Branch => {
                     if self.stack.is_empty() || self.stack.len() < 3 {
                         return Err(ExecutionError::InvalidArgument);
@@ -166,11 +190,12 @@ impl VM {
                         self.stack.pop().unwrap(),
                         self.stack.pop().unwrap(),
                     ];
-                    let iftrue: i32 =
-                        i32::try_from(iftrue).map_err(|_| ExecutionError::InvalidArgument)?;
-                    let iffalse: i32 =
-                        i32::try_from(iffalse).map_err(|_| ExecutionError::InvalidArgument)?;
-                    let label = if cond.as_bool() { iftrue } else { iffalse };
+                    debug!("Branch if {:?} then {:?} else {:?}", cond, iftrue, iffalse);
+                    let label = if cond.as_bool() {
+                        NodeId::try_from(iftrue).map_err(|_| ExecutionError::InvalidArgument)?
+                    } else {
+                        NodeId::try_from(iffalse).map_err(|_| ExecutionError::InvalidArgument)?
+                    };
                     ptr = *program
                         .labels
                         .get(&label)
@@ -182,6 +207,14 @@ impl VM {
                     }
                 }
                 Instruction::Pass => {}
+                Instruction::LiteralLabel => {
+                    let len = NodeId::BYTELEN;
+                    self.stack.push(Value::Label(
+                        NodeId::decode(&program.bytecode[ptr..ptr + len])
+                            .ok_or(ExecutionError::InvalidArgument)?,
+                    ));
+                    ptr += len;
+                }
                 Instruction::LiteralInt => {
                     let len = i32::BYTELEN;
                     self.stack.push(Value::IValue(
@@ -276,7 +309,7 @@ impl VM {
             }
         }
 
-        Ok(())
+        Err(ExecutionError::UnexpectedEndOfInput)
     }
 
     fn load_int_from_stack(&self) -> Option<i32> {
@@ -357,13 +390,16 @@ mod tests {
     fn test_simple_program() {
         let mut bytecode = Vec::with_capacity(512);
         bytecode.push(Instruction::LiteralInt as u8);
-        bytecode.append(&mut (512 as i32).encode());
+        bytecode.append(&mut 512i32.encode());
         bytecode.push(Instruction::LiteralInt as u8);
-        bytecode.append(&mut (42 as i32).encode());
+        bytecode.append(&mut 42i32.encode());
         bytecode.push(Instruction::SubInt as u8);
         bytecode.push(Instruction::LiteralInt as u8);
-        bytecode.append(&mut (68 as i32).encode());
+        bytecode.append(&mut 68i32.encode());
         bytecode.push(Instruction::AddInt as u8);
+        bytecode.push(Instruction::LiteralInt as u8);
+        bytecode.append(&mut 0i32.encode());
+        bytecode.push(Instruction::Exit as u8);
         let mut program = CompiledProgram::default();
         program.bytecode = bytecode;
 
@@ -381,11 +417,12 @@ mod tests {
     fn test_function_call() {
         let mut bytecode = Vec::with_capacity(512);
         bytecode.push(Instruction::LiteralFloat as u8);
-        bytecode.append(&mut (42.0 as f32).encode());
+        bytecode.append(&mut 42.0f32.encode());
         bytecode.push(Instruction::LiteralInt as u8);
-        bytecode.append(&mut (512 as i32).encode());
+        bytecode.append(&mut 512i32.encode());
         bytecode.push(Instruction::Call as u8);
         bytecode.append(&mut "foo".to_owned().encode());
+        bytecode.push(Instruction::Exit as u8);
 
         let mut program = CompiledProgram::default();
         program.bytecode = bytecode;

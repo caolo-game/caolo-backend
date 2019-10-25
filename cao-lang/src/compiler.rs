@@ -1,7 +1,7 @@
 use crate::{CompiledProgram, Instruction, Value};
 use arrayvec::{ArrayString, ArrayVec};
 use serde_derive::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fmt::Debug;
 
 /// Unique id of each nodes in a single compilation
@@ -9,7 +9,7 @@ pub type NodeId = i32;
 /// Node by given id has inputs given by nodeids
 /// Nodes may only have a finite amount of inputs
 pub type Inputs = HashMap<NodeId, ArrayVec<[NodeId; 16]>>;
-pub type Nodes = HashMap<NodeId, AstNode>;
+pub type Nodes = BTreeMap<NodeId, AstNode>;
 /// Value of a node if any
 pub type Values = HashMap<NodeId, Value>;
 /// String of a node if any
@@ -60,8 +60,8 @@ pub fn input_per_instruction(inst: Instruction) -> Option<u8> {
     match inst {
         AddInt | SubInt | AddFloat | SubFloat | Mul | MulFloat | Div | DivFloat => Some(2),
         Branch => Some(3),
-        LiteralInt | LiteralFloat | LiteralPtr | Pass | CopyLast => Some(0),
-        Call | LiteralArray => None,
+        LiteralLabel | LiteralInt | LiteralFloat | LiteralPtr | Pass | CopyLast => Some(0),
+        Exit | Call | LiteralArray => None,
     }
 }
 
@@ -76,19 +76,19 @@ pub struct CompilationUnit {
 
 pub struct Compiler {
     unit: CompilationUnit,
-    labels: HashMap<NodeId, usize>, // Marks the position of the node in the bytecode
+    program: CompiledProgram,
 }
 
 impl Compiler {
-    pub fn compile(unit: CompilationUnit) -> Result<Vec<CompiledProgram>, String> {
+    pub fn compile(unit: CompilationUnit) -> Result<CompiledProgram, String> {
         if unit.nodes.is_empty() {
             return Err("Can not compile program with no entry point!".to_owned());
         }
         let mut compiler = Compiler {
             unit,
-            labels: HashMap::with_capacity(512),
+            program: CompiledProgram::default(),
         };
-        let todo: Vec<NodeId> = compiler
+        let leafs: Vec<NodeId> = compiler
             .unit
             .nodes
             .iter()
@@ -106,44 +106,26 @@ impl Compiler {
             .cloned()
             .collect();
 
-        let mut compiled_programs = Vec::with_capacity(4);
-        for nodeid in todo.into_iter() {
-            let program = compiler.compile_node(nodeid)?;
-            compiled_programs.push(program);
+        for nodeid in leafs.into_iter() {
+            compiler.process_node(nodeid)?;
+            compiler.program.bytecode.push(Instruction::Exit as u8);
         }
 
-        Ok(compiled_programs)
+        Ok(compiler.program)
     }
 
-    fn clear(&mut self) {
-        self.labels.clear();
-    }
-
-    fn compile_node(&mut self, node: NodeId) -> Result<CompiledProgram, String> {
-        self.clear();
-
-        let mut bytecode = Vec::new();
-        self.process_node(node, &mut bytecode)?;
-
-        let labels = self.labels.clone();
-        let compiled = CompiledProgram {
-            bytecode,
-            labels,
-            leafid: node,
-        };
-
-        Ok(compiled)
-    }
-
-    fn process_node(&mut self, nodeid: NodeId, bytes: &mut Vec<u8>) -> Result<(), String> {
+    fn process_node(&mut self, nodeid: NodeId) -> Result<(), String> {
         use crate::traits::ByteEncodeProperties;
         use Instruction::*;
 
         Compiler::validate_node(nodeid, &mut self.unit)?;
+        self.program
+            .labels
+            .insert(nodeid, self.program.bytecode.len());
 
         if let Some(inputs) = self.unit.inputs.get(&nodeid) {
             for nodeid in inputs.clone().into_iter() {
-                self.process_node(nodeid, bytes)?;
+                self.process_node(nodeid)?;
             }
         }
         let instruction = {
@@ -172,16 +154,18 @@ impl Compiler {
         }
 
         match instruction {
-            Pass | CopyLast | Branch | AddFloat | AddInt | SubFloat | SubInt | Mul | MulFloat
-            | Div | DivFloat => {
-                self.push_node(nodeid, bytes);
+            Exit | Pass | CopyLast | Branch | AddFloat | AddInt | SubFloat | SubInt | Mul
+            | MulFloat | Div | DivFloat => {
+                self.push_node(nodeid);
             }
             Call => {
-                self.push_node(nodeid, bytes);
-                bytes.append(&mut self.unit.strings[&nodeid].encode());
+                self.push_node(nodeid);
+                self.program
+                    .bytecode
+                    .append(&mut self.unit.strings[&nodeid].encode());
             }
             LiteralArray => {
-                self.push_node(nodeid, bytes);
+                self.push_node(nodeid);
                 match self.unit.values[&nodeid] {
                     Value::IValue(v) => {
                         if self
@@ -194,7 +178,7 @@ impl Compiler {
                             return Err("Array literal got invalid inputs".to_owned());
                         }
 
-                        bytes.append(&mut v.encode());
+                        self.program.bytecode.append(&mut v.encode());
                     }
                     _ => panic!(
                         "LiteralArray got invalid value {:?}",
@@ -202,20 +186,20 @@ impl Compiler {
                     ),
                 }
             }
-            LiteralPtr | LiteralFloat | LiteralInt => {
-                self.push_node(nodeid, bytes);
+            LiteralLabel | LiteralPtr | LiteralFloat | LiteralInt => {
+                self.push_node(nodeid);
                 match (instruction, self.unit.values[&nodeid]) {
                     (Instruction::LiteralInt, Value::IValue(v)) => {
-                        bytes.append(&mut v.encode());
+                        self.program.bytecode.append(&mut v.encode());
                     }
                     (Instruction::LiteralFloat, Value::FValue(v)) => {
-                        bytes.append(&mut v.encode());
+                        self.program.bytecode.append(&mut v.encode());
                     }
                     (Instruction::LiteralPtr, Value::Pointer(v)) => {
-                        bytes.append(&mut v.encode());
+                        self.program.bytecode.append(&mut v.encode());
                     }
-                    (Instruction::LiteralArray, Value::IValue(v)) => {
-                        bytes.append(&mut v.encode());
+                    (Instruction::LiteralLabel, Value::Label(v)) => {
+                        self.program.bytecode.append(&mut v.encode());
                     }
                     _ => panic!(
                         "Literal {:?} got invalid value {:?}",
@@ -227,10 +211,9 @@ impl Compiler {
         Ok(())
     }
 
-    fn push_node(&mut self, nodeid: NodeId, bytes: &mut Vec<u8>) {
+    fn push_node(&mut self, nodeid: NodeId) {
         let node = &self.unit.nodes[&nodeid];
-        self.labels.insert(nodeid, bytes.len());
-        bytes.push(node.instruction as u8);
+        self.program.bytecode.push(node.instruction as u8);
     }
 
     pub fn validate_node(node: NodeId, cu: &CompilationUnit) -> Result<(), String> {
@@ -294,10 +277,7 @@ mod tests {
             strings,
         };
 
-        let programs = Compiler::compile(program).unwrap();
-        assert_eq!(programs.len(), 1);
-        let program = &programs[0];
-        assert_eq!(program.leafid, 2);
+        let program = Compiler::compile(program).unwrap();
 
         println!("{:?}", program);
 
@@ -306,7 +286,7 @@ mod tests {
         let mut vm = VM::new();
         vm.run(&program).unwrap();
 
-        assert_eq!(vm.stack.len(), 1);
+        assert_eq!(vm.stack.len(), 1, "{:?}", vm.stack);
 
         let value = vm.stack.last().unwrap();
         match value {
@@ -315,8 +295,112 @@ mod tests {
         }
     }
 
+    /// Add val1 and val2 if true else subtract
+    fn simple_branch_test(val1: f32, val2: f32, cond: i32, expected: f32) {
+        let nodes: Nodes = [
+            (
+                10,
+                AstNode {
+                    instruction: Instruction::LiteralFloat,
+                },
+            ),
+            (
+                1,
+                AstNode {
+                    instruction: Instruction::LiteralFloat,
+                },
+            ),
+            (
+                2,
+                AstNode {
+                    instruction: Instruction::AddFloat,
+                },
+            ),
+            (
+                5,
+                AstNode {
+                    instruction: Instruction::SubFloat,
+                },
+            ),
+            (
+                6,
+                AstNode {
+                    instruction: Instruction::LiteralInt, // Cond
+                },
+            ),
+            (
+                7,
+                AstNode {
+                    instruction: Instruction::LiteralLabel, // True
+                },
+            ),
+            (
+                8,
+                AstNode {
+                    instruction: Instruction::LiteralLabel, // False
+                },
+            ),
+            (
+                0,
+                AstNode {
+                    instruction: Instruction::Branch,
+                },
+            ),
+        ]
+        .into_iter()
+        .cloned()
+        .collect();
+        let values: Values = [
+            (10, Value::FValue(val1)),
+            (1, Value::FValue(val2)),
+            (6, Value::IValue(cond)),
+            (7, Value::Label(2)),
+            (8, Value::Label(5)),
+        ]
+        .into_iter()
+        .map(|x| *x)
+        .collect();
+        let inputs: Inputs = [
+            (2, [10, 1].into_iter().cloned().collect()),
+            (5, [10, 1].into_iter().cloned().collect()),
+            (0, [6, 7, 8].into_iter().cloned().collect()),
+        ]
+        .into_iter()
+        .cloned()
+        .collect();
+        let strings: Strings = [].into_iter().cloned().collect();
+        let program = CompilationUnit {
+            nodes,
+            values,
+            inputs,
+            strings,
+        };
+
+        let program = Compiler::compile(program).expect("compile");
+
+        let mut vm = VM::new();
+        if let Err(e) = vm.run(&program) {
+            panic!("Err:{:?}\n{:?}", e, vm);
+        }
+
+        assert_eq!(vm.stack.len(), 1);
+
+        let value = vm.stack.last().unwrap();
+        match value {
+            Value::FValue(i) => assert_eq!(*i, expected),
+            _ => panic!("Invalid value in the stack"),
+        }
+    }
+
     #[test]
-    fn test_branching() {
-        unimplemented!()
+    fn test_branching_true() {
+        simple_logger::init().unwrap_or(());
+        simple_branch_test(42.0, 512.0, 1, 42.0 + 512.0);
+    }
+
+    #[test]
+    fn test_branching_false() {
+        simple_logger::init().unwrap_or(());
+        simple_branch_test(42.0, 512.0, 0, 42.0 - 512.0);
     }
 }

@@ -15,10 +15,13 @@ pub mod structures;
 pub mod terrain;
 pub mod user;
 
-use rmp_serde as rmps;
+pub use cao_lang::prelude::{AstNode, CompilationUnit, CompiledProgram};
 
 pub type EntityId = u64;
 pub type UserId = uuid::Uuid;
+
+#[derive(Default, Clone, Copy, Debug, Serialize, Deserialize)]
+pub struct ScriptId(pub uuid::Uuid);
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 #[repr(i32)]
@@ -49,12 +52,11 @@ impl From<i32> for OperationResult {
     }
 }
 
-#[cfg(test)]
-// To be able to link the tests
-mod _external {
-    #[no_mangle]
-    fn _print() {}
+impl cao_lang::traits::AutoByteEncodeProperties for OperationResult {}
 
-    #[no_mangle]
-    fn _rand_range() {}
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Script {
+    pub compiled: Option<CompiledProgram>,
+    pub script: CompilationUnit,
 }

@@ -35,21 +35,20 @@ impl ByteEncodeProperties for String {
 }
 
 /// Opts in for the default implementation of ByteEncodeProperties
-/// Note that using this with pointers, arrays etc. will not work as one might expect!
+/// Note that using this with pointers, arrays, strings etc. will not work as one might expect!
 pub trait AutoByteEncodeProperties {}
 
 impl AutoByteEncodeProperties for i8 {}
 impl AutoByteEncodeProperties for i16 {}
 impl AutoByteEncodeProperties for i32 {}
+impl AutoByteEncodeProperties for i64 {}
 impl AutoByteEncodeProperties for u8 {}
 impl AutoByteEncodeProperties for u16 {}
 impl AutoByteEncodeProperties for u32 {}
+impl AutoByteEncodeProperties for u64 {}
 impl AutoByteEncodeProperties for f32 {}
+impl AutoByteEncodeProperties for f64 {}
 impl AutoByteEncodeProperties for TPointer {}
-impl AutoByteEncodeProperties for caolo_api::point::Point {}
-impl AutoByteEncodeProperties for caolo_api::bots::Bot {}
-impl AutoByteEncodeProperties for caolo_api::EntityId {}
-impl AutoByteEncodeProperties for caolo_api::OperationResult {}
 
 impl<T: Sized + Clone + Copy + AutoByteEncodeProperties> ByteEncodeProperties for T {
     fn encode(self) -> Vec<u8> {

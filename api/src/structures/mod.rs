@@ -1,7 +1,6 @@
 mod spawn_intent;
 pub use spawn_intent::*;
 
-use crate::rmps::{self, Serializer};
 use crate::EntityId;
 use crate::{point::Point, OperationResult, UserId};
 
@@ -13,19 +12,6 @@ pub struct Structures {
 impl Structures {
     pub fn new(structures: Vec<Structure>) -> Self {
         Self { structures }
-    }
-
-    pub fn deserialize(buffer: &[u8]) -> Result<Self, &'static str> {
-        rmps::from_slice(buffer).map_err(|e| {
-            println!("Failed to decode Structures {:?}", e);
-            "Deserialize failed"
-        })
-    }
-
-    pub fn serialize(&self) -> Vec<u8> {
-        let mut buffer = Vec::with_capacity(512);
-        <Self as serde::Serialize>::serialize(self, &mut Serializer::new(&mut buffer)).unwrap();
-        buffer
     }
 }
 

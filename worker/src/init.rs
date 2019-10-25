@@ -6,17 +6,18 @@ use rand::Rng;
 pub fn init_storage(n_fake_users: usize, storage: &mut Storage) {
     debug!("Init InMemoryStorage");
 
-    let mut users = Vec::with_capacity(n_fake_users);
+    let mut users = Vec::<UserData>::with_capacity(n_fake_users);
     let bots = Table::default_inmemory();
     let spawning_bots = Table::default_inmemory();
     let bot_decay_table = Table::default_inmemory();
-    let mut userdata = Table::default_inmemory();
+    let mut userdata = Table::<UserId, UserData>::default_inmemory();
 
-    let mut structures = Table::default_inmemory();
-    let mut hp_table = Table::default_inmemory();
-    let mut structure_energy_regen_table = Table::default_inmemory();
-    let mut structure_energy_table = Table::default_inmemory();
-    let mut structure_spawn_table = Table::default_inmemory();
+    let mut structures = Table::<EntityId, Structure>::default_inmemory();
+    let mut hp_table = Table::<EntityId, HpComponent>::default_inmemory();
+    let mut structure_energy_regen_table =
+        Table::<EntityId, EnergyRegenComponent>::default_inmemory();
+    let mut structure_energy_table = Table::<EntityId, EnergyComponent>::default_inmemory();
+    let mut structure_spawn_table = Table::<EntityId, SpawnComponent>::default_inmemory();
     let mut positions_table = Table::default_inmemory();
     let mut resources_table = Table::default_inmemory();
 
@@ -35,36 +36,7 @@ pub fn init_storage(n_fake_users: usize, storage: &mut Storage) {
         );
     }
     for _ in 0..n_fake_users {
-        let pos = uncontested_pos(&positions_table, &mut rng);
-        let ud = UserData::new(None, None);
-        let id = userdata.create_new(ud);
-        users.push(id);
-        // init spawn
-        let entity_id = storage.insert_entity();
-        structures.insert(entity_id, Structure { owner_id: Some(id) });
-        positions_table.insert(entity_id, PositionComponent(pos));
-        hp_table.insert(
-            entity_id,
-            HpComponent {
-                hp: 500,
-                hp_max: 500,
-            },
-        );
-        structure_energy_regen_table.insert(entity_id, EnergyRegenComponent { amount: 1 });
-        structure_energy_table.insert(
-            entity_id,
-            EnergyComponent {
-                energy: 250,
-                energy_max: 250,
-            },
-        );
-        structure_spawn_table.insert(
-            entity_id,
-            SpawnComponent {
-                time_to_spawn: 0,
-                spawning: None,
-            },
-        );
+        unimplemented!()
     }
 
     let mut terrain = Table::default_inmemory();

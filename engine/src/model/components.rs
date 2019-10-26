@@ -65,3 +65,8 @@ pub struct CarryComponent {
     pub carry: u16,
     pub carry_max: u16,
 }
+
+#[derive(Debug, Clone)]
+pub struct EntityScript {
+    pub script_id: ScriptId,
+}

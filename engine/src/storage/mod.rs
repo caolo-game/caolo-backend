@@ -1,10 +1,11 @@
 mod homogenoustable;
 mod macros;
 
+pub use crate::tables::{Table, TableId, TableRow};
+
 use crate::implement_table_type;
 use crate::intents::Intent;
 use crate::model::*;
-pub use crate::tables::{Table, TableId, TableRow};
 use chrono::{DateTime, Duration, Utc};
 use homogenoustable::HomogenousTable;
 use std::any::{type_name, TypeId};
@@ -17,6 +18,7 @@ pub struct Storage {
     entity_tables: BTreeMap<TypeId, HomogenousTable<EntityId>>,
     user_tables: BTreeMap<TypeId, HomogenousTable<UserId>>,
     point_tables: BTreeMap<TypeId, HomogenousTable<Point>>,
+    scripts_tables: BTreeMap<TypeId, HomogenousTable<ScriptId>>,
 
     last_tick: DateTime<Utc>,
     dt: Duration,
@@ -39,6 +41,7 @@ impl Storage {
             entity_tables: BTreeMap::new(),
             user_tables: BTreeMap::new(),
             point_tables: BTreeMap::new(),
+            scripts_tables: BTreeMap::new(),
 
             last_tick: Utc::now(),
             dt: Duration::zero(),
@@ -95,5 +98,14 @@ impl Storage {
         add_point_table,
         delete_point,
         Point
+    );
+
+    implement_table_type!(
+        scripts_tables,
+        scripts_table,
+        scripts_table_mut,
+        add_scripts_table,
+        delete_script,
+        ScriptId
     );
 }

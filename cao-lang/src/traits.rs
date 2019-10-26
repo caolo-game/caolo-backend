@@ -75,14 +75,14 @@ impl<T: Sized + Clone + Copy + AutoByteEncodeProperties> ByteEncodeProperties fo
     }
 }
 
-pub struct FunctionObject {
-    fun: Box<dyn Callable>,
+pub struct FunctionObject<Aux> {
+    fun: Box<dyn Callable<Aux>>,
 }
 
-impl Callable for FunctionObject {
+impl<Aux> Callable<Aux> for FunctionObject<Aux> {
     fn call(
         &mut self,
-        vm: &mut crate::VM,
+        vm: &mut crate::VM<Aux>,
         params: &[Value],
         output: TPointer,
     ) -> Result<usize, ExecutionError> {
@@ -94,24 +94,24 @@ impl Callable for FunctionObject {
     }
 }
 
-impl FunctionObject {
-    pub fn new<C: Callable + 'static>(f: C) -> Self {
+impl<Aux> FunctionObject<Aux> {
+    pub fn new<C: Callable<Aux> + 'static>(f: C) -> Self {
         Self { fun: Box::new(f) }
     }
 }
 
-impl std::fmt::Debug for FunctionObject {
+impl<Aux> std::fmt::Debug for FunctionObject<Aux> {
     fn fmt(&self, writer: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(writer, "FunctionObject")
     }
 }
 
-pub trait Callable {
+pub trait Callable<Aux> {
     /// Take in the VM, parameters and output pointer in parameters and return the length of the
     /// result
     fn call(
         &mut self,
-        vm: &mut crate::VM,
+        vm: &mut crate::VM<Aux>,
         params: &[Value],
         output: TPointer,
     ) -> Result<usize, ExecutionError>;
@@ -119,17 +119,17 @@ pub trait Callable {
     fn num_params(&self) -> u8;
 }
 
-pub struct FunctionWrapper<F, Args>
+pub struct FunctionWrapper<Aux, F, Args>
 where
-    F: Fn(&mut crate::VM, Args, TPointer) -> Result<usize, ExecutionError>,
+    F: Fn(&mut crate::VM<Aux>, Args, TPointer) -> Result<usize, ExecutionError>,
 {
     pub f: F,
-    _args: PhantomData<Args>,
+    _args: PhantomData<(Args, Aux)>,
 }
 
-impl<F, Args> FunctionWrapper<F, Args>
+impl<Aux, F, Args> FunctionWrapper<Aux, F, Args>
 where
-    F: Fn(&mut crate::VM, Args, TPointer) -> Result<usize, ExecutionError>,
+    F: Fn(&mut crate::VM<Aux>, Args, TPointer) -> Result<usize, ExecutionError>,
 {
     pub fn new(f: F) -> Self {
         Self {
@@ -139,13 +139,13 @@ where
     }
 }
 
-impl<F> Callable for FunctionWrapper<F, ()>
+impl<Aux, F> Callable<Aux> for FunctionWrapper<Aux, F, ()>
 where
-    F: Fn(&mut crate::VM, (), TPointer) -> Result<usize, ExecutionError>,
+    F: Fn(&mut crate::VM<Aux>, (), TPointer) -> Result<usize, ExecutionError>,
 {
     fn call(
         &mut self,
-        vm: &mut crate::VM,
+        vm: &mut crate::VM<Aux>,
         _params: &[Value],
         output: TPointer,
     ) -> Result<usize, ExecutionError> {
@@ -157,14 +157,14 @@ where
     }
 }
 
-impl<F, T> Callable for FunctionWrapper<F, T>
+impl<Aux, F, T> Callable<Aux> for FunctionWrapper<Aux, F, T>
 where
-    F: Fn(&mut crate::VM, T, TPointer) -> Result<usize, ExecutionError>,
+    F: Fn(&mut crate::VM<Aux>, T, TPointer) -> Result<usize, ExecutionError>,
     T: TryFrom<Value>,
 {
     fn call(
         &mut self,
-        vm: &mut crate::VM,
+        vm: &mut crate::VM<Aux>,
         params: &[Value],
         output: TPointer,
     ) -> Result<usize, ExecutionError> {
@@ -177,15 +177,15 @@ where
     }
 }
 
-impl<F, T1, T2> Callable for FunctionWrapper<F, (T1, T2)>
+impl<Aux, F, T1, T2> Callable<Aux> for FunctionWrapper<Aux, F, (T1, T2)>
 where
-    F: Fn(&mut crate::VM, (T1, T2), TPointer) -> Result<usize, ExecutionError>,
+    F: Fn(&mut crate::VM<Aux>, (T1, T2), TPointer) -> Result<usize, ExecutionError>,
     T1: TryFrom<Value>,
     T2: TryFrom<Value>,
 {
     fn call(
         &mut self,
-        vm: &mut crate::VM,
+        vm: &mut crate::VM<Aux>,
         params: &[Value],
         output: TPointer,
     ) -> Result<usize, ExecutionError> {
@@ -199,16 +199,16 @@ where
     }
 }
 
-impl<F, T1, T2, T3> Callable for FunctionWrapper<F, (T1, T2, T3)>
+impl<Aux, F, T1, T2, T3> Callable<Aux> for FunctionWrapper<Aux, F, (T1, T2, T3)>
 where
-    F: Fn(&mut crate::VM, (T1, T2, T3), TPointer) -> Result<usize, ExecutionError>,
+    F: Fn(&mut crate::VM<Aux>, (T1, T2, T3), TPointer) -> Result<usize, ExecutionError>,
     T1: TryFrom<Value>,
     T2: TryFrom<Value>,
     T3: TryFrom<Value>,
 {
     fn call(
         &mut self,
-        vm: &mut crate::VM,
+        vm: &mut crate::VM<Aux>,
         params: &[Value],
         output: TPointer,
     ) -> Result<usize, ExecutionError> {

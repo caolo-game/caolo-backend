@@ -110,16 +110,18 @@ impl TryFrom<u8> for Instruction {
 
 /// Cao-Lang bytecode interpreter
 #[derive(Debug)]
-pub struct VM {
+pub struct VM<Aux = ()> {
+    auxiliary_data: Aux,
     memory: Vec<u8>,
     memory_limit: usize,
-    callables: HashMap<String, FunctionObject>,
+    callables: HashMap<String, FunctionObject<Aux>>,
     stack: Vec<Value>,
 }
 
-impl VM {
-    pub fn new() -> Self {
+impl<Aux> VM<Aux> {
+    pub fn new(auxiliary_data: Aux) -> Self {
         Self {
+            auxiliary_data,
             memory: Vec::with_capacity(512),
             callables: HashMap::with_capacity(128),
             memory_limit: 40000,
@@ -127,9 +129,25 @@ impl VM {
         }
     }
 
-    pub fn register_function<C: Callable + 'static>(&mut self, name: &str, f: C) {
+    pub fn get_aux(&self) -> &Aux {
+        &self.auxiliary_data
+    }
+
+    pub fn get_aux_mut(&mut self) -> &mut Aux {
+        &mut self.auxiliary_data
+    }
+
+    pub fn unwrap_aux(self) -> Aux {
+        self.auxiliary_data
+    }
+
+    pub fn register_function<C: Callable<Aux> + 'static>(&mut self, name: &str, f: C) {
         self.callables
             .insert(name.to_owned(), FunctionObject::new(f));
+    }
+
+    pub fn register_function_obj(&mut self, name: &str, f: FunctionObject<Aux>) {
+        self.callables.insert(name.to_owned(), f);
     }
 
     pub fn get_value<T: ByteEncodeProperties>(&self, ptr: TPointer) -> Option<T> {
@@ -371,7 +389,7 @@ mod tests {
 
     #[test]
     fn test_binary_operatons() {
-        let mut vm = VM::new();
+        let mut vm = VM::new(());
 
         vm.stack.push(Value::IValue(512));
         vm.stack.push(Value::IValue(42));
@@ -406,7 +424,7 @@ mod tests {
         let mut program = CompiledProgram::default();
         program.bytecode = bytecode;
 
-        let mut vm = VM::new();
+        let mut vm = VM::new(());
         vm.run(&program).unwrap();
         assert_eq!(vm.stack.len(), 1);
         let value = vm.stack.last().unwrap();
@@ -430,9 +448,13 @@ mod tests {
         let mut program = CompiledProgram::default();
         program.bytecode = bytecode;
 
-        let mut vm = VM::new();
+        let mut vm = VM::new(());
 
-        fn foo(vm: &mut VM, (a, b): (i32, f32), out: TPointer) -> Result<usize, ExecutionError> {
+        fn foo(
+            vm: &mut VM<()>,
+            (a, b): (i32, f32),
+            out: TPointer,
+        ) -> Result<usize, ExecutionError> {
             let res = a as f32 * b % 13.;
             let res = res as i32;
 

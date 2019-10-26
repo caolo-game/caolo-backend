@@ -117,8 +117,7 @@ fn main() {
         .and_then(|s| s.parse::<usize>().ok())
         .unwrap_or(8);
 
-    let mut storage = Storage::new();
-    init::init_storage(n_actors, &mut storage);
+    let storage = init::init_storage(n_actors);
 
     let host = std::env::var("HOST").unwrap_or("localhost".to_owned());
     let port = std::env::var("PORT").unwrap_or("8000".to_owned());

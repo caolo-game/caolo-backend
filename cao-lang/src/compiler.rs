@@ -283,7 +283,7 @@ mod tests {
 
         // Compilation was successful
 
-        let mut vm = VM::new();
+        let mut vm = VM::new(());
         vm.run(&program).unwrap();
 
         assert_eq!(vm.stack.len(), 1, "{:?}", vm.stack);
@@ -378,7 +378,7 @@ mod tests {
 
         let program = Compiler::compile(program).expect("compile");
 
-        let mut vm = VM::new();
+        let mut vm = VM::new(());
         if let Err(e) = vm.run(&program) {
             panic!("Err:{:?}\n{:?}", e, vm);
         }

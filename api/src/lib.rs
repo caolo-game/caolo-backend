@@ -20,7 +20,7 @@ pub use cao_lang::prelude::{AstNode, CompilationUnit, CompiledProgram};
 pub type EntityId = u64;
 pub type UserId = uuid::Uuid;
 
-#[derive(Default, Clone, Copy, Debug, Serialize, Deserialize)]
+#[derive(Default, Clone, Copy, Debug, Serialize, Deserialize, Eq, PartialEq, Ord, PartialOrd)]
 pub struct ScriptId(pub uuid::Uuid);
 
 #[derive(Debug, Clone, Eq, PartialEq)]

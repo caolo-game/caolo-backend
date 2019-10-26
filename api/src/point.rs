@@ -1,4 +1,3 @@
-use crate::rmps::{self, Serializer};
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
 
 /// Represents a 2D point
@@ -11,19 +10,6 @@ pub struct Point {
 }
 
 impl Point {
-    pub fn deserialize(buffer: &[u8]) -> Result<Self, &'static str> {
-        rmps::from_slice(buffer).map_err(|e| {
-            println!("Failed to decode Bot {:?}", e);
-            "Deserialize failed"
-        })
-    }
-
-    pub fn serialize(self) -> Vec<u8> {
-        let mut buffer = Vec::with_capacity(512);
-        <Self as serde::Serialize>::serialize(&self, &mut Serializer::new(&mut buffer)).unwrap();
-        buffer
-    }
-
     pub fn new(x: i32, y: i32) -> Self {
         Self { x, y }
     }
@@ -138,27 +124,12 @@ impl Circle {
     }
 }
 
+impl cao_lang::traits::AutoByteEncodeProperties for Point {}
+impl cao_lang::traits::AutoByteEncodeProperties for Circle {}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn serialization() {
-        let point = Point::new(42, 69);
-
-        let buffer = point.serialize();
-
-        let point = Point::deserialize(&buffer[..]).expect("Failed to deserialize");
-
-        assert_eq!(point.x, 42);
-        assert_eq!(point.y, 69);
-    }
-
-    #[test]
-    fn nonsense_data_is_an_err() {
-        let buffer = vec![123; 16];
-        Point::deserialize(&buffer[..]).expect_err("Should be an error");
-    }
 
     #[test]
     fn basic_arithmetic() {

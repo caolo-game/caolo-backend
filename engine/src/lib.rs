@@ -15,10 +15,8 @@ use systems::execute_world_update;
 use systems::execution::{execute_intents, execute_scripts};
 
 pub fn forward(storage: &mut storage::Storage) -> Result<(), Box<dyn std::error::Error>> {
-    let users = storage.users().collect::<Vec<_>>();
-
-    compile_scripts(&users, storage);
-    let final_intents = execute_scripts(&users, storage);
+    compile_scripts(storage);
+    let final_intents = execute_scripts(storage);
 
     storage.signal_done(&final_intents);
 
@@ -32,7 +30,7 @@ pub fn forward(storage: &mut storage::Storage) -> Result<(), Box<dyn std::error:
     Ok(())
 }
 
-fn compile_scripts(userids: &[UserId], storage: &mut storage::Storage) {
+fn compile_scripts(storage: &mut storage::Storage) {
     use rayon::prelude::*;
 
     info!("Compiling scripts");

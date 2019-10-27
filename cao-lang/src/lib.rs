@@ -253,10 +253,12 @@ impl<Aux> VM<Aux> {
                     ptr += len;
                 }
                 Instruction::LiteralPtr => {
-                    let val = self.stack.pop().unwrap();
-                    let ptr = self.memory.len();
-                    self.memory.append(&mut val.encode());
-                    self.stack.push(Value::Pointer(ptr));
+                    let len = TPointer::BYTELEN;
+                    self.stack.push(Value::Pointer(
+                        TPointer::decode(&program.bytecode[ptr..ptr + len])
+                            .ok_or(ExecutionError::InvalidArgument)?,
+                    ));
+                    ptr += len;
                 }
                 Instruction::LiteralArray => {
                     let len = self

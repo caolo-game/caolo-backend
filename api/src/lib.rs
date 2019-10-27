@@ -15,7 +15,7 @@ pub mod structures;
 pub mod terrain;
 pub mod user;
 
-pub use cao_lang::prelude::{AstNode, CompilationUnit, CompiledProgram};
+pub use cao_lang::prelude::*;
 
 pub type EntityId = u64;
 pub type UserId = uuid::Uuid;

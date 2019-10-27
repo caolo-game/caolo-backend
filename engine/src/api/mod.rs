@@ -10,15 +10,52 @@ pub use self::bots::*;
 pub use self::pathfinding::*;
 pub use self::resources::*;
 pub use self::structures::*;
-use crate::intents;
 use crate::systems::execution::ScriptExecutionData;
 use cao_lang::prelude::*;
-use caolo_api::{self, OperationResult};
-use rand::Rng;
+
+macro_rules! make_import {
+    ($name: ident) => {
+        (
+            stringify!($name),
+            FunctionObject::new(FunctionWrapper::new($name)),
+        )
+    };
+}
+
+pub fn console_log(
+    vm: &mut VM<ScriptExecutionData>,
+    message: TPointer,
+    _output: TPointer,
+) -> Result<usize, ExecutionError> {
+    let message: String = vm.get_value(message).ok_or_else(|| {
+        error!("console_log called with invalid message");
+        ExecutionError::InvalidArgument
+    })?;
+
+    debug!(
+        "Console log EntityId[{:?}] : {}",
+        vm.get_aux().entityid(),
+        message
+    );
+
+    Ok(0)
+}
+
+pub fn say_hi(
+    vm: &mut VM<ScriptExecutionData>,
+    _: (),
+    _output: TPointer,
+) -> Result<usize, ExecutionError> {
+    debug!("Entity [{:?}] says hi", vm.get_aux().entityid(),);
+
+    Ok(0)
+}
 
 /// Bootstrap the game API in the VM
 pub fn make_import() -> ImportObject {
-    unimplemented!()
+    ImportObject {
+        imports: vec![make_import!(console_log), make_import!(say_hi)],
+    }
 }
 
 pub struct ImportObject {

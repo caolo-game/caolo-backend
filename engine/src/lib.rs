@@ -82,6 +82,9 @@ pub fn init_inmemory_storage() -> storage::Storage {
     storage.add_entity_table::<PositionComponent>(Table::default_inmemory());
     storage.add_entity_table::<ResourceType>(Table::default_inmemory());
     storage.add_entity_table::<DecayComponent>(Table::default_inmemory());
+    storage.add_entity_table::<EntityScript>(Table::default_inmemory());
+    storage.add_entity_table::<SpawnComponent>(Table::default_inmemory());
+    storage.add_entity_table::<Resource>(Table::default_inmemory());
 
     storage.add_user_table::<UserData>(Table::default_inmemory());
 

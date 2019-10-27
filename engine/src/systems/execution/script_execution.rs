@@ -56,6 +56,7 @@ pub fn execute_single_script<'a>(
     let data = ScriptExecutionData {
         intents: Vec::new(),
         storage: storage as *const _,
+        entityid,
     };
     let mut vm = VM::new(data);
     crate::api::make_import().execute_imports(&mut vm);
@@ -78,12 +79,18 @@ pub fn execute_single_script<'a>(
 pub struct ScriptExecutionData {
     intents: Vec<intents::Intent>,
     storage: *const Storage,
+    entityid: EntityId,
 }
 
 impl ScriptExecutionData {
+    pub fn entityid(&self) -> EntityId {
+        self.entityid
+    }
+
     pub fn storage(&self) -> &Storage {
         unsafe { &*self.storage }
     }
+
     pub fn intents(&mut self) -> &mut Vec<intents::Intent> {
         &mut self.intents
     }

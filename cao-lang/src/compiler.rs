@@ -44,7 +44,7 @@ impl crate::ByteEncodeProperties for InputString {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AstNode {
-    instruction: Instruction,
+    pub instruction: Instruction,
 }
 
 impl AstNode {
@@ -68,10 +68,10 @@ pub fn input_per_instruction(inst: Instruction) -> Option<u8> {
 /// Single unit of compilation, representing a single program
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompilationUnit {
-    nodes: Nodes,
-    inputs: Inputs,
-    values: Values,
-    strings: Strings,
+    pub nodes: Nodes,
+    pub inputs: Inputs,
+    pub values: Values,
+    pub strings: Strings,
 }
 
 pub struct Compiler {

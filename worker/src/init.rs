@@ -1,4 +1,4 @@
-use caolo_api::{AstNode, CompilationUnit, InputString, Instruction, Script, ScriptId, Value};
+use caolo_api::{AstNode, CompilationUnit, InputString, Instruction, Script, ScriptId};
 use caolo_engine::model::EntityScript;
 use caolo_engine::storage::Storage;
 
@@ -11,31 +11,18 @@ pub fn init_storage(n_fake_users: usize) -> Storage {
         Script {
             compiled: None,
             script: CompilationUnit {
-                nodes: [
-                    (
-                        0,
-                        AstNode {
-                            instruction: Instruction::LiteralPtr,
-                        },
-                    ),
-                    (
-                        1,
-                        AstNode {
-                            instruction: Instruction::Call,
-                        },
-                    ),
-                ]
+                nodes: vec![(
+                    0,
+                    AstNode {
+                        instruction: Instruction::Call,
+                    },
+                )]
                 .into_iter()
-                .cloned()
                 .collect(),
-                values: [(0, Value::Pointer(0))].into_iter().cloned().collect(),
-                inputs: [(1, [0].into_iter().cloned().collect())]
+                values: vec![].into_iter().collect(),
+                inputs: vec![].into_iter().collect(),
+                strings: vec![(0, InputString::from("say_hi").unwrap())]
                     .into_iter()
-                    .cloned()
-                    .collect(),
-                strings: [(1, InputString::from("say_hi").unwrap())]
-                    .into_iter()
-                    .cloned()
                     .collect(),
             },
         },

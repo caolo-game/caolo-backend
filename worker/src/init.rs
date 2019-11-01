@@ -19,11 +19,11 @@ pub fn init_storage(n_fake_users: usize) -> Storage {
                 )]
                 .into_iter()
                 .collect(),
-                values: vec![].into_iter().collect(),
-                inputs: vec![].into_iter().collect(),
                 strings: vec![(0, InputString::from("say_hi").unwrap())]
                     .into_iter()
                     .collect(),
+                values: Default::default(),
+                inputs: Default::default(),
             },
         },
     );

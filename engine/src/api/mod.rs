@@ -51,10 +51,23 @@ pub fn say_hi(
     Ok(0)
 }
 
+pub fn log_scalar(
+    vm: &mut VM<ScriptExecutionData>,
+    value: Value,
+    _output: TPointer,
+) -> Result<usize, ExecutionError> {
+    debug!("Entity [{:?}] says {:?}", vm.get_aux().entityid(), value);
+    Ok(0)
+}
+
 /// Bootstrap the game API in the VM
 pub fn make_import() -> ImportObject {
     ImportObject {
-        imports: vec![make_import!(console_log), make_import!(say_hi)],
+        imports: vec![
+            make_import!(console_log),
+            make_import!(say_hi),
+            make_import!(log_scalar),
+        ],
     }
 }
 

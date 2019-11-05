@@ -2,7 +2,46 @@ use caolo_api::{AstNode, CompilationUnit, InputString, Instruction, Script, Scri
 use caolo_engine::model::EntityScript;
 use caolo_engine::storage::Storage;
 
+const PROGRAM: &str = r#"{
+    "nodes": {
+        "0": {
+            "instruction": "LiteralInt"
+        },
+        "1": {
+            "instruction": "LiteralInt"
+        },
+        "2": {
+            "instruction": "AddInt"
+        },
+        "3": {
+            "instruction": "Call"
+        }
+    },
+    "inputs": {
+        "2": [
+            0,
+            1
+        ],
+        "3": [
+            2
+        ]
+    },
+    "values": {
+        "0": {
+            "IValue": 4
+        },
+        "1": {
+            "IValue": 5
+        }
+    },
+    "strings": {
+        "3": "log_scalar"
+    }
+}"#;
+
 pub fn init_storage(n_fake_users: usize) -> Storage {
+    println!("{}", serde_json::to_string(&caolo_api::Value::IValue(5)).unwrap());
+
     let mut storage = caolo_engine::init_inmemory_storage();
 
     let script_id = ScriptId::default(); // TODO randomize
@@ -10,21 +49,7 @@ pub fn init_storage(n_fake_users: usize) -> Storage {
         script_id,
         Script {
             compiled: None,
-            script: CompilationUnit {
-                nodes: vec![(
-                    0,
-                    AstNode {
-                        instruction: Instruction::Call,
-                    },
-                )]
-                .into_iter()
-                .collect(),
-                strings: vec![(0, InputString::from("say_hi").unwrap())]
-                    .into_iter()
-                    .collect(),
-                values: Default::default(),
-                inputs: Default::default(),
-            },
+            script: serde_json::from_str(PROGRAM).expect("deserialize"),
         },
     );
 

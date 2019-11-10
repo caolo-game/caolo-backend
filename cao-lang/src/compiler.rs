@@ -1,4 +1,4 @@
-use crate::{CompiledProgram, Instruction, Scalar};
+use crate::{scalar::Scalar, traits::ByteEncodeProperties, CompiledProgram, Instruction};
 use arrayvec::{ArrayString, ArrayVec};
 use serde_derive::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
@@ -18,7 +18,7 @@ pub type Strings = HashMap<NodeId, InputString>;
 const INPUT_STR_LEN: usize = 128;
 pub type InputString = ArrayString<[u8; INPUT_STR_LEN]>;
 
-impl crate::ByteEncodeProperties for InputString {
+impl ByteEncodeProperties for InputString {
     const BYTELEN: usize = INPUT_STR_LEN;
 
     fn encode(self) -> Vec<u8> {
@@ -115,7 +115,6 @@ impl Compiler {
     }
 
     fn process_node(&mut self, nodeid: NodeId) -> Result<(), String> {
-        use crate::traits::ByteEncodeProperties;
         use Instruction::*;
 
         Compiler::validate_node(nodeid, &mut self.unit)?;
@@ -167,7 +166,7 @@ impl Compiler {
             ScalarArray => {
                 self.push_node(nodeid);
                 match self.unit.values[&nodeid] {
-                    Scalar::IScalar(v) => {
+                    Scalar::Integer(v) => {
                         if self
                             .unit
                             .inputs
@@ -189,10 +188,10 @@ impl Compiler {
             ScalarLabel | ScalarPtr | ScalarFloat | ScalarInt => {
                 self.push_node(nodeid);
                 match (instruction, self.unit.values[&nodeid]) {
-                    (Instruction::ScalarInt, Scalar::IScalar(v)) => {
+                    (Instruction::ScalarInt, Scalar::Integer(v)) => {
                         self.program.bytecode.append(&mut v.encode());
                     }
-                    (Instruction::ScalarFloat, Scalar::FScalar(v)) => {
+                    (Instruction::ScalarFloat, Scalar::Floating(v)) => {
                         self.program.bytecode.append(&mut v.encode());
                     }
                     (Instruction::ScalarPtr, Scalar::Pointer(v)) => {
@@ -234,7 +233,7 @@ impl Compiler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::VM;
+    use crate::vm::VM;
 
     #[test]
     fn test_compiling_simple_program() {
@@ -261,7 +260,7 @@ mod tests {
         .into_iter()
         .cloned()
         .collect();
-        let values: Scalars = [(0, Scalar::FScalar(42.0)), (1, Scalar::FScalar(512.0))]
+        let values: Scalars = [(0, Scalar::Floating(42.0)), (1, Scalar::Floating(512.0))]
             .into_iter()
             .map(|x| *x)
             .collect();
@@ -286,11 +285,11 @@ mod tests {
         let mut vm = VM::new(());
         vm.run(&program).unwrap();
 
-        assert_eq!(vm.stack.len(), 1, "{:?}", vm.stack);
+        assert_eq!(vm.stack().len(), 1, "{:?}", vm.stack());
 
-        let value = vm.stack.last().unwrap();
+        let value = vm.stack().last().unwrap();
         match value {
-            Scalar::FScalar(i) => assert_eq!(*i, 42.0 + 512.0),
+            Scalar::Floating(i) => assert_eq!(*i, 42.0 + 512.0),
             _ => panic!("Invalid value in the stack"),
         }
     }
@@ -351,9 +350,9 @@ mod tests {
         .cloned()
         .collect();
         let values: Scalars = [
-            (10, Scalar::FScalar(val1)),
-            (1, Scalar::FScalar(val2)),
-            (6, Scalar::IScalar(cond)),
+            (10, Scalar::Floating(val1)),
+            (1, Scalar::Floating(val2)),
+            (6, Scalar::Integer(cond)),
             (7, Scalar::Label(2)),
             (8, Scalar::Label(5)),
         ]
@@ -383,11 +382,11 @@ mod tests {
             panic!("Err:{:?}\n{:?}", e, vm);
         }
 
-        assert_eq!(vm.stack.len(), 1);
+        assert_eq!(vm.stack().len(), 1);
 
-        let value = vm.stack.last().unwrap();
+        let value = vm.stack().last().unwrap();
         match value {
-            Scalar::FScalar(i) => assert_eq!(*i, expected),
+            Scalar::Floating(i) => assert_eq!(*i, expected),
             _ => panic!("Invalid value in the stack"),
         }
     }

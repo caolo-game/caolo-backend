@@ -7,8 +7,8 @@ use std::convert::TryFrom;
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum Scalar {
     Pointer(TPointer),
-    IScalar(i32),
-    FScalar(f32),
+    Integer(i32),
+    Floating(f32),
     Label(NodeId),
 }
 
@@ -17,8 +17,8 @@ impl Scalar {
         use Scalar::*;
         match self {
             Pointer(i) => i != 0,
-            IScalar(i) => i != 0,
-            FScalar(i) => i != 0.0,
+            Integer(i) => i != 0,
+            Floating(i) => i != 0.0,
             Label(_) => true,
         }
     }
@@ -31,7 +31,7 @@ impl TryFrom<Scalar> for i32 {
 
     fn try_from(v: Scalar) -> Result<Self, Scalar> {
         match v {
-            Scalar::Label(i) | Scalar::IScalar(i) => Ok(i),
+            Scalar::Label(i) | Scalar::Integer(i) => Ok(i),
             _ => Err(v),
         }
     }
@@ -42,7 +42,7 @@ impl TryFrom<Scalar> for f32 {
 
     fn try_from(v: Scalar) -> Result<Self, Scalar> {
         match v {
-            Scalar::FScalar(i) => Ok(i),
+            Scalar::Floating(i) => Ok(i),
             _ => Err(v),
         }
     }

@@ -28,10 +28,10 @@ const PROGRAM: &str = r#"{
     },
     "values": {
         "0": {
-            "IScalar": 4
+            "Integer": 4
         },
         "1": {
-            "IScalar": 5
+            "Integer": 5
         }
     },
     "strings": {
@@ -40,7 +40,7 @@ const PROGRAM: &str = r#"{
 }"#;
 
 pub fn init_storage(n_fake_users: usize) -> Storage {
-    println!("{}", serde_json::to_string(&caolo_api::Scalar::IScalar(5)).unwrap());
+    println!("{}", serde_json::to_string(&caolo_api::Scalar::Integer(5)).unwrap());
 
     let mut storage = caolo_engine::init_inmemory_storage();
 

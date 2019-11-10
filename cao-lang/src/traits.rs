@@ -1,4 +1,4 @@
-use crate::{ExecutionError, TPointer, Scalar};
+use crate::{scalar::Scalar, vm::VM, ExecutionError, TPointer};
 use std::convert::TryFrom;
 use std::marker::PhantomData;
 use std::mem;
@@ -82,7 +82,7 @@ pub struct FunctionObject<Aux> {
 impl<Aux> Callable<Aux> for FunctionObject<Aux> {
     fn call(
         &mut self,
-        vm: &mut crate::VM<Aux>,
+        vm: &mut VM<Aux>,
         params: &[Scalar],
         output: TPointer,
     ) -> Result<usize, ExecutionError> {
@@ -111,7 +111,7 @@ pub trait Callable<Aux> {
     /// result
     fn call(
         &mut self,
-        vm: &mut crate::VM<Aux>,
+        vm: &mut VM<Aux>,
         params: &[Scalar],
         output: TPointer,
     ) -> Result<usize, ExecutionError>;
@@ -121,7 +121,7 @@ pub trait Callable<Aux> {
 
 pub struct FunctionWrapper<Aux, F, Args>
 where
-    F: Fn(&mut crate::VM<Aux>, Args, TPointer) -> Result<usize, ExecutionError>,
+    F: Fn(&mut VM<Aux>, Args, TPointer) -> Result<usize, ExecutionError>,
 {
     pub f: F,
     _args: PhantomData<(Args, Aux)>,
@@ -129,7 +129,7 @@ where
 
 impl<Aux, F, Args> FunctionWrapper<Aux, F, Args>
 where
-    F: Fn(&mut crate::VM<Aux>, Args, TPointer) -> Result<usize, ExecutionError>,
+    F: Fn(&mut VM<Aux>, Args, TPointer) -> Result<usize, ExecutionError>,
 {
     pub fn new(f: F) -> Self {
         Self {
@@ -141,11 +141,11 @@ where
 
 impl<Aux, F> Callable<Aux> for FunctionWrapper<Aux, F, ()>
 where
-    F: Fn(&mut crate::VM<Aux>, (), TPointer) -> Result<usize, ExecutionError>,
+    F: Fn(&mut VM<Aux>, (), TPointer) -> Result<usize, ExecutionError>,
 {
     fn call(
         &mut self,
-        vm: &mut crate::VM<Aux>,
+        vm: &mut VM<Aux>,
         _params: &[Scalar],
         output: TPointer,
     ) -> Result<usize, ExecutionError> {
@@ -159,12 +159,12 @@ where
 
 impl<Aux, F, T> Callable<Aux> for FunctionWrapper<Aux, F, T>
 where
-    F: Fn(&mut crate::VM<Aux>, T, TPointer) -> Result<usize, ExecutionError>,
+    F: Fn(&mut VM<Aux>, T, TPointer) -> Result<usize, ExecutionError>,
     T: TryFrom<Scalar>,
 {
     fn call(
         &mut self,
-        vm: &mut crate::VM<Aux>,
+        vm: &mut VM<Aux>,
         params: &[Scalar],
         output: TPointer,
     ) -> Result<usize, ExecutionError> {
@@ -179,13 +179,13 @@ where
 
 impl<Aux, F, T1, T2> Callable<Aux> for FunctionWrapper<Aux, F, (T1, T2)>
 where
-    F: Fn(&mut crate::VM<Aux>, (T1, T2), TPointer) -> Result<usize, ExecutionError>,
+    F: Fn(&mut VM<Aux>, (T1, T2), TPointer) -> Result<usize, ExecutionError>,
     T1: TryFrom<Scalar>,
     T2: TryFrom<Scalar>,
 {
     fn call(
         &mut self,
-        vm: &mut crate::VM<Aux>,
+        vm: &mut VM<Aux>,
         params: &[Scalar],
         output: TPointer,
     ) -> Result<usize, ExecutionError> {
@@ -201,14 +201,14 @@ where
 
 impl<Aux, F, T1, T2, T3> Callable<Aux> for FunctionWrapper<Aux, F, (T1, T2, T3)>
 where
-    F: Fn(&mut crate::VM<Aux>, (T1, T2, T3), TPointer) -> Result<usize, ExecutionError>,
+    F: Fn(&mut VM<Aux>, (T1, T2, T3), TPointer) -> Result<usize, ExecutionError>,
     T1: TryFrom<Scalar>,
     T2: TryFrom<Scalar>,
     T3: TryFrom<Scalar>,
 {
     fn call(
         &mut self,
-        vm: &mut crate::VM<Aux>,
+        vm: &mut VM<Aux>,
         params: &[Scalar],
         output: TPointer,
     ) -> Result<usize, ExecutionError> {

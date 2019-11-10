@@ -5,10 +5,10 @@ use caolo_engine::storage::Storage;
 const PROGRAM: &str = r#"{
     "nodes": {
         "0": {
-            "instruction": "LiteralInt"
+            "instruction": "ScalarInt"
         },
         "1": {
-            "instruction": "LiteralInt"
+            "instruction": "ScalarInt"
         },
         "2": {
             "instruction": "AddInt"
@@ -28,10 +28,10 @@ const PROGRAM: &str = r#"{
     },
     "values": {
         "0": {
-            "IValue": 4
+            "IScalar": 4
         },
         "1": {
-            "IValue": 5
+            "IScalar": 5
         }
     },
     "strings": {
@@ -40,7 +40,7 @@ const PROGRAM: &str = r#"{
 }"#;
 
 pub fn init_storage(n_fake_users: usize) -> Storage {
-    println!("{}", serde_json::to_string(&caolo_api::Value::IValue(5)).unwrap());
+    println!("{}", serde_json::to_string(&caolo_api::Scalar::IScalar(5)).unwrap());
 
     let mut storage = caolo_engine::init_inmemory_storage();
 

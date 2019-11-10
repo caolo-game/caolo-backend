@@ -1,7 +1,7 @@
 pub mod compiler;
 pub mod prelude;
 pub mod traits;
-pub mod value;
+pub mod scalar;
 
 use prelude::*;
 
@@ -51,20 +51,20 @@ pub enum Instruction {
     Div = 7,
     /// Divide the first number by the second
     DivFloat = 8,
-    /// Moves the bot with entity id to the point and writes an OperationResult to the first
-    /// pointer
+    /// Call a function provided by the runtime
+    /// Requires function name as a string as input
     Call = 9,
     /// Push an int onto the stack
-    LiteralInt = 10,
+    ScalarInt = 10,
     /// Push a float onto the stack
-    LiteralFloat = 11,
+    ScalarFloat = 11,
     /// Push a ptr onto the stack
-    LiteralPtr = 12,
+    ScalarPtr = 12,
     /// Push a label onto the stack
-    LiteralLabel = 17,
+    ScalarLabel = 17,
     /// Pop the next N (positive integer) number of items from the stack and write them to memory
     /// Push the pointer to the beginning of the array onto the stack
-    LiteralArray = 13,
+    ScalarArray = 13,
     /// Empty instruction that has no effects
     Pass = 14,
     /// Clones the last element on the stack
@@ -94,14 +94,14 @@ impl TryFrom<u8> for Instruction {
             7 => Ok(Div),
             8 => Ok(DivFloat),
             9 => Ok(Call),
-            10 => Ok(LiteralInt),
-            11 => Ok(LiteralFloat),
-            12 => Ok(LiteralPtr),
-            13 => Ok(LiteralArray),
+            10 => Ok(ScalarInt),
+            11 => Ok(ScalarFloat),
+            12 => Ok(ScalarPtr),
+            13 => Ok(ScalarArray),
             14 => Ok(Pass),
             15 => Ok(CopyLast),
             16 => Ok(Branch),
-            17 => Ok(LiteralLabel),
+            17 => Ok(ScalarLabel),
             18 => Ok(Exit),
             _ => Err(format!("Unrecognized instruction [{}]", c)),
         }
@@ -115,7 +115,7 @@ pub struct VM<Aux = ()> {
     memory: Vec<u8>,
     memory_limit: usize,
     callables: HashMap<String, FunctionObject<Aux>>,
-    stack: Vec<Value>,
+    stack: Vec<Scalar>,
 }
 
 impl<Aux> VM<Aux> {
@@ -190,7 +190,7 @@ impl<Aux> VM<Aux> {
             match instr {
                 Instruction::Exit => {
                     debug!("Exit called");
-                    if let Some(Value::IValue(code)) = self.stack.last() {
+                    if let Some(Scalar::IScalar(code)) = self.stack.last() {
                         let code = *code;
                         self.stack.pop();
                         if code != 0 {
@@ -228,39 +228,39 @@ impl<Aux> VM<Aux> {
                     }
                 }
                 Instruction::Pass => {}
-                Instruction::LiteralLabel => {
+                Instruction::ScalarLabel => {
                     let len = NodeId::BYTELEN;
-                    self.stack.push(Value::Label(
+                    self.stack.push(Scalar::Label(
                         NodeId::decode(&program.bytecode[ptr..ptr + len])
                             .ok_or(ExecutionError::InvalidArgument)?,
                     ));
                     ptr += len;
                 }
-                Instruction::LiteralInt => {
+                Instruction::ScalarInt => {
                     let len = i32::BYTELEN;
-                    self.stack.push(Value::IValue(
+                    self.stack.push(Scalar::IScalar(
                         i32::decode(&program.bytecode[ptr..ptr + len])
                             .ok_or(ExecutionError::InvalidArgument)?,
                     ));
                     ptr += len;
                 }
-                Instruction::LiteralFloat => {
+                Instruction::ScalarFloat => {
                     let len = f32::BYTELEN;
-                    self.stack.push(Value::FValue(
+                    self.stack.push(Scalar::FScalar(
                         f32::decode(&program.bytecode[ptr..ptr + len])
                             .ok_or(ExecutionError::InvalidArgument)?,
                     ));
                     ptr += len;
                 }
-                Instruction::LiteralPtr => {
+                Instruction::ScalarPtr => {
                     let len = TPointer::BYTELEN;
-                    self.stack.push(Value::Pointer(
+                    self.stack.push(Scalar::Pointer(
                         TPointer::decode(&program.bytecode[ptr..ptr + len])
                             .ok_or(ExecutionError::InvalidArgument)?,
                     ));
                     ptr += len;
                 }
-                Instruction::LiteralArray => {
+                Instruction::ScalarArray => {
                     let len = self
                         .load_int_from_stack()
                         .ok_or(ExecutionError::InvalidArgument)?;
@@ -273,38 +273,38 @@ impl<Aux> VM<Aux> {
                         let val = self.stack.pop().unwrap();
                         self.memory.append(&mut val.encode());
                     }
-                    self.stack.push(Value::Pointer(ptr));
+                    self.stack.push(Scalar::Pointer(ptr));
                 }
                 Instruction::AddInt => self.binary_op::<i32, _, _>(
-                    |a, b| Value::IValue(a + b),
+                    |a, b| Scalar::IScalar(a + b),
                     |s| s.load_int_from_stack(),
                 )?,
                 Instruction::AddFloat => self.binary_op::<f32, _, _>(
-                    |a, b| Value::FValue(a + b),
+                    |a, b| Scalar::FScalar(a + b),
                     |s| s.load_float_from_stack(),
                 )?,
                 Instruction::SubInt => self.binary_op::<i32, _, _>(
-                    |a, b| Value::IValue(a - b),
+                    |a, b| Scalar::IScalar(a - b),
                     |s| s.load_int_from_stack(),
                 )?,
                 Instruction::SubFloat => self.binary_op::<f32, _, _>(
-                    |a, b| Value::FValue(a - b),
+                    |a, b| Scalar::FScalar(a - b),
                     |s| s.load_float_from_stack(),
                 )?,
                 Instruction::Mul => self.binary_op::<i32, _, _>(
-                    |a, b| Value::IValue(a * b),
+                    |a, b| Scalar::IScalar(a * b),
                     |s| s.load_int_from_stack(),
                 )?,
                 Instruction::MulFloat => self.binary_op::<f32, _, _>(
-                    |a, b| Value::FValue(a * b),
+                    |a, b| Scalar::FScalar(a * b),
                     |s| s.load_float_from_stack(),
                 )?,
                 Instruction::Div => self.binary_op::<i32, _, _>(
-                    |a, b| Value::IValue(a / b),
+                    |a, b| Scalar::IScalar(a / b),
                     |s| s.load_int_from_stack(),
                 )?,
                 Instruction::DivFloat => self.binary_op::<f32, _, _>(
-                    |a, b| Value::FValue(a / b),
+                    |a, b| Scalar::FScalar(a / b),
                     |s| s.load_float_from_stack(),
                 )?,
                 Instruction::Call => {
@@ -322,7 +322,7 @@ impl<Aux> VM<Aux> {
                     let outptr = self.memory.len();
                     let res_size = fun.call(self, &inputs, outptr)?;
                     self.memory.resize_with(outptr + res_size, Default::default);
-                    self.stack.push(Value::Pointer(outptr));
+                    self.stack.push(Scalar::Pointer(outptr));
 
                     self.callables.insert(fun_name, fun);
                 }
@@ -338,8 +338,8 @@ impl<Aux> VM<Aux> {
     fn load_int_from_stack(&self) -> Option<i32> {
         let val = self.stack.last()?;
         match val {
-            Value::IValue(i) => Some(*i),
-            Value::Pointer(p) => self.get_value(*p),
+            Scalar::IScalar(i) => Some(*i),
+            Scalar::Pointer(p) => self.get_value(*p),
             _ => None,
         }
     }
@@ -347,13 +347,13 @@ impl<Aux> VM<Aux> {
     fn load_float_from_stack(&self) -> Option<f32> {
         let val = self.stack.last()?;
         match val {
-            Value::FValue(i) => Some(*i),
-            Value::Pointer(p) => self.get_value(*p),
+            Scalar::FScalar(i) => Some(*i),
+            Scalar::Pointer(p) => self.get_value(*p),
             _ => None,
         }
     }
 
-    fn binary_op<T: ByteEncodeProperties, F: Fn(T, T) -> Value, FLoader: Fn(&Self) -> Option<T>>(
+    fn binary_op<T: ByteEncodeProperties, F: Fn(T, T) -> Scalar, FLoader: Fn(&Self) -> Option<T>>(
         &mut self,
         op: F,
         loader: FLoader,
@@ -393,18 +393,18 @@ mod tests {
     fn test_binary_operatons() {
         let mut vm = VM::new(());
 
-        vm.stack.push(Value::IValue(512));
-        vm.stack.push(Value::IValue(42));
+        vm.stack.push(Scalar::IScalar(512));
+        vm.stack.push(Scalar::IScalar(42));
 
         vm.binary_op::<i32, _, _>(
-            |a, b| Value::IValue((a + a / b) * b),
+            |a, b| Scalar::IScalar((a + a / b) * b),
             |s| s.load_int_from_stack(),
         )
         .unwrap();
 
         let result = vm.stack.last().expect("Expected to read the result");
         match result {
-            Value::IValue(result) => assert_eq!(*result, (512 + 512 / 42) * 42),
+            Scalar::IScalar(result) => assert_eq!(*result, (512 + 512 / 42) * 42),
             _ => panic!("Invalid result type"),
         }
     }
@@ -412,15 +412,15 @@ mod tests {
     #[test]
     fn test_simple_program() {
         let mut bytecode = Vec::with_capacity(512);
-        bytecode.push(Instruction::LiteralInt as u8);
+        bytecode.push(Instruction::ScalarInt as u8);
         bytecode.append(&mut 512i32.encode());
-        bytecode.push(Instruction::LiteralInt as u8);
+        bytecode.push(Instruction::ScalarInt as u8);
         bytecode.append(&mut 42i32.encode());
         bytecode.push(Instruction::SubInt as u8);
-        bytecode.push(Instruction::LiteralInt as u8);
+        bytecode.push(Instruction::ScalarInt as u8);
         bytecode.append(&mut 68i32.encode());
         bytecode.push(Instruction::AddInt as u8);
-        bytecode.push(Instruction::LiteralInt as u8);
+        bytecode.push(Instruction::ScalarInt as u8);
         bytecode.append(&mut 0i32.encode());
         bytecode.push(Instruction::Exit as u8);
         let mut program = CompiledProgram::default();
@@ -431,7 +431,7 @@ mod tests {
         assert_eq!(vm.stack.len(), 1);
         let value = vm.stack.last().unwrap();
         match value {
-            Value::IValue(i) => assert_eq!(*i, 512 - 42 + 68),
+            Scalar::IScalar(i) => assert_eq!(*i, 512 - 42 + 68),
             _ => panic!("Invalid value in the stack"),
         }
     }
@@ -439,9 +439,9 @@ mod tests {
     #[test]
     fn test_function_call() {
         let mut bytecode = Vec::with_capacity(512);
-        bytecode.push(Instruction::LiteralFloat as u8);
+        bytecode.push(Instruction::ScalarFloat as u8);
         bytecode.append(&mut 42.0f32.encode());
-        bytecode.push(Instruction::LiteralInt as u8);
+        bytecode.push(Instruction::ScalarInt as u8);
         bytecode.append(&mut 512i32.encode());
         bytecode.push(Instruction::Call as u8);
         bytecode.append(&mut "foo".to_owned().encode());

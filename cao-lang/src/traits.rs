@@ -1,4 +1,4 @@
-use crate::{ExecutionError, TPointer, Value};
+use crate::{ExecutionError, TPointer, Scalar};
 use std::convert::TryFrom;
 use std::marker::PhantomData;
 use std::mem;
@@ -83,7 +83,7 @@ impl<Aux> Callable<Aux> for FunctionObject<Aux> {
     fn call(
         &mut self,
         vm: &mut crate::VM<Aux>,
-        params: &[Value],
+        params: &[Scalar],
         output: TPointer,
     ) -> Result<usize, ExecutionError> {
         self.fun.call(vm, params, output)
@@ -112,7 +112,7 @@ pub trait Callable<Aux> {
     fn call(
         &mut self,
         vm: &mut crate::VM<Aux>,
-        params: &[Value],
+        params: &[Scalar],
         output: TPointer,
     ) -> Result<usize, ExecutionError>;
 
@@ -146,7 +146,7 @@ where
     fn call(
         &mut self,
         vm: &mut crate::VM<Aux>,
-        _params: &[Value],
+        _params: &[Scalar],
         output: TPointer,
     ) -> Result<usize, ExecutionError> {
         (self.f)(vm, (), output)
@@ -160,12 +160,12 @@ where
 impl<Aux, F, T> Callable<Aux> for FunctionWrapper<Aux, F, T>
 where
     F: Fn(&mut crate::VM<Aux>, T, TPointer) -> Result<usize, ExecutionError>,
-    T: TryFrom<Value>,
+    T: TryFrom<Scalar>,
 {
     fn call(
         &mut self,
         vm: &mut crate::VM<Aux>,
-        params: &[Value],
+        params: &[Scalar],
         output: TPointer,
     ) -> Result<usize, ExecutionError> {
         let val = T::try_from(params[0]).map_err(|_| ExecutionError::InvalidArgument)?;
@@ -180,13 +180,13 @@ where
 impl<Aux, F, T1, T2> Callable<Aux> for FunctionWrapper<Aux, F, (T1, T2)>
 where
     F: Fn(&mut crate::VM<Aux>, (T1, T2), TPointer) -> Result<usize, ExecutionError>,
-    T1: TryFrom<Value>,
-    T2: TryFrom<Value>,
+    T1: TryFrom<Scalar>,
+    T2: TryFrom<Scalar>,
 {
     fn call(
         &mut self,
         vm: &mut crate::VM<Aux>,
-        params: &[Value],
+        params: &[Scalar],
         output: TPointer,
     ) -> Result<usize, ExecutionError> {
         let a = T1::try_from(params[0]).map_err(|_| ExecutionError::InvalidArgument)?;
@@ -202,14 +202,14 @@ where
 impl<Aux, F, T1, T2, T3> Callable<Aux> for FunctionWrapper<Aux, F, (T1, T2, T3)>
 where
     F: Fn(&mut crate::VM<Aux>, (T1, T2, T3), TPointer) -> Result<usize, ExecutionError>,
-    T1: TryFrom<Value>,
-    T2: TryFrom<Value>,
-    T3: TryFrom<Value>,
+    T1: TryFrom<Scalar>,
+    T2: TryFrom<Scalar>,
+    T3: TryFrom<Scalar>,
 {
     fn call(
         &mut self,
         vm: &mut crate::VM<Aux>,
-        params: &[Value],
+        params: &[Scalar],
         output: TPointer,
     ) -> Result<usize, ExecutionError> {
         let a = T1::try_from(params[0]).map_err(|_| ExecutionError::InvalidArgument)?;

@@ -53,7 +53,7 @@ pub fn say_hi(
 
 pub fn log_scalar(
     vm: &mut VM<ScriptExecutionData>,
-    value: Value,
+    value: Scalar,
     _output: TPointer,
 ) -> Result<usize, ExecutionError> {
     debug!("Entity [{:?}] says {:?}", vm.get_aux().entityid(), value);

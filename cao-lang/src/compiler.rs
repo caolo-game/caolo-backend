@@ -1,4 +1,4 @@
-use crate::{CompiledProgram, Instruction, Value};
+use crate::{CompiledProgram, Instruction, Scalar};
 use arrayvec::{ArrayString, ArrayVec};
 use serde_derive::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
@@ -10,8 +10,8 @@ pub type NodeId = i32;
 /// Nodes may only have a finite amount of inputs
 pub type Inputs = HashMap<NodeId, ArrayVec<[NodeId; 16]>>;
 pub type Nodes = BTreeMap<NodeId, AstNode>;
-/// Value of a node if any
-pub type Values = HashMap<NodeId, Value>;
+/// Scalar of a node if any
+pub type Scalars = HashMap<NodeId, Scalar>;
 /// String of a node if any
 pub type Strings = HashMap<NodeId, InputString>;
 
@@ -60,8 +60,8 @@ pub fn input_per_instruction(inst: Instruction) -> Option<u8> {
     match inst {
         AddInt | SubInt | AddFloat | SubFloat | Mul | MulFloat | Div | DivFloat => Some(2),
         Branch => Some(3),
-        LiteralLabel | LiteralInt | LiteralFloat | LiteralPtr | Pass | CopyLast => Some(0),
-        Exit | Call | LiteralArray => None,
+        ScalarLabel | ScalarInt | ScalarFloat | ScalarPtr | Pass | CopyLast => Some(0),
+        Exit | Call | ScalarArray => None,
     }
 }
 
@@ -70,7 +70,7 @@ pub fn input_per_instruction(inst: Instruction) -> Option<u8> {
 pub struct CompilationUnit {
     pub nodes: Nodes,
     pub inputs: Inputs,
-    pub values: Values,
+    pub values: Scalars,
     pub strings: Strings,
 }
 
@@ -164,10 +164,10 @@ impl Compiler {
                     .bytecode
                     .append(&mut self.unit.strings[&nodeid].encode());
             }
-            LiteralArray => {
+            ScalarArray => {
                 self.push_node(nodeid);
                 match self.unit.values[&nodeid] {
-                    Value::IValue(v) => {
+                    Scalar::IScalar(v) => {
                         if self
                             .unit
                             .inputs
@@ -181,28 +181,28 @@ impl Compiler {
                         self.program.bytecode.append(&mut v.encode());
                     }
                     _ => panic!(
-                        "LiteralArray got invalid value {:?}",
+                        "ScalarArray got invalid value {:?}",
                         self.unit.values[&nodeid]
                     ),
                 }
             }
-            LiteralLabel | LiteralPtr | LiteralFloat | LiteralInt => {
+            ScalarLabel | ScalarPtr | ScalarFloat | ScalarInt => {
                 self.push_node(nodeid);
                 match (instruction, self.unit.values[&nodeid]) {
-                    (Instruction::LiteralInt, Value::IValue(v)) => {
+                    (Instruction::ScalarInt, Scalar::IScalar(v)) => {
                         self.program.bytecode.append(&mut v.encode());
                     }
-                    (Instruction::LiteralFloat, Value::FValue(v)) => {
+                    (Instruction::ScalarFloat, Scalar::FScalar(v)) => {
                         self.program.bytecode.append(&mut v.encode());
                     }
-                    (Instruction::LiteralPtr, Value::Pointer(v)) => {
+                    (Instruction::ScalarPtr, Scalar::Pointer(v)) => {
                         self.program.bytecode.append(&mut v.encode());
                     }
-                    (Instruction::LiteralLabel, Value::Label(v)) => {
+                    (Instruction::ScalarLabel, Scalar::Label(v)) => {
                         self.program.bytecode.append(&mut v.encode());
                     }
                     _ => panic!(
-                        "Literal {:?} got invalid value {:?}",
+                        "Scalar {:?} got invalid value {:?}",
                         instruction, self.unit.values[&nodeid]
                     ),
                 }
@@ -242,13 +242,13 @@ mod tests {
             (
                 0,
                 AstNode {
-                    instruction: Instruction::LiteralFloat,
+                    instruction: Instruction::ScalarFloat,
                 },
             ),
             (
                 1,
                 AstNode {
-                    instruction: Instruction::LiteralFloat,
+                    instruction: Instruction::ScalarFloat,
                 },
             ),
             (
@@ -261,7 +261,7 @@ mod tests {
         .into_iter()
         .cloned()
         .collect();
-        let values: Values = [(0, Value::FValue(42.0)), (1, Value::FValue(512.0))]
+        let values: Scalars = [(0, Scalar::FScalar(42.0)), (1, Scalar::FScalar(512.0))]
             .into_iter()
             .map(|x| *x)
             .collect();
@@ -290,7 +290,7 @@ mod tests {
 
         let value = vm.stack.last().unwrap();
         match value {
-            Value::FValue(i) => assert_eq!(*i, 42.0 + 512.0),
+            Scalar::FScalar(i) => assert_eq!(*i, 42.0 + 512.0),
             _ => panic!("Invalid value in the stack"),
         }
     }
@@ -301,13 +301,13 @@ mod tests {
             (
                 10,
                 AstNode {
-                    instruction: Instruction::LiteralFloat,
+                    instruction: Instruction::ScalarFloat,
                 },
             ),
             (
                 1,
                 AstNode {
-                    instruction: Instruction::LiteralFloat,
+                    instruction: Instruction::ScalarFloat,
                 },
             ),
             (
@@ -325,19 +325,19 @@ mod tests {
             (
                 6,
                 AstNode {
-                    instruction: Instruction::LiteralInt, // Cond
+                    instruction: Instruction::ScalarInt, // Cond
                 },
             ),
             (
                 7,
                 AstNode {
-                    instruction: Instruction::LiteralLabel, // True
+                    instruction: Instruction::ScalarLabel, // True
                 },
             ),
             (
                 8,
                 AstNode {
-                    instruction: Instruction::LiteralLabel, // False
+                    instruction: Instruction::ScalarLabel, // False
                 },
             ),
             (
@@ -350,12 +350,12 @@ mod tests {
         .into_iter()
         .cloned()
         .collect();
-        let values: Values = [
-            (10, Value::FValue(val1)),
-            (1, Value::FValue(val2)),
-            (6, Value::IValue(cond)),
-            (7, Value::Label(2)),
-            (8, Value::Label(5)),
+        let values: Scalars = [
+            (10, Scalar::FScalar(val1)),
+            (1, Scalar::FScalar(val2)),
+            (6, Scalar::IScalar(cond)),
+            (7, Scalar::Label(2)),
+            (8, Scalar::Label(5)),
         ]
         .into_iter()
         .map(|x| *x)
@@ -387,7 +387,7 @@ mod tests {
 
         let value = vm.stack.last().unwrap();
         match value {
-            Value::FValue(i) => assert_eq!(*i, expected),
+            Scalar::FScalar(i) => assert_eq!(*i, expected),
             _ => panic!("Invalid value in the stack"),
         }
     }

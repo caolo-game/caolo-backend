@@ -2,7 +2,7 @@ use crate::compiler::NodeId;
 use crate::traits::AutoByteEncodeProperties;
 use crate::TPointer;
 use serde_derive::{Deserialize, Serialize};
-use std::convert::TryFrom;
+use std::convert::{From, TryFrom};
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum Scalar {
@@ -25,6 +25,12 @@ impl Scalar {
 }
 
 impl AutoByteEncodeProperties for Scalar {}
+
+impl From<Scalar> for bool {
+    fn from(s: Scalar) -> Self {
+        s.as_bool()
+    }
+}
 
 impl TryFrom<Scalar> for i32 {
     type Error = Scalar;

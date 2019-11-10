@@ -56,7 +56,7 @@ impl<T: Sized + Clone + Copy + AutoByteEncodeProperties> ByteEncodeProperties fo
 
         let mut result = vec![0; size];
         unsafe {
-            let dayum = std::mem::transmute::<*const Self, *const u8>(&self as *const Self);
+            let dayum = mem::transmute::<*const Self, *const u8>(&self as *const Self);
             for i in 0..size {
                 result[i] = *(dayum.add(i));
             }

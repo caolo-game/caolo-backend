@@ -26,11 +26,7 @@ pub struct Payload {
 
 impl Payload {
     // TODO: pass circle as vision
-    pub fn new(storage: &Storage, vision: &[Point; 2]) -> Self {
-        let radius = vision[0].hex_distance(vision[1]) as u32;
-        let center = (vision[1] - vision[0]) / 2;
-        let vision = Circle { center, radius };
-
+    pub fn new(storage: &Storage, vision: Circle) -> Self {
         let ids = storage
             .entity_table::<model::PositionComponent>()
             .get_entities_in_range(&vision)

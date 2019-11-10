@@ -1,4 +1,4 @@
-use caolo_api::{AstNode, CompilationUnit, InputString, Instruction, Script, ScriptId};
+use caolo_api::{Script, ScriptId};
 use caolo_engine::model::EntityScript;
 use caolo_engine::storage::Storage;
 
@@ -40,8 +40,6 @@ const PROGRAM: &str = r#"{
 }"#;
 
 pub fn init_storage(n_fake_users: usize) -> Storage {
-    println!("{}", serde_json::to_string(&caolo_api::Scalar::Integer(5)).unwrap());
-
     let mut storage = caolo_engine::init_inmemory_storage();
 
     let script_id = ScriptId::default(); // TODO randomize

@@ -5,7 +5,7 @@ extern crate log;
 use actix::{Actor, ActorContext, AsyncContext, StreamHandler};
 use actix_web::{web, App, Error, HttpRequest, HttpResponse, HttpServer};
 use actix_web_actors::ws;
-use caolo_api::point::Point;
+use caolo_api::point::{Circle, Point};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -45,7 +45,7 @@ fn tick(storage: web::Data<Mutex<Storage>>) {
 struct WorldWs {
     storage: web::Data<Mutex<Storage>>,
     last_sent: Arc<AtomicUsize>, // last sent tick
-    vision: [Point; 2],          // from to
+    vision: Circle,
 }
 
 impl Actor for WorldWs {
@@ -72,7 +72,11 @@ impl WorldWs {
     fn new(storage: web::Data<Mutex<Storage>>) -> Self {
         let time = storage.lock().unwrap().time();
         Self {
-            vision: [Point::new(-40, -20), Point::new(20, 20)],
+            vision: Circle {
+                center: Point::new(0, 0),
+                radius: 20,
+            },
+
             last_sent: Arc::new(AtomicUsize::new(time as usize)),
             storage,
         }
@@ -90,21 +94,21 @@ impl WorldWs {
 
             debug!("Updating websocket actor");
 
-            if let Some(p) = {
+            if let Some(payload) = {
                 let storage = storage.lock().unwrap();
                 let time = storage.time();
                 if last_sent.load(Ordering::SeqCst) != time as usize {
                     last_sent.store(time as usize, Ordering::SeqCst);
-
-                    Some(payload::Payload::new(&storage, &vision))
+                    let payload = payload::Payload::new(&storage, vision);
+                    Some(payload)
                 } else {
                     None
                 }
             } {
                 // Free the mutex lock before bothering with serialization
-                debug!("Sending payload to client: {:#?}", p);
-                let p = serde_json::to_string(&p).unwrap();
-                ctx.text(&p);
+                debug!("Sending payload to client: {:#?}", payload);
+                let payload = serde_json::to_string(&payload).unwrap();
+                ctx.text(&payload);
             }
         });
     }

@@ -27,6 +27,9 @@ pub enum Instruction {
     /// Pop the next N (positive integer) number of items from the stack and write them to memory
     /// Push the pointer to the beginning of the array onto the stack
     ScalarArray = 13,
+    /// Writes the strings followed by the instruction to memory and pushes the pointer pointing to
+    /// it onto the stack
+    StringLiteral = 19,
     /// Empty instruction that has no effects
     Pass = 14,
     /// Clones the last element on the stack
@@ -61,6 +64,7 @@ impl TryFrom<u8> for Instruction {
             16 => Ok(Branch),
             17 => Ok(ScalarLabel),
             18 => Ok(Exit),
+            19 => Ok(StringLiteral),
             _ => Err(format!("Unrecognized instruction [{}]", c)),
         }
     }

@@ -191,6 +191,12 @@ impl<Aux> VM<Aux> {
                 Instruction::Sub => self.binary_op(|a, b| a - b, |s| s.stack().last().cloned())?,
                 Instruction::Mul => self.binary_op(|a, b| a * b, |s| s.stack().last().cloned())?,
                 Instruction::Div => self.binary_op(|a, b| a / b, |s| s.stack().last().cloned())?,
+                Instruction::StringLiteral => {
+                    let literal = Self::read_str(&mut ptr, &program.bytecode)
+                        .ok_or(ExecutionError::InvalidArgument)?;
+                    let ptr = self.set_value(literal);
+                    self.stack.push(Scalar::Pointer(ptr));
+                }
                 Instruction::Call => {
                     let fun_name = Self::read_str(&mut ptr, &program.bytecode)
                         .ok_or(ExecutionError::InvalidArgument)?;

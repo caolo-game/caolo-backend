@@ -61,7 +61,7 @@ pub fn input_per_instruction(inst: Instruction) -> Option<u8> {
         Add | Sub | Mul | Div => Some(2),
         Branch => Some(3),
         ScalarLabel | ScalarInt | ScalarFloat | ScalarPtr | Pass | CopyLast => Some(0),
-        Exit | Call | ScalarArray => None,
+        StringLiteral | Exit | Call | ScalarArray => None,
     }
 }
 
@@ -156,7 +156,7 @@ impl Compiler {
             Exit | Pass | CopyLast | Branch | Add | Sub | Mul | Div => {
                 self.push_node(nodeid);
             }
-            Call => {
+            StringLiteral | Call => {
                 self.push_node(nodeid);
                 self.program
                     .bytecode

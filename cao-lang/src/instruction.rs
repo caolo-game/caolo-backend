@@ -5,22 +5,14 @@ use std::convert::TryFrom;
 #[repr(u8)]
 /// Single instruction of the interpreter
 pub enum Instruction {
-    /// Add two numbers, write the result in the first memory location
-    AddInt = 1,
-    /// Subtract two numbers, write the result in the first memory location
-    SubInt = 2,
-    /// Add two numbers, write the result in the first memory location
-    AddFloat = 3,
-    /// Subtract two numbers, write the result in the first memory location
-    SubFloat = 4,
-    /// Multiply two numbers, write the result in the first memory location
+    /// Add two numbers
+    Add = 1,
+    /// Subtract two numbers
+    Sub = 2,
+    /// Multiply two numbers
     Mul = 5,
-    /// Multiply two numbers, write the result in the first memory location
-    MulFloat = 6,
     /// Divide the first number by the second
     Div = 7,
-    /// Divide the first number by the second
-    DivFloat = 8,
     /// Call a function provided by the runtime
     /// Requires function name as a string as input
     Call = 9,
@@ -55,14 +47,10 @@ impl TryFrom<u8> for Instruction {
     fn try_from(c: u8) -> Result<Instruction, Self::Error> {
         use Instruction::*;
         match c {
-            1 => Ok(AddInt),
-            2 => Ok(SubInt),
-            3 => Ok(AddFloat),
-            4 => Ok(SubFloat),
+            1 => Ok(Add),
+            2 => Ok(Sub),
             5 => Ok(Mul),
-            6 => Ok(MulFloat),
             7 => Ok(Div),
-            8 => Ok(DivFloat),
             9 => Ok(Call),
             10 => Ok(ScalarInt),
             11 => Ok(ScalarFloat),
@@ -77,4 +65,3 @@ impl TryFrom<u8> for Instruction {
         }
     }
 }
-

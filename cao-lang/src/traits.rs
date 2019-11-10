@@ -48,7 +48,6 @@ impl AutoByteEncodeProperties for u32 {}
 impl AutoByteEncodeProperties for u64 {}
 impl AutoByteEncodeProperties for f32 {}
 impl AutoByteEncodeProperties for f64 {}
-impl AutoByteEncodeProperties for TPointer {}
 
 impl<T: Sized + Clone + Copy + AutoByteEncodeProperties> ByteEncodeProperties for T {
     fn encode(self) -> Vec<u8> {

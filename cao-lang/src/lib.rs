@@ -10,7 +10,7 @@ use crate::instruction::Instruction;
 use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-pub type TPointer = usize;
+pub type TPointer = i32;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct CompiledProgram {

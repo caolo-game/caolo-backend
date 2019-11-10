@@ -11,7 +11,7 @@ const PROGRAM: &str = r#"{
             "instruction": "ScalarInt"
         },
         "2": {
-            "instruction": "AddInt"
+            "instruction": "Add"
         },
         "3": {
             "instruction": "Call"

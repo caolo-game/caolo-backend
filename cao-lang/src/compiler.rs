@@ -58,7 +58,7 @@ impl AstNode {
 pub fn input_per_instruction(inst: Instruction) -> Option<u8> {
     use Instruction::*;
     match inst {
-        AddInt | SubInt | AddFloat | SubFloat | Mul | MulFloat | Div | DivFloat => Some(2),
+        Add | Sub | Mul | Div => Some(2),
         Branch => Some(3),
         ScalarLabel | ScalarInt | ScalarFloat | ScalarPtr | Pass | CopyLast => Some(0),
         Exit | Call | ScalarArray => None,
@@ -153,8 +153,7 @@ impl Compiler {
         }
 
         match instruction {
-            Exit | Pass | CopyLast | Branch | AddFloat | AddInt | SubFloat | SubInt | Mul
-            | MulFloat | Div | DivFloat => {
+            Exit | Pass | CopyLast | Branch | Add | Sub | Mul | Div => {
                 self.push_node(nodeid);
             }
             Call => {
@@ -253,7 +252,7 @@ mod tests {
             (
                 2,
                 AstNode {
-                    instruction: Instruction::AddFloat,
+                    instruction: Instruction::Add,
                 },
             ),
         ]
@@ -312,13 +311,13 @@ mod tests {
             (
                 2,
                 AstNode {
-                    instruction: Instruction::AddFloat,
+                    instruction: Instruction::Add,
                 },
             ),
             (
                 5,
                 AstNode {
-                    instruction: Instruction::SubFloat,
+                    instruction: Instruction::Sub,
                 },
             ),
             (

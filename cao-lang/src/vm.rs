@@ -133,7 +133,7 @@ impl<Aux> VM<Aux> {
                 Instruction::Pass => {}
                 Instruction::ScalarLabel => {
                     let len = NodeId::BYTELEN;
-                    self.stack.push(Scalar::Label(
+                    self.stack.push(Scalar::Integer(
                         NodeId::decode(&program.bytecode[ptr..ptr + len])
                             .ok_or(ExecutionError::InvalidArgument)?,
                     ));

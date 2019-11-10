@@ -197,7 +197,7 @@ impl Compiler {
                     (Instruction::ScalarPtr, Scalar::Pointer(v)) => {
                         self.program.bytecode.append(&mut v.encode());
                     }
-                    (Instruction::ScalarLabel, Scalar::Label(v)) => {
+                    (Instruction::ScalarLabel, Scalar::Integer(v)) => {
                         self.program.bytecode.append(&mut v.encode());
                     }
                     _ => panic!(
@@ -353,8 +353,8 @@ mod tests {
             (10, Scalar::Floating(val1)),
             (1, Scalar::Floating(val2)),
             (6, Scalar::Integer(cond)),
-            (7, Scalar::Label(2)),
-            (8, Scalar::Label(5)),
+            (7, Scalar::Integer(2)),
+            (8, Scalar::Integer(5)),
         ]
         .into_iter()
         .map(|x| *x)

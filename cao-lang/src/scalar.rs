@@ -9,7 +9,6 @@ pub enum Scalar {
     Pointer(TPointer),
     Integer(i32),
     Floating(f32),
-    Label(NodeId),
 }
 
 impl Scalar {
@@ -19,7 +18,6 @@ impl Scalar {
             Pointer(i) => i != 0,
             Integer(i) => i != 0,
             Floating(i) => i != 0.0,
-            Label(_) => true,
         }
     }
 }
@@ -37,7 +35,7 @@ impl TryFrom<Scalar> for i32 {
 
     fn try_from(v: Scalar) -> Result<Self, Scalar> {
         match v {
-            Scalar::Label(i) | Scalar::Integer(i) => Ok(i),
+            Scalar::Integer(i) => Ok(i),
             _ => Err(v),
         }
     }

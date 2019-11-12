@@ -1,6 +1,6 @@
 //! Methods that are exported to the WASM clients
 //!
-//! Methods that may fail return an OperationResult or the length of the result in bytes.
+//! Methods that may fail return an OperationResult
 //!
 mod bots;
 mod pathfinding;
@@ -14,7 +14,7 @@ use crate::systems::execution::ScriptExecutionData;
 use cao_lang::prelude::*;
 
 macro_rules! make_import {
-    ($name: ident) => {
+    ($name: path) => {
         (
             stringify!($name),
             FunctionObject::new(FunctionWrapper::new($name)),
@@ -41,16 +41,6 @@ pub fn console_log(
     Ok(0)
 }
 
-pub fn say_hi(
-    vm: &mut VM<ScriptExecutionData>,
-    _: (),
-    _output: TPointer,
-) -> Result<usize, ExecutionError> {
-    debug!("Entity [{:?}] says hi", vm.get_aux().entityid(),);
-
-    Ok(0)
-}
-
 pub fn log_scalar(
     vm: &mut VM<ScriptExecutionData>,
     value: Scalar,
@@ -65,8 +55,8 @@ pub fn make_import() -> ImportObject {
     ImportObject {
         imports: vec![
             make_import!(console_log),
-            make_import!(say_hi),
             make_import!(log_scalar),
+            make_import!(bots::move_bot),
         ],
     }
 }

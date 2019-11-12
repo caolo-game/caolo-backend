@@ -1,0 +1,24 @@
+[package]
+name = "caolo-web"
+version = "0.1.0"
+authors = ["Daniel Kiss <littlesnorrboy@gmail.com>"]
+edition = "2018"
+
+[package.metadata.maturin]
+requires-dist = ["flask~=1.1.0"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "caolo_web"
+crate-type = ["cdylib"]
+
+[dependencies]
+caolo-api = { path = "../api", version = "0.1"}
+cao-lang = { path = "../cao-lang", version = "0.1"}
+serde_json = "*"
+
+[dependencies.pyo3]
+version = "0.8"
+features = ["extension-module"]
+

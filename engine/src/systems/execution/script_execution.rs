@@ -91,7 +91,7 @@ impl ScriptExecutionData {
         unsafe { &*self.storage }
     }
 
-    pub fn intents(&mut self) -> &mut Vec<intents::Intent> {
+    pub fn intents_mut(&mut self) -> &mut Vec<intents::Intent> {
         &mut self.intents
     }
 }

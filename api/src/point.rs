@@ -1,3 +1,4 @@
+use cao_lang::traits::AutoByteEncodeProperties;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
 
 /// Represents a 2D point
@@ -124,8 +125,8 @@ impl Circle {
     }
 }
 
-impl cao_lang::traits::AutoByteEncodeProperties for Point {}
-impl cao_lang::traits::AutoByteEncodeProperties for Circle {}
+impl AutoByteEncodeProperties for Point {}
+impl AutoByteEncodeProperties for Circle {}
 
 #[cfg(test)]
 mod tests {

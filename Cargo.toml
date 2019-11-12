@@ -5,4 +5,5 @@ members = [
     "engine",
     "worker",
     "cao-lang",
+    "webservice"
 ]

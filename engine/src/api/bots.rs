@@ -1,10 +1,44 @@
 use super::*;
-use crate::intents::{check_dropoff_intent, check_mine_intent, check_move_intent};
-use crate::model::{self, EntityId};
+use crate::intents::{self, check_move_intent};
+use crate::model::{self, EntityId, Point};
 use crate::profile;
 use crate::storage::Storage;
-use crate::tables::BotTable;
-use rayon::prelude::*;
+use caolo_api::OperationResult;
+
+/// In: x, y coordinates
+/// Out: OperationResult
+pub fn move_bot(
+    vm: &mut VM<ScriptExecutionData>,
+    point: TPointer,
+    output: TPointer,
+) -> Result<usize, ExecutionError> {
+    profile!("_send_move_intent");
+
+    let point: Point = vm.get_value(point).ok_or_else(|| {
+        error!("move_bot called without a point");
+        ExecutionError::InvalidArgument
+    })?;
+    let intent = caolo_api::bots::MoveIntent {
+        id: vm.get_aux().entityid(),
+        position: point,
+    };
+    let userid = Default::default();
+    let storage = vm.get_aux().storage();
+
+    let result = {
+        let checkresult = check_move_intent(&intent, userid, storage);
+        match checkresult {
+            OperationResult::Ok => 0,
+            _ => vm.set_value_at(output, checkresult),
+        }
+    };
+
+    vm.get_aux_mut()
+        .intents_mut()
+        .push(intents::Intent::new_move(intent.id, intent.position));
+
+    return Ok(result);
+}
 
 pub fn build_bot(id: EntityId, storage: &Storage) -> Option<caolo_api::bots::Bot> {
     let pos = storage

@@ -65,16 +65,16 @@ impl<Aux> VM<Aux> {
     }
 
     // TODO: check if maximum size was exceeded
-    pub fn set_value<T: ByteEncodeProperties>(&mut self, val: T) -> TPointer {
+    pub fn set_value<T: ByteEncodeProperties>(&mut self, val: T) -> (TPointer, usize) {
         let result = self.memory.len();
         let bytes = val.encode();
         self.memory.extend(bytes.iter());
 
-        result as TPointer
+        (result as TPointer, bytes.len())
     }
 
     // TODO: check if maximum size was exceeded
-    pub fn set_value_at<T: ByteEncodeProperties>(&mut self, ptr: TPointer, val: T) {
+    pub fn set_value_at<T: ByteEncodeProperties>(&mut self, ptr: TPointer, val: T) -> usize {
         let bytes = val.encode();
         match usize::try_from(ptr) {
             Ok(ptr) => {
@@ -82,9 +82,11 @@ impl<Aux> VM<Aux> {
                     self.memory.resize(ptr + bytes.len(), 0);
                 }
                 self.memory.as_mut_slice()[ptr..ptr + bytes.len()].copy_from_slice(&bytes[..]);
+                bytes.len()
             }
             Err(e) => {
                 error!("Failed to cast ptr to usize {:?}", e);
+                0
             }
         }
     }
@@ -194,7 +196,7 @@ impl<Aux> VM<Aux> {
                 Instruction::StringLiteral => {
                     let literal = Self::read_str(&mut ptr, &program.bytecode)
                         .ok_or(ExecutionError::InvalidArgument)?;
-                    let ptr = self.set_value(literal);
+                    let (ptr, _len) = self.set_value(literal);
                     self.stack.push(Scalar::Pointer(ptr));
                 }
                 Instruction::Call => {

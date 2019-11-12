@@ -23,7 +23,7 @@ pub type UserId = uuid::Uuid;
 #[derive(Default, Clone, Copy, Debug, Serialize, Deserialize, Eq, PartialEq, Ord, PartialOrd)]
 pub struct ScriptId(pub uuid::Uuid);
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Copy)]
 #[repr(i32)]
 pub enum OperationResult {
     Ok = 0,

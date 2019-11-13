@@ -128,7 +128,11 @@ impl Compiler {
             }
         }
         let instruction = {
-            let node = &self.unit.nodes[&nodeid];
+            let node = &self
+                .unit
+                .nodes
+                .get(&nodeid)
+                .ok_or_else(|| format!("node [{}] not found in `nodes`", nodeid))?;
             node.instruction
         };
         if input_per_instruction(instruction)
@@ -158,35 +162,52 @@ impl Compiler {
             }
             StringLiteral | Call => {
                 self.push_node(nodeid);
-                self.program
-                    .bytecode
-                    .append(&mut self.unit.strings[&nodeid].encode());
+                self.program.bytecode.append(
+                    &mut self
+                        .unit
+                        .strings
+                        .get(&nodeid)
+                        .ok_or_else(|| format!("node [{}] not found in `strings`", nodeid))?
+                        .encode(),
+                );
             }
             ScalarArray => {
                 self.push_node(nodeid);
-                match self.unit.values[&nodeid] {
+                match self
+                    .unit
+                    .values
+                    .get(&nodeid)
+                    .ok_or_else(|| format!("node [{}] not found in `values`", nodeid))?
+                {
                     Scalar::Integer(v) => {
                         if self
                             .unit
                             .inputs
                             .get(&nodeid)
-                            .map(|x| x.len() != v as usize)
-                            .unwrap_or(v != 0)
+                            .map(|x| x.len() != *v as usize)
+                            .unwrap_or(*v != 0)
                         {
                             return Err("Array literal got invalid inputs".to_owned());
                         }
 
                         self.program.bytecode.append(&mut v.encode());
                     }
-                    _ => panic!(
-                        "ScalarArray got invalid value {:?}",
-                        self.unit.values[&nodeid]
-                    ),
+                    _ => {
+                        return Err(format!(
+                            "ScalarArray got invalid value {:?}",
+                            self.unit.values[&nodeid]
+                        ))
+                    }
                 }
             }
             ScalarLabel | ScalarPtr | ScalarFloat | ScalarInt => {
                 self.push_node(nodeid);
-                match (instruction, self.unit.values[&nodeid]) {
+                let value = self
+                    .unit
+                    .values
+                    .get(&nodeid)
+                    .ok_or_else(|| format!("node [{}] not found in `values`", nodeid))?;
+                match (instruction, value) {
                     (Instruction::ScalarInt, Scalar::Integer(v)) => {
                         self.program.bytecode.append(&mut v.encode());
                     }
@@ -199,10 +220,12 @@ impl Compiler {
                     (Instruction::ScalarLabel, Scalar::Integer(v)) => {
                         self.program.bytecode.append(&mut v.encode());
                     }
-                    _ => panic!(
-                        "Scalar {:?} got invalid value {:?}",
-                        instruction, self.unit.values[&nodeid]
-                    ),
+                    _ => {
+                        return Err(format!(
+                            "Scalar {:?} got invalid value {:?}",
+                            instruction, value
+                        ))
+                    }
                 }
             }
         }
@@ -210,12 +233,18 @@ impl Compiler {
     }
 
     fn push_node(&mut self, nodeid: NodeId) {
-        let node = &self.unit.nodes[&nodeid];
-        self.program.bytecode.push(node.instruction as u8);
+        if let Some(node) = &self.unit.nodes.get(&nodeid) {
+            self.program.bytecode.push(node.instruction as u8);
+        }
     }
 
     pub fn validate_node(node: NodeId, cu: &CompilationUnit) -> Result<(), String> {
-        if let Some(n) = input_per_instruction(cu.nodes[&node].instruction) {
+        if let Some(n) = input_per_instruction(
+            cu.nodes
+                .get(&node)
+                .ok_or_else(|| format!("node [{}] not found in `nodes`", node))?
+                .instruction,
+        ) {
             let n_inputs = cu.inputs.get(&node).map(|x| x.len()).unwrap_or(0)
                 + cu.strings.get(&node).map(|_| 1).unwrap_or(0);
             if n_inputs != n as usize {

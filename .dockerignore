@@ -3,7 +3,8 @@
 !Cargo.lock
 !api
 !engine
-!example-bot
 !worker
 !web-client
 !rust-toolchain
+!cao-lang
+!webservice

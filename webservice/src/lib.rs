@@ -7,7 +7,7 @@ use cao_lang::prelude::{CompilationUnit, Compiler};
 
 #[pyfunction]
 /// Compile a graph
-/// TODO: Pass the compilation unit as a dict
+/// Pass the compilation unit as a JSON serialized string
 fn compile(py: Python, cu: String) -> PyResult<&PyDict> {
     let cu = serde_json::from_str::<CompilationUnit>(&cu).map_err(|e| {
         PyErr::new::<exceptions::ValueError, _>(format!(
@@ -15,15 +15,27 @@ fn compile(py: Python, cu: String) -> PyResult<&PyDict> {
             e
         ))
     })?;
-    let _result = Compiler::compile(cu).map_err(|e| {
+    let program = Compiler::compile(cu).map_err(|e| {
         PyErr::new::<exceptions::ValueError, _>(format!("Failed to compile {:?}", e))
     })?;
-    // TODO: return the compiled program
-    Ok(PyDict::new(py))
+    let result = PyDict::new(py);
+    result.set_item("bytecode", program.bytecode).map_err(|e| {
+        PyErr::new::<exceptions::ValueError, _>(format!(
+            "Failed to set the bytecode on the result {:?}",
+            e
+        ))
+    })?;
+    result.set_item("labels", program.labels).map_err(|e| {
+        PyErr::new::<exceptions::ValueError, _>(format!(
+            "Failed to set the labels on the result {:?}",
+            e
+        ))
+    })?;
+    Ok(result)
 }
 
 #[pymodule]
-fn caolo_web(_py: Python, m: &PyModule) -> PyResult<()> {
+fn caolo_web_lib(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(compile))?;
 
     Ok(())

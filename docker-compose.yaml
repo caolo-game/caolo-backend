@@ -3,9 +3,18 @@ services:
   web:
     build:
       context: .
-      dockerfile: "dockerfile.worker"
-    env_file: .env
+      dockerfile: "dockerfile.web"
+    # env_file: .env
     environment:
-      HOST: "0.0.0.0"
+      FLASK_RUN_HOST: 0.0.0.0
     ports:
-      - "8000:8000"
+      - "5000:5000"
+  # worker:
+  #   build:
+  #     context: .
+  #     dockerfile: "dockerfile.worker"
+  #   env_file: .env
+  #   environment:
+  #     HOST: "0.0.0.0"
+  #   ports:
+  #     - "8000:8000"

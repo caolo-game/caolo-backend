@@ -1,9 +1,10 @@
 import caolo_web_lib as cw
 
 from flask import Flask, request, jsonify, abort
-import json
+from flask_cors import CORS
 
 app = Flask(__name__)
+cors = CORS(app, resources={r"/*": {"origins": "*"}})
 
 
 @app.route('/compile', methods=["POST"])

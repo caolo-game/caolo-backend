@@ -60,7 +60,7 @@ pub struct SpawnBotComponent {
 }
 
 // TODO: more resource types
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct CarryComponent {
     pub carry: u16,
     pub carry_max: u16,

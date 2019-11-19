@@ -1,5 +1,5 @@
-use caolo_api::{Script, ScriptId};
-use caolo_engine::model::EntityScript;
+use caolo_api::{point::Point, Script, ScriptId};
+use caolo_engine::model;
 use caolo_engine::storage::Storage;
 
 const PROGRAM: &str = r#"{
@@ -50,8 +50,21 @@ pub fn init_storage(n_fake_users: usize) -> Storage {
     for _ in 0..n_fake_users {
         let id = storage.insert_entity();
         storage
-            .entity_table_mut::<EntityScript>()
-            .insert(id, EntityScript { script_id });
+            .entity_table_mut::<model::EntityScript>()
+            .insert(id, model::EntityScript { script_id });
+        storage.entity_table_mut::<model::Bot>().insert(
+            id,
+            model::Bot {
+                owner_id: None, // TODO
+                speed: 1,
+            },
+        );
+        storage
+            .entity_table_mut::<model::PositionComponent>()
+            .insert(id, model::PositionComponent(Point::new(0, 0)));
+        storage
+            .entity_table_mut::<model::CarryComponent>()
+            .insert(id, Default::default());
     }
     storage
 }

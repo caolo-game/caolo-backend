@@ -1,4 +1,3 @@
-from caolo_web import app
-import os
+from caolo_web import main
 
-app.run(host="0.0.0.0", port=os.getenv("PORT"), threaded=True)
+main()

@@ -5,16 +5,23 @@ use caolo_engine::storage::Storage;
 const PROGRAM: &str = r#"{
     "nodes": {
         "0": {
-            "instruction": "ScalarInt"
+            "instruction": "ScalarInt",
+            "scalar": {
+                "Integer": 4
+            }
         },
         "1": {
-            "instruction": "ScalarInt"
+            "instruction": "ScalarInt",
+            "scalar": {
+                "Integer": 5
+            }
         },
         "2": {
             "instruction": "Add"
         },
         "3": {
-            "instruction": "Call"
+            "instruction": "Call",
+            "string": "log_scalar"
         }
     },
     "inputs": {
@@ -25,17 +32,6 @@ const PROGRAM: &str = r#"{
         "3": [
             2
         ]
-    },
-    "values": {
-        "0": {
-            "Integer": 4
-        },
-        "1": {
-            "Integer": 5
-        }
-    },
-    "strings": {
-        "3": "log_scalar"
     }
 }"#;
 

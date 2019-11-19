@@ -13,6 +13,5 @@
 ## Running
 
 ```
-set FLASK_APP=caolo_web
-flask run
+python main.py
 ```

@@ -14,9 +14,10 @@ use crate::systems::execution::ScriptExecutionData;
 use cao_lang::prelude::*;
 
 macro_rules! make_import {
-    ($name: path) => {
+    ($name: path, $description: expr) => {
         (
             stringify!($name),
+            $description,
             FunctionObject::new(FunctionWrapper::new($name)),
         )
     };
@@ -54,28 +55,38 @@ pub fn log_scalar(
 pub fn make_import() -> ImportObject {
     ImportObject {
         imports: vec![
-            make_import!(console_log),
-            make_import!(log_scalar),
-            make_import!(bots::move_bot),
+            make_import!(console_log, "Log a string"),
+            make_import!(log_scalar, "Log the topmost scalar on the stack"),
+            make_import!(bots::move_bot, "Move the current bot to the Point"),
         ],
     }
 }
 
 pub struct ImportObject {
-    imports: Vec<(&'static str, FunctionObject<ScriptExecutionData>)>,
+    imports: Vec<(
+        &'static str,
+        &'static str,
+        FunctionObject<ScriptExecutionData>,
+    )>,
 }
 
 impl ImportObject {
-    pub fn imports(&self) -> &[(&'static str, FunctionObject<ScriptExecutionData>)] {
+    pub fn imports(
+        &self,
+    ) -> &[(
+        &'static str,
+        &'static str,
+        FunctionObject<ScriptExecutionData>,
+    )] {
         &self.imports
     }
 
     pub fn keys(&self) -> impl Iterator<Item = &&'static str> {
-        self.imports.iter().map(|(k, _)| k)
+        self.imports.iter().map(|(k, _, _)| k)
     }
 
     pub fn execute_imports(self, vm: &mut VM<ScriptExecutionData>) {
-        for (k, v) in self.imports {
+        for (k, _, v) in self.imports {
             vm.register_function_obj(k, v);
         }
     }

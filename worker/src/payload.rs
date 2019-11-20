@@ -1,36 +1,30 @@
 use caolo_api::{
-    bots::Bots,
-    point::{Circle, Point},
-    resources::Resources,
-    structures::Structures,
+    bots::Bots, point::Point, resources::Resources, structures::Structures,
     terrain::TileTerrainType,
 };
 use caolo_engine::api::{build_bot, build_resource, build_structure};
 use caolo_engine::model;
 use caolo_engine::storage::Storage;
-use caolo_engine::tables::PositionTable;
 
 /// terrain is a list of non-plain terrain types
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Payload {
-    bots: Bots,
-    structures: Structures,
-    resources: Resources,
+    pub bots: Bots,
+    pub structures: Structures,
+    pub resources: Resources,
 
-    terrain: Vec<(Point, TileTerrainType)>,
+    pub terrain: Vec<(Point, TileTerrainType)>,
 
-    delta_time_ms: i64,
-    time: u64,
+    pub delta_time_ms: i64,
+    pub time: u64,
 }
 
 impl Payload {
-    // TODO: pass circle as vision
-    pub fn new(storage: &Storage, vision: Circle) -> Self {
+    pub fn new(storage: &Storage) -> Self {
         let ids = storage
             .entity_table::<model::PositionComponent>()
-            .get_entities_in_range(&vision)
-            .into_iter()
+            .iter()
             .map(|(e, _)| e)
             .collect::<Vec<_>>();
 
@@ -55,7 +49,7 @@ impl Payload {
             storage
                 .point_table::<model::TileTerrainType>()
                 .iter()
-                .filter(|(p, t)| vision.is_inside(*p) && *t != TileTerrainType::Empty)
+                .filter(|(p, t)| *t != TileTerrainType::Empty)
                 .collect()
         };
 

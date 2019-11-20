@@ -34,24 +34,26 @@ def compile_script():
 
 
 class SimulationProtocol(WebSocketServerProtocol):
-    caolo_ws = None
     done = True
+    redis_conn = None
 
     def onOpen(self):
-        self.caolo_ws = create_connection(
-            os.getenv("WORKER_URL", "ws://localhost:8000"))
+        import redis
+        self.redis_conn = redis.Redis(
+            host=os.getenv("REDIS_HOST", "localhost"),
+            port=os.getenv("REDIS_PORT", "6379"),
+            db=0)
         self.done = False
         reactor.callLater(0.2, self.send_world_state)
 
-    def onClose(self,*args):
+    def onClose(self, *args):
         super().onClose(*args)
         self.done = True
 
     def send_world_state(self):
         if self.done:
             return
-        msg = self.caolo_ws.recv()
-        payload = bytes(msg, "UTF-8")
+        payload = self.redis_conn.get("WORLD_STATE")
         self.sendMessage(payload)
         reactor.callLater(0.2, self.send_world_state)
 

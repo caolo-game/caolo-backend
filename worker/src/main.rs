@@ -2,18 +2,12 @@
 extern crate serde_derive;
 #[macro_use]
 extern crate log;
-use actix::{Actor, ActorContext, AsyncContext, StreamHandler};
-use actix_web::{web, App, Error, HttpRequest, HttpResponse, HttpServer};
-use actix_web_actors::ws;
-use caolo_api::point::{Circle, Point};
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex};
-use std::thread;
-use std::time::Duration;
 
 mod init;
 mod payload;
 
+use std::thread;
+use std::time::Duration;
 use caolo_engine::{self, storage::Storage};
 
 fn init() {
@@ -21,12 +15,10 @@ fn init() {
     env_logger::init();
 }
 
-fn tick(storage: web::Data<Mutex<Storage>>) {
-    let mut storage = storage.lock().unwrap();
-
+fn tick(storage: &mut Storage) {
     let start = chrono::Utc::now();
 
-    caolo_engine::forward(&mut storage)
+    caolo_engine::forward(storage)
         .map(|_| {
             let duration = chrono::Utc::now() - start;
 
@@ -42,76 +34,22 @@ fn tick(storage: web::Data<Mutex<Storage>>) {
         .unwrap();
 }
 
-struct WorldWs {
-    storage: web::Data<Mutex<Storage>>,
-    last_sent: Arc<AtomicUsize>, // last sent tick
-    vision: Circle,
-}
+fn send_world(storage: &Storage, client: &redis::Client) -> Result<(), Box<dyn std::error::Error>> {
+    debug!("Sending world state to redis");
 
-impl Actor for WorldWs {
-    type Context = ws::WebsocketContext<Self>;
+    let payload = payload::Payload::new(storage);
+    let js = serde_json::to_string(&payload)?;
 
-    fn started(&mut self, ctx: &mut Self::Context) {
-        self.hb(ctx);
-    }
-}
+    let mut con = client.get_connection()?;
 
-impl StreamHandler<ws::Message, ws::ProtocolError> for WorldWs {
-    fn handle(&mut self, msg: ws::Message, ctx: &mut Self::Context) {
-        match msg {
-            ws::Message::Ping(msg) => ctx.pong(&msg),
-            ws::Message::Close(_) => {
-                ctx.stop();
-            }
-            _ => (),
-        }
-    }
-}
+    redis::pipe()
+        .cmd("SET")
+        .arg("WORLD_STATE")
+        .arg(js)
+        .query(&mut con)?;
 
-impl WorldWs {
-    fn new(storage: web::Data<Mutex<Storage>>) -> Self {
-        let time = storage.lock().unwrap().time();
-        Self {
-            vision: Circle {
-                center: Point::new(0, 0),
-                radius: 20,
-            },
-
-            last_sent: Arc::new(AtomicUsize::new(time as usize)),
-            storage,
-        }
-    }
-
-    fn hb(&self, ctx: &mut <Self as Actor>::Context) {
-        const HEARTBEAT_INTERVAL: Duration = Duration::from_millis(200);
-
-        ctx.run_interval(HEARTBEAT_INTERVAL, move |this, ctx| {
-            let storage = this.storage.clone();
-            let last_sent = this.last_sent.clone();
-            let vision = this.vision;
-
-            ctx.ping("");
-
-            debug!("Updating websocket actor");
-
-            if let Some(payload) = {
-                let storage = storage.lock().unwrap();
-                let time = storage.time();
-                if last_sent.load(Ordering::SeqCst) != time as usize {
-                    last_sent.store(time as usize, Ordering::SeqCst);
-                    let payload = payload::Payload::new(&storage, vision);
-                    Some(payload)
-                } else {
-                    None
-                }
-            } {
-                // Free the mutex lock before bothering with serialization
-                debug!("Sending payload to client: {:#?}", payload);
-                let payload = serde_json::to_string(&payload).unwrap();
-                ctx.text(&payload);
-            }
-        });
-    }
+    debug!("Sending world state done");
+    Ok(())
 }
 
 fn main() {
@@ -121,42 +59,14 @@ fn main() {
         .and_then(|s| s.parse::<usize>().ok())
         .unwrap_or(8);
 
-    let storage = init::init_storage(n_actors);
+    let redis_url = std::env::var("REDIS_URL").unwrap_or("redis://localhost:6379/0".to_owned());
 
-    let host = std::env::var("HOST").unwrap_or("localhost".to_owned());
-    let port = std::env::var("PORT").unwrap_or("8000".to_owned());
+    let mut storage = init::init_storage(n_actors);
+    let connection = redis::Client::open(redis_url.as_str()).expect("Redis connection");
 
-    let storage = web::Data::new(Mutex::new(storage));
-
-    {
-        let storage = storage.clone();
-        thread::Builder::new()
-            .name("Worker".to_owned())
-            .spawn(move || loop {
-                tick(storage.clone());
-                // Give the websockets a chance to read the state
-                thread::sleep(std::time::Duration::from_millis(200));
-            })
-            .unwrap();
+    loop {
+        tick(&mut storage);
+        send_world(&storage, &connection).expect("Sending world");
+        thread::sleep(Duration::from_millis(200));
     }
-
-    HttpServer::new(move || {
-        App::new()
-            .register_data(storage.clone())
-            .service(web::resource("/").to(index))
-    })
-    .workers(3)
-    .bind(format!("{}:{}", host, port))
-    .unwrap()
-    .run()
-    .unwrap();
-}
-
-fn index(
-    storage: web::Data<Mutex<Storage>>,
-    r: HttpRequest,
-    stream: web::Payload,
-) -> Result<HttpResponse, Error> {
-    debug!("Received connection request {:?}", r);
-    ws::start(WorldWs::new(storage), &r, stream)
 }

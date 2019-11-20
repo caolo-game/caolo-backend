@@ -5,6 +5,8 @@ use caolo_api::{
 use caolo_engine::api::{build_bot, build_resource, build_structure};
 use caolo_engine::model;
 use caolo_engine::storage::Storage;
+use caolo_engine::tables::LogTable;
+use std::collections::HashMap;
 
 /// terrain is a list of non-plain terrain types
 #[derive(Debug, Clone, Serialize)]
@@ -16,7 +18,7 @@ pub struct Payload {
 
     pub terrain: Vec<(Point, TileTerrainType)>,
 
-    pub log: Vec<String>,
+    pub log: HashMap<model::EntityId, String>,
 
     pub delta_time_ms: i64,
     pub time: u64,
@@ -64,9 +66,16 @@ impl Payload {
             Resources::new(resources)
         };
 
+        let time = storage.time() - 1; // the simulation increases time after the update is done
+        let log = storage
+            .log_table::<model::LogEntry>()
+            .get_logs_by_time(time)
+            .into_iter()
+            .map(|((id, _), pl)| (id, pl.payload.join("\n")))
+            .collect();
+
         let dt = storage.delta_time();
         let delta_time_ms = dt.num_milliseconds();
-        let time = storage.time();
 
         Self {
             bots,
@@ -75,7 +84,7 @@ impl Payload {
             resources,
             delta_time_ms,
             time,
-            log: vec![],
+            log,
         }
     }
 }

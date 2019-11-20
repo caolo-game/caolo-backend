@@ -112,3 +112,13 @@ impl PositionTable for InMemoryTable<EntityId, PositionComponent> {
             .count()
     }
 }
+
+impl LogTable for InMemoryTable<(EntityId, u64), model::LogEntry> {
+    fn get_logs_by_time(&self, time: u64) -> Vec<((EntityId, u64), model::LogEntry)> {
+        self.data
+            .par_iter()
+            .filter(|((_, t), _)| *t == time)
+            .map(|(k, v)| (*k, v.clone()))
+            .collect()
+    }
+}

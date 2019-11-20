@@ -4,7 +4,7 @@ mod iterators;
 #[cfg(feature = "inmemory_storage")]
 pub use self::inmemory::*;
 pub use self::iterators::*;
-use crate::model::{Bot, Circle, EntityId, PositionComponent, Structure, UserId};
+use crate::model::{self, Bot, Circle, EntityId, PositionComponent, Structure, UserId};
 // TODO: remove caolo_api dependency from this module, replace with model/
 use caolo_api::user::UserData;
 
@@ -119,7 +119,6 @@ trait TableBackend {
     type Row: Clone;
 
     fn get_by_id(&self, id: &Self::Id) -> Option<Self::Row>;
-
     fn get_by_ids(&self, id: &[Self::Id]) -> Vec<(Self::Id, Self::Row)>;
 
     /// insert or update
@@ -192,6 +191,20 @@ impl PositionTable for Table<EntityId, PositionComponent> {
         match &self.backend {
             #[cfg(feature = "inmemory_storage")]
             InMemory(table) => table.count_entities_in_range(vision),
+        }
+    }
+}
+
+pub trait LogTable {
+    fn get_logs_by_time(&self, time: u64) -> Vec<((EntityId, u64), model::LogEntry)>;
+}
+
+impl LogTable for Table<(EntityId, u64), model::LogEntry> {
+    fn get_logs_by_time(&self, time: u64) -> Vec<((EntityId, u64), model::LogEntry)> {
+        use Backend::*;
+        match &self.backend {
+            #[cfg(feature = "inmemory_storage")]
+            InMemory(table) => table.get_logs_by_time(time),
         }
     }
 }

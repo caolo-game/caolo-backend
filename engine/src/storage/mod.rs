@@ -20,6 +20,8 @@ pub struct Storage {
     point_tables: BTreeMap<TypeId, HomogenousTable<Point>>,
     scripts_tables: BTreeMap<TypeId, HomogenousTable<ScriptId>>,
 
+    log_tables: BTreeMap<TypeId, HomogenousTable<(EntityId, u64)>>,
+
     last_tick: DateTime<Utc>,
     dt: Duration,
 }
@@ -42,6 +44,7 @@ impl Storage {
             user_tables: BTreeMap::new(),
             point_tables: BTreeMap::new(),
             scripts_tables: BTreeMap::new(),
+            log_tables: BTreeMap::new(),
 
             last_tick: Utc::now(),
             dt: Duration::zero(),
@@ -107,5 +110,14 @@ impl Storage {
         add_scripts_table,
         delete_script,
         ScriptId
+    );
+
+    implement_table_type!(
+        log_tables,
+        log_table,
+        log_table_mut,
+        add_log_table,
+        delete_log,
+        (EntityId, u64)
     );
 }

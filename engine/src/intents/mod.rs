@@ -4,11 +4,13 @@ mod dropoff_intent;
 mod mine_intent;
 mod move_intent;
 mod spawn_intent;
+mod log_intent;
 
 pub use self::dropoff_intent::*;
 pub use self::mine_intent::*;
 pub use self::move_intent::*;
 pub use self::spawn_intent::*;
+pub use self::log_intent::*;
 
 use crate::storage::Storage;
 use crate::EntityId;
@@ -23,16 +25,18 @@ pub enum Intent {
     Spawn(SpawnIntent),
     Mine(MineIntent),
     Dropoff(DropoffIntent),
+    Log(LogIntent),
 }
 
 impl Intent {
     /// Higher priority should be executed first
     pub fn priority(&self) -> u16 {
         match self {
-            Intent::Move(_) => 0,
+            Intent::Move(_) => 1,
             Intent::Spawn(_) => 10,
             Intent::Mine(_) => 9,
             Intent::Dropoff(_) => 9,
+            Intent::Log(_) => 0,
         }
     }
 
@@ -42,6 +46,7 @@ impl Intent {
             Intent::Spawn(intent) => intent.execute(storage),
             Intent::Mine(intent) => intent.execute(storage),
             Intent::Dropoff(intent) => intent.execute(storage),
+            Intent::Log(intent) => intent.execute(storage),
         }
     }
 
@@ -58,6 +63,10 @@ impl Intent {
 
     pub fn new_mine(bot: EntityId, resource: EntityId) -> Self {
         Intent::Mine(MineIntent { bot, resource })
+    }
+
+    pub fn new_log(entity: EntityId, payload: String, time: u64) -> Self {
+        Intent::Log(LogIntent { entity, payload, time })
     }
 
     pub fn new_dropoff(

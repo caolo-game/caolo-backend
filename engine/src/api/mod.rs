@@ -47,7 +47,13 @@ pub fn log_scalar(
     value: Scalar,
     _output: TPointer,
 ) -> Result<usize, ExecutionError> {
-    debug!("Entity [{:?}] says {:?}", vm.get_aux().entityid(), value);
+    let entityid = vm.get_aux().entityid();
+    let time = vm.get_aux().storage().time();
+    let payload = format!("Entity [{:?}] says {:?}", entityid, value);
+    debug!("{}", payload);
+    vm.get_aux_mut()
+        .intents_mut()
+        .push(crate::intents::Intent::new_log(entityid, payload, time));
     Ok(0)
 }
 

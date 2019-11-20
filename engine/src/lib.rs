@@ -10,7 +10,7 @@ mod intents;
 mod systems;
 mod utils;
 
-use caolo_api::{EntityId, UserId};
+use caolo_api::EntityId;
 use systems::execute_world_update;
 use systems::execution::{execute_intents, execute_scripts};
 
@@ -85,6 +85,8 @@ pub fn init_inmemory_storage() -> storage::Storage {
     storage.add_entity_table::<EntityScript>(Table::default_inmemory());
     storage.add_entity_table::<SpawnComponent>(Table::default_inmemory());
     storage.add_entity_table::<Resource>(Table::default_inmemory());
+
+    storage.add_log_table::<LogEntry>(Table::default_inmemory());
 
     storage.add_user_table::<UserData>(Table::default_inmemory());
 

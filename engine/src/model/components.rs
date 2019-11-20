@@ -70,3 +70,8 @@ pub struct CarryComponent {
 pub struct EntityScript {
     pub script_id: ScriptId,
 }
+
+#[derive(Debug, Clone)]
+pub struct LogEntry {
+    pub payload: Vec<String>,
+}

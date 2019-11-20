@@ -1,6 +1,6 @@
 #[macro_export(local_inner_macros)]
 macro_rules! implement_table_type {
-    ($field_name: ident, $getter: ident, $mutter: ident, $setter: ident,$deleter: ident, $id: ident) =>{
+    ($field_name: ident, $getter: ident, $mutter: ident, $setter: ident,$deleter: ident, $id: tt) =>{
         pub fn $getter<'a, Row: TableRow>(&'a self) -> &'a Table<$id, Row> {
             let rowtype = TypeId::of::<Row>();
             self.$field_name

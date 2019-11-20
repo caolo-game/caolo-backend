@@ -16,6 +16,8 @@ pub struct Payload {
 
     pub terrain: Vec<(Point, TileTerrainType)>,
 
+    pub log: Vec<String>,
+
     pub delta_time_ms: i64,
     pub time: u64,
 }
@@ -49,7 +51,7 @@ impl Payload {
             storage
                 .point_table::<model::TileTerrainType>()
                 .iter()
-                .filter(|(p, t)| *t != TileTerrainType::Empty)
+                .filter(|(_, t)| *t != TileTerrainType::Empty)
                 .collect()
         };
 
@@ -73,6 +75,7 @@ impl Payload {
             resources,
             delta_time_ms,
             time,
+            log: vec![],
         }
     }
 }

@@ -1,4 +1,4 @@
-import os, sys
+import os, sys, json
 
 import caolo_web_lib as cw
 
@@ -15,13 +15,20 @@ from autobahn.twisted.resource import WebSocketResource, WSGIRootResource
 
 from websocket import create_connection
 
+import redis
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
 
 cors = CORS(app, resources={r"/*": {"origins": "*"}})
 
 
-@app.route('/compile', methods=["POST"])
+def get_redis_client():
+    return redis.Redis.from_url(
+        os.getenv("REDIS_URL", "redis://localhost:6379/0"))
+
+
+@app.route('/script/compile', methods=["POST"])
 def compile_script():
 
     content = request.get_data(as_text=True)
@@ -33,16 +40,22 @@ def compile_script():
         abort(400, e)
 
 
+@app.route('/script/commit', methods=["POST"])
+def upload_script():
+    program = request.json
+    redis_conn = get_redis_client()
+    content = request.json
+    content = json.dumps(content)
+    redis_conn.set("PROGRAM", content)
+    return "Ok"
+
+
 class SimulationProtocol(WebSocketServerProtocol):
     done = True
     redis_conn = None
 
     def onOpen(self):
-        import redis
-        self.redis_conn = redis.Redis(
-            host=os.getenv("REDIS_HOST", "localhost"),
-            port=os.getenv("REDIS_PORT", "6379"),
-            db=0)
+        self.redis_conn = get_redis_client()
         self.done = False
         reactor.callLater(0.2, self.send_world_state)
 

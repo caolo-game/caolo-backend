@@ -6,9 +6,9 @@ extern crate log;
 mod init;
 mod payload;
 
+use caolo_engine::{self, storage::Storage};
 use std::thread;
 use std::time::Duration;
-use caolo_engine::{self, storage::Storage};
 
 fn init() {
     dotenv::dotenv().unwrap_or_default(); // TODO: conf if used
@@ -52,6 +52,47 @@ fn send_world(storage: &Storage, client: &redis::Client) -> Result<(), Box<dyn s
     Ok(())
 }
 
+fn update_program(storage: &mut Storage, client: &redis::Client) {
+    let mut connection = client.get_connection().expect("Get redis conn");
+    redis::pipe()
+        .cmd("GET")
+        .arg("PROGRAM")
+        .cmd("DEL")
+        .arg("PROGRAM")
+        .ignore()
+        .query(&mut connection)
+        .map_err(|e| {
+            error!("Failed to GET script {:?}", e);
+        })
+        .and_then(|program: Vec<Option<String>>| {
+            program
+                .get(0)
+                .and_then(|program| program.clone())
+                .and_then(|program| {
+                    debug!("Deserializing program {:?}", program);
+                    serde_json::from_str::<caolo_api::CompilationUnit>(&program)
+                        .map_err(|e| {
+                            error!("Failed to deserialize script {:?}", e);
+                        })
+                        .ok()
+                })
+                .ok_or_else(|| ())
+        })
+        .map(|program| {
+            use caolo_api::{Script, ScriptId};
+
+            let script_id = ScriptId::default(); // TODO read from users?
+            storage.scripts_table_mut::<Script>().insert(
+                script_id,
+                Script {
+                    compiled: None,
+                    script: program,
+                },
+            );
+        })
+        .unwrap_or(());
+}
+
 fn main() {
     init();
     let n_actors = std::env::var("N_ACTORS")
@@ -62,11 +103,12 @@ fn main() {
     let redis_url = std::env::var("REDIS_URL").unwrap_or("redis://localhost:6379/0".to_owned());
 
     let mut storage = init::init_storage(n_actors);
-    let connection = redis::Client::open(redis_url.as_str()).expect("Redis connection");
+    let client = redis::Client::open(redis_url.as_str()).expect("Redis client");
 
     loop {
+        update_program(&mut storage, &client);
         tick(&mut storage);
-        send_world(&storage, &connection).expect("Sending world");
+        send_world(&storage, &client).expect("Sending world");
         thread::sleep(Duration::from_millis(200));
     }
 }

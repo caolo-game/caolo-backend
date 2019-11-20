@@ -76,11 +76,12 @@ def main():
     HOST = os.getenv("HOST", "localhost")
     PORT = int(os.getenv("PORT", "5000"))
     WS_PROTOCOL = os.getenv("WS_PROTOCOL", "ws")
+    EXTERNAL_PORT = int(os.getenv("EXTERNAL_PORT", PORT))
 
     log.startLogging(sys.stdout)
 
     # create a Twisted Web resource for our WebSocket server
-    wsFactory = WebSocketServerFactory(f"{WS_PROTOCOL}://{HOST}:{PORT}")
+    wsFactory = WebSocketServerFactory(f"{WS_PROTOCOL}://{HOST}:{PORT}", externalPort=EXTERNAL_PORT)
     wsFactory.protocol = SimulationProtocol
     wsResource = WebSocketResource(wsFactory)
 

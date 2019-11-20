@@ -67,7 +67,8 @@ class SimulationProtocol(WebSocketServerProtocol):
         if self.done:
             return
         payload = self.redis_conn.get("WORLD_STATE")
-        self.sendMessage(payload)
+        if payload:
+            self.sendMessage(payload)
         reactor.callLater(0.2, self.send_world_state)
 
 

@@ -79,7 +79,7 @@ impl TryFrom<Scalar> for i32 {
 
     fn try_from(v: Scalar) -> Result<Self, Scalar> {
         match v {
-            Scalar::Integer(i) => Ok(i),
+            Scalar::Pointer(i) | Scalar::Integer(i) => Ok(i),
             _ => Err(v),
         }
     }

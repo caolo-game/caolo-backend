@@ -7,10 +7,14 @@ pub mod vm;
 
 use crate::compiler::NodeId;
 use crate::instruction::Instruction;
+use arrayvec::ArrayString;
 use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 pub type TPointer = i32;
+
+const INPUT_STR_LEN: usize = 128;
+pub type InputString = ArrayString<[u8; INPUT_STR_LEN]>;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct CompiledProgram {
@@ -28,4 +32,5 @@ pub enum ExecutionError {
     FunctionNotFound(String),
     Unimplemented,
     OutOfMemory,
+    MissingArgument,
 }

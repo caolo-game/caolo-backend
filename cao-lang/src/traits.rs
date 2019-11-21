@@ -167,7 +167,7 @@ where
         params: &[Scalar],
         output: TPointer,
     ) -> Result<usize, ExecutionError> {
-        let val = T::try_from(params[0]).map_err(|_| ExecutionError::InvalidArgument)?;
+        let val = T::try_from(params[0]).map_err(convert_error(0))?;
         (self.f)(vm, val, output)
     }
 
@@ -188,8 +188,8 @@ where
         params: &[Scalar],
         output: TPointer,
     ) -> Result<usize, ExecutionError> {
-        let a = T1::try_from(params[0]).map_err(|_| ExecutionError::InvalidArgument)?;
-        let b = T2::try_from(params[1]).map_err(|_| ExecutionError::InvalidArgument)?;
+        let a = T1::try_from(params[0]).map_err(convert_error(0))?;
+        let b = T2::try_from(params[1]).map_err(convert_error(1))?;
         (self.f)(vm, (a, b), output)
     }
 
@@ -211,13 +211,20 @@ where
         params: &[Scalar],
         output: TPointer,
     ) -> Result<usize, ExecutionError> {
-        let a = T1::try_from(params[0]).map_err(|_| ExecutionError::InvalidArgument)?;
-        let b = T2::try_from(params[1]).map_err(|_| ExecutionError::InvalidArgument)?;
-        let c = T3::try_from(params[1]).map_err(|_| ExecutionError::InvalidArgument)?;
+        let a = T1::try_from(params[0]).map_err(convert_error(0))?;
+        let b = T2::try_from(params[1]).map_err(convert_error(1))?;
+        let c = T3::try_from(params[1]).map_err(convert_error(2))?;
         (self.f)(vm, (a, b, c), output)
     }
 
     fn num_params(&self) -> u8 {
         3
     }
+}
+
+fn convert_error<'a, T: 'a>(i: i32) -> impl Fn(T) -> ExecutionError + 'a {
+    return move |_| {
+        log::debug!("Failed to convert arugment #{}", i);
+        ExecutionError::InvalidArgument
+    };
 }

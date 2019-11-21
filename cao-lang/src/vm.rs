@@ -60,7 +60,8 @@ impl<Aux> VM<Aux> {
             let size = size as usize;
             T::decode(&self.memory[ptr..ptr + size])
         } else {
-            None
+            let ptr = ptr as usize;
+            T::decode(&self.memory[ptr..])
         }
     }
 
@@ -200,8 +201,11 @@ impl<Aux> VM<Aux> {
                     self.stack.push(Scalar::Pointer(ptr));
                 }
                 Instruction::Call => {
-                    let fun_name = Self::read_str(&mut ptr, &program.bytecode)
-                        .ok_or(ExecutionError::InvalidArgument)?;
+                    let fun_name =
+                        Self::read_str(&mut ptr, &program.bytecode).ok_or_else(|| {
+                            error!("Could not read function name");
+                            ExecutionError::InvalidArgument
+                        })?;
                     let mut fun = self.callables.remove(fun_name.as_str()).ok_or_else(|| {
                         ExecutionError::FunctionNotFound(fun_name.as_str().to_owned())
                     })?;
@@ -209,13 +213,25 @@ impl<Aux> VM<Aux> {
                     let n_inputs = fun.num_params();
                     let mut inputs = Vec::with_capacity(n_inputs as usize);
                     for _ in 0..n_inputs {
-                        inputs.push(self.stack.pop().ok_or(ExecutionError::InvalidArgument)?)
+                        inputs.push(self.stack.pop().ok_or_else(|| {
+                            error!("Missing argument to function call {:?}", fun_name);
+                            ExecutionError::MissingArgument
+                        })?)
                     }
                     let outptr = self.memory.len() as i32;
-                    let res_size = fun.call(self, &inputs, outptr)?;
-                    self.memory
-                        .resize_with(outptr as usize + res_size, Default::default);
-                    self.stack.push(Scalar::Pointer(outptr));
+                    debug!(
+                        "Calling function {} with inputs: {:?} output: {:?}",
+                        fun_name, inputs, outptr
+                    );
+                    let res_size = fun.call(self, &inputs, outptr).map_err(|e| {
+                        error!("Calling function {:?} failed with {:?}", fun_name, e);
+                        e
+                    })?;
+                    if res_size > 0 {
+                        self.memory
+                            .resize_with(outptr as usize + res_size, Default::default);
+                        self.stack.push(Scalar::Pointer(outptr));
+                    }
 
                     self.callables.insert(fun_name, fun);
                 }

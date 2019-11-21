@@ -1,3 +1,5 @@
+![](https://github.com/snorrwe/caolo-backend/workflows/Rust/badge.svg)
+
 ## Prerequisites
 
 - [Cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html)

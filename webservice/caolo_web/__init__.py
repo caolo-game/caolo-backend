@@ -41,9 +41,15 @@ def compile_script():
 
 @app.route('/script/commit', methods=["POST"])
 def upload_script():
+    content = request.get_data(as_text=True)
+    try:
+        program = cw.compile(content)
+    except ValueError as e:
+        print("Error compiling:", e)
+        abort(400, e)
     redis_conn = get_redis_client()
-    content = request.json
-    content = json.dumps(content)
+    program['script'] = request.json
+    content = json.dumps(program)
     redis_conn.set("PROGRAM", content)
     return "Ok"
 

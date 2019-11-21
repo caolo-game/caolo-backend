@@ -70,7 +70,7 @@ fn update_program(storage: &mut Storage, client: &redis::Client) {
                 .and_then(|program| program.clone())
                 .and_then(|program| {
                     debug!("Deserializing program {:?}", program);
-                    serde_json::from_str::<caolo_api::CompilationUnit>(&program)
+                    serde_json::from_str::<caolo_api::Script>(&program)
                         .map_err(|e| {
                             error!("Failed to deserialize script {:?}", e);
                         })
@@ -82,13 +82,9 @@ fn update_program(storage: &mut Storage, client: &redis::Client) {
             use caolo_api::{Script, ScriptId};
 
             let script_id = ScriptId::default(); // TODO read from users?
-            storage.scripts_table_mut::<Script>().insert(
-                script_id,
-                Script {
-                    compiled: None,
-                    script: program,
-                },
-            );
+            storage
+                .scripts_table_mut::<Script>()
+                .insert(script_id, program);
         })
         .unwrap_or(());
 }

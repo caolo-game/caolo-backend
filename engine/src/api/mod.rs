@@ -28,16 +28,18 @@ pub fn console_log(
     message: TPointer,
     _output: TPointer,
 ) -> Result<usize, ExecutionError> {
+    let entityid = vm.get_aux().entityid();
+    let time = vm.get_aux().storage().time();
     let message: String = vm.get_value(message).ok_or_else(|| {
         error!("console_log called with invalid message");
         ExecutionError::InvalidArgument
     })?;
 
-    debug!(
-        "Console log EntityId[{:?}] : {}",
-        vm.get_aux().entityid(),
-        message
-    );
+    let payload = format!("Console log EntityId[{:?}] : {}", entityid, message);
+    debug!("{}", payload);
+    vm.get_aux_mut()
+        .intents_mut()
+        .push(crate::intents::Intent::new_log(entityid, payload, time));
 
     Ok(0)
 }

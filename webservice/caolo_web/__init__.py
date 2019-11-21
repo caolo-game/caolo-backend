@@ -30,7 +30,6 @@ def get_redis_client():
 
 @app.route('/script/compile', methods=["POST"])
 def compile_script():
-
     content = request.get_data(as_text=True)
     try:
         _program = cw.compile(content)
@@ -42,7 +41,6 @@ def compile_script():
 
 @app.route('/script/commit', methods=["POST"])
 def upload_script():
-    program = request.json
     redis_conn = get_redis_client()
     content = request.json
     content = json.dumps(content)

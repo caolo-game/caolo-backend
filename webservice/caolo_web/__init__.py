@@ -18,7 +18,7 @@ from websocket import create_connection
 import redis
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'secret!'
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'asdkasldaskldajdjlaksj')
 
 cors = CORS(app, resources={r"/*": {"origins": "*"}})
 
@@ -35,7 +35,7 @@ def compile_script():
         _program = cw.compile(content)
         return "successful compilation"
     except ValueError as e:
-        print("Error compiling:", e)
+        log.err()
         abort(400, e)
 
 
@@ -45,7 +45,7 @@ def upload_script():
     try:
         program = cw.compile(content)
     except ValueError as e:
-        print("Error compiling:", e)
+        log.err()
         abort(400, e)
     redis_conn = get_redis_client()
     program['script'] = request.json
@@ -86,7 +86,8 @@ def main():
     log.startLogging(sys.stdout)
 
     # create a Twisted Web resource for our WebSocket server
-    wsFactory = WebSocketServerFactory(f"{WS_PROTOCOL}://{HOST}:{PORT}", externalPort=EXTERNAL_PORT)
+    wsFactory = WebSocketServerFactory(
+        f"{WS_PROTOCOL}://{HOST}:{PORT}", externalPort=EXTERNAL_PORT)
     wsFactory.protocol = SimulationProtocol
     wsResource = WebSocketResource(wsFactory)
 

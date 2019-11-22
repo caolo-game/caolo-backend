@@ -14,7 +14,7 @@ WORKDIR /web
 
 # TODO these are needed for the workspace
 # get rid of them
-COPY ./engine/ ./engine/
+COPY ./simulation/ ./simulation/
 COPY ./worker/ ./worker/
 
 COPY ./Cargo.toml ./Cargo.toml

@@ -6,7 +6,7 @@ extern crate log;
 mod init;
 mod payload;
 
-use caolo_engine::{self, storage::Storage};
+use caolo_sim::{self, storage::Storage};
 use std::thread;
 use std::time::Duration;
 
@@ -18,7 +18,7 @@ fn init() {
 fn tick(storage: &mut Storage) {
     let start = chrono::Utc::now();
 
-    caolo_engine::forward(storage)
+    caolo_sim::forward(storage)
         .map(|_| {
             let duration = chrono::Utc::now() - start;
 

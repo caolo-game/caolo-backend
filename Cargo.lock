@@ -118,7 +118,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "caolo-engine"
+name = "caolo-sim"
 version = "0.1.0"
 dependencies = [
  "cao-lang 0.1.0",
@@ -145,7 +145,7 @@ name = "caolo-worker"
 version = "0.1.0"
 dependencies = [
  "caolo-api 0.1.0",
- "caolo-engine 0.1.0",
+ "caolo-sim 0.1.0",
  "chrono 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "dotenv 0.14.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",

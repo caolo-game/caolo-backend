@@ -1,3 +1,5 @@
+pub mod kdtree;
+
 use super::*;
 use crate::storage::TableId;
 use rayon::prelude::*;

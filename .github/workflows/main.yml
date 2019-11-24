@@ -1,0 +1,22 @@
+name: Document
+
+on:
+  push:
+    branches: 
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v1
+      
+      - name: build
+        run: cargo doc --no-deps
+
+      - name: GitHub Pages
+        uses: crazy-max/ghaction-github-pages@v1.2.4
+        with:
+          # Build directory to deploy
+          build_dir: target/doc

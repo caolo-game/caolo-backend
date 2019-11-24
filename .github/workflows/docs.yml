@@ -22,4 +22,4 @@ jobs:
           build_dir: target/doc
           
     env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_PAT: ${{ secrets.GITHUB_PAT }}

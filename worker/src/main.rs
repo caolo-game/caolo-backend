@@ -6,7 +6,7 @@ extern crate log;
 mod init;
 mod payload;
 
-use caolo_engine::{self, storage::Storage};
+use caolo_sim::{self, storage::Storage};
 use std::thread;
 use std::time::Duration;
 
@@ -18,7 +18,7 @@ fn init() {
 fn tick(storage: &mut Storage) {
     let start = chrono::Utc::now();
 
-    caolo_engine::forward(storage)
+    caolo_sim::forward(storage)
         .map(|_| {
             let duration = chrono::Utc::now() - start;
 
@@ -53,6 +53,7 @@ fn send_world(storage: &Storage, client: &redis::Client) -> Result<(), Box<dyn s
 }
 
 fn update_program(storage: &mut Storage, client: &redis::Client) {
+    debug!("Fetching new program");
     let mut connection = client.get_connection().expect("Get redis conn");
     redis::pipe()
         .cmd("GET")
@@ -79,6 +80,8 @@ fn update_program(storage: &mut Storage, client: &redis::Client) {
                 .ok_or_else(|| ())
         })
         .map(|program| {
+            debug!("Inserting new prgoram {:?}", program);
+
             use caolo_api::{Script, ScriptId};
 
             let script_id = ScriptId::default(); // TODO read from users?
@@ -87,6 +90,7 @@ fn update_program(storage: &mut Storage, client: &redis::Client) {
                 .insert(script_id, program);
         })
         .unwrap_or(());
+    debug!("Fetching new program done");
 }
 
 fn main() {
@@ -101,10 +105,13 @@ fn main() {
     let mut storage = init::init_storage(n_actors);
     let client = redis::Client::open(redis_url.as_str()).expect("Redis client");
 
+    let sleep_duration = std::env::var("SLEEP_AFTER_TICK_MS")
+        .map(|i| i.parse::<u64>().unwrap())
+        .unwrap_or(200);
     loop {
         update_program(&mut storage, &client);
         tick(&mut storage);
         send_world(&storage, &client).expect("Sending world");
-        thread::sleep(Duration::from_millis(200));
+        thread::sleep(Duration::from_millis(sleep_duration));
     }
 }

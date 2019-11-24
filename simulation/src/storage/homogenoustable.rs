@@ -1,3 +1,5 @@
+//! This modules will allow us to store arbitrary tables that share the same key
+//!
 use crate::tables::{Table, TableId, TableRow};
 use std::any::{type_name, TypeId};
 use std::fmt::{Debug, Formatter};
@@ -10,6 +12,8 @@ pub struct HomogenousTable<Id: TableId> {
 impl<Id: TableId> HomogenousTable<Id> {
     pub fn downcast_ref<Row: TableRow>(&self) -> Option<&Table<Id, Row>> {
         if TypeId::of::<Row>() == self.rowtype {
+            #[allow(clippy::cast_ptr_alignment)]
+            // Yes, this is incredibly unsafe
             let reference =
                 unsafe { &*(self.concrete_table.as_ref() as *const _ as *const Table<Id, Row>) };
             Some(reference)
@@ -34,13 +38,9 @@ impl<Id: TableId> HomogenousTable<Id> {
         self.concrete_table.delete_entity(id);
     }
 
-    pub fn new<I: TableId, Row: TableRow>(table: Table<I, Row>) -> Self {
-        debug_assert_eq!(TypeId::of::<I>(), TypeId::of::<Id>());
+    pub fn new<Row: TableRow>(table: Table<Id, Row>) -> Self {
         let rowtype = TypeId::of::<Row>();
-        let concrete_table = unsafe {
-            let table = Box::new(table);
-            std::mem::transmute::<Box<Table<I, Row>>, Box<Table<Id, Row>>>(table)
-        };
+        let concrete_table = Box::new(table);
         Self {
             concrete_table,
             rowtype,
@@ -62,7 +62,7 @@ impl<Id: 'static + TableId> Debug for HomogenousTable<Id> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "HomogenousTable id: {},row: {:?}",
+            "HomogenousTable id: {}, row: {:?}",
             type_name::<Id>(),
             self.rowtype
         )

@@ -1,7 +1,5 @@
-#[cfg(feature = "inmemory_storage")]
 mod inmemory;
 mod iterators;
-#[cfg(feature = "inmemory_storage")]
 pub use self::inmemory::*;
 pub use self::iterators::*;
 use crate::model::{self, Bot, Circle, EntityId, PositionComponent, Structure, UserId};
@@ -32,33 +30,29 @@ where
     Id: TableId,
     Row: TableRow,
 {
-    #[cfg(feature = "inmemory_storage")]
-    pub fn with_inmemory(table: InMemoryTable<Id, Row>) -> Self {
+    pub fn with_btree(table: BTreeTable<Id, Row>) -> Self {
         Self {
-            backend: Backend::InMemory(table),
+            backend: Backend::BTree(table),
         }
     }
 
-    #[cfg(feature = "inmemory_storage")]
-    pub fn default_inmemory() -> Self {
+    pub fn default_btree() -> Self {
         Self {
-            backend: Backend::InMemory(InMemoryTable::new()),
+            backend: Backend::BTree(BTreeTable::new()),
         }
     }
 
     pub fn get_by_id(&self, id: &Id) -> Option<Row> {
         use Backend::*;
         match &self.backend {
-            #[cfg(feature = "inmemory_storage")]
-            InMemory(table) => table.get_by_id(id),
+            BTree(table) => table.get_by_id(id),
         }
     }
 
     pub fn get_by_ids(&self, id: &[Id]) -> Vec<(Id, Row)> {
         use Backend::*;
         match &self.backend {
-            #[cfg(feature = "inmemory_storage")]
-            InMemory(table) => table.get_by_ids(id),
+            BTree(table) => table.get_by_ids(id),
         }
     }
 
@@ -78,8 +72,7 @@ where
 
         use Backend::*;
         match &mut self.backend {
-            #[cfg(feature = "inmemory_storage")]
-            InMemory(table) => table.insert(id, row),
+            BTree(table) => table.insert(id, row),
         }
     }
 
@@ -93,8 +86,7 @@ where
 
         use Backend::*;
         match &mut self.backend {
-            #[cfg(feature = "inmemory_storage")]
-            InMemory(table) => table.delete(id),
+            BTree(table) => table.delete(id),
         }
     }
 
@@ -103,18 +95,16 @@ where
     pub fn iter<'a>(&'a self) -> Box<dyn TableIterator<Id, Row> + 'a> {
         use Backend::*;
         match &self.backend {
-            #[cfg(feature = "inmemory_storage")]
-            InMemory(table) => table.iter(),
+            BTree(table) => table.iter(),
         }
     }
 }
 
 enum Backend<Id: TableId, Row: Clone> {
-    #[cfg(feature = "inmemory_storage")]
-    InMemory(InMemoryTable<Id, Row>),
+    BTree(BTreeTable<Id, Row>),
 }
 
-trait TableBackend {
+pub trait TableBackend {
     type Id: TableId;
     type Row: Clone;
 
@@ -152,8 +142,7 @@ impl UserDataTable for Table<UserId, UserData> {
     fn create_new(&mut self, row: UserData) -> UserId {
         use Backend::*;
         match &mut self.backend {
-            #[cfg(feature = "inmemory_storage")]
-            InMemory(table) => table.create_new(row),
+            BTree(table) => table.create_new(row),
         }
     }
 }
@@ -166,8 +155,7 @@ impl StructureTable for Table<EntityId, Structure> {
     fn get_structures_by_owner(&self, user_id: &UserId) -> Vec<(EntityId, Structure)> {
         use Backend::*;
         match &self.backend {
-            #[cfg(feature = "inmemory_storage")]
-            InMemory(table) => table.get_structures_by_owner(user_id),
+            BTree(table) => table.get_structures_by_owner(user_id),
         }
     }
 }
@@ -182,15 +170,13 @@ impl PositionTable for Table<EntityId, PositionComponent> {
     fn get_entities_in_range(&self, vision: &Circle) -> Vec<(EntityId, PositionComponent)> {
         use Backend::*;
         match &self.backend {
-            #[cfg(feature = "inmemory_storage")]
-            InMemory(table) => table.get_entities_in_range(vision),
+            BTree(table) => table.get_entities_in_range(vision),
         }
     }
     fn count_entities_in_range(&self, vision: &Circle) -> usize {
         use Backend::*;
         match &self.backend {
-            #[cfg(feature = "inmemory_storage")]
-            InMemory(table) => table.count_entities_in_range(vision),
+            BTree(table) => table.count_entities_in_range(vision),
         }
     }
 }
@@ -203,8 +189,7 @@ impl LogTable for Table<(EntityId, u64), model::LogEntry> {
     fn get_logs_by_time(&self, time: u64) -> Vec<((EntityId, u64), model::LogEntry)> {
         use Backend::*;
         match &self.backend {
-            #[cfg(feature = "inmemory_storage")]
-            InMemory(table) => table.get_logs_by_time(time),
+            BTree(table) => table.get_logs_by_time(time),
         }
     }
 }
@@ -223,8 +208,8 @@ mod tests {
     #[test]
     fn join_iterator_simple() {
         type Id = u64;
-        let mut t1 = InMemoryTable::<Id, Row1>::new();
-        let mut t2 = InMemoryTable::<Id, Row2>::new();
+        let mut t1 = BTreeTable::<Id, Row1>::new();
+        let mut t2 = BTreeTable::<Id, Row2>::new();
 
         let expected = [
             (1, Row1(1), Row2(1)),

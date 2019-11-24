@@ -1,6 +1,6 @@
 use caolo_api::{point::Point, Script, ScriptId};
-use caolo_engine::model;
-use caolo_engine::storage::Storage;
+use caolo_sim::model;
+use caolo_sim::storage::Storage;
 
 const PROGRAM: &str = r#"{
     "nodes": {
@@ -36,7 +36,7 @@ const PROGRAM: &str = r#"{
 }"#;
 
 pub fn init_storage(n_fake_users: usize) -> Storage {
-    let mut storage = caolo_engine::init_inmemory_storage();
+    let mut storage = caolo_sim::init_inmemory_storage();
 
     let script_id = ScriptId::default(); // TODO randomize
     storage.scripts_table_mut::<Script>().insert(

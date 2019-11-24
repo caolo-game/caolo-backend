@@ -4,7 +4,7 @@ use rayon::prelude::*;
 use std::collections::BTreeMap;
 
 #[derive(Default)]
-pub struct InMemoryTable<Id, Row>
+pub struct BTreeTable<Id, Row>
 where
     Id: TableId,
     Row: Clone,
@@ -12,7 +12,7 @@ where
     data: BTreeMap<Id, Row>,
 }
 
-impl<Id, Row> InMemoryTable<Id, Row>
+impl<Id, Row> BTreeTable<Id, Row>
 where
     Id: TableId,
     Row: Clone,
@@ -24,7 +24,7 @@ where
     }
 }
 
-impl<Id, Row> TableBackend for InMemoryTable<Id, Row>
+impl<Id, Row> TableBackend for BTreeTable<Id, Row>
 where
     Id: TableId,
     Row: Clone,
@@ -57,7 +57,7 @@ where
     }
 }
 
-impl BotTable for InMemoryTable<EntityId, Bot> {
+impl BotTable for BTreeTable<EntityId, Bot> {
     fn get_bots_by_owner(&self, user_id: &UserId) -> Vec<(EntityId, Bot)> {
         self.data
             .par_iter()
@@ -67,7 +67,7 @@ impl BotTable for InMemoryTable<EntityId, Bot> {
     }
 }
 
-impl StructureTable for InMemoryTable<EntityId, Structure> {
+impl StructureTable for BTreeTable<EntityId, Structure> {
     fn get_structures_by_owner(&self, user_id: &UserId) -> Vec<(EntityId, Structure)> {
         self.data
             .par_iter()
@@ -77,7 +77,7 @@ impl StructureTable for InMemoryTable<EntityId, Structure> {
     }
 }
 
-impl UserDataTable for InMemoryTable<UserId, UserData> {
+impl UserDataTable for BTreeTable<UserId, UserData> {
     fn create_new(&mut self, row: UserData) -> UserId {
         use rand::RngCore;
         use uuid::{Builder, Variant, Version};
@@ -96,7 +96,7 @@ impl UserDataTable for InMemoryTable<UserId, UserData> {
     }
 }
 
-impl PositionTable for InMemoryTable<EntityId, PositionComponent> {
+impl PositionTable for BTreeTable<EntityId, PositionComponent> {
     fn get_entities_in_range(&self, vision: &Circle) -> Vec<(EntityId, PositionComponent)> {
         self.data
             .par_iter()
@@ -113,7 +113,7 @@ impl PositionTable for InMemoryTable<EntityId, PositionComponent> {
     }
 }
 
-impl LogTable for InMemoryTable<(EntityId, u64), model::LogEntry> {
+impl LogTable for BTreeTable<(EntityId, u64), model::LogEntry> {
     fn get_logs_by_time(&self, time: u64) -> Vec<((EntityId, u64), model::LogEntry)> {
         self.data
             .par_iter()

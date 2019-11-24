@@ -2,7 +2,7 @@
 
 members = [
     "api",
-    "engine",
+    "simulation",
     "worker",
     "cao-lang",
     "webservice"

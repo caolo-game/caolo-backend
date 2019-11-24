@@ -93,8 +93,8 @@ mod tests {
     #[test]
     fn test_move_intent_fails_if_node_is_occupied() {
         let mut storage = Storage::new();
-        storage.add_entity_table::<Bot>(Table::default_inmemory());
-        storage.add_entity_table::<PositionComponent>(Table::default_inmemory());
+        storage.add_entity_table::<Bot>(Table::default_btree());
+        storage.add_entity_table::<PositionComponent>(Table::default_btree());
 
         let id = storage.insert_entity();
 

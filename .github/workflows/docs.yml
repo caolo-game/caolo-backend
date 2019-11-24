@@ -20,3 +20,6 @@ jobs:
         with:
           # Build directory to deploy
           build_dir: target/doc
+          
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

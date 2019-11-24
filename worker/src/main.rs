@@ -53,6 +53,7 @@ fn send_world(storage: &Storage, client: &redis::Client) -> Result<(), Box<dyn s
 }
 
 fn update_program(storage: &mut Storage, client: &redis::Client) {
+    debug!("Fetching new program");
     let mut connection = client.get_connection().expect("Get redis conn");
     redis::pipe()
         .cmd("GET")
@@ -79,6 +80,8 @@ fn update_program(storage: &mut Storage, client: &redis::Client) {
                 .ok_or_else(|| ())
         })
         .map(|program| {
+            debug!("Inserting new prgoram {:?}", program);
+
             use caolo_api::{Script, ScriptId};
 
             let script_id = ScriptId::default(); // TODO read from users?
@@ -87,6 +90,7 @@ fn update_program(storage: &mut Storage, client: &redis::Client) {
                 .insert(script_id, program);
         })
         .unwrap_or(());
+    debug!("Fetching new program done");
 }
 
 fn main() {

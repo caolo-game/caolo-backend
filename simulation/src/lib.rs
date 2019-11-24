@@ -71,28 +71,28 @@ pub fn init_inmemory_storage() -> storage::Storage {
 
     let mut storage = storage::Storage::new();
 
-    storage.add_entity_table::<Bot>(Table::default_inmemory());
-    storage.add_entity_table::<SpawnBotComponent>(Table::default_inmemory());
-    storage.add_entity_table::<DecayComponent>(Table::default_inmemory());
-    storage.add_entity_table::<CarryComponent>(Table::default_inmemory());
-    storage.add_entity_table::<Structure>(Table::default_inmemory());
-    storage.add_entity_table::<HpComponent>(Table::default_inmemory());
-    storage.add_entity_table::<EnergyRegenComponent>(Table::default_inmemory());
-    storage.add_entity_table::<EnergyComponent>(Table::default_inmemory());
-    storage.add_entity_table::<PositionComponent>(Table::default_inmemory());
-    storage.add_entity_table::<ResourceType>(Table::default_inmemory());
-    storage.add_entity_table::<DecayComponent>(Table::default_inmemory());
-    storage.add_entity_table::<EntityScript>(Table::default_inmemory());
-    storage.add_entity_table::<SpawnComponent>(Table::default_inmemory());
-    storage.add_entity_table::<Resource>(Table::default_inmemory());
+    storage.add_entity_table::<Bot>(Table::default_btree());
+    storage.add_entity_table::<SpawnBotComponent>(Table::default_btree());
+    storage.add_entity_table::<DecayComponent>(Table::default_btree());
+    storage.add_entity_table::<CarryComponent>(Table::default_btree());
+    storage.add_entity_table::<Structure>(Table::default_btree());
+    storage.add_entity_table::<HpComponent>(Table::default_btree());
+    storage.add_entity_table::<EnergyRegenComponent>(Table::default_btree());
+    storage.add_entity_table::<EnergyComponent>(Table::default_btree());
+    storage.add_entity_table::<PositionComponent>(Table::default_btree());
+    storage.add_entity_table::<ResourceType>(Table::default_btree());
+    storage.add_entity_table::<DecayComponent>(Table::default_btree());
+    storage.add_entity_table::<EntityScript>(Table::default_btree());
+    storage.add_entity_table::<SpawnComponent>(Table::default_btree());
+    storage.add_entity_table::<Resource>(Table::default_btree());
 
-    storage.add_log_table::<LogEntry>(Table::default_inmemory());
+    storage.add_log_table::<LogEntry>(Table::default_btree());
 
-    storage.add_user_table::<UserData>(Table::default_inmemory());
+    storage.add_user_table::<UserData>(Table::default_btree());
 
-    storage.add_point_table::<TileTerrainType>(Table::default_inmemory());
+    storage.add_point_table::<TileTerrainType>(Table::default_btree());
 
-    storage.add_scripts_table::<caolo_api::Script>(Table::default_inmemory());
+    storage.add_scripts_table::<caolo_api::Script>(Table::default_btree());
 
     debug!("Init InMemoryStorage done");
     storage

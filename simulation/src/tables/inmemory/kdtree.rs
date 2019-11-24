@@ -5,7 +5,7 @@ use crate::storage::TableId;
 use rayon::prelude::*;
 use std::cmp::Ordering;
 
-pub trait KdTreeKey: TableId {
+pub trait KdTreeKey: TableId + Sync {
     /// Number of dimensions to split the data by
     const DIMS: u32;
     /// Compare two keys among the given axis
@@ -43,8 +43,21 @@ where
 {
     /// Insertions and deletions may leave the tree imbalanced
     /// To regain its performance it might be necessary to rebalance
-    pub fn rebalance(&mut self) {
-        unimplemented!()
+    /// currently the only way to do that is to rebuild the tree
+    pub fn rebuild(&mut self) {
+        let mut buffer = Vec::with_capacity(self.size as usize);
+        self.collect_nodes(&mut buffer);
+        *self = Self::from_nodes(&mut buffer).unwrap();
+    }
+
+    fn collect_nodes(&mut self, buffer: &mut Vec<(Id, Row)>) {
+        buffer.push((self.key, self.value.clone()));
+        if let Some(left) = self.left.as_mut() {
+            left.collect_nodes(buffer);
+        }
+        if let Some(right) = self.right.as_mut() {
+            right.collect_nodes(buffer);
+        }
     }
 
     pub fn size(&self) -> u32 {
@@ -162,7 +175,7 @@ where
 impl<Id, Row> TableBackend for KdTreeTable<Id, Row>
 where
     Id: KdTreeKey,
-    Row: Clone + Send,
+    Row: Clone + Send + Sync,
 {
     type Id = Id;
     type Row = Row;
@@ -172,7 +185,9 @@ where
     }
 
     fn get_by_ids(&self, ids: &[Id]) -> Vec<(Id, Row)> {
-        unimplemented!()
+        ids.par_iter()
+            .filter_map(|id| self.find_by_depth(id, 0).map(|v| (*id, v.clone())))
+            .collect()
     }
 
     fn insert(&mut self, id: Id, row: Row) {

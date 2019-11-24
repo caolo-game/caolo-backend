@@ -130,8 +130,8 @@ mod tests {
         let from = Point::new(0, 0);
         let to = Point::new(5, 0);
 
-        let positions = Table::default_inmemory();
-        let mut terrain = Table::default_inmemory();
+        let positions = Table::default_btree();
+        let mut terrain = Table::default_btree();
         for i in -5..=5 {
             terrain.insert(Point::new(2, i), TileTerrainType::Wall);
         }
@@ -154,8 +154,8 @@ mod tests {
         let from = Point::new(17, -16);
         let to = Point::new(7, -6);
 
-        let mut positions = Table::default_inmemory();
-        let terrain = Table::default_inmemory();
+        let mut positions = Table::default_btree();
+        let terrain = Table::default_btree();
 
         positions.insert(0, PositionComponent(from));
         positions.insert(1, PositionComponent(to));

@@ -105,10 +105,13 @@ fn main() {
     let mut storage = init::init_storage(n_actors);
     let client = redis::Client::open(redis_url.as_str()).expect("Redis client");
 
+    let sleep_duration = std::env::var("SLEEP_AFTER_TICK_MS")
+        .map(|i| i.parse::<u64>().unwrap())
+        .unwrap_or(200);
     loop {
         update_program(&mut storage, &client);
         tick(&mut storage);
         send_world(&storage, &client).expect("Sending world");
-        thread::sleep(Duration::from_millis(200));
+        thread::sleep(Duration::from_millis(sleep_duration));
     }
 }

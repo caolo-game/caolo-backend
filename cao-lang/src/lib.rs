@@ -13,7 +13,8 @@ use std::collections::HashMap;
 
 pub type TPointer = i32;
 
-const INPUT_STR_LEN: usize = 128;
+pub const MAX_INPUT_PER_NODE: usize = 8;
+pub const INPUT_STR_LEN: usize = 128;
 pub type InputString = ArrayString<[u8; INPUT_STR_LEN]>;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

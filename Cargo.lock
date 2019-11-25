@@ -107,6 +107,7 @@ dependencies = [
 name = "caolo-sim"
 version = "0.1.0"
 dependencies = [
+ "arrayvec 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "cao-lang 0.1.0",
  "caolo-api 0.1.0",
  "chrono 0.4.10 (registry+https://github.com/rust-lang/crates.io-index)",

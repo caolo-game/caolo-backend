@@ -4,14 +4,14 @@ use crate::{
 };
 use arrayvec::ArrayVec;
 use serde_derive::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 use std::fmt::Debug;
 
 /// Unique id of each nodes in a single compilation
 pub type NodeId = i32;
 /// Node by given id has inputs given by nodeids
 /// Nodes may only have a finite amount of inputs
-pub type Inputs = HashMap<NodeId, ArrayVec<[NodeId; 16]>>;
+pub type Inputs = ArrayVec<[NodeId; 16]>;
 pub type Nodes = BTreeMap<NodeId, AstNode>;
 
 impl ByteEncodeProperties for InputString {
@@ -43,6 +43,7 @@ pub struct AstNode {
     pub instruction: Instruction,
     pub string: Option<InputString>,
     pub scalar: Option<Scalar>,
+    pub inputs: Option<Inputs>,
 }
 
 impl Default for AstNode {
@@ -51,6 +52,7 @@ impl Default for AstNode {
             instruction: Instruction::Pass,
             string: None,
             scalar: None,
+            inputs: None,
         }
     }
 }
@@ -71,7 +73,6 @@ pub fn input_per_instruction(inst: Instruction) -> Option<u8> {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompilationUnit {
     pub nodes: Nodes,
-    pub inputs: Inputs,
 }
 
 pub struct Compiler {
@@ -94,7 +95,13 @@ impl Compiler {
             .iter()
             .map(|(k, _)| k)
             .filter(|k| {
-                for it in compiler.unit.inputs.values() {
+                for it in compiler
+                    .unit
+                    .nodes
+                    .values()
+                    .map(|v| v.inputs.as_ref())
+                    .flatten()
+                {
                     for n in it {
                         if n == *k {
                             return false;
@@ -118,41 +125,33 @@ impl Compiler {
         use Instruction::*;
 
         Compiler::validate_node(nodeid, &mut self.unit)?;
+        let node = self
+            .unit
+            .nodes
+            .get(&nodeid)
+            .ok_or_else(|| format!("node [{}] not found in `nodes`", nodeid))?
+            .clone();
+
         self.program
             .labels
             .insert(nodeid, self.program.bytecode.len());
 
-        if let Some(inputs) = self.unit.inputs.get(&nodeid) {
-            for nodeid in inputs.clone().into_iter() {
-                self.process_node(nodeid)?;
+        if let Some(ref inputs) = node.inputs {
+            for nodeid in inputs.iter() {
+                self.process_node(*nodeid)?;
             }
         }
-        let instruction = {
-            let node = &self
-                .unit
-                .nodes
-                .get(&nodeid)
-                .ok_or_else(|| format!("node [{}] not found in `nodes`", nodeid))?;
-            node.instruction
-        };
+        let instruction = node.instruction;
         if input_per_instruction(instruction)
             .map(usize::from)
-            .map(|n| {
-                n != 0
-                    && self
-                        .unit
-                        .inputs
-                        .get(&nodeid)
-                        .map(|x| x.len() != n)
-                        .unwrap_or(true)
-            })
+            .map(|n| n != 0 && node.inputs.as_ref().map(|x| x.len() != n).unwrap_or(true))
             .unwrap_or(false)
         {
             return Err(format!(
                 "{:?} received invalid input. Expected: {:?} Actual: {:?}",
                 instruction,
                 input_per_instruction(instruction),
-                self.unit.inputs.get(&nodeid)
+                node.inputs
             ));
         }
 
@@ -176,13 +175,7 @@ impl Compiler {
                     .ok_or_else(|| format!("node [{}] missing `scalar`", nodeid))?
                 {
                     Scalar::Integer(v) => {
-                        if self
-                            .unit
-                            .inputs
-                            .get(&nodeid)
-                            .map(|x| x.len() != v as usize)
-                            .unwrap_or(v != 0)
-                        {
+                        if node.inputs.map(|x| x.len() != v as usize).unwrap_or(v != 0) {
                             return Err("Array literal got invalid inputs".to_owned());
                         }
 
@@ -232,15 +225,14 @@ impl Compiler {
         }
     }
 
-    pub fn validate_node(node: NodeId, cu: &CompilationUnit) -> Result<(), String> {
-        if let Some(n) = input_per_instruction(
-            cu.nodes
-                .get(&node)
-                .ok_or_else(|| format!("node [{}] not found in `nodes`", node))?
-                .instruction,
-        ) {
-            let n_inputs = cu.inputs.get(&node).map(|x| x.len()).unwrap_or(0)
-                + cu.nodes[&node].string.map(|_| 1).unwrap_or(0);
+    pub fn validate_node(nodeid: NodeId, cu: &CompilationUnit) -> Result<(), String> {
+        let node = &cu
+            .nodes
+            .get(&nodeid)
+            .ok_or_else(|| format!("node [{}] not found in `nodes`", nodeid))?;
+        if let Some(n) = input_per_instruction(node.instruction) {
+            let n_inputs = node.inputs.as_ref().map(|x| x.len()).unwrap_or(0)
+                + node.string.map(|_| 1).unwrap_or(0);
             if n_inputs != n as usize {
                 return Err(format!(
                     "Invalid number of inputs, expected {} got {}",
@@ -280,6 +272,7 @@ mod tests {
                 2,
                 AstNode {
                     instruction: Instruction::Add,
+                    inputs: Some([0, 1].into_iter().cloned().collect()),
                     ..Default::default()
                 },
             ),
@@ -287,11 +280,7 @@ mod tests {
         .into_iter()
         .cloned()
         .collect();
-        let inputs: Inputs = [(2, [0, 1].into_iter().cloned().collect())]
-            .into_iter()
-            .cloned()
-            .collect();
-        let program = CompilationUnit { nodes, inputs };
+        let program = CompilationUnit { nodes };
 
         let program = Compiler::compile(program).unwrap();
 
@@ -320,6 +309,7 @@ mod tests {
                     instruction: Instruction::ScalarFloat,
                     scalar: Some(Scalar::Floating(val1)),
                     string: None,
+                    inputs: None,
                 },
             ),
             (
@@ -328,12 +318,14 @@ mod tests {
                     instruction: Instruction::ScalarFloat,
                     scalar: Some(Scalar::Floating(val2)),
                     string: None,
+                    inputs: None,
                 },
             ),
             (
                 2,
                 AstNode {
                     instruction: Instruction::Add,
+                    inputs: Some([10, 1].iter().cloned().collect()),
                     ..Default::default()
                 },
             ),
@@ -341,6 +333,7 @@ mod tests {
                 5,
                 AstNode {
                     instruction: Instruction::Sub,
+                    inputs: Some([10, 1].into_iter().cloned().collect()),
                     ..Default::default()
                 },
             ),
@@ -350,6 +343,7 @@ mod tests {
                     instruction: Instruction::ScalarInt, // Cond
                     scalar: Some(Scalar::Integer(cond)),
                     string: None,
+                    inputs: None,
                 },
             ),
             (
@@ -358,6 +352,7 @@ mod tests {
                     instruction: Instruction::ScalarLabel, // True
                     scalar: Some(Scalar::Integer(2)),
                     string: None,
+                    inputs: None,
                 },
             ),
             (
@@ -366,12 +361,14 @@ mod tests {
                     instruction: Instruction::ScalarLabel, // False
                     scalar: Some(Scalar::Integer(5)),
                     string: None,
+                    inputs: None,
                 },
             ),
             (
                 0,
                 AstNode {
                     instruction: Instruction::Branch,
+                    inputs: Some([6, 7, 8].into_iter().cloned().collect()),
                     ..Default::default()
                 },
             ),
@@ -379,15 +376,7 @@ mod tests {
         .into_iter()
         .cloned()
         .collect();
-        let inputs: Inputs = [
-            (2, [10, 1].into_iter().cloned().collect()),
-            (5, [10, 1].into_iter().cloned().collect()),
-            (0, [6, 7, 8].into_iter().cloned().collect()),
-        ]
-        .into_iter()
-        .cloned()
-        .collect();
-        let program = CompilationUnit { nodes, inputs };
+        let program = CompilationUnit { nodes };
 
         let program = Compiler::compile(program).expect("compile");
 

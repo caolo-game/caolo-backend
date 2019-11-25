@@ -52,6 +52,41 @@ fn send_world(storage: &Storage, client: &redis::Client) -> Result<(), Box<dyn s
     Ok(())
 }
 
+#[derive(Debug, Serialize)]
+struct SchemaFunctionDTO<'a> {
+    name: &'a str,
+    description: &'a str,
+    inputs: Vec<String>,
+    output: &'a str,
+}
+
+fn send_schema(client: &redis::Client) -> Result<(), Box<dyn std::error::Error>> {
+    debug!("Sending schema");
+    let mut con = client.get_connection()?;
+
+    let schema = caolo_sim::api::make_import();
+    let schema = schema
+        .imports()
+        .iter()
+        .map(|import| SchemaFunctionDTO {
+            name: import.name,
+            inputs: import.inputs().iter().map(|x| x.to_string()).collect(),
+            description: import.description,
+            output: import.output,
+        })
+        .collect::<Vec<_>>();
+    let js = serde_json::to_string(&schema)?;
+
+    redis::pipe()
+        .cmd("SET")
+        .arg("WORLD_STATE")
+        .arg(js)
+        .query(&mut con)?;
+
+    debug!("Sending schema done");
+    Ok(())
+}
+
 fn update_program(storage: &mut Storage, client: &redis::Client) {
     debug!("Fetching new program");
     let mut connection = client.get_connection().expect("Get redis conn");
@@ -108,6 +143,8 @@ fn main() {
     let sleep_duration = std::env::var("SLEEP_AFTER_TICK_MS")
         .map(|i| i.parse::<u64>().unwrap())
         .unwrap_or(200);
+
+    send_schema(&client).expect("Send schema");
     loop {
         update_program(&mut storage, &client);
         tick(&mut storage);

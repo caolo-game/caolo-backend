@@ -1,6 +1,6 @@
 use crate::{
     scalar::Scalar, traits::ByteEncodeProperties, CompiledProgram, InputString, Instruction,
-    INPUT_STR_LEN,
+    INPUT_STR_LEN, MAX_INPUT_PER_NODE,
 };
 use arrayvec::ArrayVec;
 use serde_derive::{Deserialize, Serialize};
@@ -11,11 +11,15 @@ use std::fmt::Debug;
 pub type NodeId = i32;
 /// Node by given id has inputs given by nodeids
 /// Nodes may only have a finite amount of inputs
-pub type Inputs = ArrayVec<[NodeId; 16]>;
+pub type Inputs = ArrayVec<[NodeId; MAX_INPUT_PER_NODE]>;
 pub type Nodes = BTreeMap<NodeId, AstNode>;
 
 impl ByteEncodeProperties for InputString {
     const BYTELEN: usize = INPUT_STR_LEN;
+
+    fn displayname() -> &'static str {
+        "Text"
+    }
 
     fn encode(self) -> Vec<u8> {
         let mut rr = (self.len() as i32).encode();

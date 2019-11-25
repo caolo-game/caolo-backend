@@ -17,21 +17,14 @@ const PROGRAM: &str = r#"{
             }
         },
         "2": {
-            "instruction": "Add"
+            "instruction": "Add",
+            "inputs": [0, 1]
         },
         "3": {
             "instruction": "Call",
-            "string": "log_scalar"
+            "string": "log_scalar",
+            "inputs": [2]
         }
-    },
-    "inputs": {
-        "2": [
-            0,
-            1
-        ],
-        "3": [
-            2
-        ]
     }
 }"#;
 

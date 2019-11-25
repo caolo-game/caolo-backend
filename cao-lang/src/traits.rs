@@ -1,4 +1,5 @@
 use crate::{scalar::Scalar, vm::VM, ExecutionError, TPointer};
+use std::any::type_name;
 use std::convert::TryFrom;
 use std::marker::PhantomData;
 use std::mem;
@@ -8,12 +9,19 @@ pub const MAX_STR_LEN: usize = 128;
 pub trait ByteEncodeProperties: Sized {
     const BYTELEN: usize = mem::size_of::<Self>();
 
+    fn displayname() -> &'static str {
+        type_name::<Self>()
+    }
     fn encode(self) -> Vec<u8>;
     fn decode(bytes: &[u8]) -> Option<Self>;
 }
 
 impl ByteEncodeProperties for String {
     const BYTELEN: usize = MAX_STR_LEN;
+
+    fn displayname() -> &'static str {
+        "Text"
+    }
 
     fn encode(self) -> Vec<u8> {
         assert!(self.len() < Self::BYTELEN);
@@ -34,20 +42,79 @@ impl ByteEncodeProperties for String {
     }
 }
 
+impl ByteEncodeProperties for () {
+    const BYTELEN: usize = 0;
+    fn displayname() -> &'static str {
+        "Void"
+    }
+
+    fn encode(self) -> Vec<u8> {
+        vec![]
+    }
+
+    fn decode(_bytes: &[u8]) -> Option<Self> {
+        None
+    }
+}
+
 /// Opts in for the default implementation of ByteEncodeProperties
 /// Note that using this with pointers, arrays, strings etc. will not work as one might expect!
-pub trait AutoByteEncodeProperties {}
+pub trait AutoByteEncodeProperties {
+    fn displayname() -> &'static str {
+        type_name::<Self>()
+    }
+}
 
-impl AutoByteEncodeProperties for i8 {}
-impl AutoByteEncodeProperties for i16 {}
-impl AutoByteEncodeProperties for i32 {}
-impl AutoByteEncodeProperties for i64 {}
-impl AutoByteEncodeProperties for u8 {}
-impl AutoByteEncodeProperties for u16 {}
-impl AutoByteEncodeProperties for u32 {}
-impl AutoByteEncodeProperties for u64 {}
-impl AutoByteEncodeProperties for f32 {}
-impl AutoByteEncodeProperties for f64 {}
+impl AutoByteEncodeProperties for i8 {
+    fn displayname() -> &'static str {
+        "Integer"
+    }
+}
+impl AutoByteEncodeProperties for i16 {
+    fn displayname() -> &'static str {
+        "Integer"
+    }
+}
+impl AutoByteEncodeProperties for i32 {
+    fn displayname() -> &'static str {
+        "Integer"
+    }
+}
+impl AutoByteEncodeProperties for i64 {
+    fn displayname() -> &'static str {
+        "Integer"
+    }
+}
+impl AutoByteEncodeProperties for u8 {
+    fn displayname() -> &'static str {
+        "Integer"
+    }
+}
+impl AutoByteEncodeProperties for u16 {
+    fn displayname() -> &'static str {
+        "Integer"
+    }
+}
+impl AutoByteEncodeProperties for u32 {
+    fn displayname() -> &'static str {
+        "Integer"
+    }
+}
+impl AutoByteEncodeProperties for u64 {
+    fn displayname() -> &'static str {
+        "Integer"
+    }
+}
+impl AutoByteEncodeProperties for f32 {
+    fn displayname() -> &'static str {
+        "Floating point"
+    }
+}
+impl AutoByteEncodeProperties for f64 {
+    fn displayname() -> &'static str {
+        "Floating point"
+    }
+}
 
 impl<T: Sized + Clone + Copy + AutoByteEncodeProperties> ByteEncodeProperties for T {
     fn encode(self) -> Vec<u8> {

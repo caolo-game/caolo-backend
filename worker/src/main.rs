@@ -79,7 +79,7 @@ fn send_schema(client: &redis::Client) -> Result<(), Box<dyn std::error::Error>>
 
     redis::pipe()
         .cmd("SET")
-        .arg("WORLD_STATE")
+        .arg("SCHEMA")
         .arg(js)
         .query(&mut con)?;
 

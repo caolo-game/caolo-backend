@@ -3,7 +3,6 @@ use crate::intents::check_spawn_intent;
 use crate::model::{self, EntityId};
 use crate::profile;
 use crate::storage::Storage;
-use crate::tables::StructureTable;
 use caolo_api::structures::Spawn;
 use rayon::prelude::*;
 
@@ -46,9 +45,10 @@ fn assemble_spawn(
                     debug!("Structures should have position");
                     None
                 })?;
+            let owner_id = storage.entity_table::<model::OwnedEntity>().get_by_id(&id);
             let spawn = caolo_api::structures::Structure::Spawn(Spawn {
                 id,
-                owner_id: structure.owner_id,
+                owner_id: owner_id.map(|id| id.owner_id),
                 position: position.0,
 
                 energy: energy.energy,

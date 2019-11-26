@@ -85,6 +85,7 @@ pub fn init_inmemory_storage() -> storage::Storage {
     storage.add_entity_table::<EntityScript>(Table::default_btree());
     storage.add_entity_table::<SpawnComponent>(Table::default_btree());
     storage.add_entity_table::<Resource>(Table::default_btree());
+    storage.add_entity_table::<OwnedEntity>(Table::default_btree());
 
     storage.add_log_table::<LogEntry>(Table::default_btree());
 

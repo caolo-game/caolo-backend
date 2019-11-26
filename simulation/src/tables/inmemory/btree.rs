@@ -57,26 +57,6 @@ where
     }
 }
 
-impl BotTable for BTreeTable<EntityId, Bot> {
-    fn get_bots_by_owner(&self, user_id: &UserId) -> Vec<(EntityId, Bot)> {
-        self.data
-            .par_iter()
-            .filter(|(_, e)| e.owner_id.map(|id| id == *user_id).unwrap_or(false))
-            .map(|(id, e)| (*id, e.clone()))
-            .collect()
-    }
-}
-
-impl StructureTable for BTreeTable<EntityId, Structure> {
-    fn get_structures_by_owner(&self, user_id: &UserId) -> Vec<(EntityId, Structure)> {
-        self.data
-            .par_iter()
-            .filter(|(_, e)| e.owner_id.map(|id| id == *user_id).unwrap_or(false))
-            .map(|(id, e)| (*id, e.clone()))
-            .collect()
-    }
-}
-
 impl UserDataTable for BTreeTable<UserId, UserData> {
     fn create_new(&mut self, row: UserData) -> UserId {
         use rand::RngCore;

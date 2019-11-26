@@ -3,14 +3,14 @@ use super::*;
 pub use caolo_api::terrain::TileTerrainType;
 
 #[derive(Debug, Clone)]
-pub struct Bot {
-    pub owner_id: Option<UserId>,
-    pub speed: u8,
-}
+pub struct Bot {}
 
 #[derive(Debug, Clone)]
-pub struct Structure {
-    pub owner_id: Option<UserId>,
+pub struct Structure {}
+
+#[derive(Debug, Clone)]
+pub struct OwnedEntity {
+    pub owner_id: UserId,
 }
 
 #[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Default)]
@@ -59,7 +59,6 @@ pub struct SpawnBotComponent {
     pub bot: Bot,
 }
 
-// TODO: more resource types
 #[derive(Debug, Clone, Default)]
 pub struct CarryComponent {
     pub carry: u16,

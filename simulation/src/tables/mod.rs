@@ -2,7 +2,7 @@ mod inmemory;
 mod iterators;
 pub use self::inmemory::*;
 pub use self::iterators::*;
-use crate::model::{self, Bot, Circle, EntityId, PositionComponent, Structure, UserId};
+use crate::model::{self, Circle, EntityId, PositionComponent, UserId};
 // TODO: remove caolo_api dependency from this module, replace with model/
 use caolo_api::user::UserData;
 
@@ -121,19 +121,6 @@ pub trait TableBackend {
     fn iter<'a>(&'a self) -> Box<dyn TableIterator<Self::Id, Self::Row> + 'a>;
 }
 
-pub trait BotTable {
-    fn get_bots_by_owner(&self, user_id: &UserId) -> Vec<(EntityId, Bot)>;
-}
-
-impl BotTable for Table<EntityId, Bot> {
-    fn get_bots_by_owner(&self, user_id: &UserId) -> Vec<(EntityId, Bot)> {
-        self.iter()
-            .filter(|(_, e)| e.owner_id.map(|id| id == *user_id).unwrap_or(false))
-            .map(|(id, e)| (id, e.clone()))
-            .collect()
-    }
-}
-
 pub trait UserDataTable {
     fn create_new(&mut self, row: UserData) -> UserId;
 }
@@ -143,19 +130,6 @@ impl UserDataTable for Table<UserId, UserData> {
         use Backend::*;
         match &mut self.backend {
             BTree(table) => table.create_new(row),
-        }
-    }
-}
-
-pub trait StructureTable {
-    fn get_structures_by_owner(&self, user_id: &UserId) -> Vec<(EntityId, Structure)>;
-}
-
-impl StructureTable for Table<EntityId, Structure> {
-    fn get_structures_by_owner(&self, user_id: &UserId) -> Vec<(EntityId, Structure)> {
-        use Backend::*;
-        match &self.backend {
-            BTree(table) => table.get_structures_by_owner(user_id),
         }
     }
 }

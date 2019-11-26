@@ -45,13 +45,9 @@ pub fn init_storage(n_fake_users: usize) -> Storage {
         storage
             .entity_table_mut::<model::EntityScript>()
             .insert(id, model::EntityScript { script_id });
-        storage.entity_table_mut::<model::Bot>().insert(
-            id,
-            model::Bot {
-                owner_id: None, // TODO
-                speed: 1,
-            },
-        );
+        storage
+            .entity_table_mut::<model::Bot>()
+            .insert(id, model::Bot {});
         storage
             .entity_table_mut::<model::PositionComponent>()
             .insert(id, model::PositionComponent(Point::new(0, 0)));

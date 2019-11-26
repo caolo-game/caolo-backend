@@ -34,15 +34,12 @@ impl SpawnIntent {
         let bot_id = storage.insert_entity();
         storage
             .entity_table_mut::<model::SpawnBotComponent>()
-            .insert(
-                bot_id,
-                model::SpawnBotComponent {
-                    bot: model::Bot {
-                        owner_id: self.bot.owner_id,
-                        speed: self.bot.speed,
-                    },
-                },
-            );
+            .insert(bot_id, model::SpawnBotComponent { bot: model::Bot {} });
+        if let Some(owner_id) = self.bot.owner_id {
+            storage
+                .entity_table_mut::<model::OwnedEntity>()
+                .insert(bot_id, model::OwnedEntity { owner_id: owner_id });
+        }
 
         spawn.time_to_spawn = 5;
         spawn.spawning = Some(bot_id);
@@ -65,7 +62,10 @@ pub fn check_spawn_intent(
         .get_by_id(&intent.id)
     {
         Some(structure) => {
-            if structure.owner_id.map(|id| id != userid).unwrap_or(true) {
+            let owner_id = storage
+                .entity_table::<model::OwnedEntity>()
+                .get_by_id(&intent.id);
+            if owner_id.map(|id| id.owner_id != userid).unwrap_or(true) {
                 return OperationResult::NotOwner;
             }
         }

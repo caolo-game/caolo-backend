@@ -1,11 +1,6 @@
-use super::*;
 use crate::model::{self, EntityId, Resource as ResourceComponent};
-use crate::profile;
 use crate::storage::Storage;
-use crate::tables::{JoinIterator, PositionTable};
-use caolo_api::point::{Circle, Point};
-use caolo_api::resources::{Mineral, Resource, Resources};
-use rayon::prelude::*;
+use caolo_api::resources::{Mineral, Resource};
 
 pub const MAX_SEARCH_RADIUS: u32 = 60;
 

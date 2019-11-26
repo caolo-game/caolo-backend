@@ -51,12 +51,14 @@ pub fn check_move_intent(
     let bots = storage.entity_table::<model::Bot>();
     let terrain = storage.point_table::<model::TileTerrainType>();
 
-    let bot = match bots.get_by_id(&intent.id) {
-        Some(bot) => {
-            if bot.owner_id.map(|id| id != userid).unwrap_or(true) {
+    match bots.get_by_id(&intent.id) {
+        Some(_) => {
+            let owner_id = storage
+                .entity_table::<model::OwnedEntity>()
+                .get_by_id(&intent.id);
+            if owner_id.map(|id| id.owner_id != userid).unwrap_or(true) {
                 return OperationResult::NotOwner;
             }
-            bot
         }
         None => return OperationResult::InvalidInput,
     };
@@ -72,7 +74,8 @@ pub fn check_move_intent(
         }
     };
 
-    if u64::from(bot.speed) < pos.0.hex_distance(intent.position) {
+    // TODO: bot speed component?
+    if 1 < pos.0.hex_distance(intent.position) {
         return OperationResult::InvalidInput;
     }
 
@@ -98,13 +101,7 @@ mod tests {
 
         let id = storage.insert_entity();
 
-        storage.entity_table_mut::<Bot>().insert(
-            id,
-            Bot {
-                speed: 2,
-                owner_id: None,
-            },
-        );
+        storage.entity_table_mut::<Bot>().insert(id, Bot {});
 
         storage
             .entity_table_mut::<PositionComponent>()

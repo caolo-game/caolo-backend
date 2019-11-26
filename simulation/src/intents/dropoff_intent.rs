@@ -53,8 +53,11 @@ pub fn check_dropoff_intent(
     storage: &crate::storage::Storage,
 ) -> OperationResult {
     match storage.entity_table::<model::Bot>().get_by_id(&intent.id) {
-        Some(bot) => {
-            if bot.owner_id.map(|id| id != userid).unwrap_or(true) {
+        Some(_) => {
+            let owner_id = storage
+                .entity_table::<model::OwnedEntity>()
+                .get_by_id(&intent.id);
+            if owner_id.map(|id| id.owner_id != userid).unwrap_or(true) {
                 return OperationResult::NotOwner;
             }
         }

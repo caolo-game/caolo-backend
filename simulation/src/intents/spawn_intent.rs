@@ -16,6 +16,7 @@ impl SpawnIntent {
         let mut spawn = storage
             .entity_table::<model::SpawnComponent>()
             .get_by_id(&self.id)
+            .cloned()
             .ok_or_else(|| "structure does not have spawn component")?;
 
         if spawn.spawning.is_some() {

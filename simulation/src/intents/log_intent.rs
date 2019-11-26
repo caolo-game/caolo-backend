@@ -13,7 +13,7 @@ impl LogIntent {
     pub fn execute(&self, storage: &mut Storage) -> IntentResult {
         let id = (self.entity, self.time);
         let table = storage.log_table_mut::<model::LogEntry>();
-        let entry = match table.get_by_id(&id) {
+        let entry = match table.get_by_id(&id).cloned() {
             Some(mut entry) => {
                 entry.payload.push(self.payload.clone());
                 entry

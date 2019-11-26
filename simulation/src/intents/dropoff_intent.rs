@@ -18,10 +18,12 @@ impl DropoffIntent {
         let mut carry_component = storage
             .entity_table::<model::CarryComponent>()
             .get_by_id(&self.bot)
+            .cloned()
             .ok_or_else(|| "Bot has no carry")?;
         let mut store_component = storage
             .entity_table::<model::EnergyComponent>()
             .get_by_id(&self.bot)
+            .cloned()
             .ok_or_else(|| "Bot has no carry")?;
         let dropoff = self
             .amount

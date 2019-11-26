@@ -77,7 +77,7 @@ pub fn find_path(
                         center: **p,
                         radius: 0,
                     }) == 0
-                        && terrain.get_by_id(p) != Some(TileTerrainType::Wall))
+                        && terrain.get_by_id(p) != Some(&TileTerrainType::Wall))
                     || **p == end // End may be in the positions table!
             })
             .for_each(|point| {

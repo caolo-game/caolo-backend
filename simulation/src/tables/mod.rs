@@ -42,14 +42,14 @@ where
         }
     }
 
-    pub fn get_by_id(&self, id: &Id) -> Option<Row> {
+    pub fn get_by_id<'a>(&'a self, id: &Id) -> Option<&'a Row> {
         use Backend::*;
         match &self.backend {
             BTree(table) => table.get_by_id(id),
         }
     }
 
-    pub fn get_by_ids(&self, id: &[Id]) -> Vec<(Id, Row)> {
+    pub fn get_by_ids<'a>(&'a self, id: &[Id]) -> Vec<(Id, &'a Row)> {
         use Backend::*;
         match &self.backend {
             BTree(table) => table.get_by_ids(id),
@@ -108,8 +108,8 @@ pub trait TableBackend {
     type Id: TableId;
     type Row: Clone;
 
-    fn get_by_id(&self, id: &Self::Id) -> Option<Self::Row>;
-    fn get_by_ids(&self, id: &[Self::Id]) -> Vec<(Self::Id, Self::Row)>;
+    fn get_by_id<'a>(&'a self, id: &Self::Id) -> Option<&'a Self::Row>;
+    fn get_by_ids<'a>(&'a self, id: &[Self::Id]) -> Vec<(Self::Id, &'a Self::Row)>;
 
     /// insert or update
     fn insert(&mut self, id: Self::Id, row: Self::Row);

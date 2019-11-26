@@ -32,15 +32,15 @@ where
     type Id = Id;
     type Row = Row;
 
-    fn get_by_id(&self, id: &Id) -> Option<Row> {
-        self.data.get(id).cloned()
+    fn get_by_id<'a>(&'a self, id: &Id) -> Option<&'a Row> {
+        self.data.get(id)
     }
 
-    fn get_by_ids(&self, ids: &[Id]) -> Vec<(Id, Row)> {
+    fn get_by_ids<'a>(&'a self, ids: &[Id]) -> Vec<(Id, &'a Row)> {
         self.data
             .iter()
             .filter(move |(i, _)| ids.iter().any(|x| *i == x))
-            .map(move |(i, v)| (*i, v.clone()))
+            .map(move |(i, v)| (*i, v))
             .collect()
     }
 

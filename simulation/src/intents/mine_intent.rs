@@ -27,7 +27,7 @@ impl MineIntent {
                         if energy.energy == 0 {
                             return Err("Mineral is empty!".into());
                         }
-                        energy
+                        energy.clone()
                     }
                     None => {
                         return Err("Mineral has no energy component!".into());
@@ -36,6 +36,7 @@ impl MineIntent {
                 let mut carry = storage
                     .entity_table::<model::CarryComponent>()
                     .get_by_id(&self.bot)
+                    .cloned()
                     .ok_or_else(|| {
                         error!("MineIntent bot has no carry component");
                         "Bot has no carry"

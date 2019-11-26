@@ -63,7 +63,7 @@ pub fn build_bot(id: EntityId, storage: &Storage) -> Option<caolo_api::bots::Bot
     let carry = storage
         .entity_table::<model::CarryComponent>()
         .get_by_id(&id)
-        .unwrap_or_else(|| model::CarryComponent {
+        .unwrap_or_else(|| &model::CarryComponent {
             carry: 0,
             carry_max: 0,
         });

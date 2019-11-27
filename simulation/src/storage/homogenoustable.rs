@@ -79,16 +79,14 @@ mod tests {
     use crate::tables::BTreeTable;
 
     #[test]
-    fn can_downcast()
-    {
+    fn can_downcast() {
         let table = BTreeTable::new();
         let homo = HomogenousTable::<EntityId>::new::<Bot>(table);
         homo.downcast_ref::<Bot>().unwrap();
     }
 
     #[test]
-    fn can_downcast_mut()
-    {
+    fn can_downcast_mut() {
         let table = BTreeTable::new();
         let mut homo = HomogenousTable::<EntityId>::new::<Bot>(table);
         homo.downcast_mut::<Bot>().unwrap();

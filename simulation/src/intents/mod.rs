@@ -1,19 +1,19 @@
 //! Actions _intented_ to be executed by clients
 //!
 mod dropoff_intent;
+mod log_intent;
 mod mine_intent;
 mod move_intent;
 mod spawn_intent;
-mod log_intent;
 
 pub use self::dropoff_intent::*;
+pub use self::log_intent::*;
 pub use self::mine_intent::*;
 pub use self::move_intent::*;
 pub use self::spawn_intent::*;
-pub use self::log_intent::*;
 
-use crate::storage::Storage;
 use crate::model::EntityId;
+use crate::storage::Storage;
 use caolo_api::bots::Bot;
 use caolo_api::point::{Circle, Point};
 
@@ -66,7 +66,11 @@ impl Intent {
     }
 
     pub fn new_log(entity: EntityId, payload: String, time: u64) -> Self {
-        Intent::Log(LogIntent { entity, payload, time })
+        Intent::Log(LogIntent {
+            entity,
+            payload,
+            time,
+        })
     }
 
     pub fn new_dropoff(

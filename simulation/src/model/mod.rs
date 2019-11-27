@@ -1,6 +1,6 @@
 pub mod bots;
-pub mod indices;
 pub mod components;
+pub mod indices;
 
 pub use self::components::*;
 pub use self::indices::*;

@@ -123,9 +123,9 @@ pub fn find_path(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{PositionComponent, EntityId};
-    use crate::tables::BTreeTable;
+    use crate::model::{EntityId, PositionComponent};
     use crate::prelude::*;
+    use crate::tables::BTreeTable;
 
     #[test]
     fn test_simple_wall() {

@@ -92,7 +92,7 @@ where
 
     /// Contract: ids should be ordered
     // TODO: remove the need for heap allocation
-    pub fn iter<'a>(&'a self) -> Box<dyn TableIterator<Id, Row> + 'a> {
+    pub fn iter<'a>(&'a self) -> impl TableIterator<Id, &'a Row> {
         use Backend::*;
         match &self.backend {
             BTree(table) => table.iter(),
@@ -115,10 +115,6 @@ pub trait TableBackend {
     fn insert(&mut self, id: Self::Id, row: Self::Row);
 
     fn delete(&mut self, id: &Self::Id) -> Option<Self::Row>;
-
-    /// Contract: ids should be ordered
-    // TODO: remove the need for heap allocation
-    fn iter<'a>(&'a self) -> Box<dyn TableIterator<Self::Id, Self::Row> + 'a>;
 }
 
 pub trait UserDataTable {

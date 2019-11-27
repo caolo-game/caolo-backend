@@ -66,7 +66,7 @@ pub fn execute_single_script<'a>(
         "not compiled"
     })?;
     vm.run(program).map_err(|e| {
-        error!(
+        warn!(
             "Error while executing script {:?} of entity {:?}\n{:?}",
             scriptid, entityid, e
         );

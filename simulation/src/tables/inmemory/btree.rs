@@ -22,6 +22,10 @@ where
             data: BTreeMap::new(),
         }
     }
+
+    pub fn iter<'a>(&'a self) -> impl TableIterator<Id, &'a Row> + 'a {
+        self.data.iter().map(|(id, row)| (*id, row))
+    }
 }
 
 impl<Id, Row> TableBackend for BTreeTable<Id, Row>
@@ -50,10 +54,6 @@ where
 
     fn delete(&mut self, id: &Id) -> Option<Row> {
         self.data.remove(id)
-    }
-
-    fn iter<'a>(&'a self) -> Box<dyn TableIterator<Id, Row> + 'a> {
-        Box::new(self.data.iter().map(|(id, row)| (*id, row.clone())))
     }
 }
 

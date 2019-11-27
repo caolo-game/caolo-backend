@@ -20,7 +20,8 @@ pub fn update_energy(storage: &mut Storage) {
     let energy_regen = storage.entity_table::<model::EnergyRegenComponent>();
     let energy = storage.entity_table::<model::EnergyComponent>();
     let changeset = JoinIterator::new(energy.iter(), energy_regen.iter())
-        .map(|(id, (mut e, er))| {
+        .map(|(id, (e, er))| {
+            let mut e = e.clone();
             e.energy = (e.energy + er.amount).min(e.energy_max);
             (id, e)
         })
@@ -36,7 +37,8 @@ pub fn update_spawns(storage: &mut Storage) {
 
     let changeset = spawn
         .iter()
-        .map(|(id, mut s)| {
+        .map(|(id, s)| {
+            let mut s = s.clone();
             if s.time_to_spawn > 0 {
                 s.time_to_spawn -= 1;
             }
@@ -64,7 +66,9 @@ pub fn update_decay(storage: &mut Storage) {
     let decay = storage.entity_table::<model::DecayComponent>();
     let hp = storage.entity_table::<model::HpComponent>();
     let changeset = JoinIterator::new(decay.iter(), hp.iter())
-        .map(|(id, (mut d, mut hp))| {
+        .map(|(id, (d, hp))| {
+            let mut d = d.clone();
+            let mut hp = hp.clone();
             if d.t > 0 {
                 d.t -= 1;
             }
@@ -104,21 +108,22 @@ pub fn update_minerals(storage: &mut Storage) {
         JoinIterator::new(resources.iter(), positions.iter()),
         energy.iter(),
     )
-    .filter_map(
-        |(id, ((resource, mut position), mut energy))| match resource {
-            model::Resource::Mineral => {
-                if energy.energy > 0 {
-                    return None;
-                }
-
-                energy.energy = energy.energy_max;
-
-                position.0 = random_uncontested_pos_in_range(positions, &mut rng, -14, 15);
-
-                Some((id, position, energy))
+    .filter_map(|(id, ((resource, position), energy))| match resource {
+        model::Resource::Mineral => {
+            if energy.energy > 0 {
+                return None;
             }
-        },
-    )
+
+            let mut energy = energy.clone();
+            let mut position = position.clone();
+
+            energy.energy = energy.energy_max;
+
+            position.0 = random_uncontested_pos_in_range(positions, &mut rng, -14, 15);
+
+            Some((id, position, energy))
+        }
+    })
     .collect::<Vec<_>>();
 
     for (id, pos, en) in changeset.into_iter() {

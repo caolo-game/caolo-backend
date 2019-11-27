@@ -53,7 +53,8 @@ impl Payload {
             storage
                 .point_table::<model::TileTerrainType>()
                 .iter()
-                .filter(|(_, t)| *t != TileTerrainType::Empty)
+                .filter(|(_, t)| **t != TileTerrainType::Empty)
+                .map(|(x, y)| (x, y.clone()))
                 .collect()
         };
 
@@ -61,7 +62,7 @@ impl Payload {
             let resources = storage
                 .entity_table::<model::Resource>()
                 .iter()
-                .filter_map(|(id, r)| build_resource(id, r, storage))
+                .filter_map(|(id, r)| build_resource(id, r.clone(), storage))
                 .collect();
             Resources::new(resources)
         };

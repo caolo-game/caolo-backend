@@ -4,12 +4,16 @@ use crate::tables::{self, Component, TableId, TableRow};
 use std::any::{type_name, TypeId};
 use std::fmt::{Debug, Formatter};
 
+/// Proxy into a specific table.
+/// HomogenousTables are only generic for the index parameter and can hide any table with the same
+/// index.
 pub struct HomogenousTable<Id: TableId> {
     rowtype: TypeId,
     concrete_table: Box<dyn DynTable<Id> + 'static>,
 }
 
 impl<Id: TableId> HomogenousTable<Id> {
+    /// Downcast self as an immutable reference to the underlying table.
     pub fn downcast_ref<Row: Component<Id>>(&self) -> Option<&Row::Table> {
         if TypeId::of::<Row>() == self.rowtype {
             #[allow(clippy::cast_ptr_alignment)]
@@ -22,6 +26,7 @@ impl<Id: TableId> HomogenousTable<Id> {
         }
     }
 
+    /// Downcast self as a mutable reference to the underlying table.
     pub fn downcast_mut<Row: Component<Id>>(&mut self) -> Option<&mut Row::Table> {
         if TypeId::of::<Row>() == self.rowtype {
             #[allow(clippy::cast_ptr_alignment)]
@@ -34,10 +39,12 @@ impl<Id: TableId> HomogenousTable<Id> {
         }
     }
 
+    /// Delete a row that matches the index if any.
     pub fn delete_entity(&mut self, id: &Id) {
         self.concrete_table.delete_entity(id);
     }
 
+    /// Create a new HomogenousTable given a back-end.
     pub fn new<Row: Component<Id>>(table: <Row as Component<Id>>::Table) -> Self
     where
         <Row as Component<Id>>::Table: DynTable<Id>,
@@ -51,6 +58,8 @@ impl<Id: TableId> HomogenousTable<Id> {
     }
 }
 
+/// Generic methods all tables must provide when used in a homogenous environment.
+/// This is automatically implemented for all types implementing `tables::Table`.
 pub trait DynTable<Id: TableId> {
     fn delete_entity(&mut self, id: &Id);
 }

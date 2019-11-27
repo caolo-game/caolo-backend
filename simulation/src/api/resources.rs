@@ -1,11 +1,7 @@
-use super::*;
 use crate::model::{self, EntityId, Resource as ResourceComponent};
-use crate::profile;
+use crate::prelude::*;
 use crate::storage::Storage;
-use crate::tables::{JoinIterator, PositionTable};
-use caolo_api::point::{Circle, Point};
-use caolo_api::resources::{Mineral, Resource, Resources};
-use rayon::prelude::*;
+use caolo_api::resources::{Mineral, Resource};
 
 pub const MAX_SEARCH_RADIUS: u32 = 60;
 
@@ -27,7 +23,7 @@ pub fn build_resource(
                 None
             })?;
 
-            let mineral = Mineral::new(id, pos.0, energy.energy, energy.energy_max);
+            let mineral = Mineral::new(id.0, pos.0, energy.energy, energy.energy_max);
 
             Some(Resource::Mineral(mineral))
         }

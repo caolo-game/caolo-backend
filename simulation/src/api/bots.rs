@@ -1,6 +1,7 @@
 use super::*;
 use crate::intents::{self, check_move_intent};
 use crate::model::{self, EntityId, Point};
+use crate::prelude::*;
 use crate::profile;
 use crate::storage::Storage;
 use caolo_api::OperationResult;
@@ -12,14 +13,14 @@ pub fn move_bot(
     point: TPointer,
     output: TPointer,
 ) -> Result<usize, ExecutionError> {
-    profile!("_send_move_intent");
+    profile!("mode_bot");
 
     let point: Point = vm.get_value(point).ok_or_else(|| {
         error!("move_bot called without a point");
         ExecutionError::InvalidArgument
     })?;
     let intent = caolo_api::bots::MoveIntent {
-        id: vm.get_aux().entityid(),
+        id: vm.get_aux().entityid().0,
         position: point,
     };
     let userid = Default::default();
@@ -35,43 +36,49 @@ pub fn move_bot(
 
     vm.get_aux_mut()
         .intents_mut()
-        .push(intents::Intent::new_move(intent.id, intent.position));
+        .push(intents::Intent::new_move(
+            EntityId(intent.id),
+            intent.position,
+        ));
 
     return Ok(result);
 }
 
 pub fn build_bot(id: EntityId, storage: &Storage) -> Option<caolo_api::bots::Bot> {
+    profile!("build_bot");
+
+    let bot = storage.entity_table::<model::Bot>().get_by_id(&id);
+    if let None = bot {
+        debug!(
+            "Bot {:?} could not be built because it has no bot component",
+            id
+        );
+        return None;
+    }
+
     let pos = storage
         .entity_table::<model::PositionComponent>()
         .get_by_id(&id)
         .or_else(|| {
-            debug!("Bot {:?} could not be build because it has no position", id);
+            debug!("Bot {:?} could not be built because it has no position", id);
             None
         })?;
 
     let carry = storage
         .entity_table::<model::CarryComponent>()
         .get_by_id(&id)
-        .unwrap_or_else(|| model::CarryComponent {
+        .unwrap_or_else(|| &model::CarryComponent {
             carry: 0,
             carry_max: 0,
         });
 
-    let bot = storage.entity_table::<model::Bot>().get_by_id(&id);
+    let owner_id = storage.entity_table::<model::OwnedEntity>().get_by_id(&id);
 
-    bot.map(|bot| caolo_api::bots::Bot {
-        id,
-        speed: bot.speed,
-        owner_id: bot.owner_id,
+    Some(caolo_api::bots::Bot {
+        id: id.0,
+        owner_id: owner_id.map(|id| id.owner_id.0),
         position: pos.0,
         carry: carry.carry,
         carry_max: carry.carry_max,
-    })
-    .or_else(|| {
-        debug!(
-            "Bot {:?} could not be build because it has no bot component",
-            id
-        );
-        None
     })
 }

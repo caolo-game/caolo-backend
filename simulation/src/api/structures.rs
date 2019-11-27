@@ -1,11 +1,9 @@
 use super::*;
 use crate::intents::check_spawn_intent;
 use crate::model::{self, EntityId};
-use crate::profile;
+use crate::prelude::*;
 use crate::storage::Storage;
-use crate::tables::StructureTable;
 use caolo_api::structures::Spawn;
-use rayon::prelude::*;
 
 pub fn build_structure(
     id: EntityId,
@@ -20,7 +18,7 @@ fn assemble_spawn(
     structure: &crate::model::Structure,
     storage: &Storage,
 ) -> Option<caolo_api::structures::Structure> {
-    debug!("Assembling spawn {} {:?}", id, structure);
+    debug!("Assembling spawn {:?} {:?}", id, structure);
     storage
         .entity_table::<model::SpawnComponent>()
         .get_by_id(&id)
@@ -46,9 +44,10 @@ fn assemble_spawn(
                     debug!("Structures should have position");
                     None
                 })?;
+            let owner_id = storage.entity_table::<model::OwnedEntity>().get_by_id(&id);
             let spawn = caolo_api::structures::Structure::Spawn(Spawn {
-                id,
-                owner_id: structure.owner_id,
+                id: id.0,
+                owner_id: owner_id.map(|id| id.owner_id.0),
                 position: position.0,
 
                 energy: energy.energy,
@@ -58,7 +57,7 @@ fn assemble_spawn(
                 hp_max: hp.hp_max,
 
                 time_to_spawn: spawn.time_to_spawn,
-                spawning: spawn.spawning,
+                spawning: spawn.spawning.map(|x| x.0),
             });
             Some(spawn)
         })

@@ -1,5 +1,6 @@
 use super::*;
 use crate::model::{self, PositionComponent};
+use crate::prelude::*;
 use crate::tables::PositionTable;
 use caolo_api::OperationResult;
 
@@ -45,25 +46,28 @@ impl MoveIntent {
 
 pub fn check_move_intent(
     intent: &caolo_api::bots::MoveIntent,
-    userid: caolo_api::UserId,
+    userid: model::UserId,
     storage: &crate::storage::Storage,
 ) -> OperationResult {
     let bots = storage.entity_table::<model::Bot>();
-    let terrain = storage.point_table::<model::TileTerrainType>();
+    let terrain = storage.point_table::<model::TerrainComponent>();
 
-    let bot = match bots.get_by_id(&intent.id) {
-        Some(bot) => {
-            if bot.owner_id.map(|id| id != userid).unwrap_or(true) {
+    let id = model::EntityId(intent.id);
+    match bots.get_by_id(&id) {
+        Some(_) => {
+            let owner_id = storage
+                .entity_table::<model::OwnedEntity>()
+                .get_by_id(&id);
+            if owner_id.map(|id| id.owner_id != userid).unwrap_or(true) {
                 return OperationResult::NotOwner;
             }
-            bot
         }
         None => return OperationResult::InvalidInput,
     };
 
     let pos = match storage
         .entity_table::<PositionComponent>()
-        .get_by_id(&intent.id)
+        .get_by_id(&id)
     {
         Some(pos) => pos,
         None => {
@@ -72,12 +76,15 @@ pub fn check_move_intent(
         }
     };
 
-    if u64::from(bot.speed) < pos.0.hex_distance(intent.position) {
+    // TODO: bot speed component?
+    if 1 < pos.0.hex_distance(intent.position) {
         return OperationResult::InvalidInput;
     }
 
     match terrain.get_by_id(&intent.position) {
-        Some(model::TileTerrainType::Wall) => OperationResult::InvalidInput,
+        Some(model::TerrainComponent(model::TileTerrainType::Wall)) => {
+            OperationResult::InvalidInput
+        }
         _ => OperationResult::Ok,
     }
 }
@@ -87,31 +94,25 @@ mod tests {
     use super::*;
     use crate::model::{Bot, PositionComponent};
     use crate::storage::Storage;
-    use crate::tables::Table;
+    use crate::tables::BTreeTable;
     use caolo_api::point::Point;
 
     #[test]
     fn test_move_intent_fails_if_node_is_occupied() {
         let mut storage = Storage::new();
-        storage.add_entity_table::<Bot>(Table::default_btree());
-        storage.add_entity_table::<PositionComponent>(Table::default_btree());
+        storage.add_entity_table::<Bot>(BTreeTable::new());
+        storage.add_entity_table::<PositionComponent>(BTreeTable::new());
 
         let id = storage.insert_entity();
 
-        storage.entity_table_mut::<Bot>().insert(
-            id,
-            Bot {
-                speed: 2,
-                owner_id: None,
-            },
-        );
+        storage.entity_table_mut::<Bot>().insert(id, Bot {});
 
         storage
             .entity_table_mut::<PositionComponent>()
             .insert(id, PositionComponent(Point::new(12, 13)));
 
         let intent = MoveIntent {
-            bot: 69,
+            bot: EntityId(69),
             position: Point::new(42, 42),
         };
 

@@ -1,4 +1,5 @@
 use super::EntityId;
+use crate::prelude::*;
 use crate::storage::Storage;
 
 /// Spawns a bot from a spawn.
@@ -42,6 +43,7 @@ pub fn spawn_bot(spawn_id: EntityId, entity_id: EntityId, storage: &mut Storage)
     let positions = storage.entity_table_mut::<super::PositionComponent>();
     let pos = positions
         .get_by_id(&spawn_id)
+        .cloned()
         .expect("Spawn should have position");
     positions.insert(entity_id, pos);
 

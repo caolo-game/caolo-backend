@@ -1,6 +1,6 @@
+use crate::model::{TerrainComponent, TileTerrainType};
 use crate::tables::{PositionTable, Table};
 use caolo_api::point::{Circle, Point};
-use caolo_api::terrain::TileTerrainType;
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -32,7 +32,7 @@ pub fn find_path(
     from: Point,
     to: Point,
     positions: &dyn PositionTable,
-    terrain: &Table<Point, TileTerrainType>,
+    terrain: &<TerrainComponent as crate::tables::Component<Point>>::Table,
     mut max_iterations: u32,
 ) -> Result<Vec<Point>, PathFindingError> {
     let center = (from - to) / 2;
@@ -45,7 +45,7 @@ pub fn find_path(
         .get_entities_in_range(&circle)
         .into_iter()
         .map(|(_, pos)| pos.0)
-        .chain(terrain.iter().filter_map(|(p, t)| match t {
+        .chain(terrain.iter().filter_map(|(p, t)| match t.0 {
             TileTerrainType::Wall => Some(p),
             TileTerrainType::Empty => None,
         }))
@@ -77,7 +77,8 @@ pub fn find_path(
                         center: **p,
                         radius: 0,
                     }) == 0
-                        && terrain.get_by_id(p) != Some(TileTerrainType::Wall))
+                        && terrain.get_by_id(*p).map(|x| x.0.clone())
+                            != Some(TileTerrainType::Wall))
                     || **p == end // End may be in the positions table!
             })
             .for_each(|point| {
@@ -122,18 +123,19 @@ pub fn find_path(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::PositionComponent;
-    use crate::tables::Table;
+    use crate::model::{PositionComponent, EntityId};
+    use crate::tables::BTreeTable;
+    use crate::prelude::*;
 
     #[test]
     fn test_simple_wall() {
         let from = Point::new(0, 0);
         let to = Point::new(5, 0);
 
-        let positions = Table::default_btree();
-        let mut terrain = Table::default_btree();
+        let positions = BTreeTable::new();
+        let mut terrain = BTreeTable::new();
         for i in -5..=5 {
-            terrain.insert(Point::new(2, i), TileTerrainType::Wall);
+            terrain.insert(Point::new(2, i), TerrainComponent(TileTerrainType::Wall));
         }
 
         let path = find_path(from, to, &positions, &terrain, 512).expect("Path finding failed");
@@ -154,11 +156,11 @@ mod tests {
         let from = Point::new(17, -16);
         let to = Point::new(7, -6);
 
-        let mut positions = Table::default_btree();
-        let terrain = Table::default_btree();
+        let mut positions = BTreeTable::new();
+        let terrain = BTreeTable::new();
 
-        positions.insert(0, PositionComponent(from));
-        positions.insert(1, PositionComponent(to));
+        positions.insert(EntityId(0), PositionComponent(from));
+        positions.insert(EntityId(1), PositionComponent(to));
 
         let path = find_path(from, to, &positions, &terrain, 512).expect("Path finding failed");
 

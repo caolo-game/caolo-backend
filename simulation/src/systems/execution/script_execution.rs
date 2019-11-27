@@ -1,6 +1,7 @@
-use crate::{intents, model, profile, storage::Storage};
+use crate::model::{self, EntityId, ScriptId};
+use crate::prelude::*;
+use crate::{intents, profile, storage::Storage};
 use cao_lang::prelude::*;
-use caolo_api::{EntityId, Script, ScriptId};
 use std::sync::{Arc, Mutex};
 
 pub type ExecutionResult = Result<Vec<intents::Intent>, String>;
@@ -46,7 +47,7 @@ pub fn execute_single_script<'a>(
     profile!("execute_single_script");
 
     let program = storage
-        .scripts_table::<Script>()
+        .scripts_table::<model::ScriptComponent>()
         .get_by_id(&scriptid)
         .ok_or_else(|| {
             error!("Script by ID {:?} does not exist", scriptid);
@@ -61,12 +62,12 @@ pub fn execute_single_script<'a>(
     let mut vm = VM::new(data);
     crate::api::make_import().execute_imports(&mut vm);
 
-    let program = program.compiled.ok_or_else(|| {
+    let program = program.0.compiled.as_ref().ok_or_else(|| {
         error!("Script by ID {:?} was not compiled", scriptid);
         "not compiled"
     })?;
-    vm.run(&program).map_err(|e| {
-        error!(
+    vm.run(program).map_err(|e| {
+        warn!(
             "Error while executing script {:?} of entity {:?}\n{:?}",
             scriptid, entityid, e
         );

@@ -3,11 +3,11 @@ use crate::storage::TableId;
 use rayon::prelude::*;
 use std::collections::BTreeMap;
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct BTreeTable<Id, Row>
 where
     Id: TableId,
-    Row: Clone,
+    Row: TableRow,
 {
     data: BTreeMap<Id, Row>,
 }
@@ -15,32 +15,36 @@ where
 impl<Id, Row> BTreeTable<Id, Row>
 where
     Id: TableId,
-    Row: Clone,
+    Row: TableRow,
 {
     pub fn new() -> Self {
         Self {
             data: BTreeMap::new(),
         }
     }
+
+    pub fn iter<'a>(&'a self) -> impl TableIterator<Id, &'a Row> + 'a {
+        self.data.iter().map(|(id, row)| (*id, row))
+    }
 }
 
-impl<Id, Row> TableBackend for BTreeTable<Id, Row>
+impl<Id, Row> Table for BTreeTable<Id, Row>
 where
     Id: TableId,
-    Row: Clone,
+    Row: TableRow,
 {
     type Id = Id;
     type Row = Row;
 
-    fn get_by_id(&self, id: &Id) -> Option<Row> {
-        self.data.get(id).cloned()
+    fn get_by_id<'a>(&'a self, id: &Id) -> Option<&'a Row> {
+        self.data.get(id)
     }
 
-    fn get_by_ids(&self, ids: &[Id]) -> Vec<(Id, Row)> {
+    fn get_by_ids<'a>(&'a self, ids: &[Id]) -> Vec<(Id, &'a Row)> {
         self.data
             .iter()
             .filter(move |(i, _)| ids.iter().any(|x| *i == x))
-            .map(move |(i, v)| (*i, v.clone()))
+            .map(move |(i, v)| (*i, v))
             .collect()
     }
 
@@ -50,30 +54,6 @@ where
 
     fn delete(&mut self, id: &Id) -> Option<Row> {
         self.data.remove(id)
-    }
-
-    fn iter<'a>(&'a self) -> Box<dyn TableIterator<Id, Row> + 'a> {
-        Box::new(self.data.iter().map(|(id, row)| (*id, row.clone())))
-    }
-}
-
-impl BotTable for BTreeTable<EntityId, Bot> {
-    fn get_bots_by_owner(&self, user_id: &UserId) -> Vec<(EntityId, Bot)> {
-        self.data
-            .par_iter()
-            .filter(|(_, e)| e.owner_id.map(|id| id == *user_id).unwrap_or(false))
-            .map(|(id, e)| (*id, e.clone()))
-            .collect()
-    }
-}
-
-impl StructureTable for BTreeTable<EntityId, Structure> {
-    fn get_structures_by_owner(&self, user_id: &UserId) -> Vec<(EntityId, Structure)> {
-        self.data
-            .par_iter()
-            .filter(|(_, e)| e.owner_id.map(|id| id == *user_id).unwrap_or(false))
-            .map(|(id, e)| (*id, e.clone()))
-            .collect()
     }
 }
 
@@ -91,6 +71,7 @@ impl UserDataTable for BTreeTable<UserId, UserData> {
             .set_variant(Variant::RFC4122)
             .set_version(Version::Random)
             .build();
+        let id = UserId(id);
         self.insert(id, row);
         id
     }
@@ -113,11 +94,11 @@ impl PositionTable for BTreeTable<EntityId, PositionComponent> {
     }
 }
 
-impl LogTable for BTreeTable<(EntityId, u64), model::LogEntry> {
-    fn get_logs_by_time(&self, time: u64) -> Vec<((EntityId, u64), model::LogEntry)> {
+impl LogTable for BTreeTable<model::EntityTime, model::LogEntry> {
+    fn get_logs_by_time(&self, time: u64) -> Vec<(model::EntityTime, model::LogEntry)> {
         self.data
             .par_iter()
-            .filter(|((_, t), _)| *t == time)
+            .filter(|(t, _)| t.1 == time)
             .map(|(k, v)| (*k, v.clone()))
             .collect()
     }

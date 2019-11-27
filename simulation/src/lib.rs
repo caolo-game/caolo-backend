@@ -3,6 +3,7 @@ extern crate log;
 
 pub mod api;
 pub mod model;
+pub mod prelude;
 pub mod storage;
 pub mod tables;
 
@@ -10,7 +11,7 @@ mod intents;
 mod systems;
 mod utils;
 
-use caolo_api::EntityId;
+use prelude::*;
 use systems::execute_world_update;
 use systems::execution::{execute_intents, execute_scripts};
 
@@ -31,16 +32,17 @@ pub fn forward(storage: &mut storage::Storage) -> Result<(), Box<dyn std::error:
 }
 
 fn compile_scripts(storage: &mut storage::Storage) {
-    use caolo_api::{Script, ScriptId};
+    use caolo_api::Script;
+    use model::{ScriptComponent, ScriptId};
     use rayon::prelude::*;
 
     info!("Compiling scripts");
 
-    let scripts = storage.scripts_table::<Script>();
+    let scripts = storage.scripts_table::<ScriptComponent>();
     let to_compile: Vec<(ScriptId, Script)> = scripts
         .iter()
-        .filter(|(_, s)| s.compiled.is_none())
-        .map(|(id, s)| (id, s.clone()))
+        .filter(|(_, s)| s.0.compiled.is_none())
+        .map(|(id, s)| (id, s.0.clone()))
         .collect();
     let changeset: Vec<(ScriptId, Script)> = to_compile
         .into_par_iter()
@@ -56,8 +58,8 @@ fn compile_scripts(storage: &mut storage::Storage) {
         .collect();
     for (id, script) in changeset.into_iter() {
         storage
-            .scripts_table_mut::<caolo_api::Script>()
-            .insert(id, script);
+            .scripts_table_mut::<ScriptComponent>()
+            .insert(id, ScriptComponent(script));
     }
 
     info!("Compiling scripts done");
@@ -65,34 +67,34 @@ fn compile_scripts(storage: &mut storage::Storage) {
 
 pub fn init_inmemory_storage() -> storage::Storage {
     use model::*;
-    use tables::*;
+    use tables::BTreeTable;
 
     debug!("Init InMemoryStorage");
 
     let mut storage = storage::Storage::new();
 
-    storage.add_entity_table::<Bot>(Table::default_btree());
-    storage.add_entity_table::<SpawnBotComponent>(Table::default_btree());
-    storage.add_entity_table::<DecayComponent>(Table::default_btree());
-    storage.add_entity_table::<CarryComponent>(Table::default_btree());
-    storage.add_entity_table::<Structure>(Table::default_btree());
-    storage.add_entity_table::<HpComponent>(Table::default_btree());
-    storage.add_entity_table::<EnergyRegenComponent>(Table::default_btree());
-    storage.add_entity_table::<EnergyComponent>(Table::default_btree());
-    storage.add_entity_table::<PositionComponent>(Table::default_btree());
-    storage.add_entity_table::<ResourceType>(Table::default_btree());
-    storage.add_entity_table::<DecayComponent>(Table::default_btree());
-    storage.add_entity_table::<EntityScript>(Table::default_btree());
-    storage.add_entity_table::<SpawnComponent>(Table::default_btree());
-    storage.add_entity_table::<Resource>(Table::default_btree());
+    storage.add_entity_table::<Bot>(BTreeTable::new());
+    storage.add_entity_table::<SpawnBotComponent>(BTreeTable::new());
+    storage.add_entity_table::<DecayComponent>(BTreeTable::new());
+    storage.add_entity_table::<CarryComponent>(BTreeTable::new());
+    storage.add_entity_table::<Structure>(BTreeTable::new());
+    storage.add_entity_table::<HpComponent>(BTreeTable::new());
+    storage.add_entity_table::<EnergyRegenComponent>(BTreeTable::new());
+    storage.add_entity_table::<EnergyComponent>(BTreeTable::new());
+    storage.add_entity_table::<PositionComponent>(BTreeTable::new());
+    storage.add_entity_table::<ResourceComponent>(BTreeTable::new());
+    storage.add_entity_table::<DecayComponent>(BTreeTable::new());
+    storage.add_entity_table::<EntityScript>(BTreeTable::new());
+    storage.add_entity_table::<SpawnComponent>(BTreeTable::new());
+    storage.add_entity_table::<OwnedEntity>(BTreeTable::new());
 
-    storage.add_log_table::<LogEntry>(Table::default_btree());
+    storage.add_log_table::<LogEntry>(BTreeTable::new());
 
-    storage.add_user_table::<UserData>(Table::default_btree());
+    storage.add_user_table::<UserComponent>(BTreeTable::new());
 
-    storage.add_point_table::<TileTerrainType>(Table::default_btree());
+    storage.add_point_table::<TerrainComponent>(BTreeTable::new());
 
-    storage.add_scripts_table::<caolo_api::Script>(Table::default_btree());
+    storage.add_scripts_table::<ScriptComponent>(BTreeTable::new());
 
     debug!("Init InMemoryStorage done");
     storage

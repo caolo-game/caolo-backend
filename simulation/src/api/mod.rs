@@ -3,11 +3,9 @@
 //! Methods that may fail return an OperationResult
 //!
 mod bots;
-mod pathfinding;
 mod resources;
 mod structures;
 pub use self::bots::*;
-pub use self::pathfinding::*;
 pub use self::resources::*;
 pub use self::structures::*;
 use crate::systems::execution::ScriptExecutionData;

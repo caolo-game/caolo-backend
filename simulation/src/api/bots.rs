@@ -1,6 +1,7 @@
 use super::*;
 use crate::intents::{self, check_move_intent};
 use crate::model::{self, EntityId, Point};
+use crate::prelude::*;
 use crate::profile;
 use crate::storage::Storage;
 use caolo_api::OperationResult;
@@ -19,7 +20,7 @@ pub fn move_bot(
         ExecutionError::InvalidArgument
     })?;
     let intent = caolo_api::bots::MoveIntent {
-        id: vm.get_aux().entityid(),
+        id: vm.get_aux().entityid().0,
         position: point,
     };
     let userid = Default::default();
@@ -35,7 +36,10 @@ pub fn move_bot(
 
     vm.get_aux_mut()
         .intents_mut()
-        .push(intents::Intent::new_move(intent.id, intent.position));
+        .push(intents::Intent::new_move(
+            EntityId(intent.id),
+            intent.position,
+        ));
 
     return Ok(result);
 }
@@ -71,8 +75,8 @@ pub fn build_bot(id: EntityId, storage: &Storage) -> Option<caolo_api::bots::Bot
     let owner_id = storage.entity_table::<model::OwnedEntity>().get_by_id(&id);
 
     Some(caolo_api::bots::Bot {
-        id,
-        owner_id: owner_id.map(|id| id.owner_id),
+        id: id.0,
+        owner_id: owner_id.map(|id| id.owner_id.0),
         position: pos.0,
         carry: carry.carry,
         carry_max: carry.carry_max,

@@ -1,5 +1,6 @@
 use super::*;
 use crate::model::{self, EntityId};
+use crate::prelude::*;
 use caolo_api::OperationResult;
 
 const MINE_AMOUNT: u16 = 10; // TODO: get from bot body
@@ -14,11 +15,11 @@ impl MineIntent {
     pub fn execute(&self, storage: &mut Storage) -> IntentResult {
         debug!("Bot [{:?}] is mining [{:?}]", self.bot, self.resource);
         match storage
-            .entity_table::<model::Resource>()
+            .entity_table::<model::ResourceComponent>()
             .get_by_id(&self.resource)
         {
             None => Err("Resource not found".into()),
-            Some(crate::model::Resource::Mineral) => {
+            Some(model::ResourceComponent(model::Resource::Mineral)) => {
                 let mut energy = match storage
                     .entity_table::<model::EnergyComponent>()
                     .get_by_id(&self.resource)
@@ -62,16 +63,17 @@ impl MineIntent {
 
 pub fn check_mine_intent(
     intent: &caolo_api::bots::MineIntent,
-    userid: caolo_api::UserId,
+    userid: model::UserId,
     storage: &crate::storage::Storage,
 ) -> OperationResult {
     let bots = storage.entity_table::<model::Bot>();
 
-    match bots.get_by_id(&intent.id) {
+    let id = EntityId(intent.id);
+    match bots.get_by_id(&id) {
         Some(_) => {
             let owner_id = storage
                 .entity_table::<model::OwnedEntity>()
-                .get_by_id(&intent.id);
+                .get_by_id(&id);
             if owner_id.map(|id| id.owner_id != userid).unwrap_or(true) {
                 return OperationResult::NotOwner;
             }
@@ -81,7 +83,7 @@ pub fn check_mine_intent(
 
     let positions = storage.entity_table::<model::PositionComponent>();
 
-    let botpos = match positions.get_by_id(&intent.id) {
+    let botpos = match positions.get_by_id(&id) {
         Some(pos) => pos,
         None => {
             debug!("Bot has no position");
@@ -89,7 +91,8 @@ pub fn check_mine_intent(
         }
     };
 
-    let mineralpos = match positions.get_by_id(&intent.target) {
+    let target = EntityId(intent.target);
+    let mineralpos = match positions.get_by_id(&target) {
         Some(pos) => pos,
         None => {
             debug!("Mineral has no position");
@@ -102,13 +105,13 @@ pub fn check_mine_intent(
     }
 
     match storage
-        .entity_table::<model::Resource>()
-        .get_by_id(&intent.target)
+        .entity_table::<model::ResourceComponent>()
+        .get_by_id(&target)
     {
-        Some(model::Resource::Mineral) => {
+        Some(model::ResourceComponent(model::Resource::Mineral)) => {
             match storage
                 .entity_table::<model::EnergyComponent>()
-                .get_by_id(&intent.target)
+                .get_by_id(&target)
             {
                 Some(energy) => {
                     if energy.energy > 0 {

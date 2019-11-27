@@ -1,112 +1,35 @@
+//! The game state is represented by a relational model.
+//! Tables are generic collections that store game data split by (shape) components.
+//!
 mod inmemory;
 mod iterators;
 pub use self::inmemory::*;
 pub use self::iterators::*;
-use crate::model::{self, Circle, EntityId, PositionComponent, UserId};
-// TODO: remove caolo_api dependency from this module, replace with model/
-use caolo_api::user::UserData;
+use crate::model::{self, Circle, EntityId, PositionComponent, UserData, UserId};
 
+/// TableIds may be used as indices of tables
 pub trait TableId:
     'static + Ord + PartialOrd + Eq + PartialEq + Copy + Default + Send + std::fmt::Debug
 {
 }
-
 impl<T: 'static + Ord + PartialOrd + Eq + PartialEq + Copy + Default + Send + std::fmt::Debug>
     TableId for T
 {
 }
 
+/// TableRows may be used as the row type of a table
 pub trait TableRow: 'static + Clone + Send + std::fmt::Debug {}
-
 impl<T: 'static + Clone + Send + std::fmt::Debug> TableRow for T {}
 
-/// A generic proxy to the actual table implementation
-pub struct Table<Id: TableId, Row: Clone> {
-    backend: Backend<Id, Row>,
+/// Components define both their shape (via their type) and the storage backend that shall be used to
+/// store them.
+pub trait Component<Id: TableId>: TableRow {
+    type Table: Table<Row = Self> + Send + std::fmt::Debug;
 }
 
-impl<Id, Row> Table<Id, Row>
-where
-    Id: TableId,
-    Row: TableRow,
-{
-    pub fn with_btree(table: BTreeTable<Id, Row>) -> Self {
-        Self {
-            backend: Backend::BTree(table),
-        }
-    }
-
-    pub fn default_btree() -> Self {
-        Self {
-            backend: Backend::BTree(BTreeTable::new()),
-        }
-    }
-
-    pub fn get_by_id<'a>(&'a self, id: &Id) -> Option<&'a Row> {
-        use Backend::*;
-        match &self.backend {
-            BTree(table) => table.get_by_id(id),
-        }
-    }
-
-    pub fn get_by_ids<'a>(&'a self, id: &[Id]) -> Vec<(Id, &'a Row)> {
-        use Backend::*;
-        match &self.backend {
-            BTree(table) => table.get_by_ids(id),
-        }
-    }
-
-    /// insert or update
-    pub fn insert(&mut self, id: Id, row: Row) {
-        #[cfg(feature = "log_tables")]
-        {
-            use std::any::type_name;
-
-            trace!(
-                "Inserting [{:?}] : {:?} into {:?}",
-                id,
-                row,
-                type_name::<Self>()
-            );
-        }
-
-        use Backend::*;
-        match &mut self.backend {
-            BTree(table) => table.insert(id, row),
-        }
-    }
-
-    pub fn delete(&mut self, id: &Id) -> Option<Row> {
-        #[cfg(feature = "log_tables")]
-        {
-            use std::any::type_name;
-
-            trace!("Deleting [{:?}] from {:?}", id, type_name::<Self>());
-        }
-
-        use Backend::*;
-        match &mut self.backend {
-            BTree(table) => table.delete(id),
-        }
-    }
-
-    /// Contract: ids should be ordered
-    // TODO: remove the need for heap allocation
-    pub fn iter<'a>(&'a self) -> impl TableIterator<Id, &'a Row> {
-        use Backend::*;
-        match &self.backend {
-            BTree(table) => table.iter(),
-        }
-    }
-}
-
-enum Backend<Id: TableId, Row: Clone> {
-    BTree(BTreeTable<Id, Row>),
-}
-
-pub trait TableBackend {
+pub trait Table {
     type Id: TableId;
-    type Row: Clone;
+    type Row: TableRow;
 
     fn get_by_id<'a>(&'a self, id: &Self::Id) -> Option<&'a Self::Row>;
     fn get_by_ids<'a>(&'a self, id: &[Self::Id]) -> Vec<(Self::Id, &'a Self::Row)>;
@@ -121,47 +44,14 @@ pub trait UserDataTable {
     fn create_new(&mut self, row: UserData) -> UserId;
 }
 
-impl UserDataTable for Table<UserId, UserData> {
-    fn create_new(&mut self, row: UserData) -> UserId {
-        use Backend::*;
-        match &mut self.backend {
-            BTree(table) => table.create_new(row),
-        }
-    }
-}
-
 pub trait PositionTable {
     /// Vision is AABB with topleft - bottomleft points
     fn get_entities_in_range(&self, vision: &Circle) -> Vec<(EntityId, PositionComponent)>;
     fn count_entities_in_range(&self, vision: &Circle) -> usize;
 }
 
-impl PositionTable for Table<EntityId, PositionComponent> {
-    fn get_entities_in_range(&self, vision: &Circle) -> Vec<(EntityId, PositionComponent)> {
-        use Backend::*;
-        match &self.backend {
-            BTree(table) => table.get_entities_in_range(vision),
-        }
-    }
-    fn count_entities_in_range(&self, vision: &Circle) -> usize {
-        use Backend::*;
-        match &self.backend {
-            BTree(table) => table.count_entities_in_range(vision),
-        }
-    }
-}
-
 pub trait LogTable {
-    fn get_logs_by_time(&self, time: u64) -> Vec<((EntityId, u64), model::LogEntry)>;
-}
-
-impl LogTable for Table<(EntityId, u64), model::LogEntry> {
-    fn get_logs_by_time(&self, time: u64) -> Vec<((EntityId, u64), model::LogEntry)> {
-        use Backend::*;
-        match &self.backend {
-            BTree(table) => table.get_logs_by_time(time),
-        }
-    }
+    fn get_logs_by_time(&self, time: u64) -> Vec<(model::EntityTime, model::LogEntry)>;
 }
 
 #[cfg(test)]

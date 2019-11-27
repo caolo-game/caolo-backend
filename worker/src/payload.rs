@@ -18,7 +18,7 @@ pub struct Payload {
 
     pub terrain: Vec<(Point, TileTerrainType)>,
 
-    pub log: HashMap<model::EntityId, String>,
+    pub log: HashMap<caolo_api::EntityId, String>,
 
     pub delta_time_ms: i64,
     pub time: u64,
@@ -51,18 +51,18 @@ impl Payload {
 
         let terrain = {
             storage
-                .point_table::<model::TileTerrainType>()
+                .point_table::<model::TerrainComponent>()
                 .iter()
-                .filter(|(_, t)| **t != TileTerrainType::Empty)
-                .map(|(x, y)| (x, y.clone()))
+                .filter(|(_, t)| t.0 != TileTerrainType::Empty)
+                .map(|(x, y)| (x, y.0.clone()))
                 .collect()
         };
 
         let resources = {
             let resources = storage
-                .entity_table::<model::Resource>()
+                .entity_table::<model::ResourceComponent>()
                 .iter()
-                .filter_map(|(id, r)| build_resource(id, r.clone(), storage))
+                .filter_map(|(id, r)| build_resource(id, r.0.clone(), storage))
                 .collect();
             Resources::new(resources)
         };
@@ -72,7 +72,7 @@ impl Payload {
             .log_table::<model::LogEntry>()
             .get_logs_by_time(time)
             .into_iter()
-            .map(|((id, _), pl)| (id, pl.payload.join("\n")))
+            .map(|(t, pl)| (t.0, pl.payload.join("\n")))
             .collect();
 
         let dt = storage.delta_time();

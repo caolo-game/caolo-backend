@@ -1,4 +1,5 @@
 use super::EntityId;
+use crate::prelude::*;
 use crate::storage::Storage;
 
 /// Spawns a bot from a spawn.

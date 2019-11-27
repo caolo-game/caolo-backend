@@ -1,4 +1,5 @@
 use super::*;
+use crate::prelude::*;
 use crate::model;
 use caolo_api::bots::Bot;
 use caolo_api::OperationResult;
@@ -39,7 +40,7 @@ impl SpawnIntent {
         if let Some(owner_id) = self.bot.owner_id {
             storage
                 .entity_table_mut::<model::OwnedEntity>()
-                .insert(bot_id, model::OwnedEntity { owner_id: owner_id });
+                .insert(bot_id, model::OwnedEntity { owner_id: model::UserId(owner_id) });
         }
 
         spawn.time_to_spawn = 5;
@@ -55,17 +56,18 @@ impl SpawnIntent {
 
 pub fn check_spawn_intent(
     intent: &caolo_api::structures::SpawnIntent,
-    userid: caolo_api::UserId,
+    userid: model::UserId,
     storage: &crate::storage::Storage,
 ) -> OperationResult {
+    let id = model::EntityId(intent.id);
     match storage
         .entity_table::<model::Structure>()
-        .get_by_id(&intent.id)
+        .get_by_id(&id)
     {
-        Some(structure) => {
+        Some(_) => {
             let owner_id = storage
                 .entity_table::<model::OwnedEntity>()
-                .get_by_id(&intent.id);
+                .get_by_id(&id);
             if owner_id.map(|id| id.owner_id != userid).unwrap_or(true) {
                 return OperationResult::NotOwner;
             }
@@ -78,7 +80,7 @@ pub fn check_spawn_intent(
 
     if let Some(spawn) = storage
         .entity_table::<model::SpawnComponent>()
-        .get_by_id(&intent.id)
+        .get_by_id(&id)
     {
         if spawn.spawning.is_some() {
             debug!("Structure is busy");

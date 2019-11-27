@@ -1,11 +1,12 @@
 mod homogenoustable;
 mod macros;
 
-pub use crate::tables::{Table, TableId, TableRow};
+pub use crate::tables::{TableId, TableRow, Component};
 
 use crate::implement_table_type;
 use crate::intents::Intent;
 use crate::model::*;
+use crate::model::indices::EntityTime;
 use chrono::{DateTime, Duration, Utc};
 use homogenoustable::HomogenousTable;
 use std::any::{type_name, TypeId};
@@ -19,8 +20,7 @@ pub struct Storage {
     user_tables: BTreeMap<TypeId, HomogenousTable<UserId>>,
     point_tables: BTreeMap<TypeId, HomogenousTable<Point>>,
     scripts_tables: BTreeMap<TypeId, HomogenousTable<ScriptId>>,
-
-    log_tables: BTreeMap<TypeId, HomogenousTable<(EntityId, u64)>>,
+    log_tables: BTreeMap<TypeId, HomogenousTable<EntityTime>>,
 
     last_tick: DateTime<Utc>,
     dt: Duration,
@@ -39,7 +39,7 @@ impl Storage {
     pub fn new() -> Self {
         Self {
             time: 0,
-            next_entity: 0,
+            next_entity: EntityId(0),
             entity_tables: BTreeMap::new(),
             user_tables: BTreeMap::new(),
             point_tables: BTreeMap::new(),
@@ -52,7 +52,7 @@ impl Storage {
     }
 
     pub fn users<'a>(&'a self) -> impl Iterator<Item = UserId> + 'a {
-        self.user_table::<UserData>().iter().map(|(id, _)| id)
+        self.user_table::<UserComponent>().iter().map(|(id, _)| id)
     }
 
     pub fn delta_time(&self) -> Duration {
@@ -72,7 +72,7 @@ impl Storage {
 
     pub fn insert_entity(&mut self) -> EntityId {
         let res = self.next_entity;
-        self.next_entity += 1;
+        self.next_entity.0 += 1;
         res
     }
 
@@ -118,6 +118,6 @@ impl Storage {
         log_table_mut,
         add_log_table,
         delete_log,
-        (EntityId, u64)
+        EntityTime
     );
 }

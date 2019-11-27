@@ -1,5 +1,6 @@
 use super::*;
 use crate::model::{self, EntityId, ResourceType};
+use crate::prelude::*;
 use caolo_api::OperationResult;
 
 pub const DROPOFF_RANGE: u64 = 1;
@@ -51,14 +52,13 @@ impl DropoffIntent {
 /// - the target is within dropoff range
 pub fn check_dropoff_intent(
     intent: &caolo_api::bots::DropoffIntent,
-    userid: caolo_api::UserId,
+    userid: model::UserId,
     storage: &crate::storage::Storage,
 ) -> OperationResult {
-    match storage.entity_table::<model::Bot>().get_by_id(&intent.id) {
+    let id = EntityId(intent.id);
+    match storage.entity_table::<model::Bot>().get_by_id(&id) {
         Some(_) => {
-            let owner_id = storage
-                .entity_table::<model::OwnedEntity>()
-                .get_by_id(&intent.id);
+            let owner_id = storage.entity_table::<model::OwnedEntity>().get_by_id(&id);
             if owner_id.map(|id| id.owner_id != userid).unwrap_or(true) {
                 return OperationResult::NotOwner;
             }
@@ -68,7 +68,7 @@ pub fn check_dropoff_intent(
 
     if let Some(carry) = storage
         .entity_table::<model::CarryComponent>()
-        .get_by_id(&intent.id)
+        .get_by_id(&id)
     {
         if carry.carry == 0 {
             return OperationResult::Empty;
@@ -79,9 +79,10 @@ pub fn check_dropoff_intent(
 
     let positions = storage.entity_table::<model::PositionComponent>();
 
-    let nearby = positions.get_by_id(&intent.id).and_then(|botpos| {
+    let target = EntityId(intent.target);
+    let nearby = positions.get_by_id(&id).and_then(|botpos| {
         positions
-            .get_by_id(&intent.target)
+            .get_by_id(&target)
             .map(|targetpos| targetpos.0.hex_distance(botpos.0) <= DROPOFF_RANGE)
     });
     match nearby {
@@ -95,7 +96,7 @@ pub fn check_dropoff_intent(
         Some(true) => {
             let capacity = storage
                 .entity_table::<model::EnergyComponent>()
-                .get_by_id(&intent.target);
+                .get_by_id(&target);
             if capacity.is_none() {
                 error!("Target has no energy component {:?}", intent);
                 return OperationResult::InvalidInput;

@@ -4,7 +4,7 @@ pub mod pathfinding;
 use crate::model::{self, bots::spawn_bot};
 use crate::profile;
 use crate::storage::Storage;
-use crate::tables::JoinIterator;
+use crate::tables::{JoinIterator, Table};
 use rand::Rng;
 
 pub fn execute_world_update(storage: &mut Storage) {
@@ -100,7 +100,7 @@ pub fn update_minerals(storage: &mut Storage) {
 
     let positions = storage.entity_table::<model::PositionComponent>();
     let energy = storage.entity_table::<model::EnergyComponent>();
-    let resources = storage.entity_table::<model::Resource>();
+    let resources = storage.entity_table::<model::ResourceComponent>();
 
     let mut rng = rand::thread_rng();
 
@@ -108,7 +108,7 @@ pub fn update_minerals(storage: &mut Storage) {
         JoinIterator::new(resources.iter(), positions.iter()),
         energy.iter(),
     )
-    .filter_map(|(id, ((resource, position), energy))| match resource {
+    .filter_map(|(id, ((resource, position), energy))| match resource.0 {
         model::Resource::Mineral => {
             if energy.energy > 0 {
                 return None;

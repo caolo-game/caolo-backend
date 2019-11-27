@@ -13,7 +13,7 @@ pub use self::spawn_intent::*;
 pub use self::log_intent::*;
 
 use crate::storage::Storage;
-use crate::EntityId;
+use crate::model::EntityId;
 use caolo_api::bots::Bot;
 use caolo_api::point::{Circle, Point};
 

@@ -67,10 +67,11 @@ macro_rules! make_import {
 
 pub fn make_point(
     vm: &mut VM<ScriptExecutionData>,
-    (x, y): (Scalar, Scalar),
+    (x, y): (i32, i32),
     output: TPointer,
 ) -> Result<usize, ExecutionError> {
-    unimplemented!()
+    let point = Point::new(x, y);
+    Ok(vm.set_value_at(output, point))
 }
 
 pub fn console_log(

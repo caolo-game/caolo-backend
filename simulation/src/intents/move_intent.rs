@@ -55,9 +55,7 @@ pub fn check_move_intent(
     let id = model::EntityId(intent.id);
     match bots.get_by_id(&id) {
         Some(_) => {
-            let owner_id = storage
-                .entity_table::<model::OwnedEntity>()
-                .get_by_id(&id);
+            let owner_id = storage.entity_table::<model::OwnedEntity>().get_by_id(&id);
             if owner_id.map(|id| id.owner_id != userid).unwrap_or(true) {
                 return OperationResult::NotOwner;
             }
@@ -65,10 +63,7 @@ pub fn check_move_intent(
         None => return OperationResult::InvalidInput,
     };
 
-    let pos = match storage
-        .entity_table::<PositionComponent>()
-        .get_by_id(&id)
-    {
+    let pos = match storage.entity_table::<PositionComponent>().get_by_id(&id) {
         Some(pos) => pos,
         None => {
             debug!("Bot has no position");

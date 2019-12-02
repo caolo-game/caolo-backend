@@ -1,12 +1,12 @@
 mod homogenoustable;
 mod macros;
 
-pub use crate::tables::{TableId, TableRow, Component};
+pub use crate::tables::{Component, TableId, TableRow};
 
 use crate::implement_table_type;
 use crate::intents::Intent;
-use crate::model::*;
 use crate::model::indices::EntityTime;
+use crate::model::*;
 use chrono::{DateTime, Duration, Utc};
 use homogenoustable::HomogenousTable;
 use std::any::{type_name, TypeId};

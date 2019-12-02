@@ -1,6 +1,6 @@
 use super::*;
-use crate::prelude::*;
 use crate::model;
+use crate::prelude::*;
 use caolo_api::bots::Bot;
 use caolo_api::OperationResult;
 
@@ -38,9 +38,12 @@ impl SpawnIntent {
             .entity_table_mut::<model::SpawnBotComponent>()
             .insert(bot_id, model::SpawnBotComponent { bot: model::Bot {} });
         if let Some(owner_id) = self.bot.owner_id {
-            storage
-                .entity_table_mut::<model::OwnedEntity>()
-                .insert(bot_id, model::OwnedEntity { owner_id: model::UserId(owner_id) });
+            storage.entity_table_mut::<model::OwnedEntity>().insert(
+                bot_id,
+                model::OwnedEntity {
+                    owner_id: model::UserId(owner_id),
+                },
+            );
         }
 
         spawn.time_to_spawn = 5;
@@ -60,14 +63,9 @@ pub fn check_spawn_intent(
     storage: &crate::storage::Storage,
 ) -> OperationResult {
     let id = model::EntityId(intent.id);
-    match storage
-        .entity_table::<model::Structure>()
-        .get_by_id(&id)
-    {
+    match storage.entity_table::<model::Structure>().get_by_id(&id) {
         Some(_) => {
-            let owner_id = storage
-                .entity_table::<model::OwnedEntity>()
-                .get_by_id(&id);
+            let owner_id = storage.entity_table::<model::OwnedEntity>().get_by_id(&id);
             if owner_id.map(|id| id.owner_id != userid).unwrap_or(true) {
                 return OperationResult::NotOwner;
             }

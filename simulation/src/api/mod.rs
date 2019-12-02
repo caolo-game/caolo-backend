@@ -8,34 +8,70 @@ mod structures;
 pub use self::bots::*;
 pub use self::resources::*;
 pub use self::structures::*;
+use crate::model::Point;
 use crate::systems::execution::ScriptExecutionData;
 use arrayvec::ArrayVec;
 use cao_lang::prelude::*;
 use cao_lang::traits::ByteEncodeProperties;
+use caolo_api::OperationResult;
 
 macro_rules! make_input_desc {
-    () => {None};
-
-    ($head: path) => {
-        Some(<$head as ByteEncodeProperties>::displayname())
+    ($head: ty) => {
+        [ Some(<$head as ByteEncodeProperties>::displayname()) ]
     };
 
-    ($head: path, $($tail: tt),*) => {
-        Some(<$head as ByteEncodeProperties>::displayname()),
-        make_input_desc!($($tail)*)
+    ([$($result:expr),*], $head: ty) => {
+        [
+        $($result),*
+        , Some(<$head as ByteEncodeProperties>::displayname())
+        ]
+    };
+
+    ([$($result:expr),*], $head: ty, $($tail: ty),*) => {
+        make_input_desc!(
+            [
+            $($result),*
+            , Some(<$head as ByteEncodeProperties>::displayname())
+            ],
+            $($tail)*
+        )
+    };
+
+    ($head:ty, $($tail: ty),*) => {
+        make_input_desc!(
+            [ Some(<$head as ByteEncodeProperties>::displayname()) ],
+            $($tail),*
+        )
+    };
+
+    ([$($result:expr),*]) =>{
+        [$($result),*]
     };
 }
 
 macro_rules! make_import {
-    ($name: path, $description: expr, [$($inputs: path),*], $output: ty) => {
+    ($name: path, $description: expr, [$($inputs: ty),*], $output: ty) => {
         FunctionRow {
             name: stringify!($name),
             description: $description,
-            inputs: Box::new(|| [ make_input_desc!($($inputs),*) ].iter().filter_map(|x|*x).collect()),
+            inputs: Box::new(
+                || {
+                    make_input_desc!($($inputs),*) .iter().filter_map(|x|*x).collect()
+                }
+            ),
             output: <$output as ByteEncodeProperties>::displayname(),
             fo: FunctionObject::new(FunctionWrapper::new($name)),
         }
     };
+}
+
+pub fn make_point(
+    vm: &mut VM<ScriptExecutionData>,
+    (x, y): (i32, i32),
+    output: TPointer,
+) -> Result<usize, ExecutionError> {
+    let point = Point::new(x, y);
+    Ok(vm.set_value_at(output, point))
 }
 
 pub fn console_log(
@@ -83,8 +119,14 @@ pub fn make_import() -> Schema {
             make_import!(
                 bots::move_bot,
                 "Move the bot to the given Point",
-                [crate::model::Point],
-                caolo_api::OperationResult
+                [Point],
+                OperationResult
+            ),
+            make_import!(
+                make_point,
+                "Create a point from x and y coordinates",
+                [Scalar, Scalar],
+                Point
             ),
         ],
     }

@@ -1,9 +1,11 @@
 use super::*;
-use crate::intents::{self, check_move_intent};
-use crate::model::{self, EntityId, Point};
-use crate::prelude::*;
-use crate::profile;
-use crate::storage::Storage;
+use crate::{
+    intents::{check_move_intent, Intent},
+    model::{self, EntityId, Point},
+    prelude::*,
+    profile,
+    storage::Storage,
+};
 use caolo_api::OperationResult;
 
 /// In: x, y coordinates
@@ -19,11 +21,12 @@ pub fn move_bot(
         error!("move_bot called without a point");
         ExecutionError::InvalidArgument
     })?;
+
     let intent = caolo_api::bots::MoveIntent {
         id: vm.get_aux().entityid().0,
         position: point,
     };
-    let userid = Default::default();
+    let userid = Default::default(); // FIXME
     let storage = vm.get_aux().storage();
 
     let result = {
@@ -36,10 +39,7 @@ pub fn move_bot(
 
     vm.get_aux_mut()
         .intents_mut()
-        .push(intents::Intent::new_move(
-            EntityId(intent.id),
-            intent.position,
-        ));
+        .push(Intent::new_move(EntityId(intent.id), intent.position));
 
     return Ok(result);
 }
@@ -48,7 +48,7 @@ pub fn build_bot(id: EntityId, storage: &Storage) -> Option<caolo_api::bots::Bot
     profile!("build_bot");
 
     let bot = storage.entity_table::<model::Bot>().get_by_id(&id);
-    if let None = bot {
+    if bot.is_none() {
         debug!(
             "Bot {:?} could not be built because it has no bot component",
             id

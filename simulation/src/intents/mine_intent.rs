@@ -71,9 +71,7 @@ pub fn check_mine_intent(
     let id = EntityId(intent.id);
     match bots.get_by_id(&id) {
         Some(_) => {
-            let owner_id = storage
-                .entity_table::<model::OwnedEntity>()
-                .get_by_id(&id);
+            let owner_id = storage.entity_table::<model::OwnedEntity>().get_by_id(&id);
             if owner_id.map(|id| id.owner_id != userid).unwrap_or(true) {
                 return OperationResult::NotOwner;
             }

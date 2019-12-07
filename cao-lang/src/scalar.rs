@@ -10,12 +10,12 @@ pub enum Scalar {
     Integer(i32),
     Floating(f32),
     /// Used for default initialization
-    None,
+    Null,
 }
 
 impl Default for Scalar {
     fn default() -> Self {
-        Scalar::None
+        Scalar::Null
     }
 }
 
@@ -26,7 +26,7 @@ impl Scalar {
             Pointer(i) => i != 0,
             Integer(i) => i != 0,
             Floating(i) => i != 0.0,
-            None => false
+            Null => false
         }
     }
     pub fn is_float(self) -> bool {

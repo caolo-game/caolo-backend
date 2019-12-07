@@ -64,20 +64,30 @@ impl std::fmt::Debug for NodeDescription {
 }
 
 #[macro_export]
-macro_rules! make_input_desc {
-    ($head: ty) => {
+macro_rules! make_node_desc {
+    ($name: path, $description: expr, [$($inputs: ty),*], $output: ty) => {
+        NodeDescription {
+            name: stringify!($name),
+            desc: $description,
+            inputs: make_node_desc!(input $($inputs),*) ,
+            output: <$output as ByteEncodeProperties>::displayname(),
+        }
+    };
+
+    (input $head: ty) => {
         vec![ <$head as ByteEncodeProperties>::displayname() ]
     };
 
-    ([$($result:expr),*], $head: ty) => {
+    (input [$($result:expr),*], $head: ty) => {
         vec![
         $($result),*
         , <$head as ByteEncodeProperties>::displayname()
         ]
     };
 
-    ([$($result:expr),*], $head: ty, $($tail: ty),*) => {
-        make_input_desc!(
+    (input [$($result:expr),*], $head: ty, $($tail: ty),*) => {
+        make_node_desc!(
+            input
             [
             $($result),*
             , <$head as ByteEncodeProperties>::displayname()
@@ -86,29 +96,15 @@ macro_rules! make_input_desc {
         )
     };
 
-    ($head:ty, $($tail: ty),*) => {
-        make_input_desc!(
+    (input $head:ty, $($tail: ty),*) => {
+        make_node_desc!(
+            input
             [ <$head as ByteEncodeProperties>::displayname() ],
             $($tail),*
         )
     };
 
-    ([$($result:expr),*]) =>{
+    (input [$($result:expr),*]) =>{
         vec![$($result),*]
-    };
-}
-
-#[macro_export]
-macro_rules! make_node_desc {
-    ($name: path, $description: expr, [$($inputs: ty),*], $output: ty) => {
-        {
-            use cao_lang::traits::ByteEncodeProperties;
-        NodeDescription {
-            name: stringify!($name),
-            desc: $description,
-            inputs: make_input_desc!($($inputs),*) ,
-            output: <$output as ByteEncodeProperties>::displayname(),
-        }
-        }
     };
 }

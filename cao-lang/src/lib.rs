@@ -20,7 +20,8 @@ pub type InputString = ArrayString<[u8; INPUT_STR_LEN]>;
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct CompiledProgram {
     pub bytecode: Vec<u8>,
-    pub labels: HashMap<NodeId, usize>,
+    /// Label: [block, self]
+    pub labels: HashMap<NodeId, [usize; 2]>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -34,4 +35,5 @@ pub enum ExecutionError {
     Unimplemented,
     OutOfMemory,
     MissingArgument,
+    Timeout,
 }

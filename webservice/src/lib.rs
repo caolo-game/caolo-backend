@@ -2,6 +2,7 @@ use pyo3::exceptions;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use pyo3::wrap_pyfunction;
+use std::collections::HashMap;
 
 use cao_lang::prelude::{CompilationUnit, Compiler};
 
@@ -25,12 +26,21 @@ fn compile(py: Python, cu: String) -> PyResult<&PyDict> {
             e
         ))
     })?;
-    result.set_item("labels", program.labels).map_err(|e| {
-        PyErr::new::<exceptions::ValueError, _>(format!(
-            "Failed to set the labels on the result {:?}",
-            e
-        ))
-    })?;
+    result
+        .set_item(
+            "labels",
+            program
+                .labels
+                .iter()
+                .map(|(k, [x, y])| (k, vec![x, y]))
+                .collect::<HashMap<_, _>>(),
+        )
+        .map_err(|e| {
+            PyErr::new::<exceptions::ValueError, _>(format!(
+                "Failed to set the labels on the result {:?}",
+                e
+            ))
+        })?;
     Ok(result)
 }
 

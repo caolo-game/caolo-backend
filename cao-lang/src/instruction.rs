@@ -1,3 +1,6 @@
+use crate::scalar::Scalar;
+use crate::traits::ByteEncodeProperties;
+use crate::{make_node_desc, NodeDescription};
 use serde_derive::{Deserialize, Serialize};
 use std::convert::TryFrom;
 
@@ -77,4 +80,33 @@ impl TryFrom<u8> for Instruction {
             _ => Err(format!("Unrecognized instruction [{}]", c)),
         }
     }
+}
+
+pub fn get_instruction_descriptions() -> Vec<NodeDescription> {
+    vec![
+        make_node_desc!(
+            Instruction::Add,
+            "Add two scalars",
+            [Scalar, Scalar],
+            Scalar
+        ),
+        make_node_desc!(
+            Instruction::Sub,
+            "Subtract two scalars",
+            [Scalar, Scalar],
+            Scalar
+        ),
+        make_node_desc!(
+            Instruction::Mul,
+            "Multiply two scalars",
+            [Scalar, Scalar],
+            Scalar
+        ),
+        make_node_desc!(
+            Instruction::Div,
+            "Divide two scalars",
+            [Scalar, Scalar],
+            Scalar
+        ),
+    ]
 }

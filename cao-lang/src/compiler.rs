@@ -1,3 +1,6 @@
+//! Compiles Graphs with vertices of `AstNode` into _caol-lang_ bytecode.
+//! Programs must start with a `Start` instruction.
+//!
 use crate::{
     scalar::Scalar, traits::ByteEncodeProperties, CompiledProgram, InputString, Instruction,
     INPUT_STR_LEN,

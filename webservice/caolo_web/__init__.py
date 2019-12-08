@@ -28,11 +28,6 @@ def get_redis_client():
         os.getenv("REDIS_URL", "redis://localhost:6379/0"))
 
 
-@app.route('/script/basic_schema', methods=["GET"])
-def basic_schema():
-    res = cw.get_basic_schema()
-    return jsonify(res)
-
 @app.route('/script/compile', methods=["POST"])
 def compile_script():
     content = request.get_data(as_text=True)
@@ -61,12 +56,12 @@ def upload_script():
 
 @app.route('/script/schema', methods=["GET"])
 def get_schema():
+    schema = cw.get_basic_schema()
     redis_conn = get_redis_client()
     payload = redis_conn.get("SCHEMA")
     if payload:
-        # TODO: i was too lazy to set the header to json
-        return jsonify(json.loads(payload))
-    abort(500)
+        schema.extend(json.loads(payload))
+    return jsonify(schema)
 
 
 class SimulationProtocol(WebSocketServerProtocol):

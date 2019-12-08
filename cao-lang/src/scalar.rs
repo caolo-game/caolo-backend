@@ -4,11 +4,19 @@ use serde_derive::{Deserialize, Serialize};
 use std::convert::{From, TryFrom};
 use std::ops::{Add, Div, Mul, Sub};
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub enum Scalar {
     Pointer(TPointer),
     Integer(i32),
     Floating(f32),
+    /// Used for default initialization
+    Null,
+}
+
+impl Default for Scalar {
+    fn default() -> Self {
+        Scalar::Null
+    }
 }
 
 impl Scalar {
@@ -18,6 +26,7 @@ impl Scalar {
             Pointer(i) => i != 0,
             Integer(i) => i != 0,
             Floating(i) => i != 0.0,
+            Null => false
         }
     }
     pub fn is_float(self) -> bool {

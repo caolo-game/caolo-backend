@@ -15,6 +15,7 @@ pub struct VM<Aux = ()> {
     memory_limit: usize,
     callables: HashMap<String, FunctionObject<Aux>>,
     stack: Vec<Scalar>,
+    registers: [Scalar; 16],
 }
 
 impl<Aux> VM<Aux> {
@@ -25,7 +26,12 @@ impl<Aux> VM<Aux> {
             callables: HashMap::with_capacity(128),
             memory_limit: 40000,
             stack: Vec::with_capacity(128),
+            registers: Default::default(),
         }
+    }
+
+    pub fn registers(&self) -> &[Scalar] {
+        &self.registers
     }
 
     pub fn stack(&self) -> &[Scalar] {
@@ -92,50 +98,98 @@ impl<Aux> VM<Aux> {
         }
     }
 
-    pub fn run(&mut self, program: &CompiledProgram) -> Result<(), ExecutionError> {
+    pub fn run(&mut self, program: &CompiledProgram) -> Result<i32, ExecutionError> {
         debug!("Running program");
         let mut ptr = 0;
+        let mut max_iter = 1000;
         while ptr < program.bytecode.len() {
+            max_iter -= 1;
+            if max_iter <= 0 {
+                return Err(ExecutionError::Timeout);
+            }
             let instr = Instruction::try_from(program.bytecode[ptr]).map_err(|_| {
-                error!("Byte at {} was not a valid instruction", ptr);
+                error!(
+                    "Byte at {}: {:?} was not a valid instruction",
+                    ptr, program.bytecode[ptr]
+                );
                 ExecutionError::InvalidInstruction
             })?;
-            debug!("Instruction: {:?} Pointer: {:?}", instr, ptr);
+            debug!(
+                "Instruction: {:?}({:?}) Pointer: {:?}",
+                instr, program.bytecode[ptr], ptr
+            );
             ptr += 1;
             match instr {
+                Instruction::Start => {}
+                Instruction::WriteReg => {
+                    let value = self.stack.pop().ok_or_else(|| {
+                        debug!("Value not found");
+                        ExecutionError::InvalidArgument
+                    })?;
+                    let len = i32::BYTELEN;
+                    let index = i32::decode(&program.bytecode[ptr..ptr + len])
+                        .filter(|x| *x < self.registers.len() as i32)
+                        .ok_or(ExecutionError::InvalidArgument)?;
+                    self.registers[index as usize] = value;
+                    ptr += len;
+                }
+                Instruction::ReadReg => {
+                    let len = i32::BYTELEN;
+                    let index = i32::decode(&program.bytecode[ptr..ptr + len])
+                        .filter(|x| *x < self.registers.len() as i32)
+                        .ok_or(ExecutionError::InvalidArgument)?;
+                    let value = self.registers[index as usize].clone();
+                    self.stack.push(value);
+                    ptr += len;
+                }
+                Instruction::Jump => {
+                    let label = self
+                        .stack
+                        .pop()
+                        .ok_or_else(|| ExecutionError::InvalidArgument)
+                        .and_then(|x| {
+                            NodeId::try_from(x).map_err(|_| ExecutionError::InvalidArgument)
+                        })?;
+                    ptr = program
+                        .labels
+                        .get(&label)
+                        .ok_or(ExecutionError::InvalidLabel)?[0];
+                }
                 Instruction::Exit => {
                     debug!("Exit called");
-                    if let Some(Scalar::Integer(code)) = self.stack.last() {
+                    let code = self.stack.last();
+                    if let Some(Scalar::Integer(code)) = code {
                         let code = *code;
                         self.stack.pop();
                         if code != 0 {
                             debug!("Exit code {:?}", code);
                             return Err(ExecutionError::ExitCode(code));
+                        } else {
+                            return Ok(code);
                         }
                     }
-                    return Ok(());
+                    return Ok(0);
                 }
-                Instruction::Branch => {
-                    if self.stack.len() < 3 {
+                Instruction::JumpIfTrue => {
+                    if self.stack.len() < 1 {
                         error!(
-                            "Branch called with missing arguments, stack: {:?}",
+                            "JumpIfTrue called with missing arguments, stack: {:?}",
                             self.stack
                         );
                         return Err(ExecutionError::InvalidArgument);
                     }
-                    let iffalse = self.stack.pop().unwrap();
-                    let iftrue = self.stack.pop().unwrap();
                     let cond = self.stack.pop().unwrap();
-                    debug!("Branch if {:?} then {:?} else {:?}", cond, iftrue, iffalse);
-                    let label = if cond.as_bool() {
-                        NodeId::try_from(iftrue).map_err(|_| ExecutionError::InvalidArgument)?
+                    let len = i32::BYTELEN;
+                    let label = i32::decode(&program.bytecode[ptr..ptr + len])
+                        .ok_or_else(|| ExecutionError::InvalidLabel)?;
+                    if cond.as_bool() {
+                        ptr = program
+                            .labels
+                            .get(&label)
+                            .ok_or(ExecutionError::InvalidLabel)?[0];
                     } else {
-                        NodeId::try_from(iffalse).map_err(|_| ExecutionError::InvalidArgument)?
-                    };
-                    ptr = *program
-                        .labels
-                        .get(&label)
-                        .ok_or(ExecutionError::InvalidLabel)?;
+                        ptr += len;
+                    }
                 }
                 Instruction::CopyLast => {
                     if !self.stack.is_empty() {
@@ -163,14 +217,6 @@ impl<Aux> VM<Aux> {
                     let len = f32::BYTELEN;
                     self.stack.push(Scalar::Floating(
                         f32::decode(&program.bytecode[ptr..ptr + len])
-                            .ok_or(ExecutionError::InvalidArgument)?,
-                    ));
-                    ptr += len;
-                }
-                Instruction::ScalarPtr => {
-                    let len = TPointer::BYTELEN;
-                    self.stack.push(Scalar::Pointer(
-                        TPointer::decode(&program.bytecode[ptr..ptr + len])
                             .ok_or(ExecutionError::InvalidArgument)?,
                     ));
                     ptr += len;
@@ -239,6 +285,8 @@ impl<Aux> VM<Aux> {
             if self.memory.len() > self.memory_limit {
                 return Err(ExecutionError::OutOfMemory);
             }
+            debug!("Stack {:?}", self.stack);
+            debug!("Top of stack: {:?}", self.stack.last());
         }
 
         Err(ExecutionError::UnexpectedEndOfInput)

@@ -68,11 +68,14 @@ fn send_schema(client: &redis::Client) -> Result<(), Box<dyn std::error::Error>>
     let schema = schema
         .imports()
         .iter()
-        .map(|import| SchemaFunctionDTO {
-            name: import.name,
-            inputs: import.inputs().iter().map(|x| x.to_string()).collect(),
-            description: import.description,
-            output: import.output,
+        .map(|import| {
+            let import = &import.desc;
+            SchemaFunctionDTO {
+                name: import.name,
+                inputs: import.inputs.iter().map(|x| x.to_string()).collect(),
+                description: import.desc,
+                output: import.output,
+            }
         })
         .collect::<Vec<_>>();
     let js = serde_json::to_string(&schema)?;

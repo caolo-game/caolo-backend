@@ -1,3 +1,5 @@
+//!
+//!
 pub mod compiler;
 pub mod instruction;
 pub mod prelude;
@@ -20,7 +22,8 @@ pub type InputString = ArrayString<[u8; INPUT_STR_LEN]>;
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct CompiledProgram {
     pub bytecode: Vec<u8>,
-    pub labels: HashMap<NodeId, usize>,
+    /// Label: [block, self]
+    pub labels: HashMap<NodeId, [usize; 2]>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -34,4 +37,74 @@ pub enum ExecutionError {
     Unimplemented,
     OutOfMemory,
     MissingArgument,
+    Timeout,
+}
+
+/// Metadata about a node in the program.
+#[derive(Clone, Serialize, Deserialize, Default)]
+pub struct NodeDescription {
+    pub name: &'static str,
+    pub desc: &'static str,
+    /// Human readable descriptions of the output
+    pub output: &'static str,
+    /// Human readable descriptions of inputs
+    pub inputs: Vec<&'static str>,
+}
+
+impl std::fmt::Debug for NodeDescription {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Function name: {} inputs: {} output: {}",
+            self.name,
+            self.inputs[..].join(", "),
+            self.output
+        )
+    }
+}
+
+#[macro_export]
+macro_rules! make_node_desc {
+    ($name: path, $description: expr, [$($inputs: ty),*], $output: ty) => {
+        NodeDescription {
+            name: stringify!($name),
+            desc: $description,
+            inputs: make_node_desc!(input $($inputs),*) ,
+            output: <$output as ByteEncodeProperties>::displayname(),
+        }
+    };
+
+    (input $head: ty) => {
+        vec![ <$head as ByteEncodeProperties>::displayname() ]
+    };
+
+    (input [$($result:expr),*], $head: ty) => {
+        vec![
+        $($result),*
+        , <$head as ByteEncodeProperties>::displayname()
+        ]
+    };
+
+    (input [$($result:expr),*], $head: ty, $($tail: ty),*) => {
+        make_node_desc!(
+            input
+            [
+            $($result),*
+            , <$head as ByteEncodeProperties>::displayname()
+            ],
+            $($tail)*
+        )
+    };
+
+    (input $head:ty, $($tail: ty),*) => {
+        make_node_desc!(
+            input
+            [ <$head as ByteEncodeProperties>::displayname() ],
+            $($tail),*
+        )
+    };
+
+    (input [$($result:expr),*]) =>{
+        vec![$($result),*]
+    };
 }

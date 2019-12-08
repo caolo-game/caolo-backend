@@ -36,10 +36,9 @@ pub enum Instruction {
     /// Clones the last element on the stack
     /// Does nothing if no elements are on the stack
     CopyLast = 15,
-    /// Branching (If-Else) instruction
-    /// If the value at the top of the stack is truthy jumps to the
-    /// first index else jumps to the second index
-    Branch = 16,
+    /// If the value at the top of the stack is truthy jumps to the input node
+    /// Else does nothing
+    JumpIfTrue = 16,
     /// Quit the program
     /// Implicitly inserted by the compiler after every leaf node
     Exit = 18,
@@ -70,7 +69,7 @@ impl TryFrom<u8> for Instruction {
             13 => Ok(ScalarArray),
             14 => Ok(Pass),
             15 => Ok(CopyLast),
-            16 => Ok(Branch),
+            16 => Ok(JumpIfTrue),
             17 => Ok(ScalarLabel),
             18 => Ok(Exit),
             19 => Ok(StringLiteral),

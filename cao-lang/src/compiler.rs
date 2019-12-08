@@ -6,7 +6,7 @@ use crate::{
     INPUT_STR_LEN,
 };
 use serde_derive::{Deserialize, Serialize};
-use std::collections::{BTreeMap, VecDeque};
+use std::collections::{BTreeMap, HashSet, VecDeque};
 use std::fmt::Debug;
 
 /// Unique id of each nodes in a single compilation
@@ -71,8 +71,7 @@ pub fn input_per_instruction(inst: Instruction) -> Option<u8> {
     use Instruction::*;
     match inst {
         Add | Sub | Mul | Div => Some(2),
-        Branch => Some(3),
-        WriteReg | Jump => Some(1),
+        JumpIfTrue | WriteReg | Jump => Some(1),
         Start | ReadReg | ScalarLabel | ScalarInt | ScalarFloat | CopyLast => Some(0),
         Pass | StringLiteral | Exit | Call | ScalarArray => None,
     }
@@ -108,19 +107,32 @@ impl Compiler {
             })
             .ok_or_else(|| "No start node has been found")?;
 
+        let mut nodes = compiler
+            .unit
+            .nodes
+            .iter()
+            .map(|(k, _)| *k)
+            .collect::<HashSet<_>>();
         let mut todo = VecDeque::with_capacity(compiler.unit.nodes.len());
         todo.push_back(*start.0);
 
-        while !todo.is_empty() {
-            let current = todo.pop_front().unwrap();
-            compiler.process_node(current)?;
-            if let Some(ref nodes) = compiler.unit.nodes[&current].children {
-                for node in nodes.iter().cloned() {
-                    todo.push_back(node);
+        loop {
+            while !todo.is_empty() {
+                let current = todo.pop_front().unwrap();
+                nodes.remove(&current);
+                compiler.process_node(current)?;
+                if let Some(ref nodes) = compiler.unit.nodes[&current].children {
+                    for node in nodes.iter().cloned() {
+                        todo.push_back(node);
+                    }
+                } else {
+                    compiler.program.bytecode.push(Instruction::Exit as u8);
                 }
-            } else {
-                compiler.program.bytecode.push(Instruction::Exit as u8);
             }
+            if nodes.is_empty() {
+                break;
+            }
+            todo.push_back(*nodes.iter().next().unwrap());
         }
 
         Ok(compiler.program)
@@ -144,10 +156,10 @@ impl Compiler {
         let instruction = node.instruction;
 
         match instruction {
-            Start | Exit | Pass | CopyLast | Branch | Add | Sub | Mul | Div => {
+            Start | Exit | Pass | CopyLast | Add | Sub | Mul | Div => {
                 self.push_node(nodeid);
             }
-            Jump => {
+            JumpIfTrue | Jump => {
                 self.push_node(nodeid);
                 let label = node
                     .nodeid
@@ -220,7 +232,7 @@ mod tests {
     use crate::vm::VM;
 
     #[test]
-    fn test_compiling_simple_program() {
+    fn compiling_simple_program() {
         simple_logger::init().unwrap_or(());
         let nodes: Nodes = [
             (
@@ -264,7 +276,7 @@ mod tests {
         let program = CompilationUnit { nodes };
         let program = Compiler::compile(program).unwrap();
 
-        log::warn!("{:?}", program);
+        log::warn!("Program: {:?}", program);
 
         // Compilation was successful
 
@@ -277,6 +289,95 @@ mod tests {
         match value {
             Scalar::Floating(i) => assert_eq!(*i, 42.0 + 512.0),
             _ => panic!("Invalid value in the stack"),
+        }
+    }
+
+    #[test]
+    fn branching_program() {
+        simple_logger::init().unwrap_or(());
+        let nodes: Nodes = [
+            (
+                999,
+                AstNode {
+                    instruction: Instruction::Start,
+                    children: Some(vec![0]),
+                    ..Default::default()
+                },
+            ),
+            (
+                0,
+                AstNode {
+                    instruction: Instruction::ScalarInt,
+                    scalar: Some(Scalar::Integer(4)),
+                    children: Some(vec![1]),
+                    ..Default::default()
+                },
+            ),
+            (
+                1,
+                AstNode {
+                    instruction: Instruction::ScalarInt,
+                    scalar: Some(Scalar::Integer(1)),
+                    children: Some(vec![2]),
+                    ..Default::default()
+                },
+            ),
+            (
+                3,
+                AstNode {
+                    instruction: Instruction::CopyLast,
+                    children: Some(vec![4]),
+                    ..Default::default()
+                },
+            ),
+            (
+                2,
+                AstNode {
+                    instruction: Instruction::Sub,
+                    children: Some(vec![3]),
+                    ..Default::default()
+                },
+            ),
+            (
+                4,
+                AstNode {
+                    instruction: Instruction::JumpIfTrue,
+                    nodeid: Some(5),
+                    ..Default::default()
+                },
+            ),
+            (
+                5,
+                AstNode {
+                    instruction: Instruction::CopyLast,
+                    children: Some(vec![1]),
+                    ..Default::default()
+                },
+            ),
+        ]
+        .into_iter()
+        .cloned()
+        .collect();
+
+        let program = CompilationUnit { nodes };
+        let program = Compiler::compile(program).unwrap();
+
+        log::warn!("Program: {:?}", program);
+
+        // Compilation was successful
+
+        let mut vm = VM::new(());
+        let exit_code = vm.run(&program).unwrap();
+
+        assert_eq!(exit_code, 0);
+        assert_eq!(vm.stack().len(), 3, "{:?}", vm.stack());
+
+        for i in 3..=1 {
+            let value = vm.stack()[i - 1];
+            match value {
+                Scalar::Integer(num) => assert_eq!(num as usize, i),
+                _ => panic!("Invalid value in the stack"),
+            }
         }
     }
 }

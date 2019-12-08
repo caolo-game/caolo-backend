@@ -98,7 +98,7 @@ impl<Aux> VM<Aux> {
         }
     }
 
-    pub fn run(&mut self, program: &CompiledProgram) -> Result<(), ExecutionError> {
+    pub fn run(&mut self, program: &CompiledProgram) -> Result<i32, ExecutionError> {
         debug!("Running program");
         let mut ptr = 0;
         let mut max_iter = 1000;
@@ -157,37 +157,39 @@ impl<Aux> VM<Aux> {
                 }
                 Instruction::Exit => {
                     debug!("Exit called");
-                    if let Some(Scalar::Integer(code)) = self.stack.last() {
+                    let code = self.stack.last();
+                    if let Some(Scalar::Integer(code)) = code {
                         let code = *code;
                         self.stack.pop();
                         if code != 0 {
                             debug!("Exit code {:?}", code);
                             return Err(ExecutionError::ExitCode(code));
+                        } else {
+                            return Ok(code);
                         }
                     }
-                    return Ok(());
+                    return Ok(0);
                 }
-                Instruction::Branch => {
-                    if self.stack.len() < 3 {
+                Instruction::JumpIfTrue => {
+                    if self.stack.len() < 1 {
                         error!(
-                            "Branch called with missing arguments, stack: {:?}",
+                            "JumpIfTrue called with missing arguments, stack: {:?}",
                             self.stack
                         );
                         return Err(ExecutionError::InvalidArgument);
                     }
-                    let iffalse = self.stack.pop().unwrap();
-                    let iftrue = self.stack.pop().unwrap();
                     let cond = self.stack.pop().unwrap();
-                    debug!("Branch if {:?} then {:?} else {:?}", cond, iftrue, iffalse);
-                    let label = if cond.as_bool() {
-                        NodeId::try_from(iftrue).map_err(|_| ExecutionError::InvalidArgument)?
+                    let len = i32::BYTELEN;
+                    let label = i32::decode(&program.bytecode[ptr..ptr + len])
+                        .ok_or_else(|| ExecutionError::InvalidLabel)?;
+                    if cond.as_bool() {
+                        ptr = program
+                            .labels
+                            .get(&label)
+                            .ok_or(ExecutionError::InvalidLabel)?[0];
                     } else {
-                        NodeId::try_from(iffalse).map_err(|_| ExecutionError::InvalidArgument)?
-                    };
-                    ptr = program
-                        .labels
-                        .get(&label)
-                        .ok_or(ExecutionError::InvalidLabel)?[0];
+                        ptr += len;
+                    }
                 }
                 Instruction::CopyLast => {
                     if !self.stack.is_empty() {
@@ -283,6 +285,7 @@ impl<Aux> VM<Aux> {
             if self.memory.len() > self.memory_limit {
                 return Err(ExecutionError::OutOfMemory);
             }
+            debug!("Stack {:?}", self.stack);
             debug!("Top of stack: {:?}", self.stack.last());
         }
 

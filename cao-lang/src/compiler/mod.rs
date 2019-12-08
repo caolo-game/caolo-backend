@@ -1,12 +1,14 @@
 //! Compiles Graphs with vertices of `AstNode` into _caol-lang_ bytecode.
 //! Programs must start with a `Start` instruction.
 //!
+mod astnode;
 use crate::{
     scalar::Scalar, traits::ByteEncodeProperties, CompiledProgram, InputString, Instruction,
     INPUT_STR_LEN,
 };
+pub use astnode::*;
 use serde_derive::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashSet, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::fmt::Debug;
 
 /// Unique id of each nodes in a single compilation
@@ -44,39 +46,6 @@ impl ByteEncodeProperties for InputString {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AstNode {
-    pub instruction: Instruction,
-    pub string: Option<InputString>,
-    pub scalar: Option<Scalar>,
-    pub children: Option<Inputs>,
-    pub nodeid: Option<NodeId>,
-}
-
-impl Default for AstNode {
-    fn default() -> Self {
-        Self {
-            instruction: Instruction::Pass,
-            string: None,
-            scalar: None,
-            children: None,
-            nodeid: None,
-        }
-    }
-}
-
-/// The accepted number of inputs of an instruction
-/// None if unspecified
-pub fn input_per_instruction(inst: Instruction) -> Option<u8> {
-    use Instruction::*;
-    match inst {
-        Add | Sub | Mul | Div => Some(2),
-        JumpIfTrue | WriteReg | Jump => Some(1),
-        Start | ReadReg | ScalarLabel | ScalarInt | ScalarFloat | CopyLast => Some(0),
-        Pass | StringLiteral | Exit | Call | ScalarArray => None,
-    }
-}
-
 /// Single unit of compilation, representing a single program
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompilationUnit {
@@ -101,7 +70,7 @@ impl Compiler {
             .unit
             .nodes
             .iter()
-            .find(|(_, v)| match v.instruction {
+            .find(|(_, v)| match v.node.instruction() {
                 Instruction::Start => true,
                 _ => false,
             })
@@ -112,7 +81,7 @@ impl Compiler {
             .nodes
             .iter()
             .map(|(k, _)| *k)
-            .collect::<HashSet<_>>();
+            .collect::<BTreeSet<_>>();
         let mut todo = VecDeque::with_capacity(compiler.unit.nodes.len());
         todo.push_back(*start.0);
 
@@ -139,7 +108,7 @@ impl Compiler {
     }
 
     fn process_node(&mut self, nodeid: NodeId) -> Result<(), String> {
-        use Instruction::*;
+        use InstructionNode::*;
 
         let node = self
             .unit
@@ -153,67 +122,41 @@ impl Compiler {
             .labels
             .insert(nodeid, [fromlabel, self.program.bytecode.len()]);
 
-        let instruction = node.instruction;
+        let instruction = node.node;
 
         match instruction {
-            Start | Exit | Pass | CopyLast | Add | Sub | Mul | Div => {
+            Exit | Start | Pass | CopyLast | Add | Sub | Mul | Div => {
                 self.push_node(nodeid);
             }
-            JumpIfTrue | Jump => {
+            JumpIfTrue(j) | Jump(j) => {
                 self.push_node(nodeid);
-                let label = node
-                    .nodeid
-                    .ok_or_else(|| "Jump instruction requires a NodeId input")?;
+                let label = j.nodeid;
                 self.program.bytecode.append(&mut label.encode());
             }
-            StringLiteral | Call => {
+            StringLiteral(c) => {
                 self.push_node(nodeid);
-                self.program.bytecode.append(
-                    &mut self.unit.nodes[&nodeid]
-                        .string
-                        .ok_or_else(|| format!("node [{}] missing `string`", nodeid))?
-                        .encode(),
-                );
+                self.program.bytecode.append(&mut c.value.encode());
             }
-            ScalarArray => {
+            Call(c) => {
                 self.push_node(nodeid);
-                match self.unit.nodes[&nodeid]
-                    .scalar
-                    .ok_or_else(|| format!("node [{}] missing `scalar`", nodeid))?
-                {
-                    Scalar::Integer(v) => {
-                        self.program.bytecode.append(&mut v.encode());
-                    }
-                    _ => {
-                        return Err(format!(
-                            "ScalarArray got invalid value {:?}",
-                            self.unit.nodes[&nodeid].scalar
-                        ))
-                    }
-                }
+                self.program.bytecode.append(&mut c.function.encode());
             }
-            ReadReg | WriteReg | ScalarLabel | ScalarFloat | ScalarInt => {
+            ScalarArray(n) => {
                 self.push_node(nodeid);
-                let value = self.unit.nodes[&nodeid]
-                    .scalar
-                    .ok_or_else(|| format!("node [{}] missing `scalar`", nodeid))?;
-                match (instruction, value) {
-                    (Instruction::WriteReg, Scalar::Integer(v))
-                    | (Instruction::ScalarLabel, Scalar::Integer(v))
-                    | (Instruction::ReadReg, Scalar::Integer(v))
-                    | (Instruction::ScalarInt, Scalar::Integer(v)) => {
-                        self.program.bytecode.append(&mut v.encode());
-                    }
-                    (Instruction::ScalarFloat, Scalar::Floating(v)) => {
-                        self.program.bytecode.append(&mut v.encode());
-                    }
-                    _ => {
-                        return Err(format!(
-                            "Scalar {:?} got invalid value {:?}",
-                            instruction, value
-                        ))
-                    }
-                }
+                self.program.bytecode.append(&mut n.value.encode());
+            }
+            ReadReg(r) | WriteReg(r) => {
+                self.push_node(nodeid);
+                let value = r.register;
+                self.program.bytecode.append(&mut value.encode());
+            }
+            ScalarLabel(s) | ScalarInt(s) => {
+                self.push_node(nodeid);
+                self.program.bytecode.append(&mut s.value.encode());
+            }
+            ScalarFloat(s) => {
+                self.push_node(nodeid);
+                self.program.bytecode.append(&mut s.value.encode());
             }
         }
         Ok(())
@@ -221,7 +164,7 @@ impl Compiler {
 
     fn push_node(&mut self, nodeid: NodeId) {
         if let Some(node) = &self.unit.nodes.get(&nodeid) {
-            self.program.bytecode.push(node.instruction as u8);
+            self.program.bytecode.push(node.node.instruction() as u8);
         }
     }
 }
@@ -238,34 +181,29 @@ mod tests {
             (
                 999,
                 AstNode {
-                    instruction: Instruction::Start,
+                    node: InstructionNode::Start,
                     children: Some(vec![0]),
-                    ..Default::default()
                 },
             ),
             (
                 0,
                 AstNode {
-                    instruction: Instruction::ScalarFloat,
-                    scalar: Some(Scalar::Floating(42.0)),
+                    node: InstructionNode::ScalarFloat(FloatNode { value: 42.0 }),
                     children: Some(vec![1]),
-                    ..Default::default()
                 },
             ),
             (
                 1,
                 AstNode {
-                    instruction: Instruction::ScalarFloat,
-                    scalar: Some(Scalar::Floating(512.0)),
+                    node: InstructionNode::ScalarFloat(FloatNode { value: 512.0 }),
                     children: Some(vec![2]),
-                    ..Default::default()
                 },
             ),
             (
                 2,
                 AstNode {
-                    instruction: Instruction::Add,
-                    ..Default::default()
+                    node: InstructionNode::Add,
+                    children: None,
                 },
             ),
         ]
@@ -293,65 +231,56 @@ mod tests {
     }
 
     #[test]
-    fn branching_program() {
+    fn simple_looping_program() {
         simple_logger::init().unwrap_or(());
         let nodes: Nodes = [
             (
                 999,
                 AstNode {
-                    instruction: Instruction::Start,
+                    node: InstructionNode::Start,
                     children: Some(vec![0]),
-                    ..Default::default()
                 },
             ),
             (
                 0,
                 AstNode {
-                    instruction: Instruction::ScalarInt,
-                    scalar: Some(Scalar::Integer(4)),
+                    node: InstructionNode::ScalarInt(IntegerNode { value: 4 }),
                     children: Some(vec![1]),
-                    ..Default::default()
                 },
             ),
             (
                 1,
                 AstNode {
-                    instruction: Instruction::ScalarInt,
-                    scalar: Some(Scalar::Integer(1)),
+                    node: InstructionNode::ScalarInt(IntegerNode { value: 1 }),
                     children: Some(vec![2]),
-                    ..Default::default()
                 },
             ),
             (
                 3,
                 AstNode {
-                    instruction: Instruction::CopyLast,
+                    node: InstructionNode::CopyLast,
                     children: Some(vec![4]),
-                    ..Default::default()
                 },
             ),
             (
                 2,
                 AstNode {
-                    instruction: Instruction::Sub,
+                    node: InstructionNode::Sub,
                     children: Some(vec![3]),
-                    ..Default::default()
                 },
             ),
             (
                 4,
                 AstNode {
-                    instruction: Instruction::JumpIfTrue,
-                    nodeid: Some(5),
-                    ..Default::default()
+                    node: InstructionNode::JumpIfTrue(JumpNode { nodeid: 5 }),
+                    children: None,
                 },
             ),
             (
                 5,
                 AstNode {
-                    instruction: Instruction::CopyLast,
+                    node: InstructionNode::CopyLast,
                     children: Some(vec![1]),
-                    ..Default::default()
                 },
             ),
         ]

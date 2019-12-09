@@ -62,7 +62,7 @@ impl Payload {
             let resources = storage
                 .entity_table::<model::ResourceComponent>()
                 .iter()
-                .filter_map(|(id, r)| build_resource(id, r.0.clone(), storage))
+                .filter_map(|(id, r)| build_resource(id, r.clone(), storage))
                 .collect();
             Resources::new(resources)
         };

@@ -10,6 +10,10 @@ RUN sh ./install_rust.sh -y
 RUN rm ./install_rust.sh
 RUN cargo --version
 
+WORKDIR /web/webservice
+COPY ./webservice/requirements.txt ./requirements.txt
+RUN pip install -r requirements.txt
+
 WORKDIR /web
 
 # TODO these are needed for the workspace

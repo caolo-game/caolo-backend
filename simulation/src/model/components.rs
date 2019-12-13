@@ -1,7 +1,14 @@
 use super::*;
-use crate::tables::{BTreeTable, Component, TableId};
+use crate::tables::{BTreeTable, Component, QuadtreeTable, SpatialKey2d, TableId};
 
 pub use caolo_api::terrain::TileTerrainType;
+
+/// For tables that store entity ids as values
+#[derive(Debug, Clone)]
+pub struct EntityComponent(pub EntityId);
+impl<Id: SpatialKey2d + Send + Sync> Component<Id> for EntityComponent {
+    type Table = QuadtreeTable<Id, Self>;
+}
 
 #[derive(Debug, Clone)]
 pub struct Bot {}
@@ -26,10 +33,40 @@ impl<Id: TableId> Component<Id> for OwnedEntity {
     type Table = BTreeTable<Id, Self>;
 }
 
-#[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Default)]
+#[derive(Default, Debug, Clone, Copy, Ord, PartialOrd, PartialEq, Eq)]
 pub struct PositionComponent(pub Point);
 impl<Id: TableId> Component<Id> for PositionComponent {
     type Table = BTreeTable<Id, Self>;
+}
+
+impl std::ops::Add for PositionComponent {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        Self(Point {
+            x: self.0.x + other.0.x,
+            y: self.0.y + other.0.y,
+        })
+    }
+}
+
+impl SpatialKey2d for PositionComponent {
+    fn get_axis(&self, axis: u8) -> i32 {
+        match axis {
+            0 => self.0.x,
+            1 => self.0.y,
+            _ => unreachable!(),
+        }
+    }
+
+    fn new(x: i32, y: i32) -> Self {
+        Self(Point { x, y })
+    }
+
+    fn dist(&self, other: &Self) -> u32 {
+        use std::convert::TryFrom;
+        u32::try_from(self.0.hex_distance(other.0)).expect("Distance to fit in 32 bits")
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -120,8 +157,8 @@ impl<Id: TableId> Component<Id> for LogEntry {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct TerrainComponent(pub TileTerrainType);
-impl<Id: TableId> Component<Id> for TerrainComponent {
-    type Table = BTreeTable<Id, Self>;
+impl<Id: SpatialKey2d + Send + Sync> Component<Id> for TerrainComponent {
+    type Table = QuadtreeTable<Id, Self>;
 }
 
 #[derive(Debug, Clone)]

@@ -10,10 +10,8 @@ pub use self::resources::*;
 pub use self::structures::*;
 use crate::model::Point;
 use crate::systems::execution::ScriptExecutionData;
-use arrayvec::ArrayVec;
 use cao_lang::prelude::*;
 use cao_lang::traits::ByteEncodeProperties;
-use caolo_api::OperationResult;
 
 pub fn make_point(
     vm: &mut VM<ScriptExecutionData>,

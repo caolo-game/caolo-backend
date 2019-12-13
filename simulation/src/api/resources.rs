@@ -1,7 +1,9 @@
-use crate::model::{self, EntityId, Resource as ResourceComponent};
+use super::*;
+use crate::model::{self, EntityId, Resource, ResourceComponent, PositionComponent};
 use crate::prelude::*;
+use crate::profile;
 use crate::storage::Storage;
-use caolo_api::resources::{Mineral, Resource};
+use caolo_api::resources::Mineral;
 
 pub const MAX_SEARCH_RADIUS: u32 = 60;
 
@@ -12,8 +14,8 @@ pub fn build_resource(
 ) -> Option<caolo_api::resources::Resource> {
     let positions = storage.entity_table::<model::PositionComponent>();
     let energy = storage.entity_table::<model::EnergyComponent>();
-    match resource {
-        ResourceComponent::Mineral => {
+    match resource.0 {
+        Resource::Mineral => {
             let pos = positions.get_by_id(&id).or_else(|| {
                 error!("Mineral {:?} has no position", id);
                 None
@@ -24,8 +26,22 @@ pub fn build_resource(
             })?;
 
             let mineral = Mineral::new(id.0, pos.0, energy.energy, energy.energy_max);
-
-            Some(Resource::Mineral(mineral))
+            let mineral = caolo_api::resources::Resource::Mineral(mineral);
+            Some(mineral)
         }
     }
+}
+
+pub fn find_closest_resource_by_range(
+    vm: &mut VM<ScriptExecutionData>,
+    _: (),
+    output: TPointer,
+) -> Result<usize, ExecutionError> {
+    profile!("find_closest_resource_by_range");
+    let entityid = vm.get_aux().entityid();
+    let storage = vm.get_aux().storage();
+
+    let positions = storage.entity_table::<PositionComponent>();
+    let positions = storage.entity_table::<ResourceComponent>();
+    unimplemented!()
 }

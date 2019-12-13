@@ -149,7 +149,7 @@ mod tests {
 
         assert_eq!(a.hex_distance(b), 4);
 
-        for p in a.neighbours().into_iter() {
+        for p in a.neighbours().iter() {
             assert_eq!(p.hex_distance(a), 1);
         }
     }

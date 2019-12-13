@@ -1,7 +1,7 @@
 mod btree;
-mod kdtree;
+mod quadtree;
 
 pub use btree::*;
-pub use kdtree::*;
+pub use quadtree::*;
 
 use super::*;

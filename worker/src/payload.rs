@@ -50,11 +50,14 @@ impl Payload {
         };
 
         let terrain = {
+            let mut terrain = Vec::with_capacity(512);
             storage
                 .point_table::<model::TerrainComponent>()
+                .find_by_range(&Point::default(), 256, &mut terrain);
+            terrain
                 .iter()
                 .filter(|(_, t)| t.0 != TileTerrainType::Empty)
-                .map(|(x, y)| (x, y.0.clone()))
+                .map(|(x, y)| (x.clone(), y.0.clone()))
                 .collect()
         };
 

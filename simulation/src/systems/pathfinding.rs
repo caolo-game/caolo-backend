@@ -35,18 +35,21 @@ pub fn find_path(
     terrain: &<TerrainComponent as crate::tables::Component<Point>>::Table,
     mut max_iterations: u32,
 ) -> Result<Vec<Point>, PathFindingError> {
-    let center = (from - to) / 2;
+    let center = (from + to) / 2;
     let circle = Circle {
         radius: from.hex_distance(center) as u32,
         center,
     };
 
+    let mut terrain_tiles = Vec::with_capacity((circle.radius * circle.radius) as usize);
+    terrain.find_by_range(&center, circle.radius, &mut terrain_tiles);
+
     let obsticles = positions
         .get_entities_in_range(&circle)
         .into_iter()
         .map(|(_, pos)| pos.0)
-        .chain(terrain.iter().filter_map(|(p, t)| match t.0 {
-            TileTerrainType::Wall => Some(p),
+        .chain(terrain_tiles.iter().filter_map(|(p, t)| match t.0 {
+            TileTerrainType::Wall => Some(*p),
             TileTerrainType::Empty => None,
         }))
         .collect::<BTreeSet<_>>();
@@ -125,7 +128,7 @@ mod tests {
     use super::*;
     use crate::model::{EntityId, PositionComponent};
     use crate::prelude::*;
-    use crate::tables::BTreeTable;
+    use crate::tables::{BTreeTable, QuadtreeTable};
 
     #[test]
     fn test_simple_wall() {
@@ -133,9 +136,9 @@ mod tests {
         let to = Point::new(5, 0);
 
         let positions = BTreeTable::new();
-        let mut terrain = BTreeTable::new();
+        let mut terrain = QuadtreeTable::new(Point::default(), 16, 8);
         for i in -5..=5 {
-            terrain.insert(Point::new(2, i), TerrainComponent(TileTerrainType::Wall));
+            assert!(terrain.insert((Point::new(2, i), TerrainComponent(TileTerrainType::Wall))));
         }
 
         let path = find_path(from, to, &positions, &terrain, 512).expect("Path finding failed");
@@ -157,7 +160,7 @@ mod tests {
         let to = Point::new(7, -6);
 
         let mut positions = BTreeTable::new();
-        let terrain = BTreeTable::new();
+        let terrain = QuadtreeTable::new(Point::default(), 8, 8);
 
         positions.insert(EntityId(0), PositionComponent(from));
         positions.insert(EntityId(1), PositionComponent(to));

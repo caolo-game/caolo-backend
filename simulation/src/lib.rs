@@ -100,6 +100,11 @@ pub fn init_inmemory_storage() -> storage::Storage {
         3000, // FIXME
         32,
     ));
+    storage.add_point_table::<EntityComponent>(QuadtreeTable::new(
+        Point::default(),
+        3000, // FIXME
+        32,
+    ));
 
     storage.add_scripts_table::<ScriptComponent>(BTreeTable::new());
 

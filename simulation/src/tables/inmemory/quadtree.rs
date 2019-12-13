@@ -1,4 +1,5 @@
 use super::*;
+use crate::model::components::EntityComponent;
 use crate::storage::TableId;
 use rayon::prelude::*;
 use std::ops::Add;
@@ -135,11 +136,7 @@ where
     type Row = Row;
 
     fn get_by_id<'a>(&'a self, id: &Id) -> Option<&'a Row> {
-        if let Some((_, row)) = self
-            .data
-            .iter()
-            .find(|(p, _)| p == id)
-        {
+        if let Some((_, row)) = self.data.iter().find(|(p, _)| p == id) {
             return Some(row);
         }
         if let Some(ref children) = self.children {
@@ -182,7 +179,7 @@ where
     }
 }
 
-impl PositionTable for QuadtreeTable<PositionComponent, EntityId> {
+impl PositionTable for QuadtreeTable<PositionComponent, EntityComponent> {
     fn get_entities_in_range(&self, vision: &Circle) -> Vec<(EntityId, PositionComponent)> {
         let mut res = Vec::new();
         self.find_by_range(
@@ -192,7 +189,7 @@ impl PositionTable for QuadtreeTable<PositionComponent, EntityId> {
         );
         res.into_iter()
             .filter(|(pos, _)| pos.0.hex_distance(vision.center) <= u64::from(vision.radius))
-            .map(|(pos, id)| (*id, *pos))
+            .map(|(pos, id)| (id.0, *pos))
             .collect()
     }
 
@@ -320,7 +317,7 @@ mod tests {
                 y: rng.gen_range(-3900, 3900),
             };
             let p = PositionComponent(p);
-            let inserted = tree.insert((p, EntityId(rng.gen())));
+            let inserted = tree.insert((p, EntityComponent(EntityId(rng.gen()))));
             assert!(inserted);
         }
 

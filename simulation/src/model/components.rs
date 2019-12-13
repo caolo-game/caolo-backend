@@ -3,6 +3,13 @@ use crate::tables::{BTreeTable, Component, QuadtreeTable, SpatialKey2d, TableId}
 
 pub use caolo_api::terrain::TileTerrainType;
 
+/// For tables that store entity ids as values
+#[derive(Debug, Clone)]
+pub struct EntityComponent(pub EntityId);
+impl<Id: SpatialKey2d + Send + Sync> Component<Id> for EntityComponent {
+    type Table = QuadtreeTable<Id, Self>;
+}
+
 #[derive(Debug, Clone)]
 pub struct Bot {}
 

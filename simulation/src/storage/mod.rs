@@ -10,17 +10,17 @@ use crate::model::*;
 use chrono::{DateTime, Duration, Utc};
 use homogenoustable::HomogenousTable;
 use std::any::{type_name, TypeId};
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct Storage {
     time: u64,
     next_entity: EntityId,
-    entity_tables: BTreeMap<TypeId, HomogenousTable<EntityId>>,
-    user_tables: BTreeMap<TypeId, HomogenousTable<UserId>>,
-    point_tables: BTreeMap<TypeId, HomogenousTable<Point>>,
-    scripts_tables: BTreeMap<TypeId, HomogenousTable<ScriptId>>,
-    log_tables: BTreeMap<TypeId, HomogenousTable<EntityTime>>,
+    entity_tables: HashMap<TypeId, HomogenousTable<EntityId>>,
+    user_tables: HashMap<TypeId, HomogenousTable<UserId>>,
+    point_tables: HashMap<TypeId, HomogenousTable<Point>>,
+    scripts_tables: HashMap<TypeId, HomogenousTable<ScriptId>>,
+    log_tables: HashMap<TypeId, HomogenousTable<EntityTime>>,
 
     last_tick: DateTime<Utc>,
     dt: Duration,
@@ -40,11 +40,11 @@ impl Storage {
         Self {
             time: 0,
             next_entity: EntityId(0),
-            entity_tables: BTreeMap::new(),
-            user_tables: BTreeMap::new(),
-            point_tables: BTreeMap::new(),
-            scripts_tables: BTreeMap::new(),
-            log_tables: BTreeMap::new(),
+            entity_tables: HashMap::new(),
+            user_tables: HashMap::new(),
+            point_tables: HashMap::new(),
+            scripts_tables: HashMap::new(),
+            log_tables: HashMap::new(),
 
             last_tick: Utc::now(),
             dt: Duration::zero(),

@@ -35,7 +35,8 @@ pub trait Table {
     fn get_by_ids<'a>(&'a self, id: &[Self::Id]) -> Vec<(Self::Id, &'a Self::Row)>;
 
     /// insert or update
-    fn insert(&mut self, id: Self::Id, row: Self::Row);
+    /// return wether the item was inserted
+    fn insert(&mut self, id: Self::Id, row: Self::Row) -> bool;
 
     fn delete(&mut self, id: &Self::Id) -> Option<Self::Row>;
 }

@@ -94,7 +94,7 @@ mod tests {
         let mut storage = Storage::new();
         storage.add_entity_table::<Bot>(BTreeTable::new());
         storage.add_entity_table::<PositionComponent>(BTreeTable::new());
-        storage.add_point_table::<EntityComponent>(QuadtreeTable::new(Point::new(0, 0), 30, 8));
+        storage.add_point_table::<EntityComponent>(QuadtreeTable::new(Point::new(0, 0), 30));
 
         let id = storage.insert_entity();
 

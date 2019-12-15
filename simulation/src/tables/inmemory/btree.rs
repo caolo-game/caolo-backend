@@ -48,8 +48,9 @@ where
             .collect()
     }
 
-    fn insert(&mut self, id: Id, row: Row) {
+    fn insert(&mut self, id: Id, row: Row) -> bool {
         self.data.insert(id, row);
+        true
     }
 
     fn delete(&mut self, id: &Id) -> Option<Row> {

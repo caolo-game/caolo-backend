@@ -1,7 +1,7 @@
 pub mod execution;
 pub mod pathfinding;
 
-use crate::model::{self, bots::spawn_bot};
+use crate::model::{self};
 use crate::profile;
 use crate::storage::Storage;
 use crate::tables::{JoinIterator, Table};
@@ -61,6 +61,57 @@ pub fn update_spawns(storage: &mut Storage) {
             spawn_bot(id, e, storage);
         }
     }
+}
+
+/// Spawns a bot from a spawn.
+/// Removes the spawning bot from the spawn and initializes a bot in the world
+pub fn spawn_bot(spawn_id: model::EntityId, entity_id: model::EntityId, storage: &mut Storage) {
+    debug!(
+        "spawn_bot spawn_id: {:?} entity_id: {:?}",
+        spawn_id, entity_id
+    );
+
+    let bot = storage
+        .entity_table_mut::<model::SpawnBotComponent>()
+        .delete(&entity_id)
+        .expect("Spawning bot was not found");
+    storage
+        .entity_table_mut::<model::Bot>()
+        .insert(entity_id, bot.bot);
+    storage.entity_table_mut::<model::HpComponent>().insert(
+        entity_id,
+        crate::model::HpComponent {
+            hp: 100,
+            hp_max: 100,
+        },
+    );
+    storage.entity_table_mut::<model::DecayComponent>().insert(
+        entity_id,
+        crate::model::DecayComponent {
+            eta: 20,
+            t: 100,
+            hp_amount: 100,
+        },
+    );
+    storage.entity_table_mut::<model::CarryComponent>().insert(
+        entity_id,
+        crate::model::CarryComponent {
+            carry: 0,
+            carry_max: 50,
+        },
+    );
+
+    let positions = storage.entity_table_mut::<model::PositionComponent>();
+    let pos = positions
+        .get_by_id(&spawn_id)
+        .cloned()
+        .expect("Spawn should have position");
+    positions.insert(entity_id, pos);
+
+    debug!(
+        "spawn_bot spawn_id: {:?} entity_id: {:?} - done",
+        spawn_id, entity_id
+    );
 }
 
 pub fn update_decay(storage: &mut Storage) {
@@ -182,6 +233,6 @@ fn update_positions(storage: &mut Storage) {
     position_entities.clear();
 
     for (point, entity) in positions.into_iter() {
-        position_entities.insert((point, entity));
+        position_entities.insert(point, entity);
     }
 }

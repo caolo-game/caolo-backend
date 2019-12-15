@@ -135,10 +135,10 @@ mod tests {
         let from = Point::new(0, 0);
         let to = Point::new(5, 0);
 
-        let positions = QuadtreeTable::new(Point::default(), 16, 8);
-        let mut terrain = QuadtreeTable::new(Point::default(), 16, 8);
+        let positions = QuadtreeTable::new(Point::default(), 16);
+        let mut terrain = QuadtreeTable::new(Point::default(), 16);
         for i in -5..=5 {
-            assert!(terrain.insert((Point::new(2, i), TerrainComponent(TileTerrainType::Wall))));
+            assert!(terrain.insert(Point::new(2, i), TerrainComponent(TileTerrainType::Wall)));
         }
 
         let path = find_path(from, to, &positions, &terrain, 512).expect("Path finding failed");
@@ -159,11 +159,11 @@ mod tests {
         let from = Point::new(17, -16);
         let to = Point::new(7, -6);
 
-        let mut positions = QuadtreeTable::new(Point::default(), 30, 8);
-        let terrain = QuadtreeTable::new(Point::default(), 30, 8);
+        let mut positions = QuadtreeTable::new(Point::default(), 30);
+        let terrain = QuadtreeTable::new(Point::default(), 30);
 
-        positions.insert((from, EntityComponent(EntityId(0))));
-        positions.insert((to, EntityComponent(EntityId(1))));
+        positions.insert(from, EntityComponent(EntityId(0)));
+        positions.insert(to, EntityComponent(EntityId(1)));
 
         let path = find_path(from, to, &positions, &terrain, 512).expect("Path finding failed");
 

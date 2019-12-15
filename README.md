@@ -3,7 +3,6 @@
 ## Prerequisites
 
 - [Cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html)
-    - Rust compiler version 1.38+
 
 ## Running via [Docker](https://www.docker.com/)
 

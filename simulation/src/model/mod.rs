@@ -1,4 +1,3 @@
-pub mod bots;
 pub mod components;
 pub mod indices;
 
@@ -17,7 +16,7 @@ impl crate::tables::SpatialKey2d for Point {
     fn get_axis(&self, axis: u8) -> i32 {
         match axis {
             0 => self.x,
-            1 => self.x,
+            1 => self.y,
             _ => unreachable!(),
         }
     }

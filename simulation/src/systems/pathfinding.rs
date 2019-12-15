@@ -126,7 +126,7 @@ pub fn find_path(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{EntityId, PositionComponent};
+    use crate::model::{EntityComponent, EntityId, PositionComponent};
     use crate::prelude::*;
     use crate::tables::{BTreeTable, QuadtreeTable};
 
@@ -135,10 +135,10 @@ mod tests {
         let from = Point::new(0, 0);
         let to = Point::new(5, 0);
 
-        let positions = BTreeTable::new();
-        let mut terrain = QuadtreeTable::new(Point::default(), 16, 8);
+        let positions = QuadtreeTable::new(Point::default(), 16);
+        let mut terrain = QuadtreeTable::new(Point::default(), 16);
         for i in -5..=5 {
-            assert!(terrain.insert((Point::new(2, i), TerrainComponent(TileTerrainType::Wall))));
+            assert!(terrain.insert(Point::new(2, i), TerrainComponent(TileTerrainType::Wall)));
         }
 
         let path = find_path(from, to, &positions, &terrain, 512).expect("Path finding failed");
@@ -159,11 +159,11 @@ mod tests {
         let from = Point::new(17, -16);
         let to = Point::new(7, -6);
 
-        let mut positions = BTreeTable::new();
-        let terrain = QuadtreeTable::new(Point::default(), 8, 8);
+        let mut positions = QuadtreeTable::new(Point::default(), 30);
+        let terrain = QuadtreeTable::new(Point::default(), 30);
 
-        positions.insert(EntityId(0), PositionComponent(from));
-        positions.insert(EntityId(1), PositionComponent(to));
+        positions.insert(from, EntityComponent(EntityId(0)));
+        positions.insert(to, EntityComponent(EntityId(1)));
 
         let path = find_path(from, to, &positions, &terrain, 512).expect("Path finding failed");
 

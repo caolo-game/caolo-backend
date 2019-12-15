@@ -1,7 +1,7 @@
 pub mod execution;
 pub mod pathfinding;
 
-use crate::model::{self, bots::spawn_bot};
+use crate::model::{self};
 use crate::profile;
 use crate::storage::Storage;
 use crate::tables::{JoinIterator, Table};
@@ -14,6 +14,8 @@ pub fn execute_world_update(storage: &mut Storage) {
     update_spawns(storage);
     update_decay(storage);
     update_minerals(storage);
+
+    update_positions(storage);
 }
 
 pub fn update_energy(storage: &mut Storage) {
@@ -61,6 +63,57 @@ pub fn update_spawns(storage: &mut Storage) {
     }
 }
 
+/// Spawns a bot from a spawn.
+/// Removes the spawning bot from the spawn and initializes a bot in the world
+pub fn spawn_bot(spawn_id: model::EntityId, entity_id: model::EntityId, storage: &mut Storage) {
+    debug!(
+        "spawn_bot spawn_id: {:?} entity_id: {:?}",
+        spawn_id, entity_id
+    );
+
+    let bot = storage
+        .entity_table_mut::<model::SpawnBotComponent>()
+        .delete(&entity_id)
+        .expect("Spawning bot was not found");
+    storage
+        .entity_table_mut::<model::Bot>()
+        .insert(entity_id, bot.bot);
+    storage.entity_table_mut::<model::HpComponent>().insert(
+        entity_id,
+        crate::model::HpComponent {
+            hp: 100,
+            hp_max: 100,
+        },
+    );
+    storage.entity_table_mut::<model::DecayComponent>().insert(
+        entity_id,
+        crate::model::DecayComponent {
+            eta: 20,
+            t: 100,
+            hp_amount: 100,
+        },
+    );
+    storage.entity_table_mut::<model::CarryComponent>().insert(
+        entity_id,
+        crate::model::CarryComponent {
+            carry: 0,
+            carry_max: 50,
+        },
+    );
+
+    let positions = storage.entity_table_mut::<model::PositionComponent>();
+    let pos = positions
+        .get_by_id(&spawn_id)
+        .cloned()
+        .expect("Spawn should have position");
+    positions.insert(entity_id, pos);
+
+    debug!(
+        "spawn_bot spawn_id: {:?} entity_id: {:?} - done",
+        spawn_id, entity_id
+    );
+}
+
 pub fn update_decay(storage: &mut Storage) {
     debug!("update decay system called");
     let decay = storage.entity_table::<model::DecayComponent>();
@@ -98,14 +151,15 @@ pub fn update_decay(storage: &mut Storage) {
 pub fn update_minerals(storage: &mut Storage) {
     debug!("update minerals system called");
 
-    let positions = storage.entity_table::<model::PositionComponent>();
+    let entity_positions = storage.entity_table::<model::PositionComponent>();
+    let position_entities = storage.point_table::<model::EntityComponent>();
     let energy = storage.entity_table::<model::EnergyComponent>();
     let resources = storage.entity_table::<model::ResourceComponent>();
 
     let mut rng = rand::thread_rng();
 
     let changeset = JoinIterator::new(
-        JoinIterator::new(resources.iter(), positions.iter()),
+        JoinIterator::new(resources.iter(), entity_positions.iter()),
         energy.iter(),
     )
     .filter_map(|(id, ((resource, position), energy))| match resource.0 {
@@ -119,7 +173,7 @@ pub fn update_minerals(storage: &mut Storage) {
 
             energy.energy = energy.energy_max;
 
-            position.0 = random_uncontested_pos_in_range(positions, &mut rng, -14, 15);
+            position.0 = random_uncontested_pos_in_range(position_entities, &mut rng, -14, 15);
 
             Some((id, position, energy))
         }
@@ -162,4 +216,23 @@ fn random_uncontested_pos_in_range(
         }
     }
     pos
+}
+
+/// Rebuild the point tables
+fn update_positions(storage: &mut Storage) {
+    use model::EntityComponent;
+    use model::PositionComponent;
+
+    let positions = storage.entity_table::<PositionComponent>();
+    let positions = positions
+        .iter()
+        .map(|(id, pos)| (pos.0, EntityComponent(id)))
+        .collect::<Vec<_>>();
+
+    let position_entities = storage.point_table_mut::<EntityComponent>();
+    position_entities.clear();
+
+    for (point, entity) in positions.into_iter() {
+        position_entities.insert(point, entity);
+    }
 }

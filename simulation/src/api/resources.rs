@@ -42,6 +42,6 @@ pub fn find_closest_resource_by_range(
     let storage = vm.get_aux().storage();
 
     let positions = storage.entity_table::<PositionComponent>();
-    let positions = storage.entity_table::<ResourceComponent>();
+    let resources = storage.entity_table::<ResourceComponent>();
     unimplemented!()
 }

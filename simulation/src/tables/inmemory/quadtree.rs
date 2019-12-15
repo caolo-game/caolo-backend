@@ -30,7 +30,7 @@ where
     median: Id,
     radius: u32,
 
-    data: Box<ArrayVec<[(Id, Row); 128]>>,
+    data: Box<ArrayVec<[(Id, Row); 16]>>,
 
     children: Option<Vec<Self>>,
 }

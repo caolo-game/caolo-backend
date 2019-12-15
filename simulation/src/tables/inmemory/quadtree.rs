@@ -1,5 +1,5 @@
 use super::*;
-use crate::model::components::EntityComponent;
+use crate::model::{components::EntityComponent, Point};
 use crate::storage::TableId;
 use rayon::prelude::*;
 use std::ops::Add;
@@ -51,6 +51,15 @@ where
         }
     }
 
+    pub fn clear(&mut self) {
+        self.data.clear();
+        if let Some(children) = self.children.as_mut() {
+            for child in children.iter_mut() {
+                child.clear();
+            }
+        }
+    }
+
     /// Find in AABB
     pub fn find_by_range<'a>(&'a self, center: &Id, radius: u32, out: &mut Vec<&'a (Id, Row)>) {
         if !Self::test_aabb_aabb(&self.median, self.radius, center, radius) {
@@ -62,6 +71,31 @@ where
                 child.find_by_range(center, radius, out);
             }
         }
+    }
+
+    /// Return the bounds of this Node as an AABB
+    pub fn bounds(&self) -> (Id, Id) {
+        let radius = self.radius as i32;
+        let x = self.median.get_axis(0);
+        let y = self.median.get_axis(1);
+
+        (
+            Id::new(x - radius, y - radius),
+            Id::new(x + radius, y + radius),
+        )
+    }
+
+    /// Return wether point is within the bounds of this node
+    pub fn intersects(&self, point: &Id) -> bool {
+        let x = point.get_axis(0);
+        let y = point.get_axis(1);
+
+        let mx = self.median.get_axis(0);
+        let my = self.median.get_axis(1);
+
+        let rad = self.radius as i32;
+
+        mx - rad <= x && my - rad <= y && x <= mx + rad && y <= my + rad
     }
 
     fn test_aabb_aabb(a: &Id, radiusa: u32, b: &Id, radiusb: u32) -> bool {
@@ -179,29 +213,21 @@ where
     }
 }
 
-impl PositionTable for QuadtreeTable<PositionComponent, EntityComponent> {
+impl PositionTable for QuadtreeTable<Point, EntityComponent> {
     fn get_entities_in_range(&self, vision: &Circle) -> Vec<(EntityId, PositionComponent)> {
         let mut res = Vec::new();
-        self.find_by_range(
-            &PositionComponent(vision.center),
-            vision.radius * 3 / 2,
-            &mut res,
-        );
+        self.find_by_range(&vision.center, vision.radius * 3 / 2, &mut res);
         res.into_iter()
-            .filter(|(pos, _)| pos.0.hex_distance(vision.center) <= u64::from(vision.radius))
-            .map(|(pos, id)| (id.0, *pos))
+            .filter(|(pos, _)| pos.hex_distance(vision.center) <= u64::from(vision.radius))
+            .map(|(pos, id)| (id.0, PositionComponent(*pos)))
             .collect()
     }
 
     fn count_entities_in_range(&self, vision: &Circle) -> usize {
         let mut res = Vec::new();
-        self.find_by_range(
-            &PositionComponent(vision.center),
-            vision.radius * 3 / 2,
-            &mut res,
-        );
+        self.find_by_range(&vision.center, vision.radius * 3 / 2, &mut res);
         res.into_iter()
-            .filter(|(pos, _)| pos.0.hex_distance(vision.center) <= u64::from(vision.radius))
+            .filter(|(pos, _)| pos.hex_distance(vision.center) <= u64::from(vision.radius))
             .count()
     }
 }
@@ -309,14 +335,13 @@ mod tests {
     fn bench_get_entities_in_range(b: &mut Bencher) {
         let mut rng = rand::thread_rng();
 
-        let mut tree = QuadtreeTable::new(PositionComponent::default(), 4000, 16);
+        let mut tree = QuadtreeTable::new(Point::default(), 4000, 16);
 
         for i in 0..(1 << 15) {
             let p = Point {
                 x: rng.gen_range(-3900, 3900),
                 y: rng.gen_range(-3900, 3900),
             };
-            let p = PositionComponent(p);
             let inserted = tree.insert((p, EntityComponent(EntityId(rng.gen()))));
             assert!(inserted);
         }
@@ -331,5 +356,52 @@ mod tests {
             };
             tree.get_entities_in_range(&Circle { center: p, radius })
         });
+    }
+
+    #[bench]
+    fn make_quadtree(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+
+        b.iter(|| {
+            let mut tree = QuadtreeTable::new(Point::default(), 4000, 16);
+
+            for i in 0..(1 << 15) {
+                let p = Point {
+                    x: rng.gen_range(-3900, 3900),
+                    y: rng.gen_range(-3900, 3900),
+                };
+                let inserted = tree.insert((p, EntityComponent(EntityId(rng.gen()))));
+                assert!(inserted);
+            }
+        })
+    }
+
+    #[bench]
+    fn rebuild_quadtree(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+
+        let mut tree = QuadtreeTable::new(Point::default(), 4000, 16);
+
+        for i in 0..(1 << 15) {
+            let p = Point {
+                x: rng.gen_range(-3900, 3900),
+                y: rng.gen_range(-3900, 3900),
+            };
+            let inserted = tree.insert((p, EntityComponent(EntityId(rng.gen()))));
+            assert!(inserted);
+        }
+
+        b.iter(|| {
+            tree.clear();
+
+            for i in 0..(1 << 15) {
+                let p = Point {
+                    x: rng.gen_range(-3900, 3900),
+                    y: rng.gen_range(-3900, 3900),
+                };
+                let inserted = tree.insert((p, EntityComponent(EntityId(rng.gen()))));
+                assert!(inserted);
+            }
+        })
     }
 }

@@ -12,6 +12,7 @@ use crate::model::Point;
 use crate::systems::execution::ScriptExecutionData;
 use cao_lang::prelude::*;
 use cao_lang::traits::ByteEncodeProperties;
+use caolo_api::OperationResult;
 
 pub fn make_point(
     vm: &mut VM<ScriptExecutionData>,
@@ -75,7 +76,7 @@ pub fn make_import() -> Schema {
                     bots::move_bot,
                     "Move the bot to the given Point",
                     [Point],
-                    ()
+                    OperationResult
                 ),
                 fo: FunctionObject::new(FunctionWrapper::new(bots::move_bot)),
             },

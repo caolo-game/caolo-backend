@@ -14,6 +14,8 @@ pub fn execute_world_update(storage: &mut Storage) {
     update_spawns(storage);
     update_decay(storage);
     update_minerals(storage);
+
+    update_positions(storage);
 }
 
 pub fn update_energy(storage: &mut Storage) {
@@ -98,14 +100,15 @@ pub fn update_decay(storage: &mut Storage) {
 pub fn update_minerals(storage: &mut Storage) {
     debug!("update minerals system called");
 
-    let positions = storage.entity_table::<model::PositionComponent>();
+    let entity_positions = storage.entity_table::<model::PositionComponent>();
+    let position_entities = storage.point_table::<model::EntityComponent>();
     let energy = storage.entity_table::<model::EnergyComponent>();
     let resources = storage.entity_table::<model::ResourceComponent>();
 
     let mut rng = rand::thread_rng();
 
     let changeset = JoinIterator::new(
-        JoinIterator::new(resources.iter(), positions.iter()),
+        JoinIterator::new(resources.iter(), entity_positions.iter()),
         energy.iter(),
     )
     .filter_map(|(id, ((resource, position), energy))| match resource.0 {
@@ -119,7 +122,7 @@ pub fn update_minerals(storage: &mut Storage) {
 
             energy.energy = energy.energy_max;
 
-            position.0 = random_uncontested_pos_in_range(positions, &mut rng, -14, 15);
+            position.0 = random_uncontested_pos_in_range(position_entities, &mut rng, -14, 15);
 
             Some((id, position, energy))
         }
@@ -162,4 +165,23 @@ fn random_uncontested_pos_in_range(
         }
     }
     pos
+}
+
+/// Rebuild the point tables
+fn update_positions(storage: &mut Storage) {
+    use model::EntityComponent;
+    use model::PositionComponent;
+
+    let positions = storage.entity_table::<PositionComponent>();
+    let positions = positions
+        .iter()
+        .map(|(id, pos)| (pos.0, EntityComponent(id)))
+        .collect::<Vec<_>>();
+
+    let position_entities = storage.point_table_mut::<EntityComponent>();
+    position_entities.clear();
+
+    for (point, entity) in positions.into_iter() {
+        position_entities.insert((point, entity));
+    }
 }

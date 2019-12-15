@@ -77,23 +77,6 @@ impl UserDataTable for BTreeTable<UserId, UserData> {
     }
 }
 
-impl PositionTable for BTreeTable<EntityId, PositionComponent> {
-    fn get_entities_in_range(&self, vision: &Circle) -> Vec<(EntityId, PositionComponent)> {
-        self.data
-            .par_iter()
-            .filter(|(_, p)| p.0.hex_distance(vision.center) <= u64::from(vision.radius))
-            .map(|(k, v)| (*k, *v))
-            .collect()
-    }
-
-    fn count_entities_in_range(&self, vision: &Circle) -> usize {
-        self.data
-            .par_iter()
-            .filter(|(_, p)| p.0.hex_distance(vision.center) <= u64::from(vision.radius))
-            .count()
-    }
-}
-
 impl LogTable for BTreeTable<model::EntityTime, model::LogEntry> {
     fn get_logs_by_time(&self, time: u64) -> Vec<(model::EntityTime, model::LogEntry)> {
         self.data
@@ -101,40 +84,5 @@ impl LogTable for BTreeTable<model::EntityTime, model::LogEntry> {
             .filter(|(t, _)| t.1 == time)
             .map(|(k, v)| (*k, v.clone()))
             .collect()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use caolo_api::point::Point;
-    use rand::prelude::*;
-    use test::Bencher;
-
-    #[bench]
-    fn bench_get_entities_in_range(b: &mut Bencher) {
-        let mut rng = rand::thread_rng();
-
-        let mut table = BTreeTable::new();
-
-        for i in 0..(1 << 15) {
-            let p = Point {
-                x: rng.gen_range(-3900, 3900),
-                y: rng.gen_range(-3900, 3900),
-            };
-            let p = PositionComponent(p);
-            table.insert(EntityId(rng.gen()), p);
-        }
-
-        let radius = 512;
-
-        b.iter(|| {
-            let table = &table;
-            let p = Point {
-                x: rng.gen_range(-3900, 3900),
-                y: rng.gen_range(-3900, 3900),
-            };
-            table.get_entities_in_range(&Circle { center: p, radius })
-        });
     }
 }

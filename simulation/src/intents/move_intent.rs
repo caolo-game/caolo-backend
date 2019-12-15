@@ -1,7 +1,6 @@
 use super::*;
-use crate::model::{self, PositionComponent};
+use crate::model::{self, EntityComponent, PositionComponent};
 use crate::prelude::*;
-use crate::tables::PositionTable;
 use caolo_api::OperationResult;
 
 #[derive(Debug, Clone)]
@@ -14,7 +13,7 @@ impl MoveIntent {
     pub fn execute(&self, storage: &mut Storage) -> IntentResult {
         debug!("Moving bot[{:?}] to {:?}", self.bot, self.position);
 
-        let table = storage.entity_table::<PositionComponent>();
+        let table = storage.point_table::<EntityComponent>();
 
         if storage
             .entity_table::<model::Bot>()
@@ -25,18 +24,17 @@ impl MoveIntent {
             return Err("Bot not found".into());
         }
 
-        let pos = PositionComponent(self.position);
-        if 0 < table.count_entities_in_range(&Circle {
-            center: pos.0,
-            radius: 0,
-        }) {
-            debug!("Occupied");
+        if table.get_by_id(&self.position).is_some() {
+            debug!("Occupied {:?} ", self);
             return Err("Occupied".into());
+        }
+        if !table.intersects(&self.position) {
+            debug!("PositionTable insert failed {:?}", self);
+            return Err("Out of bounds".into());
         }
 
         let table = storage.entity_table_mut::<PositionComponent>();
-
-        table.insert(self.bot, pos);
+        table.insert(self.bot, PositionComponent(self.position));
 
         debug!("Move successful");
 
@@ -87,16 +85,16 @@ pub fn check_move_intent(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{Bot, PositionComponent};
+    use crate::model::{Bot, EntityComponent, Point, PositionComponent};
     use crate::storage::Storage;
-    use crate::tables::BTreeTable;
-    use caolo_api::point::Point;
+    use crate::tables::{BTreeTable, QuadtreeTable};
 
     #[test]
     fn test_move_intent_fails_if_node_is_occupied() {
         let mut storage = Storage::new();
         storage.add_entity_table::<Bot>(BTreeTable::new());
         storage.add_entity_table::<PositionComponent>(BTreeTable::new());
+        storage.add_point_table::<EntityComponent>(QuadtreeTable::new(Point::new(0, 0), 30, 8));
 
         let id = storage.insert_entity();
 

@@ -23,12 +23,6 @@ Then open the client in your browser by visiting [http://localhost:3000](http://
 - Running the test suite
     ```
     cargo test
+    cargo bench  # run benchmarks
     cargo clippy # linter
     ```
-
-## Directory/Module structure
-
-- `api`: Rust module that contains all types and helper methods to interact between wasm and the engine and also between the worker and the client
-- `engine`: The game engine that's responsible for running the simulation
-- `worker`: Application that runs the engine and communicates with the "outside"
-- `example-bot`: An example bot written in Rust that plays the game

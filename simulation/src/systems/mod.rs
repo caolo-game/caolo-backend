@@ -196,8 +196,8 @@ pub fn update_minerals(storage: &mut Storage) {
     debug!("update minerals system done");
 }
 
-fn random_uncontested_pos_in_range(
-    positions_table: &dyn crate::tables::PositionTable,
+fn random_uncontested_pos_in_range<T: crate::tables::PositionTable>(
+    positions_table: &T,
     rng: &mut rand::rngs::ThreadRng,
     from: i32,
     to: i32,
@@ -207,11 +207,7 @@ fn random_uncontested_pos_in_range(
         pos.x = rng.gen_range(from, to);
         pos.y = rng.gen_range(from, to);
 
-        if positions_table.count_entities_in_range(&model::Circle {
-            center: pos,
-            radius: 0,
-        }) == 0
-        {
+        if positions_table.get_by_id(&pos).is_none() {
             break;
         }
     }
@@ -219,7 +215,7 @@ fn random_uncontested_pos_in_range(
 }
 
 /// Rebuild the point tables
-fn update_positions(storage: &mut Storage) {
+pub fn update_positions(storage: &mut Storage) {
     use model::EntityComponent;
     use model::PositionComponent;
 

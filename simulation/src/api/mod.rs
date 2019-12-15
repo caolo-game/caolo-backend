@@ -59,6 +59,39 @@ pub fn log_scalar(
     Ok(0)
 }
 
+/// Holds data about a function
+pub struct FunctionRow {
+    pub desc: NodeDescription,
+    pub fo: FunctionObject<ScriptExecutionData>,
+}
+
+impl std::fmt::Debug for FunctionRow {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "FunctionRow of {:?}", self.desc,)
+    }
+}
+
+#[derive(Debug)]
+pub struct Schema {
+    imports: Vec<FunctionRow>,
+}
+
+impl Schema {
+    pub fn imports(&self) -> &[FunctionRow] {
+        &self.imports
+    }
+
+    pub fn keys(&self) -> impl Iterator<Item = &str> {
+        self.imports.iter().map(|fr| fr.desc.name)
+    }
+
+    pub fn execute_imports(self, vm: &mut VM<ScriptExecutionData>) {
+        for fr in self.imports {
+            vm.register_function_obj(fr.desc.name, fr.fo);
+        }
+    }
+}
+
 /// Bootstrap the game API in the VM
 pub fn make_import() -> Schema {
     Schema {
@@ -90,38 +123,5 @@ pub fn make_import() -> Schema {
                 fo: FunctionObject::new(FunctionWrapper::new(make_point)),
             },
         ],
-    }
-}
-
-/// Holds data about a function
-pub struct FunctionRow {
-    pub desc: NodeDescription,
-    pub fo: FunctionObject<ScriptExecutionData>,
-}
-
-impl std::fmt::Debug for FunctionRow {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "FunctionRow of {:?}", self.desc,)
-    }
-}
-
-#[derive(Debug)]
-pub struct Schema {
-    imports: Vec<FunctionRow>,
-}
-
-impl Schema {
-    pub fn imports(&self) -> &[FunctionRow] {
-        &self.imports
-    }
-
-    pub fn keys(&self) -> impl Iterator<Item = &str> {
-        self.imports.iter().map(|fr| fr.desc.name)
-    }
-
-    pub fn execute_imports(self, vm: &mut VM<ScriptExecutionData>) {
-        for fr in self.imports {
-            vm.register_function_obj(fr.desc.name, fr.fo);
-        }
     }
 }

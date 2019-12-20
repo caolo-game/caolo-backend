@@ -1,3 +1,5 @@
+//! Quadtree based tables to query two dimensional data
+//! 
 use super::*;
 use crate::model::{components::EntityComponent, Point};
 use crate::storage::TableId;

@@ -5,6 +5,7 @@ use crate::{
     prelude::*,
     profile,
     storage::Storage,
+    systems::pathfinding,
 };
 use caolo_api::OperationResult;
 
@@ -21,13 +22,33 @@ pub fn move_bot(
         error!("move_bot called without a point");
         ExecutionError::InvalidArgument
     })?;
+    let entity = vm.get_aux().entityid();
+    let storage = vm.get_aux().storage();
+
+    let positions = storage.point_table::<model::EntityComponent>();
+    let terrain = storage.point_table::<model::TerrainComponent>();
+
+    let botpos = storage
+        .entity_table::<model::PositionComponent>()
+        .get_by_id(&entity)
+        .ok_or_else(|| {
+            error!("entity {:?} does not have position component!", entity);
+            ExecutionError::InvalidArgument
+        })?;
+
+    let path = pathfinding::find_path(botpos.0, point, positions, terrain, 5000).map_err(|e| {
+        error!("pathfinding failed {:?}", e);
+        ExecutionError::TaskFailure(format!(
+            "Could not find path from {:?} to {:?}",
+            botpos, point
+        ))
+    })?;
 
     let intent = caolo_api::bots::MoveIntent {
-        id: vm.get_aux().entityid().0,
-        position: point,
+        id: entity.0,
+        position: path[0], // TODO: cache path
     };
     let userid = Default::default(); // FIXME
-    let storage = vm.get_aux().storage();
 
     let result = {
         let checkresult = check_move_intent(&intent, userid, storage);

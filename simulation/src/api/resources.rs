@@ -1,5 +1,5 @@
 use super::*;
-use crate::model::{self, EntityId, Resource, ResourceComponent, PositionComponent};
+use crate::model::{self, EntityId, Resource, ResourceComponent};
 use crate::prelude::*;
 use crate::profile;
 use crate::storage::Storage;
@@ -33,15 +33,15 @@ pub fn build_resource(
 }
 
 pub fn find_closest_resource_by_range(
-    vm: &mut VM<ScriptExecutionData>,
+    _vm: &mut VM<ScriptExecutionData>,
     _: (),
-    output: TPointer,
+    _output: TPointer,
 ) -> Result<usize, ExecutionError> {
     profile!("find_closest_resource_by_range");
-    let entityid = vm.get_aux().entityid();
-    let storage = vm.get_aux().storage();
-
-    let positions = storage.entity_table::<PositionComponent>();
-    let resources = storage.entity_table::<ResourceComponent>();
+    // let entityid = vm.get_aux().entityid();
+    // let storage = vm.get_aux().storage();
+    //
+    // let positions = storage.entity_table::<PositionComponent>();
+    // let resources = storage.entity_table::<ResourceComponent>();
     unimplemented!()
 }

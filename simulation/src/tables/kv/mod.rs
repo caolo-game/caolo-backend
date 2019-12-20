@@ -1,3 +1,5 @@
+//! Key-Value storages
+//!
 mod btree;
 mod quadtree;
 

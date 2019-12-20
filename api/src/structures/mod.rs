@@ -2,7 +2,7 @@ mod spawn_intent;
 pub use spawn_intent::*;
 
 use crate::EntityId;
-use crate::{point::Point, OperationResult, UserId};
+use crate::{point::Point, UserId};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Structures {

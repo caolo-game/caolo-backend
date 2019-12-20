@@ -1,3 +1,5 @@
+//! Quadtree based tables to query two dimensional data
+//! 
 use super::*;
 use crate::model::{components::EntityComponent, Point};
 use crate::storage::TableId;
@@ -330,7 +332,7 @@ mod tests {
 
         let mut tree = QuadtreeTable::new(Point::default(), 4000);
 
-        for i in 0..(1 << 15) {
+        for _ in 0..(1 << 15) {
             let p = Point {
                 x: rng.gen_range(-3900, 3900),
                 y: rng.gen_range(-3900, 3900),
@@ -358,7 +360,7 @@ mod tests {
         b.iter(|| {
             let mut tree = QuadtreeTable::new(Point::default(), 4000);
 
-            for i in 0..(1 << 15) {
+            for _ in 0..(1 << 15) {
                 let p = Point {
                     x: rng.gen_range(-3900, 3900),
                     y: rng.gen_range(-3900, 3900),
@@ -375,7 +377,7 @@ mod tests {
 
         let mut tree = QuadtreeTable::new(Point::default(), 4000);
 
-        for i in 0..(1 << 15) {
+        for _ in 0..(1 << 15) {
             let p = Point {
                 x: rng.gen_range(-3900, 3900),
                 y: rng.gen_range(-3900, 3900),
@@ -387,7 +389,7 @@ mod tests {
         b.iter(|| {
             tree.clear();
 
-            for i in 0..(1 << 15) {
+            for _ in 0..(1 << 15) {
                 let p = Point {
                     x: rng.gen_range(-3900, 3900),
                     y: rng.gen_range(-3900, 3900),

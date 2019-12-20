@@ -38,6 +38,7 @@ pub enum ExecutionError {
     OutOfMemory,
     MissingArgument,
     Timeout,
+    TaskFailure(String),
 }
 
 /// Metadata about a node in the program.

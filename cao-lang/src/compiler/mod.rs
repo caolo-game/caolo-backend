@@ -207,7 +207,7 @@ mod tests {
                 },
             ),
         ]
-        .into_iter()
+        .iter()
         .cloned()
         .collect();
 
@@ -284,7 +284,7 @@ mod tests {
                 },
             ),
         ]
-        .into_iter()
+        .iter()
         .cloned()
         .collect();
 

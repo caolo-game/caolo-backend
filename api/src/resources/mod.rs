@@ -2,9 +2,7 @@ mod minerals;
 
 pub use minerals::*;
 
-use crate::point::Circle;
 use crate::point::Point;
-use crate::OperationResult;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[repr(u8)]

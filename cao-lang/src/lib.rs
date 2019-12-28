@@ -1,4 +1,38 @@
+//! Example Program serialized as JSON
+//! ```
+//! const PROGRAM: &str = r#"{
+//!     "nodes": {
+//!         "0": {
+//!             "node": {
+//!                 "ScalarInt": {
+//!                     "value": 42
+//!                 }
+//!             },
+//!             "children": [
+//!                 1
+//!             ]
+//!         },
+//!         "1": {
+//!             "node": {
+//!                 "Call": {
+//!                     "function": "log_scalar"
+//!                 }
+//!             }
+//!         },
+//!         "99": {
+//!             "node": {
+//!                 "Start": null
+//!             },
+//!             "children": [
+//!                 0
+//!             ]
+//!         }
+//!     }
+//! }"#;
 //!
+//! let compilation_unit = serde_json::from_str(PROGRAM).unwrap();
+//! cao_lang::compiler::Compiler::compile(compilation_unit).unwrap();
+//!```
 //!
 pub mod compiler;
 pub mod instruction;

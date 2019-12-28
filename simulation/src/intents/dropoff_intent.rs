@@ -46,8 +46,8 @@ impl DropoffIntent {
 }
 
 /// A valid dropoff intent has the following characteristics:
-/// - the bot is the user's
-/// - the bot is carrying resource of type ty
+/// - the bot is owned by the user
+/// - the bot is carrying resource of type `ty`
 /// - the target is not full
 /// - the target is within dropoff range
 pub fn check_dropoff_intent(
@@ -66,14 +66,12 @@ pub fn check_dropoff_intent(
         None => return OperationResult::InvalidInput,
     };
 
-    if let Some(carry) = storage
+    if !storage
         .entity_table::<model::CarryComponent>()
         .get_by_id(&id)
+        .map(|carry| carry.carry != 0)
+        .unwrap_or(false)
     {
-        if carry.carry == 0 {
-            return OperationResult::Empty;
-        }
-    } else {
         return OperationResult::Empty;
     }
 

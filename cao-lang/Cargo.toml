@@ -14,3 +14,4 @@ arrayvec= { version="0.5", features=["serde", "array-sizes-33-128"] }
 
 [dev-dependencies]
 simple_logger = "1.0"
+serde_json = "*"

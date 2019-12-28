@@ -6,25 +6,29 @@ use caolo_sim::storage::Storage;
 const PROGRAM: &str = r#"{
     "nodes": {
         "0": {
-            "instruction": "ScalarInt",
-            "scalar": {
-                "Integer": 4
-            }
+            "node": {
+                "ScalarInt": {
+                    "value": 42
+                }
+            },
+            "children": [
+                1
+            ]
         },
         "1": {
-            "instruction": "ScalarInt",
-            "scalar": {
-                "Integer": 5
+            "node": {
+                "Call": {
+                    "function": "log_scalar"
+                }
             }
         },
-        "2": {
-            "instruction": "Add",
-            "inputs": [0, 1]
-        },
-        "3": {
-            "instruction": "Call",
-            "string": "log_scalar",
-            "inputs": [2]
+        "99": {
+            "node": {
+                "Start": null
+            },
+            "children": [
+                0
+            ]
         }
     }
 }"#;

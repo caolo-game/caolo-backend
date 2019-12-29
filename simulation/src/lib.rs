@@ -111,8 +111,8 @@ pub fn init_inmemory_storage() -> storage::Storage {
 }
 
 #[allow(unused)]
-fn uncontested_pos(
-    positions_table: &dyn tables::PositionTable,
+fn uncontested_pos<Table: tables::PositionTable>(
+    positions_table: &Table,
     rng: &mut rand::rngs::ThreadRng,
 ) -> caolo_api::point::Point {
     use caolo_api::point::{Circle, Point};

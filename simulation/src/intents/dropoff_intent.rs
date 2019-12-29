@@ -66,11 +66,11 @@ pub fn check_dropoff_intent(
         None => return OperationResult::InvalidInput,
     };
 
-    if !storage
+    if storage
         .entity_table::<model::CarryComponent>()
         .get_by_id(&id)
-        .map(|carry| carry.carry != 0)
-        .unwrap_or(false)
+        .map(|carry| carry.carry == 0)
+        .unwrap_or(true)
     {
         return OperationResult::Empty;
     }

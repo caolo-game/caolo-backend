@@ -12,8 +12,8 @@ pub fn build_structure(
 }
 
 fn assemble_spawn(
-    id: crate::model::EntityId,
-    structure: &crate::model::Structure,
+    id: model::EntityId,
+    structure: &model::Structure,
     storage: &Storage,
 ) -> Option<caolo_api::structures::Structure> {
     debug!("Assembling spawn {:?} {:?}", id, structure);
@@ -21,6 +21,13 @@ fn assemble_spawn(
         .entity_table::<model::SpawnComponent>()
         .get_by_id(&id)
         .and_then(|spawn| {
+            let position = storage
+                .entity_table::<model::PositionComponent>()
+                .get_by_id(&id)
+                .or_else(|| {
+                    debug!("Structures should have position");
+                    None
+                })?;
             let hp = storage
                 .entity_table::<model::HpComponent>()
                 .get_by_id(&id)
@@ -33,13 +40,6 @@ fn assemble_spawn(
                 .get_by_id(&id)
                 .or_else(|| {
                     debug!("Spawn should have energy");
-                    None
-                })?;
-            let position = storage
-                .entity_table::<model::PositionComponent>()
-                .get_by_id(&id)
-                .or_else(|| {
-                    debug!("Structures should have position");
                     None
                 })?;
             let owner_id = storage.entity_table::<model::OwnedEntity>().get_by_id(&id);

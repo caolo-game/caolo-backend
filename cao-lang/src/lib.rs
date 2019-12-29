@@ -77,16 +77,16 @@ pub enum ExecutionError {
 
 /// Metadata about a node in the program.
 #[derive(Clone, Serialize, Deserialize, Default)]
-pub struct NodeDescription {
-    pub name: &'static str,
-    pub desc: &'static str,
+pub struct NodeDescription<'a> {
+    pub name: &'a str,
+    pub desc: &'a str,
     /// Human readable descriptions of the output
-    pub output: &'static str,
+    pub output: &'a str,
     /// Human readable descriptions of inputs
-    pub inputs: Vec<&'static str>,
+    pub inputs: Vec<&'a str>,
 }
 
-impl std::fmt::Debug for NodeDescription {
+impl<'a> std::fmt::Debug for NodeDescription<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,

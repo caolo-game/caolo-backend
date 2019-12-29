@@ -61,7 +61,7 @@ pub fn log_scalar(
 
 /// Holds data about a function
 pub struct FunctionRow {
-    pub desc: NodeDescription,
+    pub desc: NodeDescription<'static>,
     pub fo: FunctionObject<ScriptExecutionData>,
 }
 

@@ -81,7 +81,7 @@ impl TryFrom<u8> for Instruction {
     }
 }
 
-pub fn get_instruction_descriptions() -> Vec<NodeDescription> {
+pub fn get_instruction_descriptions() -> Vec<NodeDescription<'static>> {
     vec![
         make_node_desc!(
             Instruction::Add,

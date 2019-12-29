@@ -111,7 +111,7 @@ where
         true
     }
 
-    fn split(&mut self) {
+    fn split(&mut self) -> &mut Vec<Self> {
         assert!(self.children.is_none(), "splitting node more than once!");
 
         let radius = (self.radius / 2 + 1) as i32;
@@ -131,6 +131,7 @@ where
         );
         children.sort_by_key(|c| self.child_index(&c.median));
         self.children = Some(children);
+        self.children.as_mut().unwrap()
     }
 
     fn child_index(&self, id: &Id) -> usize {
@@ -184,11 +185,16 @@ where
             self.data.push((id, row));
             return true;
         }
-        if self.children.is_none() {
-            self.split();
-        }
         let ind = self.child_index(&id);
-        self.children.as_mut().unwrap()[ind as usize].insert(id, row)
+        match self.children.as_mut() {
+            Some(children) => {
+                children[ind as usize].insert(id, row);
+            }
+            None => {
+                self.split()[ind as usize].insert(id, row);
+            }
+        }
+        true
     }
 
     fn delete(&mut self, id: &Id) -> Option<Row> {

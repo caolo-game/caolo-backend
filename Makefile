@@ -1,7 +1,14 @@
-.DEFAULT_GOAL := worker
+.DEFAULT_GOAL := start
+
+test:
+	cargo test
+	# TODO test webservice
 
 worker:
 	cargo run
+
+start:
+	docker-compose up
 
 startworker:
 	docker-compose up --scale web=0

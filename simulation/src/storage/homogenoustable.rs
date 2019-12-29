@@ -64,7 +64,12 @@ pub trait DynTable<Id: TableId> {
     fn delete_entity(&mut self, id: &Id);
 }
 
-impl<Id: TableId, Row: TableRow, T: tables::Table<Id = Id, Row = Row>> DynTable<Id> for T {
+impl<Id, Row, T> DynTable<Id> for T
+where
+    Id: TableId,
+    Row: TableRow,
+    T: tables::Table<Id = Id, Row = Row>,
+{
     fn delete_entity(&mut self, id: &Id) {
         self.delete(id);
     }
@@ -74,7 +79,7 @@ impl<Id: 'static + TableId> Debug for HomogenousTable<Id> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "HomogenousTable index: {}, type: {:?}",
+            "HomogenousTable index: {}, row type: {:?}",
             type_name::<Id>(),
             self.rowtype
         )

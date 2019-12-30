@@ -11,7 +11,8 @@ build:
     worker: dockerfile.worker
 
 release:
-  command: python manage.py db upgrade
+  command:
+    - python manage.py db upgrade
   image: web
 
 run:

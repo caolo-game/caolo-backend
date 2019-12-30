@@ -16,4 +16,4 @@ release:
   image: web
 
 run:
-  command: python app.py
+  web: python app.py

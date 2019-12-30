@@ -2,7 +2,6 @@ use super::*;
 use crate::{
     intents::{check_move_intent, Intent},
     model::{self, EntityId, Point},
-    prelude::*,
     profile,
     storage::Storage,
     systems::pathfinding,

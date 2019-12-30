@@ -1,5 +1,4 @@
 use crate::model::{self, EntityId};
-use crate::prelude::*;
 use crate::storage::Storage;
 use caolo_api::structures::Spawn;
 
@@ -25,21 +24,21 @@ fn assemble_spawn(
                 .entity_table::<model::PositionComponent>()
                 .get_by_id(&id)
                 .or_else(|| {
-                    debug!("Structures should have position");
+                    error!("Structures should have position");
                     None
                 })?;
             let hp = storage
                 .entity_table::<model::HpComponent>()
                 .get_by_id(&id)
                 .or_else(|| {
-                    debug!("Spawn should have hp");
+                    error!("Spawn should have hp");
                     None
                 })?;
             let energy = storage
                 .entity_table::<model::EnergyComponent>()
                 .get_by_id(&id)
                 .or_else(|| {
-                    debug!("Spawn should have energy");
+                    error!("Spawn should have energy");
                     None
                 })?;
             let owner_id = storage.entity_table::<model::OwnedEntity>().get_by_id(&id);

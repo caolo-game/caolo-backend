@@ -15,7 +15,7 @@ from flask_migrate import Migrate
 from .handler.script import script_bp
 from .handler.auth import auth_bp
 from .config import Config
-from .model import db
+from .model import db, login_manager
 
 app = Flask(__name__)
 
@@ -26,6 +26,7 @@ app.register_blueprint(auth_bp, urlprefix="/login")
 
 db.init_app(app)
 migrate = Migrate(app, db)
+login_manager.init_app(app)
 
 cors = CORS(app, resources={r"/*": {"origins": "*"}})
 

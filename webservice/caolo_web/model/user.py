@@ -14,10 +14,10 @@ class OAuth(OAuthConsumerMixin, db.Model):
     user = db.relationship(User)
 
 
-LOGIN_MANAGER = LoginManager()
-LOGIN_MANAGER.login_view = "google.login"
+login_manager = LoginManager()
+login_manager.login_view = "google.login"
 
 
-@LOGIN_MANAGER.user_loader
+@login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))

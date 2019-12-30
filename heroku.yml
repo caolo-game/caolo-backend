@@ -3,3 +3,7 @@ build:
     web: heroku/dockerfile.web
     worker: heroku/dockerfile.worker
 
+release:
+  command:
+    - python manage.py db upgrade
+  image: web

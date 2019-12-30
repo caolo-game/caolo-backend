@@ -36,3 +36,4 @@ flask-login
 psycopg2
 Flask-Migrate
 Flask-Script
+sqlalchemy-utils

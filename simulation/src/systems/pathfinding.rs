@@ -1,5 +1,5 @@
 use crate::model::{TerrainComponent, TileTerrainType};
-use crate::tables::{PositionTable, Table};
+use crate::tables::PositionTable;
 use caolo_api::point::{Circle, Point};
 
 use std::collections::{BTreeMap, BTreeSet};

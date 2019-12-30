@@ -26,6 +26,23 @@ where
     pub fn iter<'a>(&'a self) -> impl TableIterator<Id, &'a Row> + 'a {
         self.data.iter().map(|(id, row)| (*id, row))
     }
+
+    pub fn get_by_id<'a>(&'a self, id: &Id) -> Option<&'a Row> {
+        self.data.get(id)
+    }
+
+    pub fn get_by_ids<'a>(&'a self, ids: &[Id]) -> Vec<(Id, &'a Row)> {
+        self.data
+            .iter()
+            .filter(move |(i, _)| ids.iter().any(|x| *i == x))
+            .map(move |(i, v)| (*i, v))
+            .collect()
+    }
+
+    pub fn insert_or_update(&mut self, id: Id, row: Row) -> bool {
+        self.data.insert(id, row);
+        true
+    }
 }
 
 impl<Id, Row> Table for BTreeTable<Id, Row>
@@ -35,23 +52,6 @@ where
 {
     type Id = Id;
     type Row = Row;
-
-    fn get_by_id<'a>(&'a self, id: &Id) -> Option<&'a Row> {
-        self.data.get(id)
-    }
-
-    fn get_by_ids<'a>(&'a self, ids: &[Id]) -> Vec<(Id, &'a Row)> {
-        self.data
-            .iter()
-            .filter(move |(i, _)| ids.iter().any(|x| *i == x))
-            .map(move |(i, v)| (*i, v))
-            .collect()
-    }
-
-    fn insert(&mut self, id: Id, row: Row) -> bool {
-        self.data.insert(id, row);
-        true
-    }
 
     fn delete(&mut self, id: &Id) -> Option<Row> {
         self.data.remove(id)
@@ -73,7 +73,7 @@ impl UserDataTable for BTreeTable<UserId, UserData> {
             .set_version(Version::Random)
             .build();
         let id = UserId(id);
-        self.insert(id, row);
+        self.insert_or_update(id, row);
         id
     }
 }

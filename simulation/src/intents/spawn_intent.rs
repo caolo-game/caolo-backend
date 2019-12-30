@@ -1,6 +1,5 @@
 use super::*;
 use crate::model;
-use crate::prelude::*;
 use caolo_api::bots::Bot;
 use caolo_api::OperationResult;
 
@@ -36,14 +35,16 @@ impl SpawnIntent {
         let bot_id = storage.insert_entity();
         storage
             .entity_table_mut::<model::SpawnBotComponent>()
-            .insert(bot_id, model::SpawnBotComponent { bot: model::Bot {} });
+            .insert_or_update(bot_id, model::SpawnBotComponent { bot: model::Bot {} });
         if let Some(owner_id) = self.bot.owner_id {
-            storage.entity_table_mut::<model::OwnedEntity>().insert(
-                bot_id,
-                model::OwnedEntity {
-                    owner_id: model::UserId(owner_id),
-                },
-            );
+            storage
+                .entity_table_mut::<model::OwnedEntity>()
+                .insert_or_update(
+                    bot_id,
+                    model::OwnedEntity {
+                        owner_id: model::UserId(owner_id),
+                    },
+                );
         }
 
         spawn.time_to_spawn = 5;
@@ -51,7 +52,7 @@ impl SpawnIntent {
 
         storage
             .entity_table_mut::<model::SpawnComponent>()
-            .insert(self.id, spawn);
+            .insert_or_update(self.id, spawn);
 
         Ok(())
     }

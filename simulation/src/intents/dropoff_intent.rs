@@ -1,6 +1,5 @@
 use super::*;
 use crate::model::{self, EntityId, ResourceType};
-use crate::prelude::*;
 use caolo_api::OperationResult;
 
 pub const DROPOFF_RANGE: u64 = 1;
@@ -36,10 +35,10 @@ impl DropoffIntent {
 
         storage
             .entity_table_mut::<model::CarryComponent>()
-            .insert(self.bot, carry_component);
+            .insert_or_update(self.bot, carry_component);
         storage
             .entity_table_mut::<model::EnergyComponent>()
-            .insert(self.structure, store_component);
+            .insert_or_update(self.structure, store_component);
 
         Ok(())
     }

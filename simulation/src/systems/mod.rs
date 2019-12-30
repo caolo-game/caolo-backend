@@ -1,7 +1,7 @@
 pub mod execution;
 pub mod pathfinding;
 
-use crate::model::{self};
+use crate::model::{self, Circle};
 use crate::profile;
 use crate::storage::Storage;
 use crate::tables::{JoinIterator, Table};
@@ -30,7 +30,7 @@ pub fn update_energy(storage: &mut Storage) {
         .collect::<Vec<_>>();
     let energy = storage.entity_table_mut::<model::EnergyComponent>();
     for (id, e) in changeset.into_iter() {
-        energy.insert(id, e);
+        energy.insert_or_update(id, e);
     }
 }
 
@@ -56,7 +56,7 @@ pub fn update_spawns(storage: &mut Storage) {
     for (id, s, e) in changeset.into_iter() {
         storage
             .entity_table_mut::<model::SpawnComponent>()
-            .insert(id, s);
+            .insert_or_update(id, s);
         if let Some(e) = e {
             spawn_bot(id, e, storage);
         }
@@ -77,36 +77,42 @@ pub fn spawn_bot(spawn_id: model::EntityId, entity_id: model::EntityId, storage:
         .expect("Spawning bot was not found");
     storage
         .entity_table_mut::<model::Bot>()
-        .insert(entity_id, bot.bot);
-    storage.entity_table_mut::<model::HpComponent>().insert(
-        entity_id,
-        crate::model::HpComponent {
-            hp: 100,
-            hp_max: 100,
-        },
-    );
-    storage.entity_table_mut::<model::DecayComponent>().insert(
-        entity_id,
-        crate::model::DecayComponent {
-            eta: 20,
-            t: 100,
-            hp_amount: 100,
-        },
-    );
-    storage.entity_table_mut::<model::CarryComponent>().insert(
-        entity_id,
-        crate::model::CarryComponent {
-            carry: 0,
-            carry_max: 50,
-        },
-    );
+        .insert_or_update(entity_id, bot.bot);
+    storage
+        .entity_table_mut::<model::HpComponent>()
+        .insert_or_update(
+            entity_id,
+            crate::model::HpComponent {
+                hp: 100,
+                hp_max: 100,
+            },
+        );
+    storage
+        .entity_table_mut::<model::DecayComponent>()
+        .insert_or_update(
+            entity_id,
+            crate::model::DecayComponent {
+                eta: 20,
+                t: 100,
+                hp_amount: 100,
+            },
+        );
+    storage
+        .entity_table_mut::<model::CarryComponent>()
+        .insert_or_update(
+            entity_id,
+            crate::model::CarryComponent {
+                carry: 0,
+                carry_max: 50,
+            },
+        );
 
     let positions = storage.entity_table_mut::<model::PositionComponent>();
     let pos = positions
         .get_by_id(&spawn_id)
         .cloned()
         .expect("Spawn should have position");
-    positions.insert(entity_id, pos);
+    positions.insert_or_update(entity_id, pos);
 
     debug!(
         "spawn_bot spawn_id: {:?} entity_id: {:?} - done",
@@ -139,10 +145,10 @@ pub fn update_decay(storage: &mut Storage) {
         } else {
             storage
                 .entity_table_mut::<model::HpComponent>()
-                .insert(id, hp);
+                .insert_or_update(id, hp);
             storage
                 .entity_table_mut::<model::DecayComponent>()
-                .insert(id, d);
+                .insert_or_update(id, d);
         }
     }
     debug!("update decay system done");
@@ -187,10 +193,10 @@ pub fn update_minerals(storage: &mut Storage) {
         );
         storage
             .entity_table_mut::<model::PositionComponent>()
-            .insert(id, pos);
+            .insert_or_update(id, pos);
         storage
             .entity_table_mut::<model::EnergyComponent>()
-            .insert(id, en);
+            .insert_or_update(id, en);
     }
 
     debug!("update minerals system done");
@@ -207,7 +213,11 @@ fn random_uncontested_pos_in_range<T: crate::tables::PositionTable>(
         pos.x = rng.gen_range(from, to);
         pos.y = rng.gen_range(from, to);
 
-        if positions_table.get_by_id(&pos).is_none() {
+        let circle = Circle {
+            center: pos,
+            radius: 1,
+        };
+        if positions_table.count_entities_in_range(&circle) == 0 {
             break;
         }
     }

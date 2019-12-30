@@ -43,8 +43,8 @@ where
 
 impl<Id, Row> QuadtreeTable<Id, Row>
 where
-    Id: SpatialKey2d,
-    Row: TableRow,
+    Id: SpatialKey2d + Sync,
+    Row: TableRow + Send + Sync,
 {
     pub fn new(median: Id, radius: u32) -> Self {
         Self {
@@ -103,6 +103,50 @@ where
         mx - rad <= x && my - rad <= y && x <= mx + rad && y <= my + rad
     }
 
+    pub fn get_by_id<'a>(&'a self, id: &Id) -> Option<&'a Row> {
+        if let Some((_, row)) = self.data.iter().find(|(p, _)| p == id) {
+            return Some(row);
+        }
+        if let Some(ref children) = self.children {
+            let ind = self.child_index(id);
+            match children[ind].get_by_id(id) {
+                row @ Some(_) => return row,
+                None => {}
+            }
+        }
+        None
+    }
+
+    pub fn get_by_ids<'a>(&'a self, ids: &[Id]) -> Vec<(Id, &'a Row)> {
+        ids.into_par_iter()
+            .filter_map(|id| self.get_by_id(id).map(|row| (*id, row)))
+            .collect()
+    }
+
+    pub fn insert(&mut self, id: Id, row: Row) -> bool {
+        if !Self::test_aabb_aabb(&id, 0, &self.median, self.radius) {
+            debug!(
+                "Insertion out of bounds med: {:?} rad: {:?} | point: {:?}",
+                self.median, self.radius, id
+            );
+            return false;
+        }
+        if self.data.len() < self.data.capacity() {
+            self.data.push((id, row));
+            return true;
+        }
+        let ind = self.child_index(&id);
+        match self.children.as_mut() {
+            Some(children) => {
+                children[ind as usize].insert(id, row);
+            }
+            None => {
+                self.split()[ind as usize].insert(id, row);
+            }
+        }
+        true
+    }
+
     fn test_aabb_aabb(a: &Id, radiusa: u32, b: &Id, radiusb: u32) -> bool {
         let rad = radiusa as i64 + radiusb as i64;
         if a.axis_dist(b, 0) as i64 > rad || a.axis_dist(b, 1) as i64 > rad {
@@ -152,50 +196,6 @@ where
 {
     type Id = Id;
     type Row = Row;
-
-    fn get_by_id<'a>(&'a self, id: &Id) -> Option<&'a Row> {
-        if let Some((_, row)) = self.data.iter().find(|(p, _)| p == id) {
-            return Some(row);
-        }
-        if let Some(ref children) = self.children {
-            let ind = self.child_index(id);
-            match children[ind].get_by_id(id) {
-                row @ Some(_) => return row,
-                None => {}
-            }
-        }
-        None
-    }
-
-    fn get_by_ids<'a>(&'a self, ids: &[Id]) -> Vec<(Id, &'a Row)> {
-        ids.into_par_iter()
-            .filter_map(|id| self.get_by_id(id).map(|row| (*id, row)))
-            .collect()
-    }
-
-    fn insert(&mut self, id: Id, row: Row) -> bool {
-        if !Self::test_aabb_aabb(&id, 0, &self.median, self.radius) {
-            debug!(
-                "Insertion out of bounds med: {:?} rad: {:?} | point: {:?}",
-                self.median, self.radius, id
-            );
-            return false;
-        }
-        if self.data.len() < self.data.capacity() {
-            self.data.push((id, row));
-            return true;
-        }
-        let ind = self.child_index(&id);
-        match self.children.as_mut() {
-            Some(children) => {
-                children[ind as usize].insert(id, row);
-            }
-            None => {
-                self.split()[ind as usize].insert(id, row);
-            }
-        }
-        true
-    }
 
     fn delete(&mut self, id: &Id) -> Option<Row> {
         if let Some((i, row)) = self

@@ -1,6 +1,5 @@
 use super::*;
 use crate::model::{self, EntityId};
-use crate::prelude::*;
 use caolo_api::OperationResult;
 
 const MINE_AMOUNT: u16 = 10; // TODO: get from bot body
@@ -50,10 +49,10 @@ impl MineIntent {
 
                 storage
                     .entity_table_mut::<model::CarryComponent>()
-                    .insert(self.bot, carry);
+                    .insert_or_update(self.bot, carry);
                 storage
                     .entity_table_mut::<model::EnergyComponent>()
-                    .insert(self.resource, energy);
+                    .insert_or_update(self.resource, energy);
                 debug!("Mine succeeded");
                 Ok(())
             }

@@ -33,8 +33,8 @@ mod tests {
         ];
 
         for i in 0..8 {
-            t1.insert(i, Row1(i.try_into().unwrap()));
-            t2.insert(i, Row2(i.try_into().unwrap()));
+            t1.insert_or_update(i, Row1(i.try_into().unwrap()));
+            t2.insert_or_update(i, Row2(i.try_into().unwrap()));
         }
 
         t2.delete(&0);
@@ -42,8 +42,8 @@ mod tests {
         t1.delete(&4);
 
         for (id, r1, r2) in expected.iter() {
-            t1.insert(*id, *r1);
-            t2.insert(*id, *r2);
+            t1.insert_or_update(*id, *r1);
+            t2.insert_or_update(*id, *r2);
         }
 
         let mut count = 0;

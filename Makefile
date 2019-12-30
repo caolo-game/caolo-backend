@@ -8,7 +8,7 @@ worker:
 	cargo run
 
 start:
-	docker-compose up
+	docker-compose up --build
 
 startworker:
 	docker-compose up --scale web=0

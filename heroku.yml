@@ -1,7 +1,7 @@
 build:
   docker:
-    web: heroku/dockerfile.web
-    worker: heroku/dockerfile.worker
+    web: dockerfile.web
+    worker: dockerfile.worker
 
 release:
   command:

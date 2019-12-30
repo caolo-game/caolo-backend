@@ -13,7 +13,7 @@ start:
 startworker:
 	docker-compose up --scale web=0
 
-startservice:
+startweb:
 	docker-compose up --scale worker=0
 
 pushworker:

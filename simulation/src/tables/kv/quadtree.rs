@@ -1,5 +1,5 @@
 //! Quadtree based tables to query two dimensional data
-//! 
+//!
 use super::*;
 use crate::model::{components::EntityComponent, Point};
 use crate::storage::TableId;
@@ -17,12 +17,16 @@ pub trait SpatialKey2d: TableId + Add<Output = Self> {
     /// Distance between two keys
     fn dist(&self, other: &Self) -> u32;
 
-    /// Distance among given axis
+    /// Distance among given axis. Used for separating axis tests to reduce query times when only
+    /// one axis is considered..
     fn axis_dist(&self, other: &Self, axis: u8) -> u32 {
         (self.get_axis(axis) - other.get_axis(axis)).abs() as u32
     }
 }
 
+/// 2D spatial storage.
+/// Keys are not unique! If you're unsure wether a key appears multiple times use range querying
+/// methods.
 #[derive(Default, Debug)]
 pub struct QuadtreeTable<Id, Row>
 where
@@ -32,7 +36,7 @@ where
     median: Id,
     radius: u32,
 
-    data: Box<ArrayVec<[(Id, Row); 16]>>,
+    data: ArrayVec<[(Id, Row); 8]>,
 
     children: Option<Vec<Self>>,
 }
@@ -47,7 +51,7 @@ where
             median,
             radius,
 
-            data: Box::new(ArrayVec::new()),
+            data: ArrayVec::new(),
             children: None,
         }
     }
@@ -74,7 +78,7 @@ where
         }
     }
 
-    /// Return the bounds of this node as an AABB
+    /// Return the bounds of this node as an AABB (min, max).
     pub fn bounds(&self) -> (Id, Id) {
         let radius = self.radius as i32;
         let x = self.median.get_axis(0);
@@ -100,15 +104,14 @@ where
     }
 
     fn test_aabb_aabb(a: &Id, radiusa: u32, b: &Id, radiusb: u32) -> bool {
-        for i in 0..2 {
-            if a.axis_dist(b, i) as i64 > (radiusa as i64 + radiusb as i64) {
-                return false;
-            }
+        let rad = radiusa as i64 + radiusb as i64;
+        if a.axis_dist(b, 0) as i64 > rad || a.axis_dist(b, 1) as i64 > rad {
+            return false;
         }
         true
     }
 
-    fn split(&mut self) {
+    fn split(&mut self) -> &mut Vec<Self> {
         assert!(self.children.is_none(), "splitting node more than once!");
 
         let radius = (self.radius / 2 + 1) as i32;
@@ -128,6 +131,7 @@ where
         );
         children.sort_by_key(|c| self.child_index(&c.median));
         self.children = Some(children);
+        self.children.as_mut().unwrap()
     }
 
     fn child_index(&self, id: &Id) -> usize {
@@ -155,8 +159,9 @@ where
         }
         if let Some(ref children) = self.children {
             let ind = self.child_index(id);
-            if let Some(row) = children[ind].get_by_id(id) {
-                return Some(row);
+            match children[ind].get_by_id(id) {
+                row @ Some(_) => return row,
+                None => {}
             }
         }
         None
@@ -170,8 +175,8 @@ where
 
     fn insert(&mut self, id: Id, row: Row) -> bool {
         if !Self::test_aabb_aabb(&id, 0, &self.median, self.radius) {
-            println!(
-                "med: {:?} rad: {:?} | point: {:?}",
+            debug!(
+                "Insertion out of bounds med: {:?} rad: {:?} | point: {:?}",
                 self.median, self.radius, id
             );
             return false;
@@ -180,11 +185,16 @@ where
             self.data.push((id, row));
             return true;
         }
-        if self.children.is_none() {
-            self.split();
-        }
         let ind = self.child_index(&id);
-        self.children.as_mut().unwrap()[ind as usize].insert(id, row)
+        match self.children.as_mut() {
+            Some(children) => {
+                children[ind as usize].insert(id, row);
+            }
+            None => {
+                self.split()[ind as usize].insert(id, row);
+            }
+        }
+        true
     }
 
     fn delete(&mut self, id: &Id) -> Option<Row> {
@@ -199,12 +209,9 @@ where
             return Some(row);
         }
         let ind = self.child_index(id);
-        if let Some(children) = self.children.as_mut() {
-            if let Some(row) = children[ind].delete(id) {
-                return Some(row);
-            }
-        }
-        None
+        self.children
+            .as_mut()
+            .and_then(|children| children[ind].delete(id))
     }
 }
 

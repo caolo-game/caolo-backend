@@ -12,6 +12,11 @@ services:
     depends_on:
       - redis
       - postgres
+
+    entrypoint:
+      - python
+      - app.py
+
   worker:
     build:
       context: .

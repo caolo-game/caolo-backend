@@ -4,6 +4,7 @@ setup:
       as: DATABASE
     - plan: heroku-redis
       as: REDIS
+
 build:
   docker:
     web: dockerfile.web
@@ -13,3 +14,7 @@ release:
   command:
     - python manage.py db upgrade
   image: web
+
+run:
+  command:
+    - python app.py

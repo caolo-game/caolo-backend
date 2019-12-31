@@ -1,0 +1,21 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches:
+    - master
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Build the Worker Docker image
+      run: make buildworker
+    - name: Build the Web Docker image
+      run: make buildweb
+    - name: Push the images to GitHub
+      run: make pushall

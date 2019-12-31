@@ -4,9 +4,6 @@ test:
 	cargo test
 	# TODO test webservice
 
-worker:
-	cargo run
-
 start:
 	docker-compose up --build
 
@@ -17,14 +14,14 @@ startweb:
 	docker-compose up --scale worker=0
 
 buildworker:
-	docker build -t docker.pkg.github.com/caolo-game/caolo-backend/caolo-worker:latest -f dockerfile.worker .
+	docker build -t frenetiq/caolo-worker:latest -f dockerfile.worker .
 
 pushworker: buildworker
-	docker push docker.pkg.github.com/caolo-game/caolo-backend/caolo-worker:latest
+	docker push frenetiq/caolo-worker:latest
 
 buildweb:
-	docker build -t docker.pkg.github.com/caolo-game/caolo-backend/caolo-web:latest -f dockerfile.web .
+	docker build -t frenetiq/caolo-web:latest -f dockerfile.web .
 pushweb: buildweb
-	docker push docker.pkg.github.com/caolo-game/caolo-backend/caolo-web:latest
+	docker push frenetiq/caolo-web:latest
 
 pushall: pushworker pushweb

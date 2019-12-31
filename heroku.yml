@@ -7,8 +7,8 @@ setup:
 
 build:
   docker:
-    web: dockerfile.web
-    worker: dockerfile.worker
+    web: heroku/dockerfile.web
+    worker: heroku/dockerfile.worker
 
 release:
   command:

@@ -11,7 +11,7 @@ from ..model import OAuth, User, db
 from ..config import Config
 
 auth_bp = make_google_blueprint(
-    scope=["profile", "email"],
+    scope=["profile", "email", "openid"],
     redirect_url=Config.GOOGLE_OAUTH_LOGIN_REDIRECT)
 
 

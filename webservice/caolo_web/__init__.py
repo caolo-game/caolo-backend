@@ -12,6 +12,8 @@ from websocket import create_connection
 import redis
 from flask_migrate import Migrate
 from werkzeug.middleware.proxy_fix import ProxyFix
+from flask_dance.contrib.google import google
+from flask_login import current_user, login_required
 
 from .handler.script import script_bp
 from .handler.auth import auth_bp
@@ -22,8 +24,8 @@ app = Flask(__name__)
 
 app.config.from_object(Config)
 
-app.register_blueprint(script_bp, urlprefix="/script")
-app.register_blueprint(auth_bp, urlprefix="/login")
+app.register_blueprint(script_bp)
+app.register_blueprint(auth_bp)
 
 db.init_app(app)
 migrate = Migrate(app, db)
@@ -32,9 +34,16 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 cors = CORS(app, resources={r"/*": {"origins": "*"}})
 
+
 @app.route("/")
+@login_required
 def index():
-    return redirect(url_for("google.login"))
+    log.msg(f"index, current_user: {current_user}")
+
+    if Config.ON_LOGIN_REDIRECT:
+        return redirect(Config.ON_LOGIN_REDIRECT)
+
+    return f"Hello {current_user.email.split('@')[0]}"
 
 
 def get_redis_client():

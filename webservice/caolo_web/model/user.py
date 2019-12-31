@@ -1,10 +1,12 @@
 from flask_login import LoginManager, UserMixin
 from flask_dance.consumer.storage.sqla import OAuthConsumerMixin
+from sqlalchemy.dialects.postgresql import UUID
 from . import db
 
 
 class User(UserMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(
+        UUID(), primary_key=True, server_default=db.text("gen_random_uuid()"))
     email = db.Column(db.String(256), unique=True)
 
 
@@ -20,4 +22,4 @@ login_manager.login_view = "google.login"
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    return User.query.get(user_id)

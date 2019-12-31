@@ -9,6 +9,8 @@ from twisted.python import log
 from ..model.program import Program
 from ..model import db
 
+from ..service import get_redis_client
+
 script_bp = Blueprint("script", __name__, url_prefix="/script")
 
 

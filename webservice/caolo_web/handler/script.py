@@ -3,9 +3,10 @@ import os, sys, json
 import caolo_web_lib as cw
 
 from flask import Blueprint, request, jsonify, abort
+from flask_login import login_required
 from twisted.python import log
 
-script_bp = Blueprint("script", __name__)
+script_bp = Blueprint("script", __name__, url_prefix="/script")
 
 
 @script_bp.route('/compile', methods=["POST"])
@@ -20,6 +21,7 @@ def compile_script():
 
 
 @script_bp.route('/commit', methods=["POST"])
+@login_required
 def upload_script():
     content = request.get_data(as_text=True)
     try:

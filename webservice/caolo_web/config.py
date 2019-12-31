@@ -11,3 +11,4 @@ class Config(object):
     GOOGLE_OAUTH_LOGIN_REDIRECT = os.getenv("GOOGLE_OAUTH_LOGIN_REDIRECT")
 
     PREFERRED_URL_SCHEME = os.getenv("PREFERRED_URL_SCHEME", "http")
+    ON_LOGIN_REDIRECT = os.getenv("ON_LOGIN_REDIRECT")

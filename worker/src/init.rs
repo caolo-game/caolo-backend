@@ -1,6 +1,5 @@
 use caolo_api::{point::Point, Script, ScriptId};
 use caolo_sim::model;
-use caolo_sim::prelude::*;
 use caolo_sim::storage::Storage;
 
 const PROGRAM: &str = r#"{
@@ -40,7 +39,7 @@ pub fn init_storage(n_fake_users: usize) -> Storage {
     let script_id = model::ScriptId(script_id);
     storage
         .scripts_table_mut::<model::ScriptComponent>()
-        .insert(
+        .insert_or_update(
             script_id,
             model::ScriptComponent(Script {
                 compiled: None,
@@ -52,16 +51,16 @@ pub fn init_storage(n_fake_users: usize) -> Storage {
         let id = storage.insert_entity();
         storage
             .entity_table_mut::<model::EntityScript>()
-            .insert(id, model::EntityScript { script_id });
+            .insert_or_update(id, model::EntityScript { script_id });
         storage
             .entity_table_mut::<model::Bot>()
-            .insert(id, model::Bot {});
+            .insert_or_update(id, model::Bot {});
         storage
             .entity_table_mut::<model::PositionComponent>()
-            .insert(id, model::PositionComponent(Point::new(0, 0)));
+            .insert_or_update(id, model::PositionComponent(Point::new(0, 0)));
         storage
             .entity_table_mut::<model::CarryComponent>()
-            .insert(id, Default::default());
+            .insert_or_update(id, Default::default());
     }
     storage
 }

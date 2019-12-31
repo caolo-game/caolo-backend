@@ -1,5 +1,19 @@
+setup:
+  addons:
+    - plan: heroku-postgresql
+      as: DATABASE
+    - plan: heroku-redis
+      as: REDIS
+
 build:
   docker:
-    web: dockerfile.web
-    worker: dockerfile.worker
+    web: heroku/dockerfile.web
+    worker: heroku/dockerfile.worker
 
+release:
+  command:
+    - python manage.py db upgrade
+  image: web
+
+run:
+  web: python app.py

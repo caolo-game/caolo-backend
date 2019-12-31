@@ -14,7 +14,6 @@ mod intents;
 mod systems;
 mod utils;
 
-use prelude::*;
 use systems::execute_world_update;
 use systems::execution::{execute_intents, execute_scripts};
 
@@ -62,7 +61,7 @@ fn compile_scripts(storage: &mut storage::Storage) {
     for (id, script) in changeset.into_iter() {
         storage
             .scripts_table_mut::<ScriptComponent>()
-            .insert(id, ScriptComponent(script));
+            .insert_or_update(id, ScriptComponent(script));
     }
 
     info!("Compiling scripts done");

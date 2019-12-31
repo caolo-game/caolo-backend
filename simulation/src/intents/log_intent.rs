@@ -3,7 +3,6 @@ use crate::model::{
     self,
     indices::{EntityId, EntityTime},
 };
-use crate::prelude::*;
 
 #[derive(Debug, Clone)]
 pub struct LogIntent {
@@ -25,7 +24,7 @@ impl LogIntent {
                 payload: vec![self.payload.clone()],
             },
         };
-        table.insert(id, entry);
+        table.insert_or_update(id, entry);
 
         Ok(())
     }

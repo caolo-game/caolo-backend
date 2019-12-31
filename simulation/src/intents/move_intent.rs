@@ -1,6 +1,5 @@
 use super::*;
 use crate::model::{self, EntityComponent, PositionComponent};
-use crate::prelude::*;
 use caolo_api::OperationResult;
 
 #[derive(Debug, Clone)]
@@ -34,7 +33,7 @@ impl MoveIntent {
         }
 
         let table = storage.entity_table_mut::<PositionComponent>();
-        table.insert(self.bot, PositionComponent(self.position));
+        table.insert_or_update(self.bot, PositionComponent(self.position));
 
         debug!("Move successful");
 
@@ -98,11 +97,11 @@ mod tests {
 
         let id = storage.insert_entity();
 
-        storage.entity_table_mut::<Bot>().insert(id, Bot {});
+        storage.entity_table_mut::<Bot>().insert_or_update(id, Bot {});
 
         storage
             .entity_table_mut::<PositionComponent>()
-            .insert(id, PositionComponent(Point::new(12, 13)));
+            .insert_or_update(id, PositionComponent(Point::new(12, 13)));
 
         let intent = MoveIntent {
             bot: EntityId(69),

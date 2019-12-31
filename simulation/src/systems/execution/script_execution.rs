@@ -1,5 +1,4 @@
 use crate::model::{self, EntityId, ScriptId};
-use crate::prelude::*;
 use crate::{intents, profile, storage::Storage};
 use cao_lang::prelude::*;
 use std::sync::{Arc, Mutex};

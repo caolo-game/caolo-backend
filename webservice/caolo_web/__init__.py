@@ -1,26 +1,40 @@
 import os, sys, json
 
-import caolo_web_lib as cw
-
-from flask import Flask, request, jsonify, abort
+from flask import Flask, request, jsonify, abort, redirect, url_for
 from flask_cors import CORS
-
 from twisted.python import log
 from twisted.internet import reactor
 from twisted.web.server import Site
 from twisted.web.wsgi import WSGIResource
-
 from autobahn.twisted.websocket import WebSocketServerFactory, WebSocketServerProtocol
 from autobahn.twisted.resource import WebSocketResource, WSGIRootResource
-
 from websocket import create_connection
-
 import redis
+from flask_migrate import Migrate
+from werkzeug.middleware.proxy_fix import ProxyFix
+
+from .handler.script import script_bp
+from .handler.auth import auth_bp
+from .config import Config
+from .model import db, login_manager
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'asdkasldaskldajdjlaksj')
+
+app.config.from_object(Config)
+
+app.register_blueprint(script_bp, urlprefix="/script")
+app.register_blueprint(auth_bp, urlprefix="/login")
+
+db.init_app(app)
+migrate = Migrate(app, db)
+login_manager.init_app(app)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 cors = CORS(app, resources={r"/*": {"origins": "*"}})
+
+@app.route("/")
+def index():
+    return redirect(url_for("google.login"))
 
 
 def get_redis_client():
@@ -28,43 +42,10 @@ def get_redis_client():
         os.getenv("REDIS_URL", "redis://localhost:6379/0"))
 
 
-@app.route('/script/compile', methods=["POST"])
-def compile_script():
-    content = request.get_data(as_text=True)
-    try:
-        _program = cw.compile(content)
-        return "successful compilation"
-    except ValueError as e:
-        log.err()
-        abort(400, e)
-
-
-@app.route('/script/commit', methods=["POST"])
-def upload_script():
-    content = request.get_data(as_text=True)
-    try:
-        program = cw.compile(content)
-    except ValueError as e:
-        log.err()
-        abort(400, e)
-    redis_conn = get_redis_client()
-    program['script'] = request.json
-    content = json.dumps(program)
-    redis_conn.set("PROGRAM", content)
-    return "Ok"
-
-
-@app.route('/script/schema', methods=["GET"])
-def get_schema():
-    schema = cw.get_basic_schema()
-    redis_conn = get_redis_client()
-    payload = redis_conn.get("SCHEMA")
-    if payload:
-        schema.extend(json.loads(payload))
-    return jsonify(schema)
-
-
 class SimulationProtocol(WebSocketServerProtocol):
+    """
+    Stream the simulation to the clients
+    """
     done = True
     redis_conn = None
 

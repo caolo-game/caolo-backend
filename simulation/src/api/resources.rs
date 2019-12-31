@@ -1,6 +1,5 @@
 use super::*;
 use crate::model::{self, EntityId, Resource, ResourceComponent};
-use crate::prelude::*;
 use crate::profile;
 use crate::storage::Storage;
 use caolo_api::resources::Mineral;

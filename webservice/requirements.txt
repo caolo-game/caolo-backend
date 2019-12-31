@@ -29,3 +29,11 @@ websocket-client==0.56.0
 Werkzeug==0.16.0
 zope.interface==4.7.1
 redis~=3.3
+Flask-Dance[sqla]~=3.0
+blinker
+flask-sqlalchemy
+flask-login
+psycopg2
+Flask-Migrate
+Flask-Script
+sqlalchemy-utils

@@ -26,12 +26,6 @@ pub trait Table {
     type Id: TableId;
     type Row: TableRow;
 
-    fn get_by_id<'a>(&'a self, id: &Self::Id) -> Option<&'a Self::Row>;
-    fn get_by_ids<'a>(&'a self, id: &[Self::Id]) -> Vec<(Self::Id, &'a Self::Row)>;
-
-    /// return wether the item was inserted successfully
-    fn insert(&mut self, id: Self::Id, row: Self::Row) -> bool;
-
     fn delete(&mut self, id: &Self::Id) -> Option<Self::Row>;
 }
 

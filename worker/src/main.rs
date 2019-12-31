@@ -121,13 +121,12 @@ fn update_program(storage: &mut Storage, client: &redis::Client) {
             debug!("Inserting new prgoram {:?}", program);
 
             use caolo_sim::model::{ScriptComponent, ScriptId};
-            use caolo_sim::prelude::*;
 
             let script_id = ScriptId::default(); // TODO read from users?
             let program = ScriptComponent(program);
             storage
                 .scripts_table_mut::<ScriptComponent>()
-                .insert(script_id, program);
+                .insert_or_update(script_id, program);
         })
         .unwrap_or(());
     debug!("Fetching new program done");

@@ -1,14 +1,14 @@
-## Build-Dependencies
+## Install Dependencies
 
-`pip install maturin`
-
-## App-Dependencies
-
-`pip install flask`
+`pip install -r requirements.txt`
 
 ## Building
 
 `maturin build`
+
+## (Optional) Install Dotenv
+
+`pip install python-dotenv`
 
 ## Running
 

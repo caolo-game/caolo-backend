@@ -1,8 +1,4 @@
-//! The public API of the game.
-//! Wraps the Engine functions in a more managable API
-//!
-//! (De)Serialization between WASM and the Engine is done via [MessagePack](https://msgpack.org/index.html)
-//! When using the API for writing bots this does not effect you.
+//! The public API of the game. Used in the communication layer between the simulation and clients.
 //!
 #[macro_use]
 extern crate serde_derive;

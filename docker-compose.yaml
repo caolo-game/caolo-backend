@@ -11,6 +11,12 @@ services:
       - "5000:5000"
     depends_on:
       - redis
+      - postgres
+
+    entrypoint:
+      - python
+      - app.py
+
   worker:
     build:
       context: .
@@ -18,7 +24,17 @@ services:
     env_file: .env
     depends_on:
       - redis
+      - postgres
+
   redis:
     image: redis:latest
     ports:
       - "6379:6379"
+
+  postgres:
+    image: postgres:11.1
+    environment:
+      POSTGRES_PASSWORD: almafa1
+      POSTGRES_USER: postgres
+    ports:
+      - "5432:5432"

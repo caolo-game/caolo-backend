@@ -35,7 +35,7 @@ pub fn console_log(
         ExecutionError::InvalidArgument
     })?;
 
-    let payload = format!("Console log EntityId[{:?}] : {}", entityid, message);
+    let payload = format!("{:?} says {}", entityid, message);
     debug!("{}", payload);
     vm.get_aux_mut()
         .intents_mut()
@@ -51,7 +51,7 @@ pub fn log_scalar(
 ) -> Result<usize, ExecutionError> {
     let entityid = vm.get_aux().entityid();
     let time = vm.get_aux().storage().time();
-    let payload = format!("Entity [{:?}] says {:?}", entityid, value);
+    let payload = format!("{:?} says {:?}", entityid, value);
     debug!("{}", payload);
     vm.get_aux_mut()
         .intents_mut()

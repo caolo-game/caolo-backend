@@ -4,3 +4,5 @@ target/
 *.pyd
 
 .vscode/
+
+*.sqlite3

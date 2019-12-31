@@ -76,8 +76,6 @@ def main():
 
     log.startLogging(sys.stdout)
 
-    log.msg(f"Loaded config: {Config.__dict__}")
-
     # create a Twisted Web resource for our WebSocket server
     wsFactory = WebSocketServerFactory(
         f"{WS_PROTOCOL}://{HOST}:{PORT}", externalPort=EXTERNAL_PORT)

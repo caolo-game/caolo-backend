@@ -1,7 +1,7 @@
-"""empty message
+"""Init
 
 Revision ID: 7a447ff002de
-Revises: 
+Revises:
 Create Date: 2019-12-31 19:01:42.561992
 
 """

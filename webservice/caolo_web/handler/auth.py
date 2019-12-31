@@ -49,4 +49,4 @@ def authorize(blueprint, token):
         login_user(user)
         log.msg("Successfully signed in.")
 
-    return True
+    return token

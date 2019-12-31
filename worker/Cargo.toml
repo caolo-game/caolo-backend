@@ -10,11 +10,10 @@ edition = "2018"
 caolo-sim = { path = "../simulation", features=["profile"] }
 caolo-api = { path = "../api" }
 log = "*"
-env_logger = "0.6"
+env_logger = "*"
 dotenv = "0.14"
 chrono = { version="0.4", features=["serde"] }
 serde_json = "*"
 serde = "*"
 serde_derive = "*"
-rand = "0.6"
 redis = "0.13"

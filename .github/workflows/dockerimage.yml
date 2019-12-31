@@ -1,4 +1,4 @@
-name: Docker Image CI
+name: Publish docker images
 
 on:
   push:
@@ -17,5 +17,5 @@ jobs:
       run: make buildworker
     - name: Build the Web Docker image
       run: make buildweb
-    - name: Push the images to GitHub
+    - name: Push the images
       run: make pushall

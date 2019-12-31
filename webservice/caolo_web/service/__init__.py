@@ -1,4 +1,5 @@
 import redis
+import os
 
 
 def get_redis_client():

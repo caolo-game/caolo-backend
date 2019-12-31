@@ -17,5 +17,8 @@ jobs:
       run: make buildworker
     - name: Build the Web Docker image
       run: make buildweb
+      
+    - name: Docker login
+      run: docker login -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
     - name: Push the images
       run: make pushall

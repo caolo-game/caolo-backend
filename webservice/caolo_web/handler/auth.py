@@ -8,8 +8,11 @@ from flask_dance.consumer.storage.sqla import SQLAlchemyStorage
 from sqlalchemy.orm.exc import NoResultFound
 
 from ..model import OAuth, User, db
+from ..config import Config
 
-auth_bp = make_google_blueprint(scope=["profile", "email"])
+auth_bp = make_google_blueprint(
+    scope=["profile", "email"],
+    redirect_url=Config.GOOGLE_OAUTH_LOGIN_REDIRECT)
 
 
 @oauth_authorized.connect_via(auth_bp)
@@ -26,11 +29,13 @@ def authorize(blueprint, token):
     info = resp.json()
     user_id = info["id"]
 
-    query = OAuth.query.filter_by(provider=blueprint.name, provider_user_id=user_id)
+    query = OAuth.query.filter_by(
+        provider=blueprint.name, provider_user_id=user_id)
     try:
         oauth = query.one()
     except NoResultFound:
-        oauth = OAuth(provider=blueprint.name, provider_user_id=user_id, token=token)
+        oauth = OAuth(
+            provider=blueprint.name, provider_user_id=user_id, token=token)
 
     if oauth.user:
         login_user(oauth.user)

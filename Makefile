@@ -16,12 +16,15 @@ startworker:
 startweb:
 	docker-compose up --scale worker=0
 
-pushworker:
+buildworker:
 	docker build -t docker.pkg.github.com/caolo-game/caolo-backend/caolo-worker:latest -f dockerfile.worker .
+
+pushworker: buildworker
 	docker push docker.pkg.github.com/caolo-game/caolo-backend/caolo-worker:latest
 
-pushweb:
+buildweb:
 	docker build -t docker.pkg.github.com/caolo-game/caolo-backend/caolo-web:latest -f dockerfile.web .
+pushweb: buildweb
 	docker push docker.pkg.github.com/caolo-game/caolo-backend/caolo-web:latest
 
 pushall: pushworker pushweb

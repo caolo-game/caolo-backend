@@ -6,6 +6,7 @@ on:
 jobs:
 
   build:
+    name: Build Docker images
 
     runs-on: ubuntu-latest
 

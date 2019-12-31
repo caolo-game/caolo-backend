@@ -16,12 +16,15 @@ startweb:
 buildworker:
 	docker build -t frenetiq/caolo-worker:latest -f dockerfile.worker .
 
-pushworker: buildworker
+pushworker:
 	docker push frenetiq/caolo-worker:latest
 
 buildweb:
 	docker build -t frenetiq/caolo-web:latest -f dockerfile.web .
-pushweb: buildweb
+
+pushweb:
 	docker push frenetiq/caolo-web:latest
+
+buildall: buildweb buildworker
 
 pushall: pushworker pushweb

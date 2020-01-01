@@ -39,7 +39,6 @@ def authorize(blueprint, token):
 
     if oauth.user:
         login_user(oauth.user)
-        log.msg("Successfully signed in.")
 
     else:
         user = User(email=info["email"])
@@ -47,6 +46,7 @@ def authorize(blueprint, token):
         db.session.add_all([user, oauth])
         db.session.commit()
         login_user(user)
-        log.msg("Successfully signed in.")
 
-    return token
+    log.msg(f"Successfully signed in. {user.id}")
+
+    return False

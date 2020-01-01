@@ -1,18 +1,11 @@
-FROM python:latest
+FROM python:latest AS build
 
 ENV PATH /root/.cargo/bin:$PATH
-
-EXPOSE 5000
 
 # install rust
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > install_rust.sh
 RUN sh ./install_rust.sh -y
-RUN rm ./install_rust.sh
 RUN cargo --version
-
-WORKDIR /web/webservice
-COPY ./webservice/requirements.txt ./requirements.txt
-RUN pip install -r requirements.txt
 
 WORKDIR /web
 
@@ -30,9 +23,21 @@ COPY ./cao-lang/ ./cao-lang/
 COPY ./webservice/ ./webservice/
 
 WORKDIR /web/webservice
-RUN pip install -r requirements.txt
+RUN pip install maturin
 RUN mkdir build
 RUN maturin build --release -o ./build/
 RUN ls -al build
-RUN pip --version
+
+# --------------
+
+FROM python:latest
+WORKDIR /web
+COPY --from=build /web/webservice/build/ ./build/
 RUN pip install build/caolo_web-0.1.0-cp38-cp38-manylinux1_x86_64.whl
+COPY ./webservice/requirements.txt ./requirements.txt
+RUN pip install -r requirements.txt
+
+# Copy the non-packaged scripts
+COPY ./webservice/*.py ./
+COPY ./webservice/migrations/ ./migrations
+COPY ./webservice/caolo_web/ ./caolo_web

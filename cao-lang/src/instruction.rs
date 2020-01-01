@@ -107,5 +107,15 @@ pub fn get_instruction_descriptions() -> Vec<NodeDescription<'static>> {
             [Scalar, Scalar],
             Scalar
         ),
+        make_node_desc!(Instruction::Start, "Start of the program", [], ()),
+        make_node_desc!(Instruction::Pass, "Do nothing", [], ()),
+        make_node_desc!(Instruction::ScalarInt, "Make an integer", [], Scalar),
+        make_node_desc!(Instruction::ScalarFloat, "Make a real number", [], Scalar),
+        make_node_desc!(
+            Instruction::JumpIfTrue,
+            "Jump to the input node if the last value is true else do nothing.",
+            [Scalar],
+            ()
+        ),
     ]
 }

@@ -3,8 +3,13 @@ import os, sys, json
 import caolo_web_lib as cw
 
 from flask import Blueprint, request, jsonify, abort
-from flask_login import login_required
+from flask_login import login_required, current_user
 from twisted.python import log
+
+from ..model.program import Program
+from ..model import db
+
+from ..service import get_redis_client
 
 script_bp = Blueprint("script", __name__, url_prefix="/script")
 
@@ -33,6 +38,12 @@ def upload_script():
     program['script'] = request.json
     content = json.dumps(program)
     redis_conn.set("PROGRAM", content)
+
+    program = Program(ast=request.text)
+
+    db.session.add(program)
+    db.session.commit()
+
     return "Ok"
 
 

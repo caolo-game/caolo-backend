@@ -139,7 +139,11 @@ macro_rules! make_node_desc {
         )
     };
 
-    (input [$($result:expr),*]) =>{
+    (input [$($result:expr),*]) => {
         vec![$($result),*]
+    };
+
+    (input) => {
+        vec![]
     };
 }

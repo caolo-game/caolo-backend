@@ -9,7 +9,6 @@ from twisted.web.wsgi import WSGIResource
 from autobahn.twisted.websocket import WebSocketServerFactory, WebSocketServerProtocol
 from autobahn.twisted.resource import WebSocketResource, WSGIRootResource
 from websocket import create_connection
-import redis
 from flask_migrate import Migrate
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_dance.contrib.google import google
@@ -19,13 +18,11 @@ from .handler.script import script_bp
 from .handler.auth import auth_bp
 from .config import Config
 from .model import db, login_manager
+from .service import get_redis_client
 
 app = Flask(__name__)
 
 app.config.from_object(Config)
-
-app.register_blueprint(script_bp)
-app.register_blueprint(auth_bp)
 
 db.init_app(app)
 migrate = Migrate(app, db)
@@ -33,6 +30,9 @@ login_manager.init_app(app)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 cors = CORS(app, resources={r"/*": {"origins": "*"}})
+
+app.register_blueprint(script_bp)
+app.register_blueprint(auth_bp)
 
 
 @app.route("/")
@@ -44,11 +44,6 @@ def index():
         return redirect(Config.ON_LOGIN_REDIRECT)
 
     return f"Hello {current_user.email.split('@')[0]}"
-
-
-def get_redis_client():
-    return redis.Redis.from_url(
-        os.getenv("REDIS_URL", "redis://localhost:6379/0"))
 
 
 class SimulationProtocol(WebSocketServerProtocol):

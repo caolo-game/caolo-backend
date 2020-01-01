@@ -6,13 +6,13 @@ from . import db
 
 class User(UserMixin, db.Model):
     id = db.Column(
-        UUID(), primary_key=True, server_default=db.text("gen_random_uuid()"))
+        UUID, primary_key=True, server_default=db.text("gen_random_uuid()"))
     email = db.Column(db.String(256), unique=True)
 
 
 class OAuth(OAuthConsumerMixin, db.Model):
     provider_user_id = db.Column(db.String(256), unique=True, nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey(User.id), nullable=False)
+    user_id = db.Column(UUID, db.ForeignKey(User.id), nullable=False)
     user = db.relationship(User)
 
 

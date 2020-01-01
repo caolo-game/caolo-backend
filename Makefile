@@ -4,8 +4,8 @@ test:
 	cargo test
 	# TODO test webservice
 
-start:
-	docker-compose up --build
+start: buildworker buildweb
+	docker-compose up
 
 startworker:
 	docker-compose up --scale web=0

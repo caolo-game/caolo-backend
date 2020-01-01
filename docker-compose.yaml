@@ -1,9 +1,7 @@
 version: '3'
 services:
   web:
-    build:
-      context: .
-      dockerfile: "dockerfile.web"
+    image: frenetiq/caolo-web
     env_file: .env
     environment:
       FLASK_RUN_HOST: 0.0.0.0
@@ -18,9 +16,7 @@ services:
       - app.py
 
   worker:
-    build:
-      context: .
-      dockerfile: "dockerfile.worker"
+    image: frenetiq/caolo-worker
     env_file: .env
     depends_on:
       - redis

@@ -24,15 +24,15 @@ app = Flask(__name__)
 
 app.config.from_object(Config)
 
-app.register_blueprint(script_bp)
-app.register_blueprint(auth_bp)
-
 db.init_app(app)
 migrate = Migrate(app, db)
 login_manager.init_app(app)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 cors = CORS(app, resources={r"/*": {"origins": "*"}})
+
+app.register_blueprint(script_bp)
+app.register_blueprint(auth_bp)
 
 
 @app.route("/")
@@ -44,7 +44,6 @@ def index():
         return redirect(Config.ON_LOGIN_REDIRECT)
 
     return f"Hello {current_user.email.split('@')[0]}"
-
 
 
 class SimulationProtocol(WebSocketServerProtocol):

@@ -21,6 +21,8 @@ services:
     depends_on:
       - redis
       - postgres
+    entrypoint:
+      - /caolo
 
   redis:
     image: redis:latest

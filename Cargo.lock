@@ -119,16 +119,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "caolo-web"
-version = "0.1.0"
-dependencies = [
- "cao-lang 0.1.0",
- "caolo-api 0.1.0",
- "pyo3 0.8.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_json 1.0.41 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "caolo-worker"
 version = "0.1.0"
 dependencies = [
@@ -141,6 +131,16 @@ dependencies = [
  "redis 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.102 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.102 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_json 1.0.41 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "caolo_web"
+version = "0.1.0"
+dependencies = [
+ "cao-lang 0.1.0",
+ "caolo-api 0.1.0",
+ "pyo3 0.8.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.41 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 

@@ -28,3 +28,6 @@ pushweb:
 buildall: buildweb buildworker
 
 pushall: pushworker pushweb
+
+deploy: buildall pushall
+	git push heroku develop:master

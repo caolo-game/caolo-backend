@@ -245,7 +245,7 @@ impl PositionTable for OctreeTable<Point3, EntityComponent> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{Circle, Point3, Point};
+    use crate::model::{Circle, Point, Point3};
     use rand::prelude::*;
     use test::Bencher;
 
@@ -289,7 +289,7 @@ mod tests {
 
         let mut points = Vec::with_capacity(256);
 
-        for i in 0..8usize {
+        for i in 0..256usize {
             let p = Point3 {
                 x: rng.gen_range(-127, 128),
                 y: rng.gen_range(-127, 128),
@@ -310,6 +310,21 @@ mod tests {
         for p in points {
             let found = tree.get_by_id(&p.0);
             assert_eq!(found, Some(&p.1));
+        }
+
+        let mut fake = Vec::with_capacity(256);
+        for i in 0..256usize {
+            let p = Point3 {
+                x: rng.gen_range(128, 256),
+                y: rng.gen_range(128, 256),
+                z: rng.gen_range(128, 256),
+            };
+            fake.push((p, i));
+        }
+
+        for p in fake {
+            let found = tree.get_by_id(&p.0);
+            assert!(found.is_none());
         }
     }
 

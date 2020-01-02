@@ -332,15 +332,14 @@ mod tests {
     fn bench_range_query(b: &mut Bencher) {
         let mut rng = rand::thread_rng();
 
-        let mut tree = OctreeTable::new(Point3::default(), 4000);
+        let mut tree = OctreeTable::new(Point3::default(), 8000);
 
         for i in 0..(1 << 15) {
-            let p = Point3 {
+            let p = Point {
                 x: rng.gen_range(-3900, 3900),
                 y: rng.gen_range(-3900, 3900),
-                z: rng.gen_range(-3900, 3900),
             };
-            let inserted = tree.insert(p, i);
+            let inserted = tree.insert(Point3::hex_axial_to_cube(p), i);
             assert!(inserted);
         }
 
@@ -350,12 +349,11 @@ mod tests {
         b.iter(|| {
             let tree = &tree;
             res.clear();
-            let p = Point3 {
+            let p = Point {
                 x: rng.gen_range(-3900, 3900),
                 y: rng.gen_range(-3900, 3900),
-                z: rng.gen_range(-3900, 3900),
             };
-            tree.find_by_range(&p, radius, &mut res);
+            tree.find_by_range(&Point3::hex_axial_to_cube(p), radius, &mut res);
             res.len()
         });
     }
@@ -364,15 +362,17 @@ mod tests {
     fn bench_get_entities_in_range(b: &mut Bencher) {
         let mut rng = rand::thread_rng();
 
-        let mut tree = OctreeTable::new(Point3::default(), 4000);
+        let mut tree = OctreeTable::new(Point3::default(), 8000);
 
         for _ in 0..(1 << 15) {
-            let p = Point3 {
+            let p = Point {
                 x: rng.gen_range(-3900, 3900),
                 y: rng.gen_range(-3900, 3900),
-                z: rng.gen_range(-3900, 3900),
             };
-            let inserted = tree.insert(p, EntityComponent(EntityId(rng.gen())));
+            let inserted = tree.insert(
+                Point3::hex_axial_to_cube(p),
+                EntityComponent(EntityId(rng.gen())),
+            );
             assert!(inserted);
         }
 

@@ -33,7 +33,7 @@ Flask-Dance[sqla]~=3.0
 blinker
 flask-sqlalchemy
 flask-login
-psycopg2
+psycopg2-binary
 Flask-Migrate
 Flask-Script
 sqlalchemy-utils

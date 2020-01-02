@@ -1,4 +1,4 @@
-FROM python:latest AS build
+FROM python:3.8 AS build
 
 ENV PATH /root/.cargo/bin:$PATH
 
@@ -8,6 +8,9 @@ RUN sh ./install_rust.sh -y
 RUN cargo --version
 
 WORKDIR /web
+
+COPY ./webservice/requirements.txt ./requirements.txt
+RUN pip install -r requirements.txt
 
 # TODO these are needed for the workspace
 # get rid of them
@@ -30,7 +33,10 @@ RUN ls -al build
 
 # --------------
 
-FROM python:latest
+FROM python:3.8-slim
+RUN apt-get update
+RUN apt-get install build-essential -y
+
 WORKDIR /web
 COPY --from=build /web/webservice/build/ ./build/
 RUN pip install build/caolo_web-0.1.0-cp38-cp38-manylinux1_x86_64.whl

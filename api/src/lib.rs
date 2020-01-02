@@ -10,6 +10,7 @@ pub mod resources;
 pub mod structures;
 pub mod terrain;
 pub mod user;
+pub mod point3;
 
 pub use cao_lang::prelude::*;
 

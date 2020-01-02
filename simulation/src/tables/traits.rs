@@ -1,6 +1,4 @@
-use crate::model::{
-    self, Circle, EntityComponent, EntityId, Point, PositionComponent, UserData, UserId,
-};
+use crate::model::{self, Circle, EntityId, PositionComponent, UserData, UserId};
 
 /// TableIds may be used as indices of tables
 pub trait TableId:
@@ -33,7 +31,7 @@ pub trait UserDataTable {
     fn create_new(&mut self, row: UserData) -> UserId;
 }
 
-pub trait PositionTable: Table<Id = Point, Row = EntityComponent> {
+pub trait PositionTable {
     /// Vision is AABB with topleft - bottomleft points
     fn get_entities_in_range(&self, vision: &Circle) -> Vec<(EntityId, PositionComponent)>;
     fn count_entities_in_range(&self, vision: &Circle) -> usize;

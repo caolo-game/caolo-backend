@@ -11,7 +11,8 @@ use std::thread;
 use std::time::Duration;
 
 fn init() {
-    dotenv::dotenv().unwrap_or_default(); // TODO: conf if used
+    #[cfg(dotenv)]
+    dotenv::dotenv().unwrap_or_default();
     env_logger::init();
 }
 

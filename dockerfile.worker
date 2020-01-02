@@ -12,7 +12,7 @@ COPY ./api/ ./api/
 COPY ./cao-lang/ ./cao-lang/
 COPY ./webservice/ ./webservice/
 
-RUN cargo install --path worker --root .
+RUN cargo install --path worker --root . --no-default-features
 
 # ---------- Copy the built binary to a scratch container, to minimize the image size ----------
 

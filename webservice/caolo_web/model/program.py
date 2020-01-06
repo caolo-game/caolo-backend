@@ -7,7 +7,8 @@ class Program(db.Model):
     """
     Users' Cao-Lang Programs
     """
-    id = db.Column(UUID, primary_key=True)
+    id = db.Column(
+        UUID, primary_key=True, server_default=db.text("gen_random_uuid()"))
     ast = db.Column(JSON, nullable=False)
 
     user_id = db.Column(UUID, db.ForeignKey(User.id), nullable=False)

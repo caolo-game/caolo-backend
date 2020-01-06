@@ -29,7 +29,10 @@ migrate = Migrate(app, db)
 login_manager.init_app(app)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
-cors = CORS(app, resources={r"/*": {"origins": "*"}})
+cors = CORS(
+    app, resources={r"/*": {
+        "origins": "*"
+    }}, supports_credentials=True)
 
 app.register_blueprint(script_bp)
 app.register_blueprint(auth_bp)

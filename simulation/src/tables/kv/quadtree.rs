@@ -334,7 +334,7 @@ mod tests {
     }
 
     #[bench]
-    fn bench_get_entities_in_range(b: &mut Bencher) {
+    fn bench_get_entities_in_range_sparse(b: &mut Bencher) {
         let mut rng = rand::thread_rng();
 
         let mut tree = QuadtreeTable::new(Point::default(), 4000);
@@ -355,6 +355,33 @@ mod tests {
             let p = Point {
                 x: rng.gen_range(-3900, 3900),
                 y: rng.gen_range(-3900, 3900),
+            };
+            tree.get_entities_in_range(&Circle { center: p, radius })
+        });
+    }
+
+    #[bench]
+    fn bench_get_entities_in_range_dense(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+
+        let mut tree = QuadtreeTable::new(Point::default(), 4000);
+
+        for _ in 0..(1 << 15) {
+            let p = Point {
+                x: rng.gen_range(-200, 200),
+                y: rng.gen_range(-200, 200),
+            };
+            let inserted = tree.insert(p, EntityComponent(EntityId(rng.gen())));
+            assert!(inserted);
+        }
+
+        let radius = 50;
+
+        b.iter(|| {
+            let tree = &tree;
+            let p = Point {
+                x: rng.gen_range(-200, 200),
+                y: rng.gen_range(-200, 200),
             };
             tree.get_entities_in_range(&Circle { center: p, radius })
         });

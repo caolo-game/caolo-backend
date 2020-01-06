@@ -2,7 +2,7 @@ version: '3'
 services:
   web:
     image: frenetiq/caolo-web
-    env_file: .env
+    env_file: docker.env
     environment:
       FLASK_RUN_HOST: 0.0.0.0
     ports:
@@ -17,7 +17,7 @@ services:
 
   worker:
     image: frenetiq/caolo-worker
-    env_file: .env
+    env_file: docker.env
     depends_on:
       - redis
       - postgres

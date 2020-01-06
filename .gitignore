@@ -6,3 +6,5 @@ target/
 .vscode/
 
 *.sqlite3
+
+docker.env

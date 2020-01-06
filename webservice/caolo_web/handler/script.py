@@ -39,7 +39,7 @@ def upload_script():
     content = json.dumps(program)
     redis_conn.set("PROGRAM", content)
 
-    program = Program(ast=request.text)
+    program = Program(ast=request.get_data(as_text=True))
 
     db.session.add(program)
     db.session.commit()

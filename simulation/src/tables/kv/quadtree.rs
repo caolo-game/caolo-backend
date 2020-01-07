@@ -8,6 +8,8 @@ use rayon::prelude::*;
 use std::ops::Add;
 
 pub trait SpatialKey2d: TableId + Add<Output = Self> {
+    fn as_array(&self) -> [i32; 2];
+
     /// Get axis 0 or 1
     fn get_axis(&self, axis: u8) -> i32;
 
@@ -81,8 +83,7 @@ where
     /// Return the bounds of this node as an AABB (min, max).
     pub fn bounds(&self) -> (Id, Id) {
         let radius = self.radius as i32;
-        let x = self.median.get_axis(0);
-        let y = self.median.get_axis(1);
+        let [x, y] = self.median.as_array();
 
         (
             Id::new(x - radius, y - radius),
@@ -92,11 +93,8 @@ where
 
     /// Return wether point is within the bounds of this node
     pub fn intersects(&self, point: &Id) -> bool {
-        let x = point.get_axis(0);
-        let y = point.get_axis(1);
-
-        let mx = self.median.get_axis(0);
-        let my = self.median.get_axis(1);
+        let [x, y] = point.as_array();
+        let [mx, my] = self.median.as_array();
 
         let rad = self.radius as i32;
 
@@ -180,8 +178,10 @@ where
 
     fn child_index(&self, id: &Id) -> usize {
         let mut res = 0;
+        let id = id.as_array();
+        let median = self.median.as_array();
         for i in 0..2 {
-            if self.median.get_axis(i) < id.get_axis(i) {
+            if median[i] < id[i] {
                 res |= 1 << i;
             }
         }

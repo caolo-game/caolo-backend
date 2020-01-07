@@ -51,6 +51,10 @@ impl std::ops::Add for PositionComponent {
 }
 
 impl SpatialKey2d for PositionComponent {
+    fn as_array(&self) -> [i32; 2] {
+        [self.0.x, self.0.y]
+    }
+
     fn get_axis(&self, axis: u8) -> i32 {
         match axis {
             0 => self.0.x,

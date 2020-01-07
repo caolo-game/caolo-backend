@@ -262,6 +262,7 @@ mod tests {
     use super::*;
     use caolo_api::point::Point;
     use rand::prelude::*;
+    use std::collections::HashMap;
     use test::Bencher;
 
     #[test]
@@ -297,22 +298,24 @@ mod tests {
     fn get_by_id() {
         let mut rng = rand::thread_rng();
 
-        let mut tree = MortonTable::new();
+        let mut tree = MortonTable::<Point, usize>::new();
 
-        let mut points = Vec::with_capacity(64);
+        let mut points = HashMap::with_capacity(64);
 
-        for i in 0..64usize {
+        for i in 0..64 {
             let p = Point {
                 x: rng.gen_range(0, 128),
                 y: rng.gen_range(0, 128),
             };
-            points.push((p, i));
+            points.insert(p, i);
         }
 
-        for (p, e) in points.iter().cloned() {
-            let inserted = tree.insert(p, e);
+        for (p, e) in points.iter() {
+            let inserted = tree.insert(p.clone(), *e);
             assert!(inserted);
         }
+
+        let mut points: Vec<_> = points.into_iter().collect();
 
         points.shuffle(&mut rng);
 

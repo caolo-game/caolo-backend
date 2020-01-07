@@ -55,7 +55,7 @@ impl Node {
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct MortonTable<Id, Row>
 where
     Id: SpatialKey2d,
@@ -65,6 +65,13 @@ where
     values: Vec<Row>,
 
     _m: PhantomData<Id>,
+}
+
+unsafe impl<Id, Row> Send for MortonTable<Id, Row>
+where
+    Id: SpatialKey2d + Send,
+    Row: TableRow + Send,
+{
 }
 
 impl<Id, Row> MortonTable<Id, Row>
@@ -129,7 +136,7 @@ where
     }
 
     /// Returns the first item with given id, if any
-    pub fn get_by_id<'a>(&'a self, id: Id) -> Option<&'a Row> {
+    pub fn get_by_id<'a>(&'a self, id: &Id) -> Option<&'a Row> {
         let [x, y] = id.as_array();
         let x = x.try_into().expect("positive integer fitting into 16 bits");
         let y = y.try_into().expect("positive integer fitting into 16 bits");
@@ -146,7 +153,7 @@ where
     /// For each id returns the first item with given id, if any
     pub fn get_by_ids<'a>(&'a self, ids: &[Id]) -> Vec<(Id, &'a Row)> {
         ids.into_par_iter()
-            .filter_map(|id| self.get_by_id(*id).map(|row| (*id, row)))
+            .filter_map(|id| self.get_by_id(id).map(|row| (*id, row)))
             .collect()
     }
 
@@ -196,6 +203,36 @@ where
             let id = Id::new(node.x as i32, node.y as i32);
             if center.dist(&id) < radius {
                 out.push((id, &self.values[node.ind]));
+            }
+        }
+    }
+
+    /// Return wether point is within the bounds of this node
+    pub fn intersects(&self, point: &Id) -> bool {
+        let [x, y] = point.as_array();
+        x >= 0 && y >= 0 && (x & 0x0000ffff) == x && (y & 0x0000ffff) == y
+    }
+}
+
+impl<Id, Row> Table for MortonTable<Id, Row>
+where
+    Id: SpatialKey2d + Send + Sync,
+    Row: TableRow + Send + Sync,
+{
+    type Id = Id;
+    type Row = Row;
+
+    fn delete(&mut self, id: &Id) -> Option<Row> {
+        let [x, y] = id.as_array();
+        let x = x.try_into().ok()?;
+        let y = y.try_into().ok()?;
+        let id = MortonKey::new(x, y);
+        match self.keys.binary_search_by_key(&id, |node| node.key) {
+            Err(_) => None,
+            Ok(_ind) => {
+                // TODO: removing the row will require reassigning all other row indices that are
+                // greater than this one
+                unimplemented!()
             }
         }
     }
@@ -282,7 +319,7 @@ mod tests {
         println!("{:?}\n{:#?}", points, tree);
 
         for p in points {
-            let found = tree.get_by_id(p.0);
+            let found = tree.get_by_id(&p.0);
             assert_eq!(found, Some(&p.1));
         }
     }

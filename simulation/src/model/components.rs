@@ -1,5 +1,5 @@
 use super::*;
-use crate::tables::{BTreeTable, Component, QuadtreeTable, SpatialKey2d, TableId};
+use crate::tables::{BTreeTable, Component, MortonTable, SpatialKey2d, TableId};
 
 pub use caolo_api::terrain::TileTerrainType;
 
@@ -7,7 +7,7 @@ pub use caolo_api::terrain::TileTerrainType;
 #[derive(Debug, Clone)]
 pub struct EntityComponent(pub EntityId);
 impl<Id: SpatialKey2d + Send + Sync> Component<Id> for EntityComponent {
-    type Table = QuadtreeTable<Id, Self>;
+    type Table = MortonTable<Id, Self>;
 }
 
 #[derive(Debug, Clone)]
@@ -162,7 +162,7 @@ impl<Id: TableId> Component<Id> for LogEntry {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct TerrainComponent(pub TileTerrainType);
 impl<Id: SpatialKey2d + Send + Sync> Component<Id> for TerrainComponent {
-    type Table = QuadtreeTable<Id, Self>;
+    type Table = MortonTable<Id, Self>;
 }
 
 #[derive(Debug, Clone)]

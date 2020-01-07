@@ -69,7 +69,7 @@ fn compile_scripts(storage: &mut storage::Storage) {
 
 pub fn init_inmemory_storage() -> storage::Storage {
     use model::*;
-    use tables::{BTreeTable, QuadtreeTable};
+    use tables::{BTreeTable, MortonTable};
 
     debug!("Init InMemoryStorage");
 
@@ -94,14 +94,8 @@ pub fn init_inmemory_storage() -> storage::Storage {
 
     storage.add_user_table::<UserComponent>(BTreeTable::new());
 
-    storage.add_point_table::<TerrainComponent>(QuadtreeTable::new(
-        Point::default(),
-        3000, // FIXME
-    ));
-    storage.add_point_table::<EntityComponent>(QuadtreeTable::new(
-        Point::default(),
-        3000, // FIXME
-    ));
+    storage.add_point_table::<TerrainComponent>(MortonTable::new());
+    storage.add_point_table::<EntityComponent>(MortonTable::new());
 
     storage.add_scripts_table::<ScriptComponent>(BTreeTable::new());
 

@@ -27,6 +27,7 @@ impl MoveIntent {
             debug!("Occupied {:?} ", self);
             return Err("Occupied".into());
         }
+
         if !table.intersects(&self.position) {
             debug!("PositionTable insert failed {:?}", self);
             return Err("Out of bounds".into());
@@ -86,14 +87,14 @@ mod tests {
     use super::*;
     use crate::model::{Bot, EntityComponent, Point, PositionComponent};
     use crate::storage::Storage;
-    use crate::tables::{BTreeTable, QuadtreeTable};
+    use crate::tables::{BTreeTable, MortonTable};
 
     #[test]
     fn test_move_intent_fails_if_node_is_occupied() {
         let mut storage = Storage::new();
         storage.add_entity_table::<Bot>(BTreeTable::new());
         storage.add_entity_table::<PositionComponent>(BTreeTable::new());
-        storage.add_point_table::<EntityComponent>(QuadtreeTable::new(Point::new(0, 0), 30));
+        storage.add_point_table::<EntityComponent>(MortonTable::new());
 
         let id = storage.insert_entity();
 

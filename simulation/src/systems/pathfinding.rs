@@ -1,4 +1,4 @@
-use crate::model::{TerrainComponent, TileTerrainType};
+use crate::model::{EntityComponent, TerrainComponent, TileTerrainType};
 use crate::tables::PositionTable;
 use caolo_api::point::{Circle, Point};
 
@@ -31,7 +31,7 @@ pub enum PathFindingError {
 pub fn find_path(
     from: Point,
     to: Point,
-    positions: &dyn PositionTable,
+    positions: &<EntityComponent as crate::tables::Component<Point>>::Table,
     terrain: &<TerrainComponent as crate::tables::Component<Point>>::Table,
     mut max_iterations: u32,
 ) -> Result<Vec<Point>, PathFindingError> {
@@ -72,6 +72,7 @@ pub fn find_path(
             .pos
             .neighbours()
             .iter()
+            .filter(|p| positions.intersects(&p)) // assume that positions and terrain have the same bounds
             .filter(|p| {
                 let is_inside = circle.is_inside(**p);
 
@@ -127,16 +128,16 @@ pub fn find_path(
 mod tests {
     use super::*;
     use crate::model::{EntityComponent, EntityId};
-    use crate::tables::QuadtreeTable;
+    use crate::tables::MortonTable;
 
     #[test]
     fn test_simple_wall() {
-        let from = Point::new(0, 0);
-        let to = Point::new(5, 0);
+        let from = Point::new(0, 2);
+        let to = Point::new(5, 2);
 
-        let positions = QuadtreeTable::new(Point::default(), 16);
-        let mut terrain = QuadtreeTable::new(Point::default(), 16);
-        for i in -5..=5 {
+        let positions = MortonTable::new();
+        let mut terrain = MortonTable::new();
+        for i in 0..=5 {
             assert!(terrain.insert(Point::new(2, i), TerrainComponent(TileTerrainType::Wall)));
         }
 
@@ -155,11 +156,11 @@ mod tests {
 
     #[test]
     fn test_simple() {
-        let from = Point::new(17, -16);
-        let to = Point::new(7, -6);
+        let from = Point::new(17, 6);
+        let to = Point::new(7, 16);
 
-        let mut positions = QuadtreeTable::new(Point::default(), 30);
-        let terrain = QuadtreeTable::new(Point::default(), 30);
+        let mut positions = MortonTable::new();
+        let terrain = MortonTable::new();
 
         positions.insert(from, EntityComponent(EntityId(0)));
         positions.insert(to, EntityComponent(EntityId(1)));

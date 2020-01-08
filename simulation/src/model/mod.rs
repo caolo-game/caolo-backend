@@ -10,6 +10,10 @@ pub use caolo_api::resources::ResourceType;
 pub use caolo_api::user::UserData;
 
 impl crate::tables::SpatialKey2d for Point {
+    fn as_array(&self) -> [i32; 2] {
+        [self.x, self.y]
+    }
+
     fn new(x: i32, y: i32) -> Self {
         Self { x, y }
     }

@@ -26,7 +26,7 @@ impl Scalar {
             Pointer(i) => i != 0,
             Integer(i) => i != 0,
             Floating(i) => i != 0.0,
-            Null => false
+            Null => false,
         }
     }
     pub fn is_float(self) -> bool {

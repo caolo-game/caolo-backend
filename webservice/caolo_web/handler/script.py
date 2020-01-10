@@ -34,9 +34,8 @@ def upload_script():
     except ValueError as e:
         log.err()
         abort(400, e)
+    content = json.dumps({"compiled": program, "script": json.loads(content)})
     redis_conn = get_redis_client()
-    program['script'] = request.json
-    content = json.dumps(program)
     redis_conn.set("PROGRAM", content)
 
     program = Program(ast=request.json, user=current_user)

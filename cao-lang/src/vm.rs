@@ -66,8 +66,13 @@ impl<Aux> VM<Aux> {
             let size = size as usize;
             T::decode(&self.memory[ptr..ptr + size])
         } else {
-            let ptr = ptr as usize;
-            T::decode(&self.memory[ptr..])
+            error!(
+                "Invalid index passed to get_value {} when size was {} and len is {}",
+                ptr,
+                size,
+                self.memory.len()
+            );
+            None
         }
     }
 

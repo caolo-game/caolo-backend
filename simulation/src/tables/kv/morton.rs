@@ -210,6 +210,7 @@ where
     /// Return wether point is within the bounds of this node
     pub fn intersects(&self, point: &Id) -> bool {
         let [x, y] = point.as_array();
+        // at most 16 bits long non-negative integers
         x >= 0 && y >= 0 && (x & 0x0000ffff) == x && (y & 0x0000ffff) == y
     }
 }

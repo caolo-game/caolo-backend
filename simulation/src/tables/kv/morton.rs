@@ -229,10 +229,23 @@ where
         let id = MortonKey::new(x, y);
         match self.keys.binary_search_by_key(&id, |node| node.key) {
             Err(_) => None,
-            Ok(_ind) => {
-                // TODO: removing the row will require reassigning all other row indices that are
-                // greater than this one
-                unimplemented!()
+            Ok(ind) => {
+                // swap with the last, reassign the corresponding key
+                //
+                let i = self.keys[ind].ind;
+                let last = self.values.len() - 1;
+
+                self.values.swap(i, last);
+
+                for n in self.keys.iter_mut() {
+                    if n.ind == last {
+                        n.ind = i;
+                        break;
+                    }
+                }
+
+                self.keys.remove(ind);
+                Some(self.values.remove(last))
             }
         }
     }

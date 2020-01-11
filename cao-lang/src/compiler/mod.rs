@@ -60,7 +60,7 @@ pub struct Compiler {
 impl Compiler {
     pub fn compile(unit: CompilationUnit) -> Result<CompiledProgram, String> {
         if unit.nodes.is_empty() {
-            return Err("Can not compile program with no entry point!".to_owned());
+            return Err("Program is empty!".to_owned());
         }
         let mut compiler = Compiler {
             unit,
@@ -90,18 +90,23 @@ impl Compiler {
                 let current = todo.pop_front().unwrap();
                 nodes.remove(&current);
                 compiler.process_node(current)?;
-                if let Some(ref nodes) = compiler.unit.nodes[&current].children {
-                    for node in nodes.iter().cloned() {
-                        todo.push_back(node);
+                match compiler.unit.nodes[&current]
+                    .children
+                    .as_ref()
+                    .map(|c| (c.len(), c))
+                {
+                    Some((0, _)) | None => compiler.program.bytecode.push(Instruction::Exit as u8),
+                    Some((_, nodes)) => {
+                        for node in nodes.iter().cloned() {
+                            todo.push_back(node);
+                        }
                     }
-                } else {
-                    compiler.program.bytecode.push(Instruction::Exit as u8);
                 }
             }
-            if nodes.is_empty() {
-                break;
+            match nodes.iter().next() {
+                Some(node) => todo.push_back(*node),
+                None => break,
             }
-            todo.push_back(*nodes.iter().next().unwrap());
         }
 
         Ok(compiler.program)

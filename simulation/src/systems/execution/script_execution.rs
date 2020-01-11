@@ -1,4 +1,4 @@
-use crate::model::{self, EntityId, ScriptId};
+use crate::model::{self, EntityId, ScriptId, UserId};
 use crate::{intents, profile, storage::Storage};
 use cao_lang::prelude::*;
 use std::sync::{Arc, Mutex};
@@ -57,6 +57,7 @@ pub fn execute_single_script<'a>(
         intents: Vec::new(),
         storage: storage as *const _,
         entityid,
+        current_user: None, // TODO
     };
     let mut vm = VM::new(data);
     crate::api::make_import().execute_imports(&mut vm);
@@ -80,6 +81,7 @@ pub struct ScriptExecutionData {
     intents: Vec<intents::Intent>,
     storage: *const Storage,
     entityid: EntityId,
+    current_user: Option<UserId>,
 }
 
 impl ScriptExecutionData {
@@ -93,5 +95,9 @@ impl ScriptExecutionData {
 
     pub fn intents_mut(&mut self) -> &mut Vec<intents::Intent> {
         &mut self.intents
+    }
+
+    pub fn userid(&self) -> Option<UserId> {
+        self.current_user
     }
 }

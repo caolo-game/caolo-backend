@@ -4,9 +4,11 @@
 //!
 mod bots;
 mod resources;
+mod spawns;
 mod structures;
 pub use self::bots::*;
 pub use self::resources::*;
+pub use self::spawns::*;
 pub use self::structures::*;
 use crate::model::Point;
 use crate::systems::execution::ScriptExecutionData;
@@ -121,6 +123,15 @@ pub fn make_import() -> Schema {
                     Point
                 ),
                 fo: FunctionObject::new(FunctionWrapper::new(make_point)),
+            },
+            FunctionRow {
+                desc: make_node_desc!(
+                    spawn,
+                    "Spawn a new bot from given configuration.",
+                    [caolo_api::structures::SpawnIntent],
+                    OperationResult
+                ),
+                fo: FunctionObject::new(FunctionWrapper::new(spawn)),
             },
         ],
     }

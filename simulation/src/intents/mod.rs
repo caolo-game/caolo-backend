@@ -14,10 +14,13 @@ pub use self::spawn_intent::*;
 
 use crate::model::EntityId;
 use crate::storage::Storage;
-use caolo_api::bots::Bot;
 use caolo_api::point::Point;
 
 pub type IntentResult = Result<(), Box<dyn std::error::Error>>;
+
+pub trait ExecutableIntent {
+    fn execute(&self, storage: &mut Storage) -> IntentResult;
+}
 
 #[derive(Debug, Clone)]
 pub enum Intent {
@@ -52,13 +55,6 @@ impl Intent {
 
     pub fn new_move(bot: EntityId, position: Point) -> Self {
         Intent::Move(MoveIntent { bot, position })
-    }
-
-    pub fn new_spawn(bot: Bot, structure_id: EntityId) -> Self {
-        Intent::Spawn(SpawnIntent {
-            id: structure_id,
-            bot,
-        })
     }
 
     pub fn new_mine(bot: EntityId, resource: EntityId) -> Self {

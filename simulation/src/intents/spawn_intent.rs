@@ -1,12 +1,13 @@
 use super::*;
-use crate::model;
-use caolo_api::bots::Bot;
+use crate::model::{self, UserId};
+use caolo_api::structures::BotDescription;
 use caolo_api::OperationResult;
 
 #[derive(Debug, Clone)]
 pub struct SpawnIntent {
     pub id: EntityId,
-    pub bot: Bot,
+    pub bot: BotDescription,
+    pub owner_id: Option<UserId>,
 }
 
 impl SpawnIntent {
@@ -36,15 +37,10 @@ impl SpawnIntent {
         storage
             .entity_table_mut::<model::SpawnBotComponent>()
             .insert_or_update(bot_id, model::SpawnBotComponent { bot: model::Bot {} });
-        if let Some(owner_id) = self.bot.owner_id {
+        if let Some(owner_id) = self.owner_id {
             storage
                 .entity_table_mut::<model::OwnedEntity>()
-                .insert_or_update(
-                    bot_id,
-                    model::OwnedEntity {
-                        owner_id: model::UserId(owner_id),
-                    },
-                );
+                .insert_or_update(bot_id, model::OwnedEntity { owner_id: owner_id });
         }
 
         spawn.time_to_spawn = 5;

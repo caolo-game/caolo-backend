@@ -11,8 +11,9 @@ use std::thread;
 use std::time::Duration;
 
 fn init() {
-    #[cfg(dotenv)]
-    dotenv::dotenv().unwrap_or_default();
+    #[cfg(feature="dotenv")]
+    dep_dotenv::dotenv().unwrap_or_default();
+
     env_logger::init();
 }
 
@@ -119,7 +120,7 @@ fn update_program(storage: &mut Storage, client: &redis::Client) {
                 .ok_or_else(|| ())
         })
         .map(|program| {
-            debug!("Inserting new prgoram {:?}", program);
+            debug!("Inserting new program {:?}", program);
 
             use caolo_sim::model::{ScriptComponent, ScriptId};
 

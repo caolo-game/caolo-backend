@@ -49,6 +49,16 @@ def index():
     return f"Hello {current_user.email.split('@')[0]}"
 
 
+@app.route("/myself")
+@login_required
+def myself():
+    user = {
+        "id": current_user.id,
+        "email": current_user.email,
+    }
+    return jsonify(user)
+
+
 class SimulationProtocol(WebSocketServerProtocol):
     """
     Stream the simulation to the clients

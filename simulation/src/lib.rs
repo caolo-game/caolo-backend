@@ -104,26 +104,3 @@ pub fn init_inmemory_storage() -> storage::Storage {
     storage
 }
 
-#[allow(unused)]
-fn uncontested_pos<Table: tables::PositionTable>(
-    positions_table: &Table,
-    rng: &mut rand::rngs::ThreadRng,
-) -> caolo_api::point::Point {
-    use caolo_api::point::{Circle, Point};
-    use rand::Rng;
-
-    let mut pos = Point::default();
-    loop {
-        pos.x = rng.gen_range(-19, 20);
-        pos.y = rng.gen_range(-19, 20);
-
-        if positions_table.count_entities_in_range(&Circle {
-            center: pos,
-            radius: 0,
-        }) == 0
-        {
-            break;
-        }
-    }
-    pos
-}

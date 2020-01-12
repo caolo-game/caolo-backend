@@ -36,6 +36,7 @@ pub fn move_bot(
         })?;
 
     let path = pathfinding::find_path(botpos.0, point, positions, terrain, 5000).map_err(|e| {
+        // TODO this isnt really an error
         error!("pathfinding failed {:?}", e);
         ExecutionError::TaskFailure(format!(
             "Could not find path from {:?} to {:?}",

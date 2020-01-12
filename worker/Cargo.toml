@@ -20,5 +20,6 @@ serde_json = "*"
 serde = "*"
 serde_derive = "*"
 redis = "0.13"
+rand="*"
 
 dep-dotenv = { version="0.14", optional=true, package="dotenv" }

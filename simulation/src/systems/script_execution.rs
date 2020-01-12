@@ -57,7 +57,7 @@ pub fn execute_single_script<'a>(
         intents: intents::Intents::new(),
         storage: storage as *const _,
         entityid,
-        current_user: None, // TODO
+        current_user: Some(Default::default()), // None, // TODO
     };
     let mut vm = VM::new(data);
     crate::api::make_import().execute_imports(&mut vm);

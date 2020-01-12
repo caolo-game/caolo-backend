@@ -40,12 +40,13 @@ def upload_script():
     redis_conn = get_redis_client()
     redis_conn.set("PROGRAM", content)
 
-    program = Program(ast=content, compiled=program, user=current_user)
+    name = raw.get('name')
+    program = Program(ast=content, compiled=program, user=current_user, name=name)
 
     db.session.add(program)
     db.session.commit()
 
-    return "Ok"
+    return program.id
 
 
 @script_bp.route('/schema', methods=["GET"])

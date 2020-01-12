@@ -5,7 +5,7 @@ test:
 	# TODO test webservice
 
 start: buildworker buildweb
-	docker-compose up
+	docker-compose up -d
 
 startworker:
 	docker-compose up --scale web=0

@@ -1,12 +1,9 @@
-#[macro_use]
-extern crate serde_derive;
-#[macro_use]
-extern crate log;
-
 mod init;
 mod payload;
 
 use caolo_sim::{self, storage::Storage};
+use log::{debug, error, info};
+use serde_derive::Serialize;
 use std::thread;
 use std::time::{Duration, Instant};
 

@@ -6,6 +6,7 @@ use caolo_sim::api::{build_bot, build_resource, build_structure};
 use caolo_sim::model;
 use caolo_sim::storage::Storage;
 use caolo_sim::tables::LogTable;
+use serde_derive::Serialize;
 use std::collections::HashMap;
 
 /// terrain is a list of non-plain terrain types

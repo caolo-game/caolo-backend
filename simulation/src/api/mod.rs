@@ -11,7 +11,7 @@ pub use self::resources::*;
 pub use self::spawns::*;
 pub use self::structures::*;
 use crate::model::Point;
-use crate::systems::execution::ScriptExecutionData;
+use crate::systems::script_execution::ScriptExecutionData;
 use cao_lang::prelude::*;
 use cao_lang::traits::ByteEncodeProperties;
 use caolo_api::OperationResult;
@@ -41,7 +41,12 @@ pub fn console_log(
     debug!("{}", payload);
     vm.get_aux_mut()
         .intents_mut()
-        .push(crate::intents::Intent::new_log(entityid, payload, time));
+        .log_intents
+        .push(crate::intents::LogIntent {
+            entity: entityid,
+            payload,
+            time,
+        });
 
     Ok(0)
 }
@@ -57,7 +62,12 @@ pub fn log_scalar(
     debug!("{}", payload);
     vm.get_aux_mut()
         .intents_mut()
-        .push(crate::intents::Intent::new_log(entityid, payload, time));
+        .log_intents
+        .push(crate::intents::LogIntent {
+            entity: entityid,
+            payload,
+            time,
+        });
     Ok(0)
 }
 

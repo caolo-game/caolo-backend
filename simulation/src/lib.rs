@@ -15,7 +15,8 @@ mod systems;
 mod utils;
 
 use systems::execute_world_update;
-use systems::execution::{execute_intents, execute_scripts};
+use systems::intent_execution::execute_intents;
+use systems::script_execution::execute_scripts;
 
 pub fn forward(storage: &mut storage::Storage) -> Result<(), Box<dyn std::error::Error>> {
     compile_scripts(storage);
@@ -23,7 +24,7 @@ pub fn forward(storage: &mut storage::Storage) -> Result<(), Box<dyn std::error:
 
     storage.signal_done(&final_intents);
 
-    info!("Executing intents {}", final_intents.len());
+    info!("Executing intents");
     execute_intents(final_intents, storage);
     info!("Executing intents - done");
     info!("Executing systems update");

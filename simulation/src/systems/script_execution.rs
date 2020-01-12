@@ -3,14 +3,14 @@ use crate::{intents, profile, storage::Storage};
 use cao_lang::prelude::*;
 use std::sync::{Arc, Mutex};
 
-pub type ExecutionResult = Result<Vec<intents::Intent>, String>;
+pub type ExecutionResult = Result<intents::Intents, String>;
 
 /// Must be called from a tokio runtime!
 /// Returns the intents that are expected to be executed
-pub fn execute_scripts(storage: &Storage) -> Vec<intents::Intent> {
+pub fn execute_scripts(storage: &Storage) -> intents::Intents {
     profile!("execute_scripts");
 
-    let intents = Arc::new(Mutex::new(Vec::new()));
+    let intents = Arc::new(Mutex::new(intents::Intents::new()));
     {
         let intents = intents.clone();
         rayon::scope(move |s| {
@@ -18,9 +18,9 @@ pub fn execute_scripts(storage: &Storage) -> Vec<intents::Intent> {
                 let intents = intents.clone();
                 s.spawn(move |_| {
                     match execute_single_script(entityid, script.script_id, storage) {
-                        Ok(mut ints) => {
+                        Ok(ints) => {
                             let mut intents = intents.lock().unwrap();
-                            intents.append(&mut ints);
+                            intents.merge(ints);
                         }
                         Err(e) => {
                             error!(
@@ -54,7 +54,7 @@ pub fn execute_single_script<'a>(
         })?;
 
     let data = ScriptExecutionData {
-        intents: Vec::new(),
+        intents: intents::Intents::new(),
         storage: storage as *const _,
         entityid,
         current_user: None, // TODO
@@ -78,7 +78,7 @@ pub fn execute_single_script<'a>(
 }
 
 pub struct ScriptExecutionData {
-    intents: Vec<intents::Intent>,
+    intents: intents::Intents,
     storage: *const Storage,
     entityid: EntityId,
     current_user: Option<UserId>,
@@ -93,7 +93,7 @@ impl ScriptExecutionData {
         unsafe { &*self.storage }
     }
 
-    pub fn intents_mut(&mut self) -> &mut Vec<intents::Intent> {
+    pub fn intents_mut(&mut self) -> &mut intents::Intents {
         &mut self.intents
     }
 

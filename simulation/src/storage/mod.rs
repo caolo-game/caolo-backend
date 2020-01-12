@@ -4,7 +4,7 @@ mod macros;
 pub use crate::tables::{Component, TableId, TableRow};
 
 use crate::implement_table_type;
-use crate::intents::Intent;
+use crate::intents::Intents;
 use crate::model::indices::EntityTime;
 use crate::model::*;
 use chrono::{DateTime, Duration, Utc};
@@ -63,7 +63,7 @@ impl Storage {
         self.time
     }
 
-    pub fn signal_done(&mut self, _intents: &[Intent]) {
+    pub fn signal_done(&mut self, _intents: &Intents) {
         let now = Utc::now();
         self.dt = now - self.last_tick;
         self.last_tick = now;

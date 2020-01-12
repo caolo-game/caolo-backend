@@ -56,22 +56,25 @@ impl SpawnIntent {
 
 pub fn check_spawn_intent(
     intent: &caolo_api::structures::SpawnIntent,
-    userid: model::UserId,
+    userid: Option<model::UserId>,
     storage: &crate::storage::Storage,
 ) -> OperationResult {
     let id = model::EntityId(intent.id);
-    match storage.entity_table::<model::Structure>().get_by_id(&id) {
-        Some(_) => {
-            let owner_id = storage.entity_table::<model::OwnedEntity>().get_by_id(&id);
-            if owner_id.map(|id| id.owner_id != userid).unwrap_or(true) {
-                return OperationResult::NotOwner;
+
+    if let Some(userid) = userid {
+        match storage.entity_table::<model::Structure>().get_by_id(&id) {
+            Some(_) => {
+                let owner_id = storage.entity_table::<model::OwnedEntity>().get_by_id(&id);
+                if owner_id.map(|id| id.owner_id != userid).unwrap_or(true) {
+                    return OperationResult::NotOwner;
+                }
+            }
+            None => {
+                debug!("Structure not found");
+                return OperationResult::InvalidInput;
             }
         }
-        None => {
-            debug!("Structure not found");
-            return OperationResult::InvalidInput;
-        }
-    };
+    }
 
     if let Some(spawn) = storage
         .entity_table::<model::SpawnComponent>()

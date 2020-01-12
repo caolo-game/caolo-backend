@@ -1,6 +1,6 @@
-use crate::intents::{Intent, SpawnIntent as InnerSpawnIntent};
-use crate::model::{EntityId, SpawnComponent};
-use crate::systems::execution::ScriptExecutionData;
+use crate::intents::{check_spawn_intent, SpawnIntent as InnerSpawnIntent};
+use crate::model::EntityId;
+use crate::systems::script_execution::ScriptExecutionData;
 use cao_lang::prelude::*;
 use caolo_api::structures::SpawnIntent;
 use caolo_api::OperationResult;
@@ -20,24 +20,15 @@ pub fn spawn(
     };
 
     let storage = vm.get_aux().storage();
+    let userid = vm.get_aux().userid();
 
-    match storage
-        .entity_table::<SpawnComponent>()
-        .get_by_id(&EntityId(intent.id))
-        .map(|c| c.spawning.is_none())
-    {
-        None => {
-            return Err(ExecutionError::TaskFailure(format!(
-                "Spawn called on an entity {} that is not a spawn!",
-                intent.id
-            )));
-        }
-        Some(false) => {
-            log::warn!("spawn called on entity {} that is busy!", intent.id);
-            let s = vm.set_value_at(output, OperationResult::InvalidInput);
+    let check = check_spawn_intent(&intent, userid, storage);
+    match check {
+        OperationResult::Ok => {}
+        _ => {
+            let s = vm.set_value_at(output, check);
             return Ok(s);
         }
-        _ => {}
     }
 
     let intent = InnerSpawnIntent {
@@ -46,7 +37,7 @@ pub fn spawn(
         bot: intent.bot,
     };
 
-    vm.get_aux_mut().intents_mut().push(Intent::Spawn(intent));
+    vm.get_aux_mut().intents_mut().spawn_intents.push(intent);
 
     let s = vm.set_value_at(output, OperationResult::Ok);
     return Ok(s);

@@ -1,6 +1,6 @@
 use super::*;
 use crate::{
-    intents::{check_move_intent, Intent},
+    intents::{check_move_intent, MoveIntent},
     model::{self, EntityId, Point},
     profile,
     storage::Storage,
@@ -64,7 +64,11 @@ pub fn move_bot(
 
     vm.get_aux_mut()
         .intents_mut()
-        .push(Intent::new_move(EntityId(intent.id), intent.position));
+        .move_intents
+        .push(MoveIntent {
+            bot: EntityId(intent.id),
+            position: intent.position,
+        });
 
     return Ok(result);
 }

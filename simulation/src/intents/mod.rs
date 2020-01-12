@@ -22,64 +22,27 @@ pub trait ExecutableIntent {
     fn execute(&self, storage: &mut Storage) -> IntentResult;
 }
 
-#[derive(Debug, Clone)]
-pub enum Intent {
-    Move(MoveIntent),
-    Spawn(SpawnIntent),
-    Mine(MineIntent),
-    Dropoff(DropoffIntent),
-    Log(LogIntent),
+#[derive(Debug, Clone, Default)]
+pub struct Intents {
+    pub move_intents: Vec<MoveIntent>,
+    pub spawn_intents: Vec<SpawnIntent>,
+    pub mine_intents: Vec<MineIntent>,
+    pub dropoff_intents: Vec<DropoffIntent>,
+    pub log_intents: Vec<LogIntent>,
 }
 
-impl Intent {
-    /// Higher priority should be executed first
-    pub fn priority(&self) -> u16 {
-        match self {
-            Intent::Move(_) => 1,
-            Intent::Spawn(_) => 10,
-            Intent::Mine(_) => 9,
-            Intent::Dropoff(_) => 9,
-            Intent::Log(_) => 0,
-        }
+impl Intents {
+    pub fn merge(&mut self, other: Intents) -> &mut Self {
+        self.move_intents.extend_from_slice(&other.move_intents);
+        self.spawn_intents.extend_from_slice(&other.spawn_intents);
+        self.mine_intents.extend_from_slice(&other.mine_intents);
+        self.dropoff_intents
+            .extend_from_slice(&other.dropoff_intents);
+        self.log_intents.extend_from_slice(&other.log_intents);
+        self
     }
 
-    pub fn execute(self, storage: &mut Storage) -> IntentResult {
-        match self {
-            Intent::Move(intent) => intent.execute(storage),
-            Intent::Spawn(intent) => intent.execute(storage),
-            Intent::Mine(intent) => intent.execute(storage),
-            Intent::Dropoff(intent) => intent.execute(storage),
-            Intent::Log(intent) => intent.execute(storage),
-        }
-    }
-
-    pub fn new_move(bot: EntityId, position: Point) -> Self {
-        Intent::Move(MoveIntent { bot, position })
-    }
-
-    pub fn new_mine(bot: EntityId, resource: EntityId) -> Self {
-        Intent::Mine(MineIntent { bot, resource })
-    }
-
-    pub fn new_log(entity: EntityId, payload: String, time: u64) -> Self {
-        Intent::Log(LogIntent {
-            entity,
-            payload,
-            time,
-        })
-    }
-
-    pub fn new_dropoff(
-        bot: EntityId,
-        structure: EntityId,
-        amount: u16,
-        ty: crate::model::ResourceType,
-    ) -> Self {
-        Intent::Dropoff(DropoffIntent {
-            bot,
-            structure,
-            amount,
-            ty,
-        })
+    pub fn new() -> Self {
+        Self::default()
     }
 }

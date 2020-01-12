@@ -1,4 +1,4 @@
-use super::*;
+use super::{EntityId, Point, ScriptId, UserData, UserId};
 use crate::tables::{BTreeTable, Component, MortonTable, SpatialKey2d, TableId};
 
 pub use caolo_api::terrain::TileTerrainType;
@@ -37,40 +37,6 @@ impl<Id: TableId> Component<Id> for OwnedEntity {
 pub struct PositionComponent(pub Point);
 impl<Id: TableId> Component<Id> for PositionComponent {
     type Table = BTreeTable<Id, Self>;
-}
-
-impl std::ops::Add for PositionComponent {
-    type Output = Self;
-
-    fn add(self, other: Self) -> Self {
-        Self(Point {
-            x: self.0.x + other.0.x,
-            y: self.0.y + other.0.y,
-        })
-    }
-}
-
-impl SpatialKey2d for PositionComponent {
-    fn as_array(&self) -> [i32; 2] {
-        [self.0.x, self.0.y]
-    }
-
-    fn get_axis(&self, axis: u8) -> i32 {
-        match axis {
-            0 => self.0.x,
-            1 => self.0.y,
-            _ => unreachable!(),
-        }
-    }
-
-    fn new(x: i32, y: i32) -> Self {
-        Self(Point { x, y })
-    }
-
-    fn dist(&self, other: &Self) -> u32 {
-        use std::convert::TryFrom;
-        u32::try_from(self.0.hex_distance(other.0)).expect("Distance to fit in 32 bits")
-    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -143,6 +109,7 @@ impl<Id: TableId> Component<Id> for CarryComponent {
     type Table = BTreeTable<Id, Self>;
 }
 
+/// Entity - Script join table
 #[derive(Debug, Clone)]
 pub struct EntityScript {
     pub script_id: ScriptId,
@@ -171,12 +138,14 @@ impl<Id: TableId> Component<Id> for ResourceComponent {
     type Table = BTreeTable<Id, Self>;
 }
 
+/// Entities with Scripts
 #[derive(Debug, Clone)]
 pub struct ScriptComponent(pub caolo_api::Script);
 impl<Id: TableId> Component<Id> for ScriptComponent {
     type Table = BTreeTable<Id, Self>;
 }
 
+/// Entities with UserData
 #[derive(Debug, Clone)]
 pub struct UserComponent(pub UserData);
 impl<Id: TableId> Component<Id> for UserComponent {

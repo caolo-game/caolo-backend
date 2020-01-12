@@ -5,6 +5,7 @@ pub trait TableId:
     'static + Ord + PartialOrd + Eq + PartialEq + Copy + Default + Send + std::fmt::Debug
 {
 }
+
 impl<T: 'static + Ord + PartialOrd + Eq + PartialEq + Copy + Default + Send + std::fmt::Debug>
     TableId for T
 {

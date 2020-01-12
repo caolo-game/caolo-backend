@@ -1,5 +1,7 @@
 *
 !Cargo.toml
+!Cargo.web.toml
+!Cargo.worker.toml
 !Cargo.lock
 !api
 !simulation

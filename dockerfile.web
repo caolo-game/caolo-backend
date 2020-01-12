@@ -12,12 +12,7 @@ WORKDIR /web
 COPY ./webservice/requirements.txt ./requirements.txt
 RUN pip install -r requirements.txt
 
-# TODO these are needed for the workspace
-# get rid of them
-COPY ./simulation/ ./simulation/
-COPY ./worker/ ./worker/
-
-COPY ./Cargo.toml ./Cargo.toml
+COPY ./Cargo.web.toml ./Cargo.toml
 COPY ./Cargo.lock ./Cargo.lock
 COPY ./rust-toolchain ./rust-toolchain
 

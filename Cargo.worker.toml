@@ -1,0 +1,8 @@
+[workspace]
+
+members = [
+    "api",
+    "simulation",
+    "worker",
+    "cao-lang"
+]

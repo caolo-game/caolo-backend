@@ -29,7 +29,7 @@ Then open the client in your browser by visiting [http://localhost:3000](http://
     cargo bench  # run benchmarks
     cargo clippy # linter
     ```
-    
+
 - Running the web service
     ```
     cd webservice
@@ -39,3 +39,9 @@ Then open the client in your browser by visiting [http://localhost:3000](http://
     python manager.py db upgrade
     python app.py
     ```
+
+## Deployment
+
+Deploying to [Heroku](https://heroku.com):
+
+Create a new project. Setup the repository. Then `make deploy`

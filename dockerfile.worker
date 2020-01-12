@@ -2,7 +2,7 @@ FROM rust:latest AS build
 
 WORKDIR /worker
 
-COPY ./Cargo.toml ./Cargo.toml
+COPY ./Cargo.worker.toml ./Cargo.toml
 COPY ./Cargo.lock ./Cargo.lock
 COPY ./rust-toolchain ./rust-toolchain
 
@@ -10,7 +10,6 @@ COPY ./simulation/ ./simulation/
 COPY ./worker/ ./worker/
 COPY ./api/ ./api/
 COPY ./cao-lang/ ./cao-lang/
-COPY ./webservice/ ./webservice/
 
 RUN cargo install --path worker --root . --no-default-features
 

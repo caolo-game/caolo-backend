@@ -8,10 +8,10 @@ mod payload;
 
 use caolo_sim::{self, storage::Storage};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 fn init() {
-    #[cfg(feature="dotenv")]
+    #[cfg(feature = "dotenv")]
     dep_dotenv::dotenv().unwrap_or_default();
 
     env_logger::init();
@@ -146,15 +146,19 @@ fn main() {
     let mut storage = init::init_storage(n_actors);
     let client = redis::Client::open(redis_url.as_str()).expect("Redis client");
 
-    let sleep_duration = std::env::var("SLEEP_AFTER_TICK_MS")
+    let tick_freq = std::env::var("TARGET_TICK_FREQUENCY_MS")
         .map(|i| i.parse::<u64>().unwrap())
         .unwrap_or(200);
+    let tick_freq = Duration::from_millis(tick_freq);
 
     send_schema(&client).expect("Send schema");
     loop {
+        let start = Instant::now();
         update_program(&mut storage, &client);
         tick(&mut storage);
         send_world(&storage, &client).expect("Sending world");
-        thread::sleep(Duration::from_millis(sleep_duration));
+        let t = Instant::now() - start;
+        let sleep_duration = tick_freq.checked_sub(t).unwrap_or(Duration::from_millis(0));
+        thread::sleep(sleep_duration);
     }
 }

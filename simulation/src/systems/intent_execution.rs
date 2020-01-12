@@ -39,6 +39,9 @@ pub fn execute_intents(mut intents: Intents, storage: &mut Storage) {
 /// Remove duplicate positions.
 /// Replaces duplicate positions with log intents
 fn pre_process_move_intents(move_intents: &mut Vec<MoveIntent>) {
+    if move_intents.is_empty() {
+        return;
+    }
     // sort move intents by their positions
     move_intents.par_sort_unstable_by_key(|int| int.position);
     let len = move_intents.len();

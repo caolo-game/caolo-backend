@@ -29,7 +29,7 @@ impl MoveIntent {
         }
 
         if !table.intersects(&self.position) {
-            debug!("PositionTable insert failed {:?}", self);
+            debug!("PositionTable insert failed {:?}, out of bounds", self);
             return Err("Out of bounds".into());
         }
 
@@ -48,7 +48,6 @@ pub fn check_move_intent(
     storage: &crate::storage::Storage,
 ) -> OperationResult {
     let bots = storage.entity_table::<model::Bot>();
-    let terrain = storage.point_table::<model::TerrainComponent>();
 
     let id = model::EntityId(intent.id);
     match bots.get_by_id(&id) {
@@ -71,15 +70,27 @@ pub fn check_move_intent(
 
     // TODO: bot speed component?
     if 1 < pos.0.hex_distance(intent.position) {
+        debug!(
+            "Bot move target {:?} is out of range of bot position {:?} and velocity {:?}",
+            intent.position, pos, 1
+        );
         return OperationResult::InvalidInput;
     }
 
+    let terrain = storage.point_table::<model::TerrainComponent>();
     match terrain.get_by_id(&intent.position) {
         Some(model::TerrainComponent(model::TileTerrainType::Wall)) => {
-            OperationResult::InvalidInput
+            debug!("Position is occupied by terrain");
+            return OperationResult::InvalidInput;
         }
-        _ => OperationResult::Ok,
+        _ => {}
     }
+    let entity_positions = storage.point_table::<model::EntityComponent>();
+    if let Some(entity) = entity_positions.get_by_id(&intent.position) {
+        debug!("Position is occupied by another entity {:?}", entity);
+        return OperationResult::InvalidInput;
+    }
+    OperationResult::Ok
 }
 
 #[cfg(test)]
@@ -98,7 +109,9 @@ mod tests {
 
         let id = storage.insert_entity();
 
-        storage.entity_table_mut::<Bot>().insert_or_update(id, Bot {});
+        storage
+            .entity_table_mut::<Bot>()
+            .insert_or_update(id, Bot {});
 
         storage
             .entity_table_mut::<PositionComponent>()

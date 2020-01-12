@@ -43,9 +43,14 @@ pub fn move_bot(
         ))
     })?;
 
-    let intent = caolo_api::bots::MoveIntent {
-        id: entity.0,
-        position: path[0], // TODO: cache path
+    let intent = if let Some(position) = path.get(0).cloned() {
+        caolo_api::bots::MoveIntent {
+            id: entity.0,
+            position, // TODO: cache path
+        }
+    } else {
+        debug!("Entity {:?} is trying to move to its own position", entity);
+        return Ok(0);
     };
     let userid = Default::default(); // FIXME
 

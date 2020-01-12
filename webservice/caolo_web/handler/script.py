@@ -41,7 +41,8 @@ def upload_script():
     redis_conn.set("PROGRAM", content)
 
     name = raw.get('name')
-    program = Program(ast=content, compiled=program, user=current_user, name=name)
+    program = Program(
+        ast=content, compiled=program, user=current_user, name=name)
 
     db.session.add(program)
     db.session.commit()

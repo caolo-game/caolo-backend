@@ -52,7 +52,7 @@ pub fn move_bot(
         debug!("Entity {:?} is trying to move to its own position", entity);
         return Ok(0);
     };
-    let userid = Default::default(); // FIXME
+    let userid = vm.get_aux().userid().expect("userid to be set");
 
     let result = {
         let checkresult = check_move_intent(&intent, userid, storage);

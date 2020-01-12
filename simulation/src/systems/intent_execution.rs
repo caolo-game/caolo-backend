@@ -3,6 +3,7 @@ use crate::profile;
 use crate::storage::Storage;
 use rayon::prelude::*;
 
+/// Executes all intents in order of priority (as defined by this system)
 pub fn execute_intents(mut intents: Intents, storage: &mut Storage) {
     profile!("execute_intents");
 

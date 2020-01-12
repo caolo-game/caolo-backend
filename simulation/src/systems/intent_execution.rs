@@ -40,7 +40,7 @@ pub fn execute_intents(mut intents: Intents, storage: &mut Storage) {
 /// Remove duplicate positions.
 /// Replaces duplicate positions with log intents
 fn pre_process_move_intents(move_intents: &mut Vec<MoveIntent>) {
-    if move_intents.is_empty() {
+    if move_intents.len() < 2 {
         return;
     }
     // sort move intents by their positions

@@ -19,6 +19,8 @@ use systems::intent_execution::execute_intents;
 use systems::script_execution::execute_scripts;
 
 pub fn forward(storage: &mut storage::Storage) -> Result<(), Box<dyn std::error::Error>> {
+    profile!("forward world state");
+
     compile_scripts(storage);
     let final_intents = execute_scripts(storage);
 
@@ -31,6 +33,8 @@ pub fn forward(storage: &mut storage::Storage) -> Result<(), Box<dyn std::error:
     execute_world_update(storage);
     info!("Executing systems update - done");
 
+    info!("-----------Tick {} done-----------", storage.time());
+    crate::utils::profiler::save_global();
     Ok(())
 }
 
@@ -72,6 +76,7 @@ pub fn init_inmemory_storage() -> storage::Storage {
     use model::*;
     use tables::{BTreeTable, MortonTable};
 
+    profile!("init_inmemory_storage");
     debug!("Init InMemoryStorage");
 
     let mut storage = storage::Storage::new();
@@ -103,4 +108,3 @@ pub fn init_inmemory_storage() -> storage::Storage {
     debug!("Init InMemoryStorage done");
     storage
 }
-

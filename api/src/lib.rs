@@ -6,11 +6,11 @@ extern crate serde_derive;
 pub mod bots;
 pub mod pathfinding;
 pub mod point;
+pub mod point3;
 pub mod resources;
 pub mod structures;
 pub mod terrain;
 pub mod user;
-pub mod point3;
 
 pub use cao_lang::prelude::*;
 

@@ -1,7 +1,6 @@
 use caolo_api::{point::Point, Script, ScriptId};
 use caolo_sim::model;
 use caolo_sim::storage::Storage;
-use caolo_sim::tables::PositionTable;
 
 const PROGRAM: &str = r#"{"nodes":{"0":{"node":{"Start":null},"children":[1]},"1":{"node":{"ScalarInt":{"value":420}},"children":[2]},"2":{"node":{"ScalarInt":{"value":69}},"children":[3]},"3":{"node":{"Call":{"function":"make_point"}},"children":[4]},"4":{"node":{"Call":{"function":"bots::move_bot"}},"children":[]}},"name":"placeholder"}"#;
 
@@ -19,7 +18,15 @@ pub fn init_storage(n_fake_users: usize) -> Storage {
                 script: serde_json::from_str(PROGRAM).expect("deserialize"),
             }),
         );
+
     let mut rng = rand::thread_rng();
+
+    let terrain = storage.point_table_mut::<model::TerrainComponent>();
+
+    for _ in 0..1 << 13 {
+        let pos = uncontested_pos(terrain, &mut rng);
+        terrain.insert(pos, model::TerrainComponent(model::TileTerrainType::Wall));
+    }
 
     for _ in 0..n_fake_users {
         let id = storage.insert_entity();
@@ -52,11 +59,10 @@ pub fn init_storage(n_fake_users: usize) -> Storage {
     storage
 }
 
-fn uncontested_pos<Table: PositionTable>(
-    positions_table: &Table,
+fn uncontested_pos<T: caolo_sim::tables::TableRow + Send + Sync>(
+    positions_table: &caolo_sim::tables::MortonTable<Point, T>,
     rng: &mut rand::rngs::ThreadRng,
 ) -> caolo_api::point::Point {
-    use caolo_api::point::Circle;
     use rand::Rng;
 
     let mut pos = Point::default();
@@ -64,11 +70,7 @@ fn uncontested_pos<Table: PositionTable>(
         pos.x = rng.gen_range(0, 2000);
         pos.y = rng.gen_range(0, 2000);
 
-        if positions_table.count_entities_in_range(&Circle {
-            center: pos,
-            radius: 0,
-        }) == 0
-        {
+        if positions_table.get_by_id(&pos).is_none() {
             break;
         }
     }

@@ -10,6 +10,8 @@ use rayon::prelude::*;
 use std::convert::TryInto;
 use std::marker::PhantomData;
 
+use crate::profile;
+
 #[derive(Debug, Clone, Copy, Hash, Eq, PartialEq, PartialOrd, Ord)]
 struct MortonKey(u32);
 
@@ -137,6 +139,8 @@ where
 
     /// Returns the first item with given id, if any
     pub fn get_by_id<'a>(&'a self, id: &Id) -> Option<&'a Row> {
+        profile!("get_by_id");
+
         let [x, y] = id.as_array();
         let x = x.try_into().expect("positive integer fitting into 16 bits");
         let y = y.try_into().expect("positive integer fitting into 16 bits");
@@ -152,6 +156,8 @@ where
 
     /// For each id returns the first item with given id, if any
     pub fn get_by_ids<'a>(&'a self, ids: &[Id]) -> Vec<(Id, &'a Row)> {
+        profile!("get_by_ids");
+
         ids.into_par_iter()
             .filter_map(|id| self.get_by_id(id).map(|row| (*id, row)))
             .collect()
@@ -159,10 +165,46 @@ where
 
     /// Find in AABB
     pub fn find_by_range<'a>(&'a self, center: &Id, radius: u32, out: &mut Vec<(Id, &'a Row)>) {
+        profile!("find_by_range");
+
         let r = radius as i32 / 2 + 1;
         let min = *center + Id::new(-r, -r);
         let max = *center + Id::new(r, r);
 
+        let [min, max] = self.morton_min_max(&min, &max);
+
+        for i in min..max {
+            let node = &self.keys[i];
+            let id = Id::new(node.x as i32, node.y as i32);
+            if center.dist(&id) < radius {
+                out.push((id, &self.values[node.ind]));
+            }
+        }
+    }
+
+    /// Find in AABB
+    pub fn count_in_range<'a>(&'a self, center: &Id, radius: u32) -> u32 {
+        profile!("count_in_range");
+
+        let r = radius as i32 / 2 + 1;
+        let min = *center + Id::new(-r, -r);
+        let max = *center + Id::new(r, r);
+
+        let [min, max] = self.morton_min_max(&min, &max);
+
+        let mut count = 0;
+        for i in min..max {
+            let node = &self.keys[i];
+            let id = Id::new(node.x as i32, node.y as i32);
+            if center.dist(&id) < radius {
+                count += 1;
+            }
+        }
+        count
+    }
+
+    /// Turn AABB min-max to from-to indices
+    fn morton_min_max(&self, min: &Id, max: &Id) -> [usize; 2] {
         let [minx, miny] = min.as_array();
         let [maxx, maxy] = max.as_array();
 
@@ -198,13 +240,7 @@ where
             .binary_search_by_key(&max, |node| node.key)
             .unwrap_or_else(|i| i);
 
-        for i in min..max {
-            let node = &self.keys[i];
-            let id = Id::new(node.x as i32, node.y as i32);
-            if center.dist(&id) < radius {
-                out.push((id, &self.values[node.ind]));
-            }
-        }
+        [min, max]
     }
 
     /// Return wether point is within the bounds of this node
@@ -224,6 +260,8 @@ where
     type Row = Row;
 
     fn delete(&mut self, id: &Id) -> Option<Row> {
+        profile!("delete");
+
         let [x, y] = id.as_array();
         let x = x.try_into().ok()?;
         let y = y.try_into().ok()?;
@@ -254,6 +292,8 @@ where
 
 impl PositionTable for MortonTable<Point, EntityComponent> {
     fn get_entities_in_range(&self, vision: &Circle) -> Vec<(EntityId, PositionComponent)> {
+        profile!("get_entities_in_range");
+
         let mut res = Vec::new();
         self.find_by_range(&vision.center, vision.radius * 3 / 2, &mut res);
         res.into_iter()
@@ -263,11 +303,9 @@ impl PositionTable for MortonTable<Point, EntityComponent> {
     }
 
     fn count_entities_in_range(&self, vision: &Circle) -> usize {
-        let mut res = Vec::new();
-        self.find_by_range(&vision.center, vision.radius * 3 / 2, &mut res);
-        res.into_iter()
-            .filter(|(pos, _)| pos.hex_distance(vision.center) <= u64::from(vision.radius))
-            .count()
+        profile!("count_entities_in_range");
+
+        self.count_in_range(&vision.center, vision.radius * 3 / 2) as usize
     }
 }
 
@@ -470,5 +508,49 @@ mod tests {
                 )
             }));
         })
+    }
+
+    #[bench]
+    fn bench_get_by_id_rand(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+
+        let len = 1 << 16;
+        let mut tree = MortonTable::from_iterator((0..len).map(|_| {
+            let pos = Point {
+                x: rng.gen_range(0, 3900 * 2),
+                y: rng.gen_range(0, 3900 * 2),
+            };
+            (pos, rng.next_u32())
+        }));
+
+        b.iter(|| {
+            let pos = Point {
+                x: rng.gen_range(0, 3900 * 2),
+                y: rng.gen_range(0, 3900 * 2),
+            };
+            tree.get_by_id(&pos)
+        });
+    }
+
+    #[bench]
+    fn bench_get_by_id_in_tree(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+
+        let len = 1 << 16;
+        let mut points = Vec::with_capacity(len);
+        let mut tree = MortonTable::from_iterator((0..len).map(|_| {
+            let pos = Point {
+                x: rng.gen_range(0, 3900 * 2),
+                y: rng.gen_range(0, 3900 * 2),
+            };
+            points.push(pos.clone());
+            (pos, rng.next_u32())
+        }));
+
+        b.iter(|| {
+            let i = rng.gen_range(0, points.len());
+            let pos = &points[i];
+            tree.get_by_id(pos)
+        });
     }
 }

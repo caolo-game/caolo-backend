@@ -1,6 +1,6 @@
 pub mod intent_execution;
-pub mod script_execution;
 pub mod pathfinding;
+pub mod script_execution;
 
 use crate::model::{self, Circle};
 use crate::profile;

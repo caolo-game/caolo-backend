@@ -11,7 +11,7 @@ default = ["dotenv"]
 dotenv = ["dep-dotenv"]
 
 [dependencies]
-caolo-sim = { path = "../simulation", features=[] }
+caolo-sim = { path = "../simulation", features=["profile"] }
 caolo-api = { path = "../api" }
 log = "*"
 env_logger = "*"

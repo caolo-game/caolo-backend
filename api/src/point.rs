@@ -3,7 +3,9 @@ use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
 
 /// Represents a 2D point
 /// x and y coordinates are interpreted as column and row when Point is used as a hex tile.
-#[derive(Debug, Clone, Default, Copy, Eq, PartialEq, Serialize, Deserialize, Ord, PartialOrd, Hash)]
+#[derive(
+    Debug, Clone, Default, Copy, Eq, PartialEq, Serialize, Deserialize, Ord, PartialOrd, Hash,
+)]
 #[serde(rename_all = "camelCase")]
 pub struct Point {
     pub x: i32,

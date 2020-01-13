@@ -35,14 +35,14 @@ pub fn move_bot(
             ExecutionError::InvalidArgument
         })?;
 
-    let path = pathfinding::find_path(botpos.0, point, positions, terrain, 5000).map_err(|e| {
-        // TODO this isnt really an error
-        error!("pathfinding failed {:?}", e);
-        ExecutionError::TaskFailure(format!(
-            "Could not find path from {:?} to {:?}",
-            botpos, point
-        ))
-    })?;
+    let path = match pathfinding::find_path(botpos.0, point, positions, terrain, 5000) {
+        Ok(a) => a,
+        Err(e) => {
+            debug!("pathfinding failed {:?}", e);
+            let res = vm.set_value_at(output, OperationResult::OperationFailed);
+            return Ok(res);
+        }
+    };
 
     let intent = if let Some(position) = path.get(0).cloned() {
         caolo_api::bots::MoveIntent {

@@ -8,3 +8,7 @@ target/
 *.sqlite3
 
 docker.env
+
+profile.csv
+
+.ipynb_checkpoints/

@@ -17,7 +17,6 @@ class OAuth(OAuthConsumerMixin, db.Model):
 
 
 login_manager = LoginManager()
-login_manager.login_view = "google.login"
 
 
 @login_manager.user_loader

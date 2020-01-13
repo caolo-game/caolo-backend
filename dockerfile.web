@@ -9,16 +9,14 @@ RUN cargo --version
 
 WORKDIR /web
 
-COPY ./webservice/requirements.txt ./requirements.txt
-RUN pip install -r requirements.txt
-
 COPY ./Cargo.web.toml ./Cargo.toml
 COPY ./Cargo.lock ./Cargo.lock
 COPY ./rust-toolchain ./rust-toolchain
-
 COPY ./api/ ./api/
 COPY ./cao-lang/ ./cao-lang/
-COPY ./webservice/ ./webservice/
+COPY ./webservice/Cargo.toml ./webservice/Cargo.toml
+COPY ./webservice/src/ ./webservice/src
+COPY ./webservice/pyproject.toml ./webservice/pyproject.toml
 
 WORKDIR /web/webservice
 RUN pip install maturin

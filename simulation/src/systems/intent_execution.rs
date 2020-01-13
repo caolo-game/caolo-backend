@@ -41,6 +41,7 @@ pub fn execute_intents(mut intents: Intents, storage: &mut Storage) {
 /// Replaces duplicate positions with log intents
 fn pre_process_move_intents(move_intents: &mut Vec<MoveIntent>) {
     if move_intents.len() < 2 {
+        // 0 and 1 long vectors do not have duplicates
         return;
     }
     // sort move intents by their positions

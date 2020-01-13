@@ -58,3 +58,11 @@ def get_schema():
     if payload:
         schema.extend(json.loads(payload))
     return jsonify(schema)
+
+
+@script_bp.route('/my_scripts', methods=["GET"])
+@login_required
+def get_my_scripts():
+    query = Program.query.filter_by(user_id=current_user.id)
+    result = [{"id": q.id, "ast": json.loads(q.ast), "name": q.name} for q in query]
+    return jsonify(result)

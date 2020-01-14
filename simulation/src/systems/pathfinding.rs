@@ -2,7 +2,7 @@ use crate::model::{EntityComponent, TerrainComponent, TileTerrainType};
 use crate::tables::PositionTable;
 use caolo_api::point::{Circle, Point};
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 struct Node {
@@ -54,12 +54,12 @@ pub fn find_path(
             TileTerrainType::Wall => Some(*p),
             TileTerrainType::Empty => None,
         }))
-        .collect::<BTreeSet<_>>();
+        .collect::<HashSet<_>>();
 
     let current = from;
     let end = to;
 
-    let mut closed_set = BTreeMap::<Point, Node>::new();
+    let mut closed_set = HashMap::<Point, Node>::with_capacity(circle.radius as usize * 2);
     let mut open_set = BTreeSet::new();
 
     let mut current = Node::new(current, current, current.hex_distance(end) as i32, 0);
@@ -125,6 +125,7 @@ pub fn find_path(
         path.push(current);
         current = closed_set[&current].parent;
     }
+    // path is reconstructed from the end backwards, so fix the order of points
     path[from..].reverse();
     Ok(())
 }

@@ -21,7 +21,6 @@ use systems::script_execution::execute_scripts;
 pub fn forward(storage: &mut storage::Storage) -> Result<(), Box<dyn std::error::Error>> {
     profile!("forward world state");
 
-    compile_scripts(storage);
     let final_intents = execute_scripts(storage);
 
     storage.signal_done(&final_intents);
@@ -36,40 +35,6 @@ pub fn forward(storage: &mut storage::Storage) -> Result<(), Box<dyn std::error:
     info!("-----------Tick {} done-----------", storage.time());
     crate::utils::profiler::save_global();
     Ok(())
-}
-
-fn compile_scripts(storage: &mut storage::Storage) {
-    use caolo_api::Script;
-    use model::{ScriptComponent, ScriptId};
-    use rayon::prelude::*;
-
-    info!("Compiling scripts");
-
-    let scripts = storage.scripts_table::<ScriptComponent>();
-    let to_compile: Vec<(ScriptId, Script)> = scripts
-        .iter()
-        .filter(|(_, s)| s.0.compiled.is_none())
-        .map(|(id, s)| (id, s.0.clone()))
-        .collect();
-    let changeset: Vec<(ScriptId, Script)> = to_compile
-        .into_par_iter()
-        .filter_map(|(id, mut script)| {
-            let compiled = cao_lang::prelude::Compiler::compile(script.script.clone())
-                .map_err(|e| {
-                    error!("Script {:?} failed to compile {:?}", id, e);
-                })
-                .ok()?;
-            script.compiled = Some(compiled);
-            Some((id, script))
-        })
-        .collect();
-    for (id, script) in changeset.into_iter() {
-        storage
-            .scripts_table_mut::<ScriptComponent>()
-            .insert_or_update(id, ScriptComponent(script));
-    }
-
-    info!("Compiling scripts done");
 }
 
 pub fn init_inmemory_storage() -> storage::Storage {

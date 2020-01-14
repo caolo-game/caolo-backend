@@ -123,6 +123,7 @@ dependencies = [
 name = "caolo-worker"
 version = "0.1.0"
 dependencies = [
+ "cao-lang 0.1.0",
  "caolo-api 0.1.0",
  "caolo-sim 0.1.0",
  "chrono 0.4.10 (registry+https://github.com/rust-lang/crates.io-index)",

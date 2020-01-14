@@ -1,3 +1,4 @@
+use cao_lang::prelude::*;
 use caolo_api::{point::Point, Script, ScriptId};
 use caolo_sim::model;
 use caolo_sim::storage::Storage;
@@ -9,13 +10,16 @@ pub fn init_storage(n_fake_users: usize) -> Storage {
 
     let script_id = ScriptId::default(); // TODO randomize
     let script_id = model::ScriptId(script_id);
+    let script: CompilationUnit =
+        serde_json::from_str(PROGRAM).expect("deserialize example program");
+    let compiled = Compiler::compile(script.clone()).expect("failed to compile example program");
     storage
         .scripts_table_mut::<model::ScriptComponent>()
         .insert_or_update(
             script_id,
             model::ScriptComponent(Script {
-                compiled: None,
-                script: serde_json::from_str(PROGRAM).expect("deserialize"),
+                compiled: Some(compiled),
+                script: script,
             }),
         );
 

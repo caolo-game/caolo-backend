@@ -35,7 +35,7 @@ pub fn move_bot(
             ExecutionError::InvalidArgument
         })?;
 
-    let path = match pathfinding::find_path(botpos.0, point, positions, terrain, 5000) {
+    let path = match pathfinding::find_path(botpos.0, point, positions, terrain, 1000) {
         Ok(a) => a,
         Err(e) => {
             debug!("pathfinding failed {:?}", e);

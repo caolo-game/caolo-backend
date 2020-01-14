@@ -121,9 +121,12 @@ where
 
     /// May trigger reordering of items, if applicable prefer `extend` and insert many keys at once.
     pub fn insert(&mut self, id: Id, row: Row) -> bool {
+        if !self.intersects(&id) {
+            return false;
+        }
         let [x, y] = id.as_array();
-        let x = x.try_into().expect("positive integer fitting into 16 bits");
-        let y = y.try_into().expect("positive integer fitting into 16 bits");
+        let [x, y] = [x as u16, y as u16];
+
         let ind = self
             .keys
             .binary_search_by_key(&MortonKey::new(x, y), |node| node.key)
@@ -141,9 +144,12 @@ where
     pub fn get_by_id<'a>(&'a self, id: &Id) -> Option<&'a Row> {
         profile!("get_by_id");
 
+        if !self.intersects(&id) {
+            return None;
+        }
         let [x, y] = id.as_array();
-        let x = x.try_into().ok()?;
-        let y = y.try_into().ok()?;
+        let [x, y] = [x as u16, y as u16];
+
         if let Ok(ind) = self
             .keys
             .binary_search_by_key(&MortonKey::new(x, y), |node| node.key)
@@ -204,27 +210,17 @@ where
     }
 
     /// Turn AABB min-max to from-to indices
+    /// Clamps `min` and `max` to intersect `self`
     fn morton_min_max(&self, min: &Id, max: &Id) -> [usize; 2] {
         let [minx, miny] = min.as_array();
         let [maxx, maxy] = max.as_array();
 
-        let minx = minx
-            .max(0)
-            .try_into()
-            .expect("positive integer fitting into 16 bits");
-        let miny = miny
-            .max(0)
-            .try_into()
-            .expect("positive integer fitting into 16 bits");
-
-        let maxx = maxx
-            .max(0)
-            .try_into()
-            .expect("positive integer fitting into 16 bits");
-        let maxy = maxy
-            .max(0)
-            .try_into()
-            .expect("positive integer fitting into 16 bits");
+        let [minx, miny, maxx, maxy] = [
+            minx.max(0x0000) as u16,
+            miny.max(0x0000) as u16,
+            maxx.min(0xffff) as u16,
+            maxy.min(0xffff) as u16,
+        ];
 
         // calculate the range we have to check
         let min = MortonKey::new(minx, miny);
@@ -235,8 +231,7 @@ where
             .keys
             .binary_search_by_key(&min, |node| node.key)
             .unwrap_or_else(|i| i);
-        let max: usize = self
-            .keys
+        let max: usize = self.keys[min..]
             .binary_search_by_key(&max, |node| node.key)
             .unwrap_or_else(|i| i);
 

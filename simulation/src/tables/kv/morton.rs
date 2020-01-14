@@ -515,7 +515,7 @@ mod tests {
         let mut rng = rand::thread_rng();
 
         let len = 1 << 16;
-        let mut tree = MortonTable::from_iterator((0..len).map(|_| {
+        let tree = MortonTable::from_iterator((0..len).map(|_| {
             let pos = Point {
                 x: rng.gen_range(0, 3900 * 2),
                 y: rng.gen_range(0, 3900 * 2),
@@ -538,7 +538,7 @@ mod tests {
 
         let len = 1 << 16;
         let mut points = Vec::with_capacity(len);
-        let mut tree = MortonTable::from_iterator((0..len).map(|_| {
+        let tree = MortonTable::from_iterator((0..len).map(|_| {
             let pos = Point {
                 x: rng.gen_range(0, 3900 * 2),
                 y: rng.gen_range(0, 3900 * 2),
@@ -551,6 +551,87 @@ mod tests {
             let i = rng.gen_range(0, points.len());
             let pos = &points[i];
             tree.get_by_id(pos)
+        });
+    }
+
+    #[bench]
+    fn bench_get_by_id_in_hashmap(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+
+        let len = 1 << 16;
+        let mut points = Vec::with_capacity(len);
+        let mut tree = std::collections::HashMap::with_capacity(len);
+        for _ in 0..len {
+            let pos = Point {
+                x: rng.gen_range(0, 3900 * 2),
+                y: rng.gen_range(0, 3900 * 2),
+            };
+            points.push(pos.clone());
+            tree.insert(pos, rng.next_u32());
+        }
+
+        b.iter(|| {
+            let i = rng.gen_range(0, points.len());
+            let pos = &points[i];
+            tree.get(pos)
+        });
+    }
+
+    #[bench]
+    fn bench_get_by_id_rand_in_hashmap(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+
+        let len = 1 << 16;
+
+        let mut tree = std::collections::HashMap::with_capacity(len);
+        for _ in 0..len {
+            let pos = Point {
+                x: rng.gen_range(0, 3900 * 2),
+                y: rng.gen_range(0, 3900 * 2),
+            };
+            tree.insert(pos, rng.next_u32());
+        }
+
+        b.iter(|| {
+            let pos = Point {
+                x: rng.gen_range(0, 3900 * 2),
+                y: rng.gen_range(0, 3900 * 2),
+            };
+            tree.get(&pos)
+        });
+    }
+
+    #[bench]
+    fn bench_get_entities_in_range_dense_in_hashmap(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+
+        let mut tree = std::collections::HashMap::new();
+
+        for _ in 0..(1 << 15) {
+            let p = Point {
+                x: rng.gen_range(0, 200 * 2),
+                y: rng.gen_range(0, 200 * 2),
+            };
+            tree.insert(p, EntityComponent(EntityId(rng.gen())));
+        }
+
+        let radius = 50;
+
+        let mut v = Vec::with_capacity(512);
+        b.iter(|| {
+            let tree = &tree;
+            let x = rng.gen_range(0, 200 * 2);
+            let y = rng.gen_range(0, 200 * 2);
+            v.clear();
+            for x in x - radius..x + radius {
+                for y in y - radius..y + radius {
+                    let p = Point { x, y };
+                    if let Some(val) = tree.get(&p) {
+                        v.push((p, val));
+                    }
+                }
+            }
+            v.len()
         });
     }
 }

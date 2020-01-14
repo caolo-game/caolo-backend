@@ -15,6 +15,17 @@ use crate::systems::script_execution::ScriptExecutionData;
 use cao_lang::prelude::*;
 use cao_lang::traits::ByteEncodeProperties;
 use caolo_api::OperationResult;
+use std::convert::TryFrom;
+
+/// Write an OperationResult to the program
+pub fn make_operation_result(
+    vm: &mut VM<ScriptExecutionData>,
+    op: i32,
+    output: TPointer,
+) -> Result<usize, ExecutionError> {
+    let op = OperationResult::try_from(op).map_err(|_| ExecutionError::InvalidArgument)?;
+    Ok(vm.set_value_at(output, op))
+}
 
 pub fn make_point(
     vm: &mut VM<ScriptExecutionData>,
@@ -139,6 +150,24 @@ pub fn make_import() -> Schema {
                     spawn,
                     "Spawn a new bot from given configuration.",
                     [caolo_api::structures::SpawnIntent],
+                    OperationResult
+                ),
+                fo: FunctionObject::new(FunctionWrapper::new(spawn)),
+            },
+            FunctionRow {
+                desc: make_node_desc!(
+                    find_closest_resource_by_range,
+                    "Find the resource closest to the current entity",
+                    [],
+                    (OperationResult, Point)
+                ),
+                fo: FunctionObject::new(FunctionWrapper::new(spawn)),
+            },
+            FunctionRow {
+                desc: make_node_desc!(
+                    make_operation_result,
+                    "Produces an OperationResult",
+                    [i32],
                     OperationResult
                 ),
                 fo: FunctionObject::new(FunctionWrapper::new(spawn)),

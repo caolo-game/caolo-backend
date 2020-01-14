@@ -1,10 +1,12 @@
 use super::*;
-use crate::model::{self, EntityId, Resource, ResourceComponent};
+use crate::model::{
+    self, EntityComponent, EntityId, PositionComponent, Resource, ResourceComponent,
+};
 use crate::profile;
 use crate::storage::Storage;
 use caolo_api::resources::Mineral;
 
-pub const MAX_SEARCH_RADIUS: u32 = 60;
+pub const MAX_SEARCH_RADIUS: u32 = 256;
 
 pub fn build_resource(
     id: EntityId,
@@ -32,15 +34,46 @@ pub fn build_resource(
 }
 
 pub fn find_closest_resource_by_range(
-    _vm: &mut VM<ScriptExecutionData>,
+    vm: &mut VM<ScriptExecutionData>,
     _: (),
-    _output: TPointer,
+    output: TPointer,
 ) -> Result<usize, ExecutionError> {
     profile!("find_closest_resource_by_range");
-    // let entityid = vm.get_aux().entityid();
-    // let storage = vm.get_aux().storage();
-    //
-    // let positions = storage.entity_table::<PositionComponent>();
-    // let resources = storage.entity_table::<ResourceComponent>();
-    unimplemented!()
+
+    let entityid = vm.get_aux().entityid();
+    let storage = vm.get_aux().storage();
+
+    let position = match storage
+        .entity_table::<PositionComponent>()
+        .get_by_id(&entityid)
+    {
+        Some(p) => p,
+        None => {
+            debug!("{:?} has no PositionComponent", entityid);
+            return Ok(vm.set_value_at(output, (OperationResult::InvalidInput,)));
+        }
+    };
+
+    let mut candidates = Vec::with_capacity(MAX_SEARCH_RADIUS as usize * 2);
+    storage.point_table::<EntityComponent>().find_by_range(
+        &position.0,
+        MAX_SEARCH_RADIUS,
+        &mut candidates,
+    );
+
+    let resources = storage.entity_table::<ResourceComponent>();
+
+    candidates.retain(|(_pos, entityid)| resources.get_by_id(&entityid.0).is_some());
+    match candidates
+        .iter()
+        .min_by_key(|(pos, _)| pos.hex_distance(position.0))
+    {
+        None => return Ok(vm.set_value_at(output, (OperationResult::OperationFailed,))),
+        Some((pos, _entity)) => {
+            // move out of the result to free the storage borrow
+            let pos = *pos;
+            let len = vm.set_value_at(output, (OperationResult::Ok, pos));
+            return Ok(len);
+        }
+    }
 }

@@ -90,11 +90,12 @@ impl<Aux> VM<Aux> {
         let bytes = val.encode();
         match usize::try_from(ptr) {
             Ok(ptr) => {
-                if ptr + bytes.len() > self.memory.len() {
-                    self.memory.resize(ptr + bytes.len(), 0);
+                let len = bytes.len();
+                if ptr + len > self.memory.len() {
+                    self.memory.resize(ptr + len, 0);
                 }
-                self.memory.as_mut_slice()[ptr..ptr + bytes.len()].copy_from_slice(&bytes[..]);
-                bytes.len()
+                self.memory.as_mut_slice()[ptr..ptr + len].copy_from_slice(&bytes[..]);
+                len
             }
             Err(e) => {
                 error!("Failed to cast ptr to usize {:?}", e);

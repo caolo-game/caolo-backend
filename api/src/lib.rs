@@ -14,6 +14,8 @@ pub mod user;
 
 pub use cao_lang::prelude::*;
 
+use std::convert::TryFrom;
+
 pub type EntityId = u64;
 pub type UserId = uuid::Uuid;
 
@@ -33,9 +35,11 @@ pub enum OperationResult {
     Full = -7,
 }
 
-impl From<i32> for OperationResult {
-    fn from(i: i32) -> OperationResult {
-        match i {
+impl TryFrom<i32> for OperationResult {
+    type Error = i32;
+
+    fn try_from(i: i32) -> Result<OperationResult, i32> {
+        let op = match i {
             0 => OperationResult::Ok,
             -1 => OperationResult::NotOwner,
             -2 => OperationResult::InvalidInput,
@@ -44,8 +48,11 @@ impl From<i32> for OperationResult {
             -5 => OperationResult::InvalidTarget,
             -6 => OperationResult::Empty,
             -7 => OperationResult::Full,
-            _ => panic!("Got an unexpected return code {}", i),
-        }
+            _ => {
+                return Err(i);
+            }
+        };
+        Ok(op)
     }
 }
 

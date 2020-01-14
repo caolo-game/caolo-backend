@@ -116,6 +116,27 @@ impl AutoByteEncodeProperties for f64 {
     }
 }
 
+impl<T1: AutoByteEncodeProperties> AutoByteEncodeProperties for (T1,) {}
+
+impl<T1: AutoByteEncodeProperties, T2: AutoByteEncodeProperties> AutoByteEncodeProperties
+    for (T1, T2)
+{
+}
+
+impl<T1: AutoByteEncodeProperties, T2: AutoByteEncodeProperties, T3: AutoByteEncodeProperties>
+    AutoByteEncodeProperties for (T1, T2, T3)
+{
+}
+
+impl<
+        T1: AutoByteEncodeProperties,
+        T2: AutoByteEncodeProperties,
+        T3: AutoByteEncodeProperties,
+        T4: AutoByteEncodeProperties,
+    > AutoByteEncodeProperties for (T1, T2, T3, T4)
+{
+}
+
 impl<T: Sized + Clone + Copy + AutoByteEncodeProperties> ByteEncodeProperties for T {
     fn encode(self) -> Vec<u8> {
         let size: usize = Self::BYTELEN;

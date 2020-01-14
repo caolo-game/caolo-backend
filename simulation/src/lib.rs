@@ -21,7 +21,9 @@ use systems::script_execution::execute_scripts;
 pub fn forward(storage: &mut storage::Storage) -> Result<(), Box<dyn std::error::Error>> {
     profile!("forward world state");
 
+    info!("Executing scripts");
     let final_intents = execute_scripts(storage);
+    info!("Executing scripts - done");
 
     storage.signal_done(&final_intents);
 

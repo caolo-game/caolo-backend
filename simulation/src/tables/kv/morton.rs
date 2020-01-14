@@ -142,8 +142,8 @@ where
         profile!("get_by_id");
 
         let [x, y] = id.as_array();
-        let x = x.try_into().expect("positive integer fitting into 16 bits");
-        let y = y.try_into().expect("positive integer fitting into 16 bits");
+        let x = x.try_into().ok()?;
+        let y = y.try_into().ok()?;
         if let Ok(ind) = self
             .keys
             .binary_search_by_key(&MortonKey::new(x, y), |node| node.key)

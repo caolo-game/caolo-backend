@@ -15,7 +15,7 @@ pub fn move_bot(
     point: TPointer,
     output: TPointer,
 ) -> Result<usize, ExecutionError> {
-    profile!("mode_bot");
+    profile!("move_bot");
 
     let point: Point = vm.get_value(point).ok_or_else(|| {
         error!("move_bot called without a point");

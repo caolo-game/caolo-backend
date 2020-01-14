@@ -28,13 +28,15 @@ pub enum PathFindingError {
     Unreachable,
 }
 
+/// Find path from `from` to `to`. Will append the resulting path to the `path` output vector.
 pub fn find_path(
     from: Point,
     to: Point,
     positions: &<EntityComponent as crate::tables::Component<Point>>::Table,
     terrain: &<TerrainComponent as crate::tables::Component<Point>>::Table,
     mut max_iterations: u32,
-) -> Result<Vec<Point>, PathFindingError> {
+    path: &mut Vec<Point>,
+) -> Result<(), PathFindingError> {
     let center = (from + to) / 2;
     let circle = Circle {
         radius: from.hex_distance(center) as u32,
@@ -72,17 +74,20 @@ pub fn find_path(
             .pos
             .neighbours()
             .iter()
-            .filter(|p| positions.intersects(&p)) // assume that positions and terrain have the same bounds
+            .filter(|p| {
+                let res = positions.intersects(&p);
+                debug_assert!(
+                    terrain.intersects(&p) == res,
+                    "if p intersects positions it must also intersect terrain!"
+                );
+                res
+            })
             .filter(|p| {
                 let is_inside = circle.is_inside(**p);
 
                 (is_inside && !obsticles.contains(p))
-                    || (positions.count_entities_in_range(&Circle {
-                        center: **p,
-                        radius: 0,
-                    }) == 0
-                        && terrain.get_by_id(*p).map(|x| x.0.clone())
-                            != Some(TileTerrainType::Wall))
+                    || (positions.get_by_id(*p).is_none()
+                        && terrain.get_by_id(*p).map(|x| &x.0) != Some(&TileTerrainType::Wall))
                     || **p == end // End may be in the positions table!
             })
             .for_each(|point| {
@@ -113,15 +118,15 @@ pub fn find_path(
     }
 
     // reconstruct path
-    let mut path = Vec::with_capacity(closed_set.len());
     let mut current = end;
     let end = from;
+    let from = path.len();
     while current != end {
         path.push(current);
         current = closed_set[&current].parent;
     }
-    let path = path.iter().rev().cloned().collect();
-    Ok(path)
+    path[from..].reverse();
+    Ok(())
 }
 
 #[cfg(test)]
@@ -141,7 +146,8 @@ mod tests {
             assert!(terrain.insert(Point::new(2, i), TerrainComponent(TileTerrainType::Wall)));
         }
 
-        let path = find_path(from, to, &positions, &terrain, 512).expect("Path finding failed");
+        let mut path = vec![];
+        find_path(from, to, &positions, &terrain, 512, &mut path).expect("Path finding failed");
 
         let mut current = from;
         for point in path.iter() {
@@ -165,7 +171,8 @@ mod tests {
         positions.insert(from, EntityComponent(EntityId(0)));
         positions.insert(to, EntityComponent(EntityId(1)));
 
-        let path = find_path(from, to, &positions, &terrain, 512).expect("Path finding failed");
+        let mut path = vec![];
+        find_path(from, to, &positions, &terrain, 512, &mut path).expect("Path finding failed");
 
         let mut current = from;
         for point in path.iter() {

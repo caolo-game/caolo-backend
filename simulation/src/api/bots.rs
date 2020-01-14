@@ -35,8 +35,9 @@ pub fn move_bot(
             ExecutionError::InvalidArgument
         })?;
 
-    let path = match pathfinding::find_path(botpos.0, point, positions, terrain, 1000) {
-        Ok(a) => a,
+    let mut path = Vec::with_capacity(1000);
+    match pathfinding::find_path(botpos.0, point, positions, terrain, 1000, &mut path) {
+        Ok(_) => {}
         Err(e) => {
             debug!("pathfinding failed {:?}", e);
             let res = vm.set_value_at(output, OperationResult::OperationFailed);

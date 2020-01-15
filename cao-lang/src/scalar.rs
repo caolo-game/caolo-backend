@@ -4,7 +4,7 @@ use serde_derive::{Deserialize, Serialize};
 use std::convert::{From, TryFrom};
 use std::ops::{Add, Div, Mul, Sub};
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, PartialOrd)]
 pub enum Scalar {
     Pointer(TPointer),
     Integer(i32),
@@ -102,6 +102,18 @@ impl TryFrom<Scalar> for f32 {
             Scalar::Floating(i) => Ok(i),
             _ => Err(v),
         }
+    }
+}
+
+impl From<i32> for Scalar {
+    fn from(i: i32) -> Self {
+        Scalar::Integer(i)
+    }
+}
+
+impl From<bool> for Scalar {
+    fn from(i: bool) -> Self {
+        Scalar::Integer(i as i32)
     }
 }
 

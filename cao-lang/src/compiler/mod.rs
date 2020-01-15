@@ -130,7 +130,8 @@ impl Compiler {
         let instruction = node.node;
 
         match instruction {
-            Exit | Start | Pass | CopyLast | Add | Sub | Mul | Div => {
+            Equals | Less | LessOrEq | NotEquals | Exit | Start | Pass | CopyLast | Add | Sub
+            | Mul | Div => {
                 self.push_node(nodeid);
             }
             JumpIfTrue(j) | Jump(j) => {

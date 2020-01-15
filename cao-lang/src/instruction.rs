@@ -8,6 +8,8 @@ use std::convert::TryFrom;
 #[repr(u8)]
 /// Single instruction of the interpreter
 pub enum Instruction {
+    /// The first node executed
+    Start = 0,
     /// Add two numbers
     Add = 1,
     /// Subtract two numbers
@@ -48,8 +50,14 @@ pub enum Instruction {
     WriteReg = 21,
     /// Read the value in the given register and push it on the stack
     ReadReg = 22,
-    /// The first node executed
-    Start = 0,
+    /// Compares two scalars
+    Equals = 23,
+    /// Compares two scalars
+    NotEquals = 24,
+    /// Is the first param less than the second?
+    Less = 25,
+    /// Is the first param less than or equal to the second?
+    LessOrEq = 26,
 }
 
 impl TryFrom<u8> for Instruction {
@@ -76,6 +84,10 @@ impl TryFrom<u8> for Instruction {
             20 => Ok(Jump),
             21 => Ok(WriteReg),
             22 => Ok(ReadReg),
+            23 => Ok(Equals),
+            24 => Ok(NotEquals),
+            25 => Ok(Less),
+            26 => Ok(LessOrEq),
             _ => Err(format!("Unrecognized instruction [{}]", c)),
         }
     }

@@ -246,6 +246,18 @@ impl<Aux> VM<Aux> {
                 Instruction::Sub => self.binary_op(|a, b| a - b, |s| s.stack().last().cloned())?,
                 Instruction::Mul => self.binary_op(|a, b| a * b, |s| s.stack().last().cloned())?,
                 Instruction::Div => self.binary_op(|a, b| a / b, |s| s.stack().last().cloned())?,
+                Instruction::Equals => {
+                    self.binary_op(|a, b| (a == b).into(), |s| s.stack().last().cloned())?
+                }
+                Instruction::NotEquals => {
+                    self.binary_op(|a, b| (a != b).into(), |s| s.stack().last().cloned())?
+                }
+                Instruction::Less => {
+                    self.binary_op(|a, b| (a < b).into(), |s| s.stack().last().cloned())?
+                }
+                Instruction::LessOrEq => {
+                    self.binary_op(|a, b| (a <= b).into(), |s| s.stack().last().cloned())?
+                }
                 Instruction::StringLiteral => {
                     let literal = Self::read_str(&mut ptr, &program.bytecode)
                         .ok_or(ExecutionError::InvalidArgument)?;

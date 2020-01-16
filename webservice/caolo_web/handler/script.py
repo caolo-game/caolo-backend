@@ -27,7 +27,7 @@ def compile_script():
 
 @script_bp.route('/commit', methods=["POST"])
 @login_required
-def upload_script():
+def commit_script():
     content = request.get_data(as_text=True)
     try:
         program = cw.compile(content)

@@ -29,12 +29,12 @@ RUN ls -al build
 FROM python:3.8-slim
 RUN apt-get update
 RUN apt-get install build-essential -y
+COPY ./webservice/requirements.txt ./requirements.txt
+RUN pip install -r requirements.txt
 
 WORKDIR /web
 COPY --from=build /web/webservice/build/ ./build/
 RUN pip install build/caolo_web-0.1.0-cp38-cp38-manylinux1_x86_64.whl
-COPY ./webservice/requirements.txt ./requirements.txt
-RUN pip install -r requirements.txt
 
 # Copy the non-packaged scripts
 COPY ./webservice/*.py ./

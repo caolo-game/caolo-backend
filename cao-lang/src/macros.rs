@@ -13,9 +13,7 @@ pub mod vm {
     #[macro_export(local_inner_macros)]
     macro_rules! pop_stack {
         ($from : ident) => {{
-            let r = *$from.stack.last().ok_or(ExecutionError::InvalidArgument)?;
-            $from.stack.pop();
-            r
+            $from.stack.pop().ok_or(ExecutionError::InvalidArgument)?
         }};
     }
 

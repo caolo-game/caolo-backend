@@ -6,6 +6,8 @@ use log::{debug, error};
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
+use crate::{binary_compare, pop_stack};
+
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Object {
     /// index of the Object's data in the VM memory
@@ -35,51 +37,6 @@ pub struct VM<Aux = ()> {
     stack: Vec<Scalar>,
     registers: [Scalar; 16],
     objects: HashMap<TPointer, Object>,
-}
-
-macro_rules! load_ptr {
-    ($val: expr, $from: ident) => {
-        $from
-            .objects
-            .get($val)
-            .ok_or(ExecutionError::InvalidArgument)?;
-    };
-}
-
-macro_rules! pop_stack {
-    ($from : ident) => {{
-        let r = *$from.stack.last().ok_or(ExecutionError::InvalidArgument)?;
-        $from.stack.pop();
-        r
-    }};
-}
-
-macro_rules! binary_compare {
-    ($from:ident, $cmp: tt, $return_on_diff_type: expr) => {
-        {
-        let b = pop_stack!($from);
-        let a = pop_stack!($from);
-        let res = match (a, b) {
-            (Scalar::Pointer(a), Scalar::Pointer(b)) => {
-                let a = load_ptr!(&a, $from);
-                let b = load_ptr!(&b, $from);
-                if a.size() != b.size() {
-                    $return_on_diff_type
-                } else {
-                    let size = a.size() as usize;
-                    let ind = a.index() as usize;
-                    let a = &$from.memory[ind..ind + size];
-                    let ind = b.index() as usize;
-                    let b = &$from.memory[ind..ind + size];
-
-                    a.iter().zip(b.iter()).all(|(a, b)| a $cmp b)
-                }
-            }
-            _ => a $cmp b,
-        };
-        $from.stack.push(Scalar::Integer(res as i32));
-        }
-    };
 }
 
 impl<Aux> VM<Aux> {

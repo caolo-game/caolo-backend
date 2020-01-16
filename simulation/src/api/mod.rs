@@ -13,6 +13,7 @@ pub use self::structures::*;
 use crate::model::Point;
 use crate::systems::script_execution::ScriptExecutionData;
 use cao_lang::prelude::*;
+use cao_lang::scalar::Scalar;
 use cao_lang::traits::ByteEncodeProperties;
 use caolo_api::OperationResult;
 use std::convert::TryFrom;
@@ -21,32 +22,29 @@ use std::convert::TryFrom;
 pub fn make_operation_result(
     vm: &mut VM<ScriptExecutionData>,
     op: i32,
-    output: TPointer,
-) -> Result<usize, ExecutionError> {
+) -> Result<Object, ExecutionError> {
     let op = OperationResult::try_from(op).map_err(|_| ExecutionError::InvalidArgument)?;
-    Ok(vm.set_value_at(output, op))
+    vm.set_value(op)
 }
 
 pub fn make_point(
     vm: &mut VM<ScriptExecutionData>,
     (x, y): (i32, i32),
-    output: TPointer,
-) -> Result<usize, ExecutionError> {
+) -> Result<Object, ExecutionError> {
     let point = Point::new(x, y);
-    Ok(vm.set_value_at(output, point))
+    vm.set_value(point)
 }
 
 pub fn console_log(
     vm: &mut VM<ScriptExecutionData>,
     message: TPointer,
-    _output: TPointer,
-) -> Result<usize, ExecutionError> {
-    let entityid = vm.get_aux().entityid();
-    let time = vm.get_aux().storage().time();
+) -> Result<Object, ExecutionError> {
     let message: String = vm.get_value(message).ok_or_else(|| {
-        error!("console_log called with invalid message");
+        debug!("console_log called with invalid message");
         ExecutionError::InvalidArgument
     })?;
+    let entityid = vm.get_aux().entityid();
+    let time = vm.get_aux().storage().time();
 
     let payload = format!("{:?} says {}", entityid, message);
     debug!("{}", payload);
@@ -59,14 +57,13 @@ pub fn console_log(
             time,
         });
 
-    Ok(0)
+    Ok(Default::default())
 }
 
 pub fn log_scalar(
     vm: &mut VM<ScriptExecutionData>,
     value: Scalar,
-    _output: TPointer,
-) -> Result<usize, ExecutionError> {
+) -> Result<Object, ExecutionError> {
     let entityid = vm.get_aux().entityid();
     let time = vm.get_aux().storage().time();
     let payload = format!("{:?} says {:?}", entityid, value);
@@ -79,7 +76,7 @@ pub fn log_scalar(
             payload,
             time,
         });
-    Ok(0)
+    Ok(Default::default())
 }
 
 /// Holds data about a function
@@ -161,7 +158,7 @@ pub fn make_import() -> Schema {
                     [],
                     (OperationResult, Point)
                 ),
-                fo: FunctionObject::new(FunctionWrapper::new(spawn)),
+                fo: FunctionObject::new(FunctionWrapper::new(find_closest_resource_by_range)),
             },
             FunctionRow {
                 desc: make_node_desc!(
@@ -170,7 +167,7 @@ pub fn make_import() -> Schema {
                     [i32],
                     OperationResult
                 ),
-                fo: FunctionObject::new(FunctionWrapper::new(spawn)),
+                fo: FunctionObject::new(FunctionWrapper::new(make_operation_result)),
             },
         ],
     }

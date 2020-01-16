@@ -6,11 +6,7 @@ use caolo_api::structures::SpawnIntent;
 use caolo_api::OperationResult;
 
 /// Given a SpawnIntent as input instructs the current spawn to spawn a new Bot
-pub fn spawn(
-    vm: &mut VM<ScriptExecutionData>,
-    intent: TPointer,
-    output: TPointer,
-) -> Result<usize, ExecutionError> {
+pub fn spawn(vm: &mut VM<ScriptExecutionData>, intent: TPointer) -> Result<Object, ExecutionError> {
     let intent = match vm.get_value::<SpawnIntent>(intent) {
         None => {
             log::error!("spawn intent not set");
@@ -26,8 +22,7 @@ pub fn spawn(
     match check {
         OperationResult::Ok => {}
         _ => {
-            let s = vm.set_value_at(output, check);
-            return Ok(s);
+            return vm.set_value(check);
         }
     }
 
@@ -39,6 +34,5 @@ pub fn spawn(
 
     vm.get_aux_mut().intents_mut().spawn_intents.push(intent);
 
-    let s = vm.set_value_at(output, OperationResult::Ok);
-    return Ok(s);
+    vm.set_value(OperationResult::Ok)
 }

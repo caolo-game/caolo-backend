@@ -36,8 +36,7 @@ pub fn build_resource(
 pub fn find_closest_resource_by_range(
     vm: &mut VM<ScriptExecutionData>,
     _: (),
-    output: TPointer,
-) -> Result<usize, ExecutionError> {
+) -> Result<Object, ExecutionError> {
     profile!("find_closest_resource_by_range");
 
     let entityid = vm.get_aux().entityid();
@@ -50,7 +49,7 @@ pub fn find_closest_resource_by_range(
         Some(p) => p,
         None => {
             debug!("{:?} has no PositionComponent", entityid);
-            return Ok(vm.set_value_at(output, (OperationResult::InvalidInput,)));
+            return vm.set_value((OperationResult::InvalidInput,));
         }
     };
 
@@ -68,12 +67,11 @@ pub fn find_closest_resource_by_range(
         .iter()
         .min_by_key(|(pos, _)| pos.hex_distance(position.0))
     {
-        None => return Ok(vm.set_value_at(output, (OperationResult::OperationFailed,))),
+        None => vm.set_value((OperationResult::OperationFailed,)),
         Some((pos, _entity)) => {
             // move out of the result to free the storage borrow
             let pos = *pos;
-            let len = vm.set_value_at(output, (OperationResult::Ok, pos));
-            return Ok(len);
+            vm.set_value((OperationResult::Ok, pos))
         }
     }
 }

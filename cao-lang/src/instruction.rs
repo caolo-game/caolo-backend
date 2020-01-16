@@ -123,11 +123,36 @@ pub fn get_instruction_descriptions() -> Vec<NodeDescription<'static>> {
         make_node_desc!(Instruction::Pass, "Do nothing", [], ()),
         make_node_desc!(Instruction::ScalarInt, "Make an integer", [], Scalar),
         make_node_desc!(Instruction::ScalarFloat, "Make a real number", [], Scalar),
+        make_node_desc!(Instruction::StringLiteral, "Make a text", [], Scalar),
         make_node_desc!(
             Instruction::JumpIfTrue,
             "Jump to the input node if the last value is true else do nothing.",
             [Scalar],
             ()
+        ),
+        make_node_desc!(
+            Instruction::Equals,
+            "Return 1 if the inputs are equal, 0 otherwise",
+            [Scalar, Scalar],
+            Scalar
+        ),
+        make_node_desc!(
+            Instruction::NotEquals,
+            "Return 0 if the inputs are equal, 1 otherwise",
+            [Scalar, Scalar],
+            Scalar
+        ),
+        make_node_desc!(
+            Instruction::Less,
+            "Return 1 if the first input is less than the second, 0 otherwise",
+            [Scalar, Scalar],
+            Scalar
+        ),
+        make_node_desc!(
+            Instruction::LessOrEq,
+            "Return 1 if the first input is less than or equal to the second, 0 otherwise",
+            [Scalar, Scalar],
+            Scalar
         ),
     ]
 }

@@ -3,5 +3,7 @@ pub use crate::instruction::Instruction;
 pub use crate::scalar::*;
 pub use crate::traits::*;
 pub use crate::{
-    make_node_desc, vm::VM, CompiledProgram, ExecutionError, InputString, NodeDescription, TPointer,
+    make_node_desc,
+    vm::{Object, VM},
+    CompiledProgram, ExecutionError, InputString, NodeDescription, TPointer,
 };

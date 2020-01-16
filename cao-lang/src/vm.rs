@@ -6,6 +6,24 @@ use log::{debug, error};
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Object {
+    /// index of the Object's data in the VM memory
+    data_index: u32,
+    /// size of the data in the VM memory
+    data_size: i32,
+}
+
+impl Object {
+    pub fn index(&self) -> u32 {
+        self.data_index
+    }
+
+    pub fn size(&self) -> u32 {
+        self.data_size as u32
+    }
+}
+
 /// Cao-Lang bytecode interpreter.
 /// Aux is an auxiliary data structure passed to custom functions.
 #[derive(Debug)]
@@ -16,6 +34,52 @@ pub struct VM<Aux = ()> {
     callables: HashMap<String, FunctionObject<Aux>>,
     stack: Vec<Scalar>,
     registers: [Scalar; 16],
+    objects: HashMap<TPointer, Object>,
+}
+
+macro_rules! load_ptr {
+    ($val: expr, $from: ident) => {
+        $from
+            .objects
+            .get($val)
+            .ok_or(ExecutionError::InvalidArgument)?;
+    };
+}
+
+macro_rules! pop_stack {
+    ($from : ident) => {{
+        let r = *$from.stack.last().ok_or(ExecutionError::InvalidArgument)?;
+        $from.stack.pop();
+        r
+    }};
+}
+
+macro_rules! binary_compare {
+    ($from:ident, $cmp: tt, $return_on_diff_type: expr) => {
+        {
+        let b = pop_stack!($from);
+        let a = pop_stack!($from);
+        let res = match (a, b) {
+            (Scalar::Pointer(a), Scalar::Pointer(b)) => {
+                let a = load_ptr!(&a, $from);
+                let b = load_ptr!(&b, $from);
+                if a.size() != b.size() {
+                    $return_on_diff_type
+                } else {
+                    let size = a.size() as usize;
+                    let ind = a.index() as usize;
+                    let a = &$from.memory[ind..ind + size];
+                    let ind = b.index() as usize;
+                    let b = &$from.memory[ind..ind + size];
+
+                    a.iter().zip(b.iter()).all(|(a, b)| a $cmp b)
+                }
+            }
+            _ => a $cmp b,
+        };
+        $from.stack.push(Scalar::Integer(res as i32));
+        }
+    };
 }
 
 impl<Aux> VM<Aux> {
@@ -27,6 +91,7 @@ impl<Aux> VM<Aux> {
             memory_limit: 40000,
             stack: Vec::with_capacity(128),
             registers: Default::default(),
+            objects: Default::default(),
         }
     }
 
@@ -61,47 +126,40 @@ impl<Aux> VM<Aux> {
 
     pub fn get_value<T: ByteEncodeProperties>(&self, ptr: TPointer) -> Option<T> {
         let size = T::BYTELEN as i32;
-        if ptr + size <= self.memory.len() as i32 {
-            let ptr = ptr as usize;
-            let size = size as usize;
-            T::decode(&self.memory[ptr..ptr + size])
-        } else {
-            error!(
-                "Invalid index passed to get_value {} when size was {} and len is {}",
-                ptr,
-                size,
-                self.memory.len()
+        let object = self.objects.get(&ptr)?;
+        if object.data_size != size {
+            debug!(
+                "Attempting to reference an object with the wrong type ({}) at address {}",
+                T::displayname(),
+                ptr
             );
-            None
+            return None;
         }
+        let head = object.data_index as usize;
+        let tail = (head + size as usize).min(self.memory.len());
+        T::decode(&self.memory[head..tail])
     }
 
     // TODO: check if maximum size was exceeded
-    pub fn set_value<T: ByteEncodeProperties>(&mut self, val: T) -> (TPointer, usize) {
+    pub fn set_value<T: ByteEncodeProperties>(&mut self, val: T) -> Result<Object, ExecutionError> {
         let result = self.memory.len();
         let bytes = val.encode();
+        let object = Object {
+            data_index: result as u32,
+            data_size: T::BYTELEN as i32,
+        };
+
         self.memory.extend(bytes.iter());
 
-        (result as TPointer, bytes.len())
-    }
+        self.objects.insert(result as TPointer, object);
+        debug!(
+            "Set value {:?} {:?} {}",
+            object,
+            T::BYTELEN,
+            T::displayname()
+        );
 
-    // TODO: check if maximum size was exceeded
-    pub fn set_value_at<T: ByteEncodeProperties>(&mut self, ptr: TPointer, val: T) -> usize {
-        let bytes = val.encode();
-        match usize::try_from(ptr) {
-            Ok(ptr) => {
-                let len = bytes.len();
-                if ptr + len > self.memory.len() {
-                    self.memory.resize(ptr + len, 0);
-                }
-                self.memory.as_mut_slice()[ptr..ptr + len].copy_from_slice(&bytes[..]);
-                len
-            }
-            Err(e) => {
-                error!("Failed to cast ptr to usize {:?}", e);
-                0
-            }
-        }
+        Ok(object)
     }
 
     pub fn run(&mut self, program: &CompiledProgram) -> Result<i32, ExecutionError> {
@@ -242,27 +300,19 @@ impl<Aux> VM<Aux> {
                     }
                     self.stack.push(Scalar::Pointer(ptr as i32));
                 }
-                Instruction::Add => self.binary_op(|a, b| a + b, |s| s.stack().last().cloned())?,
-                Instruction::Sub => self.binary_op(|a, b| a - b, |s| s.stack().last().cloned())?,
-                Instruction::Mul => self.binary_op(|a, b| a * b, |s| s.stack().last().cloned())?,
-                Instruction::Div => self.binary_op(|a, b| a / b, |s| s.stack().last().cloned())?,
-                Instruction::Equals => {
-                    self.binary_op(|a, b| (a == b).into(), |s| s.stack().last().cloned())?
-                }
-                Instruction::NotEquals => {
-                    self.binary_op(|a, b| (a != b).into(), |s| s.stack().last().cloned())?
-                }
-                Instruction::Less => {
-                    self.binary_op(|a, b| (a < b).into(), |s| s.stack().last().cloned())?
-                }
-                Instruction::LessOrEq => {
-                    self.binary_op(|a, b| (a <= b).into(), |s| s.stack().last().cloned())?
-                }
+                Instruction::Add => self.binary_op(|a, b| a + b)?,
+                Instruction::Sub => self.binary_op(|a, b| a - b)?,
+                Instruction::Mul => self.binary_op(|a, b| a * b)?,
+                Instruction::Div => self.binary_op(|a, b| a / b)?,
+                Instruction::Equals => binary_compare!(self, ==, false),
+                Instruction::NotEquals => binary_compare!(self, !=, true),
+                Instruction::Less => binary_compare!(self, <, false),
+                Instruction::LessOrEq => binary_compare!(self, <=, false),
                 Instruction::StringLiteral => {
                     let literal = Self::read_str(&mut ptr, &program.bytecode)
                         .ok_or(ExecutionError::InvalidArgument)?;
-                    let (ptr, _len) = self.set_value(literal);
-                    self.stack.push(Scalar::Pointer(ptr));
+                    let obj = self.set_value(literal)?;
+                    self.stack.push(Scalar::Pointer(obj.index() as i32));
                 }
                 Instruction::Call => {
                     let fun_name =
@@ -287,13 +337,13 @@ impl<Aux> VM<Aux> {
                         "Calling function {} with inputs: {:?} output: {:?}",
                         fun_name, inputs, outptr
                     );
-                    let res_size = fun.call(self, &inputs, outptr).map_err(|e| {
+                    let res = fun.call(self, &inputs).map_err(|e| {
                         error!("Calling function {:?} failed with {:?}", fun_name, e);
                         e
                     })?;
-                    if res_size > 0 {
-                        self.memory
-                            .resize_with(outptr as usize + res_size, Default::default);
+                    debug!("Function call returned value: {:?}", res);
+
+                    if res.data_size > 0 {
                         self.stack.push(Scalar::Pointer(outptr));
                     }
 
@@ -318,15 +368,12 @@ impl<Aux> VM<Aux> {
         }
     }
 
-    fn binary_op<F, FLoader>(&mut self, op: F, loader: FLoader) -> Result<(), ExecutionError>
+    fn binary_op<F>(&mut self, op: F) -> Result<(), ExecutionError>
     where
         F: Fn(Scalar, Scalar) -> Scalar,
-        FLoader: Fn(&Self) -> Option<Scalar>,
     {
-        let b = loader(self).ok_or(ExecutionError::InvalidArgument)?;
-        self.stack.pop().unwrap();
-        let a = loader(self).ok_or(ExecutionError::InvalidArgument)?;
-        self.stack.pop().unwrap();
+        let b = pop_stack!(self);
+        let a = pop_stack!(self);
         self.stack.push(op(a, b));
         Ok(())
     }
@@ -361,8 +408,7 @@ mod tests {
         vm.stack.push(Scalar::Integer(512));
         vm.stack.push(Scalar::Integer(42));
 
-        vm.binary_op(|a, b| (a + a / b) * b, |s| s.stack().last().cloned())
-            .unwrap();
+        vm.binary_op(|a, b| (a + a / b) * b).unwrap();
 
         let result = vm.stack.last().expect("Expected to read the result");
         match result {
@@ -414,23 +460,18 @@ mod tests {
 
         let mut vm = VM::new(());
 
-        fn foo(
-            vm: &mut VM<()>,
-            (a, b): (i32, f32),
-            out: TPointer,
-        ) -> Result<usize, ExecutionError> {
+        fn foo(vm: &mut VM<()>, (a, b): (i32, f32)) -> ExecutionResult {
             let res = a as f32 * b % 13.;
             let res = res as i32;
 
-            vm.set_value_at(out, res);
-            Ok(i32::BYTELEN)
+            vm.set_value(res)
         };
 
         vm.register_function("foo", FunctionWrapper::new(foo));
         vm.register_function(
             "bar",
-            FunctionWrapper::new(|_vm: &mut VM, _a: i32, _out: TPointer| {
-                Err::<usize, _>(ExecutionError::Unimplemented)
+            FunctionWrapper::new(|_vm: &mut VM, _a: i32| {
+                Err::<Object, _>(ExecutionError::Unimplemented)
             }),
         );
 

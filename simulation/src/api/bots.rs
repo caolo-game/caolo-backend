@@ -13,15 +13,16 @@ use caolo_api::OperationResult;
 pub fn move_bot(
     vm: &mut VM<ScriptExecutionData>,
     point: TPointer,
-    output: TPointer,
-) -> Result<usize, ExecutionError> {
+) -> Result<Object, ExecutionError> {
     profile!("move_bot");
+
+    let entity = vm.get_aux().entityid();
+    debug!("moving bot {:?}", entity);
 
     let point: Point = vm.get_value(point).ok_or_else(|| {
         error!("move_bot called without a point");
         ExecutionError::InvalidArgument
     })?;
-    let entity = vm.get_aux().entityid();
     let storage = vm.get_aux().storage();
 
     let positions = storage.point_table::<model::EntityComponent>();
@@ -40,8 +41,7 @@ pub fn move_bot(
         Ok(_) => {}
         Err(e) => {
             debug!("pathfinding failed {:?}", e);
-            let res = vm.set_value_at(output, OperationResult::OperationFailed);
-            return Ok(res);
+            return vm.set_value(OperationResult::InvalidTarget);
         }
     };
 
@@ -52,17 +52,12 @@ pub fn move_bot(
         }
     } else {
         debug!("Entity {:?} is trying to move to its own position", entity);
-        return Ok(0);
+        return vm.set_value(OperationResult::InvalidTarget);
     };
     let userid = vm.get_aux().userid().expect("userid to be set");
 
-    let result = {
-        let checkresult = check_move_intent(&intent, userid, storage);
-        match checkresult {
-            OperationResult::Ok => 0,
-            _ => vm.set_value_at(output, checkresult),
-        }
-    };
+    let checkresult = check_move_intent(&intent, userid, storage);
+    let result = vm.set_value(checkresult);
 
     vm.get_aux_mut()
         .intents_mut()
@@ -72,7 +67,7 @@ pub fn move_bot(
             position: intent.position,
         });
 
-    return Ok(result);
+    result
 }
 
 pub fn build_bot(id: EntityId, storage: &Storage) -> Option<caolo_api::bots::Bot> {

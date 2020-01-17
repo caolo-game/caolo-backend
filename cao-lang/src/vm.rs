@@ -2,11 +2,10 @@ use crate::compiler::NodeId;
 use crate::instruction::Instruction;
 use crate::prelude::*;
 use crate::scalar::Scalar;
+use crate::{binary_compare, pop_stack};
 use log::{debug, error};
 use std::collections::HashMap;
 use std::convert::TryFrom;
-
-use crate::{binary_compare, pop_stack};
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Object {
@@ -48,7 +47,7 @@ impl<Aux> VM<Aux> {
             memory_limit: 40000,
             stack: Vec::with_capacity(128),
             registers: Default::default(),
-            objects: Default::default(),
+            objects: HashMap::with_capacity(128),
         }
     }
 

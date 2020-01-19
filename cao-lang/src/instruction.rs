@@ -1,6 +1,6 @@
 use crate::scalar::Scalar;
 use crate::traits::ByteEncodeProperties;
-use crate::{make_node_desc, NodeDescription};
+use crate::{subprogram_description, SubProgram};
 use serde_derive::{Deserialize, Serialize};
 use std::convert::TryFrom;
 
@@ -93,66 +93,66 @@ impl TryFrom<u8> for Instruction {
     }
 }
 
-pub fn get_instruction_descriptions() -> Vec<NodeDescription<'static>> {
+pub fn get_instruction_descriptions() -> Vec<SubProgram<'static>> {
     vec![
-        make_node_desc!(
+        subprogram_description!(
             Instruction::Add,
             "Add two scalars",
             [Scalar, Scalar],
-            Scalar
+            [Scalar]
         ),
-        make_node_desc!(
+        subprogram_description!(
             Instruction::Sub,
             "Subtract two scalars",
             [Scalar, Scalar],
-            Scalar
+            [Scalar]
         ),
-        make_node_desc!(
+        subprogram_description!(
             Instruction::Mul,
             "Multiply two scalars",
             [Scalar, Scalar],
-            Scalar
+            [Scalar]
         ),
-        make_node_desc!(
+        subprogram_description!(
             Instruction::Div,
             "Divide two scalars",
             [Scalar, Scalar],
-            Scalar
+            [Scalar]
         ),
-        make_node_desc!(Instruction::Start, "Start of the program", [], ()),
-        make_node_desc!(Instruction::Pass, "Do nothing", [], ()),
-        make_node_desc!(Instruction::ScalarInt, "Make an integer", [], Scalar),
-        make_node_desc!(Instruction::ScalarFloat, "Make a real number", [], Scalar),
-        make_node_desc!(Instruction::StringLiteral, "Make a text", [], Scalar),
-        make_node_desc!(
+        subprogram_description!(Instruction::Start, "Start of the program", [], []),
+        subprogram_description!(Instruction::Pass, "Do nothing", [], []),
+        subprogram_description!(Instruction::ScalarInt, "Make an integer", [], [Scalar]),
+        subprogram_description!(Instruction::ScalarFloat, "Make a real number", [], [Scalar]),
+        subprogram_description!(Instruction::StringLiteral, "Make a text", [], [Scalar]),
+        subprogram_description!(
             Instruction::JumpIfTrue,
             "Jump to the input node if the last value is true else do nothing.",
             [Scalar],
-            ()
+            []
         ),
-        make_node_desc!(
+        subprogram_description!(
             Instruction::Equals,
             "Return 1 if the inputs are equal, 0 otherwise",
             [Scalar, Scalar],
-            Scalar
+            [Scalar]
         ),
-        make_node_desc!(
+        subprogram_description!(
             Instruction::NotEquals,
             "Return 0 if the inputs are equal, 1 otherwise",
             [Scalar, Scalar],
-            Scalar
+            [Scalar]
         ),
-        make_node_desc!(
+        subprogram_description!(
             Instruction::Less,
             "Return 1 if the first input is less than the second, 0 otherwise",
             [Scalar, Scalar],
-            Scalar
+            [Scalar]
         ),
-        make_node_desc!(
+        subprogram_description!(
             Instruction::LessOrEq,
             "Return 1 if the first input is less than or equal to the second, 0 otherwise",
             [Scalar, Scalar],
-            Scalar
+            [Scalar]
         ),
     ]
 }

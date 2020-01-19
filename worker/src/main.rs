@@ -55,8 +55,8 @@ fn send_world(storage: &Storage, client: &redis::Client) -> Result<(), Box<dyn s
 struct SchemaFunctionDTO<'a> {
     name: &'a str,
     description: &'a str,
-    inputs: Vec<String>,
-    output: &'a str,
+    input: Vec<&'a str>,
+    output: Vec<&'a str>,
 }
 
 fn send_schema(client: &redis::Client) -> Result<(), Box<dyn std::error::Error>> {
@@ -71,9 +71,9 @@ fn send_schema(client: &redis::Client) -> Result<(), Box<dyn std::error::Error>>
             let import = &import.desc;
             SchemaFunctionDTO {
                 name: import.name,
-                inputs: import.inputs.iter().map(|x| x.to_string()).collect(),
+                input: import.input.iter().cloned().collect(),
                 description: import.desc,
-                output: import.output,
+                output: import.output.iter().cloned().collect(),
             }
         })
         .collect::<Vec<_>>();

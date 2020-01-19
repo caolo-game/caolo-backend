@@ -18,8 +18,9 @@ impl<Id: TableId> HomogenousTable<Id> {
         if TypeId::of::<Row>() == self.rowtype {
             #[allow(clippy::cast_ptr_alignment)]
             // Yes, this is incredibly unsafe
-            let reference =
-                unsafe { &*(self.concrete_table.as_ref() as *const _ as *const Row::Table) };
+            let reference = unsafe {
+                &*(self.concrete_table.as_ref() as *const dyn DynTable<Id> as *const Row::Table)
+            };
             Some(reference)
         } else {
             None
@@ -31,8 +32,9 @@ impl<Id: TableId> HomogenousTable<Id> {
         if TypeId::of::<Row>() == self.rowtype {
             #[allow(clippy::cast_ptr_alignment)]
             // Yes, this is incredibly unsafe
-            let reference =
-                unsafe { &mut *(self.concrete_table.as_mut() as *mut _ as *mut Row::Table) };
+            let reference = unsafe {
+                &mut *(self.concrete_table.as_mut() as *mut dyn DynTable<Id> as *mut Row::Table)
+            };
             Some(reference)
         } else {
             None

@@ -13,11 +13,12 @@ use crate::model::{self, Circle, EntityId, PositionComponent, UserData, UserId};
 mod tests {
     use super::*;
     use std::convert::TryInto;
+    use serde_derive::Serialize;
 
-    #[derive(Debug, Clone, Copy)]
+    #[derive(Debug, Clone, Copy, Serialize)]
     struct Row1(i32);
 
-    #[derive(Debug, Clone, Copy)]
+    #[derive(Debug, Clone, Copy, Serialize)]
     struct Row2(i32);
 
     #[test]

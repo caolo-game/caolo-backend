@@ -81,7 +81,7 @@ pub fn log_scalar(
 
 /// Holds data about a function
 pub struct FunctionRow {
-    pub desc: NodeDescription<'static>,
+    pub desc: SubProgram<'static>,
     pub fo: FunctionObject<ScriptExecutionData>,
 }
 
@@ -117,55 +117,55 @@ pub fn make_import() -> Schema {
     Schema {
         imports: vec![
             FunctionRow {
-                desc: make_node_desc!(console_log, "Log a string", [String], ()),
+                desc: subprogram_description!(console_log, "Log a string", [String], []),
                 fo: FunctionObject::new(FunctionWrapper::new(console_log)),
             },
             FunctionRow {
-                desc: make_node_desc!(log_scalar, "Log a scalar value", [Scalar], ()),
+                desc: subprogram_description!(log_scalar, "Log a scalar value", [Scalar], []),
                 fo: FunctionObject::new(FunctionWrapper::new(log_scalar)),
             },
             FunctionRow {
-                desc: make_node_desc!(
+                desc: subprogram_description!(
                     bots::move_bot,
                     "Move the bot to the given Point",
                     [Point],
-                    OperationResult
+                    [OperationResult]
                 ),
                 fo: FunctionObject::new(FunctionWrapper::new(bots::move_bot)),
             },
             FunctionRow {
-                desc: make_node_desc!(
+                desc: subprogram_description!(
                     make_point,
                     "Create a point from x and y coordinates",
                     [Scalar, Scalar],
-                    Point
+                    [Point]
                 ),
                 fo: FunctionObject::new(FunctionWrapper::new(make_point)),
             },
             FunctionRow {
-                desc: make_node_desc!(
+                desc: subprogram_description!(
                     spawn,
                     "Spawn a new bot from given configuration.",
                     [caolo_api::structures::SpawnIntent],
-                    OperationResult
+                    [OperationResult]
                 ),
                 fo: FunctionObject::new(FunctionWrapper::new(spawn)),
             },
             FunctionRow {
-                desc: make_node_desc!(
+                desc: subprogram_description!(
                     find_closest_resource_by_range,
                     "Find the resource closest to the current entity",
                     [],
-                    (OperationResult, Point)
+                    [OperationResult, Point]
                 ),
                 fo: FunctionObject::new(FunctionWrapper::new(find_closest_resource_by_range)),
             },
             FunctionRow {
-                desc: make_node_desc!(
+                desc: subprogram_description!(
                     make_operation_result,
                     "Produces an OperationResult",
                     [i32],
-                    OperationResult
+                    [OperationResult]
                 ),
                 fo: FunctionObject::new(FunctionWrapper::new(make_operation_result)),
             },

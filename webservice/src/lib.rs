@@ -55,7 +55,7 @@ fn get_basic_schema(py: Python) -> PyResult<&PyList> {
             d.set_item("name", desc.name).unwrap();
             d.set_item("desc", desc.desc).unwrap();
             d.set_item("output", desc.output).unwrap();
-            d.set_item("inputs", desc.inputs).unwrap();
+            d.set_item("input", desc.input).unwrap();
             d
         })
         .collect::<Vec<_>>();

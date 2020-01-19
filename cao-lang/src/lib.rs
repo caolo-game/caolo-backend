@@ -76,37 +76,38 @@ pub enum ExecutionError {
     TaskFailure(String),
 }
 
-/// Metadata about a node in the program.
+/// Metadata about a subprogram in the program.
+/// Subprograms consume their inputs and produce outputs.
 #[derive(Clone, Serialize, Deserialize, Default)]
-pub struct NodeDescription<'a> {
+pub struct SubProgram<'a> {
     pub name: &'a str,
     pub desc: &'a str,
     /// Human readable descriptions of the output
-    pub output: &'a str,
+    pub output: Vec<&'a str>,
     /// Human readable descriptions of inputs
-    pub inputs: Vec<&'a str>,
+    pub input: Vec<&'a str>,
 }
 
-impl<'a> std::fmt::Debug for NodeDescription<'a> {
+impl<'a> std::fmt::Debug for SubProgram<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Function name: {} inputs: {} output: {}",
+            "Function name: {} inputs: {} outputs: {}",
             self.name,
-            self.inputs[..].join(", "),
-            self.output
+            self.input[..].join(", "),
+            self.output[..].join(", ")
         )
     }
 }
 
 #[macro_export]
-macro_rules! make_node_desc {
-    ($name: path, $description: expr, [$($inputs: ty),*], $output: ty) => {
-        NodeDescription {
+macro_rules! subprogram_description {
+    ($name: path, $description: expr, [$($inputs: ty),*], [$($outputs: ty),*]) => {
+        SubProgram {
             name: stringify!($name),
             desc: $description,
-            inputs: make_node_desc!(input $($inputs),*) ,
-            output: <$output as ByteEncodeProperties>::displayname(),
+            input: subprogram_description!(input $($inputs),*) ,
+            output: subprogram_description!(input $($outputs),*),
         }
     };
 
@@ -122,7 +123,7 @@ macro_rules! make_node_desc {
     };
 
     (input [$($result:expr),*], $head: ty, $($tail: ty),*) => {
-        make_node_desc!(
+        subprogram_description!(
             input
             [
             $($result),*
@@ -133,7 +134,7 @@ macro_rules! make_node_desc {
     };
 
     (input $head:ty, $($tail: ty),*) => {
-        make_node_desc!(
+        subprogram_description!(
             input
             [ <$head as ByteEncodeProperties>::displayname() ],
             $($tail),*

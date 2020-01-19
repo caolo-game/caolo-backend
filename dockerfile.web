@@ -6,6 +6,7 @@ ENV PATH /root/.cargo/bin:$PATH
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > install_rust.sh
 RUN sh ./install_rust.sh -y
 RUN cargo --version
+RUN pip install maturin
 
 WORKDIR /web
 
@@ -19,7 +20,6 @@ COPY ./webservice/src/ ./webservice/src
 COPY ./webservice/pyproject.toml ./webservice/pyproject.toml
 
 WORKDIR /web/webservice
-RUN pip install maturin
 RUN mkdir build
 RUN maturin build --release -o ./build/
 RUN ls -al build

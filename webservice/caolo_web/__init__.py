@@ -69,7 +69,9 @@ class SimulationProtocol(WebSocketServerProtocol):
     def onOpen(self):
         self.redis_conn = get_redis_client()
         self.done = False
-        reactor.callLater(0.2, self.send_world_state)
+        latency = os.getenv("TARGET_TICK_FREQUENCY_MS", "2000")
+        latency = int(latency)
+        reactor.callLater(latency, self.send_world_state)
 
     def onClose(self, *args):
         super().onClose(*args)

@@ -61,7 +61,7 @@ def myself():
 
 class SimulationProtocol(WebSocketServerProtocol):
     """
-    Stream the simulation to the clients
+    Stream the world state to the clients
     """
     done = True
     redis_conn = None

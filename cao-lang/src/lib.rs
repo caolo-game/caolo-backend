@@ -1,4 +1,14 @@
-//! Example Program serialized as JSON
+//! ## Programs
+//!
+//! Programs are composed of subprograms. A subprogram consumes inputs and produces outputs.
+//! Subprograms will always consume from the top of the stack downwards and push their outputs to
+//! the stack. This means that subprogram composition is not a commutative operation. (Consider
+//! subprograms A, B and C. Then the composition ABC is not the same as BAC if A != B. )
+//!
+//! Programs passed to the `Compiler` must contain a `Start` node. Execution will begin at the
+//! first `Start` node.
+//!
+//! Example (Sub) Program serialized as JSON
 //! ```
 //! const PROGRAM: &str = r#"{
 //!     "nodes": {

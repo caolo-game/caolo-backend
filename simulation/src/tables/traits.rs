@@ -1,19 +1,29 @@
 use crate::model::{self, Circle, EntityId, PositionComponent, UserData, UserId};
+use serde::Serialize;
 
 /// TableIds may be used as indices of tables
 pub trait TableId:
-    'static + Ord + PartialOrd + Eq + PartialEq + Copy + Default + Send + std::fmt::Debug
+    'static + Ord + PartialOrd + Eq + PartialEq + Copy + Default + Send + std::fmt::Debug + Serialize
 {
 }
 
-impl<T: 'static + Ord + PartialOrd + Eq + PartialEq + Copy + Default + Send + std::fmt::Debug>
-    TableId for T
+impl<T> TableId for T where
+    T: 'static
+        + Ord
+        + PartialOrd
+        + Eq
+        + PartialEq
+        + Copy
+        + Default
+        + Send
+        + std::fmt::Debug
+        + Serialize
 {
 }
 
 /// TableRows may be used as the row type of a table
-pub trait TableRow: 'static + Clone + Send + std::fmt::Debug {}
-impl<T: 'static + Clone + Send + std::fmt::Debug> TableRow for T {}
+pub trait TableRow: 'static + Clone + Send + std::fmt::Debug + Serialize {}
+impl<T: 'static + Clone + Send + std::fmt::Debug + Serialize> TableRow for T {}
 
 /// Components define both their shape (via their type) and the storage backend that shall be used to
 /// store them.
@@ -21,7 +31,7 @@ pub trait Component<Id: TableId>: TableRow {
     type Table: Table<Row = Self> + Send + std::fmt::Debug;
 }
 
-pub trait Table {
+pub trait Table: Serialize {
     type Id: TableId;
     type Row: TableRow;
 

@@ -9,10 +9,11 @@ use crate::model::{components::EntityComponent, Point};
 use rayon::prelude::*;
 use std::convert::TryInto;
 use std::marker::PhantomData;
+use serde_derive::Serialize;
 
 use crate::profile;
 
-#[derive(Debug, Clone, Copy, Hash, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, Hash, Eq, PartialEq, PartialOrd, Ord, Serialize)]
 struct MortonKey(u32);
 
 impl MortonKey {
@@ -37,7 +38,7 @@ impl MortonKey {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 struct Node {
     x: u16,
     y: u16,
@@ -57,7 +58,7 @@ impl Node {
     }
 }
 
-#[derive(Default, Debug, Clone)]
+#[derive(Default, Debug, Clone, Serialize)]
 pub struct MortonTable<Id, Row>
 where
     Id: SpatialKey2d,

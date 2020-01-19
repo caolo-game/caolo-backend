@@ -17,9 +17,9 @@ cao-lang = { path = "../cao-lang" }
 log = "*"
 env_logger = "*"
 chrono = { version="0.4", features=["serde"] }
-serde_json = "*"
-serde = "*"
-serde_derive = "*"
+serde_json = "1"
+serde = "1"
+serde_derive = "1"
 redis = "0.13"
 rand="*"
 

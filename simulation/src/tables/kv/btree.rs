@@ -1,9 +1,10 @@
 use super::*;
 use crate::storage::TableId;
 use rayon::prelude::*;
+use serde_derive::Serialize;
 use std::collections::BTreeMap;
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Serialize)]
 pub struct BTreeTable<Id, Row>
 where
     Id: TableId,

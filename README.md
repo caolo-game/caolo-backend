@@ -1,4 +1,4 @@
-![](https://github.com/snorrwe/caolo-backend/workflows/Rust/badge.svg)
+[![CircleCI](https://circleci.com/gh/snorrwe/caolo-backend/tree/master.svg?style=svg)](https://circleci.com/gh/snorrwe/caolo-backend/tree/master)
 
 ## Prerequisites
 

@@ -35,7 +35,7 @@ jobs:
       - checkout
       - run:
           name: Build docs
-          command: cargo docs --no-deps
+          command: cargo doc --no-deps
 
       - run:
           name: Install and configure GH pages dependencies

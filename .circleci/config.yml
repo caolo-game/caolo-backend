@@ -68,7 +68,7 @@ jobs:
 
       - run:
           name: Deploy
-          command: npx gh-pages --dist build
+          command: npx gh-pages --dist target/doc
 
 
 workflows:

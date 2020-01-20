@@ -30,12 +30,28 @@ jobs:
   docs:
     docker:
       - image: rust:1.40.0
-      - image: circleci/node:12
     steps:
       - checkout
       - run:
           name: Build docs
           command: cargo doc --no-deps
+      - restore_cache:
+          keys:
+            - v4-cargo-cache-{{ arch }}-{{ checksum "Cargo.lock" }}
+
+      - persist_to_workspace:
+          root: ~/repo
+          paths: 
+           - build/doc
+
+  deploy_docs:
+    docker:
+      - image: circleci/node:12
+
+    steps:
+      - checkout
+      - attach_workspace:
+          at: ~/repo
 
       - run:
           name: Install and configure GH pages dependencies
@@ -58,7 +74,9 @@ workflows:
       - docs:
           requires:
             - test_worker
+      - deploy_docs:
+          requires:
+            - docs
           filters:
             branches:
               only: master
-

@@ -45,7 +45,7 @@ jobs:
       - persist_to_workspace:
           root: ~/repo
           paths: 
-           - build
+           - target/doc
 
   deploy_docs:
     docker:

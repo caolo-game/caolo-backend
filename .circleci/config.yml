@@ -27,8 +27,38 @@ jobs:
             - target/debug/deps
           key: v4-cargo-cache-{{ arch }}-{{ checksum "Cargo.lock" }}
 
+  docs:
+    docker:
+      - image: rust:1.40.0
+      - image: circleci/node:12
+    steps:
+      - checkout
+      - run:
+          name: Build docs
+          command: cargo docs --no-deps
+
+      - run:
+          name: Install and configure GH pages dependencies
+          command: |
+            yarn global add --silent gh-pages
+            git config user.email "littlesnorrboy+circleci@gmail.com"
+            git config user.name "ci-build"
+            git status
+
+      - run:
+          name: Deploy
+          command: npx gh-pages --dist build
+
+
 workflows:
   version: 2
   build_test:
     jobs:
       - test_worker
+      - docs:
+          requires:
+            - test_worker
+          filters:
+            branches:
+              only: master
+

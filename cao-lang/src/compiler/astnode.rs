@@ -1,4 +1,5 @@
 use super::*;
+use crate::InputString;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AstNode {
@@ -99,7 +100,7 @@ pub struct FloatNode {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct CallNode {
-    pub function: String,
+    pub function: InputString,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

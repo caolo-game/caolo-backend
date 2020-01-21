@@ -3,14 +3,14 @@ use super::*;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AstNode {
     pub node: InstructionNode,
-    pub children: Option<Inputs>,
+    pub child: Option<NodeId>,
 }
 
 impl Default for AstNode {
     fn default() -> Self {
         Self {
             node: InstructionNode::Pass,
-            children: None,
+            child: None,
         }
     }
 }

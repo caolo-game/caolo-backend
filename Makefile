@@ -31,3 +31,6 @@ pushall: pushworker pushweb
 
 deploy: buildall pushall
 	git push heroku master
+
+migrate:
+	docker-compose exec web python manage.py db upgrade

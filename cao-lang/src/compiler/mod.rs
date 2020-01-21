@@ -15,7 +15,6 @@ use std::fmt::Debug;
 pub type NodeId = i32;
 /// Node by given id has inputs given by nodeids
 /// Nodes may only have a finite amount of inputs
-pub type Inputs = Vec<NodeId>;
 pub type Nodes = BTreeMap<NodeId, AstNode>;
 
 impl ByteEncodeProperties for InputString {
@@ -90,16 +89,10 @@ impl Compiler {
                 let current = todo.pop_front().unwrap();
                 nodes.remove(&current);
                 compiler.process_node(current)?;
-                match compiler.unit.nodes[&current]
-                    .children
-                    .as_ref()
-                    .map(|c| (c.len(), c))
-                {
-                    Some((0, _)) | None => compiler.program.bytecode.push(Instruction::Exit as u8),
-                    Some((_, nodes)) => {
-                        for node in nodes.iter().cloned() {
-                            todo.push_back(node);
-                        }
+                match compiler.unit.nodes[&current].child.as_ref() {
+                    None => compiler.program.bytecode.push(Instruction::Exit as u8),
+                    Some(node) => {
+                        todo.push_back(*node);
                     }
                 }
             }

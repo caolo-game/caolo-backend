@@ -9,7 +9,7 @@ class Program(db.Model):
     """
     id = db.Column(
         UUID, primary_key=True, server_default=db.text("gen_random_uuid()"))
-    ast = db.Column(JSON, nullable=False)
+    program = db.Column(JSON, nullable=False)
     compiled = db.Column(JSON, nullable=True)
     name = db.Column(db.String, nullable=True)
 

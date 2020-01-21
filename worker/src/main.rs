@@ -72,7 +72,7 @@ fn send_schema(client: &redis::Client) -> Result<(), Box<dyn std::error::Error>>
             SchemaFunctionDTO {
                 name: import.name,
                 input: import.input.iter().cloned().collect(),
-                description: import.desc,
+                description: import.description,
                 output: import.output.iter().cloned().collect(),
             }
         })

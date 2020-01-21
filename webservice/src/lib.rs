@@ -53,7 +53,7 @@ fn get_basic_schema(py: Python) -> PyResult<&PyList> {
         .map(|desc| {
             let d = PyDict::new(py);
             d.set_item("name", desc.name).unwrap();
-            d.set_item("desc", desc.desc).unwrap();
+            d.set_item("description", desc.description).unwrap();
             d.set_item("output", desc.output).unwrap();
             d.set_item("input", desc.input).unwrap();
             d

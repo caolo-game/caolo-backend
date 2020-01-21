@@ -30,19 +30,24 @@ def compile_script():
 def commit_script():
     content = request.get_data(as_text=True)
     try:
-        program = cw.compile(content)
+        compiled = cw.compile(content)
     except ValueError as e:
         log.err()
         abort(400, e)
-    raw = json.loads(content)
-    content = json.dumps({"compiled": program, "script": raw})
+    program = json.loads(content)
+    content = json.dumps({"compiled": compiled, "script": program})
 
     redis_conn = get_redis_client()
     redis_conn.set("PROGRAM", content)
 
-    name = raw.get('name')
+    try:
+        name = program.pop('name')
+    except KeyError:
+        log.err()
+        abort(400, "name was not set")
+
     program = Program(
-        ast=content, compiled=program, user=current_user, name=name)
+        program=program, compiled=compiled, user=current_user, name=name)
 
     db.session.add(program)
     db.session.commit()
@@ -64,5 +69,9 @@ def get_schema():
 @login_required
 def get_my_scripts():
     query = Program.query.filter_by(user_id=current_user.id)
-    result = [{"id": q.id, "ast": json.loads(q.ast), "name": q.name} for q in query]
+    result = [{
+        "id": q.id,
+        "program": json.loads(q.program),
+        "name": q.name
+    } for q in query]
     return jsonify(result)

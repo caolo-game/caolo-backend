@@ -91,7 +91,7 @@ pub enum ExecutionError {
 #[derive(Clone, Serialize, Deserialize, Default)]
 pub struct SubProgram<'a> {
     pub name: &'a str,
-    pub desc: &'a str,
+    pub description: &'a str,
     /// Human readable descriptions of the output
     pub output: Vec<&'a str>,
     /// Human readable descriptions of inputs
@@ -115,7 +115,7 @@ macro_rules! subprogram_description {
     ($name: path, $description: expr, [$($inputs: ty),*], [$($outputs: ty),*]) => {
         SubProgram {
             name: stringify!($name),
-            desc: $description,
+            description: $description,
             input: subprogram_description!(input $($inputs),*) ,
             output: subprogram_description!(input $($outputs),*),
         }

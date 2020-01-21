@@ -3,8 +3,7 @@
 //!
 mod astnode;
 use crate::{
-    scalar::Scalar, traits::ByteEncodeProperties, CompiledProgram, InputString, Instruction,
-    INPUT_STR_LEN,
+    traits::ByteEncodeProperties, CompiledProgram, InputString, Instruction, INPUT_STR_LEN,
 };
 pub use astnode::*;
 use serde_derive::{Deserialize, Serialize};

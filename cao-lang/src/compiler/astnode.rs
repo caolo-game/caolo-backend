@@ -84,11 +84,6 @@ impl InstructionNode {
     }
 }
 
-/// Instructions that require squalar parameters
-#[derive(Debug, Clone, Serialize, Deserialize, Default, Copy)]
-pub struct ScalarNode {
-    pub value: Scalar,
-}
 #[derive(Debug, Clone, Serialize, Deserialize, Default, Copy)]
 pub struct IntegerNode {
     pub value: i32,

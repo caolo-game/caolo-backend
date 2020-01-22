@@ -14,6 +14,11 @@ from ..service import get_redis_client
 script_bp = Blueprint("script", __name__, url_prefix="/script")
 
 
+@script_bp.errorhandler(400)
+def resource_not_found(e):
+    return jsonify(error=str(e)), 400
+
+
 @script_bp.route('/compile', methods=["POST"])
 def compile_script():
     content = request.get_data(as_text=True)

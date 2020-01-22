@@ -171,6 +171,7 @@ impl Compiler {
 mod tests {
     use super::*;
     use crate::vm::VM;
+    use crate::scalar::Scalar;
 
     #[test]
     fn compiling_simple_program() {
@@ -180,28 +181,28 @@ mod tests {
                 999,
                 AstNode {
                     node: InstructionNode::Start,
-                    children: Some(vec![0]),
+                    child: Some(0),
                 },
             ),
             (
                 0,
                 AstNode {
                     node: InstructionNode::ScalarFloat(FloatNode { value: 42.0 }),
-                    children: Some(vec![1]),
+                    child: Some(1),
                 },
             ),
             (
                 1,
                 AstNode {
                     node: InstructionNode::ScalarFloat(FloatNode { value: 512.0 }),
-                    children: Some(vec![2]),
+                    child: Some(2),
                 },
             ),
             (
                 2,
                 AstNode {
                     node: InstructionNode::Add,
-                    children: None,
+                    child: None,
                 },
             ),
         ]
@@ -236,49 +237,49 @@ mod tests {
                 999,
                 AstNode {
                     node: InstructionNode::Start,
-                    children: Some(vec![0]),
+                    child: Some(0),
                 },
             ),
             (
                 0,
                 AstNode {
                     node: InstructionNode::ScalarInt(IntegerNode { value: 4 }),
-                    children: Some(vec![1]),
+                    child: Some(1),
                 },
             ),
             (
                 1,
                 AstNode {
                     node: InstructionNode::ScalarInt(IntegerNode { value: 1 }),
-                    children: Some(vec![2]),
+                    child: Some(2),
                 },
             ),
             (
                 3,
                 AstNode {
                     node: InstructionNode::CopyLast,
-                    children: Some(vec![4]),
+                    child: Some(4),
                 },
             ),
             (
                 2,
                 AstNode {
                     node: InstructionNode::Sub,
-                    children: Some(vec![3]),
+                    child: Some(3),
                 },
             ),
             (
                 4,
                 AstNode {
                     node: InstructionNode::JumpIfTrue(JumpNode { nodeid: 5 }),
-                    children: None,
+                    child: None,
                 },
             ),
             (
                 5,
                 AstNode {
                     node: InstructionNode::CopyLast,
-                    children: Some(vec![1]),
+                    child: Some(1),
                 },
             ),
         ]

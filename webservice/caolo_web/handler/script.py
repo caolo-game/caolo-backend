@@ -42,14 +42,14 @@ def commit_script():
     program = json.loads(content)
     content = json.dumps({"compiled": compiled, "script": program})
 
-    redis_conn = get_redis_client()
-    redis_conn.set("PROGRAM", content)
-
     try:
         name = program.pop('name')
     except KeyError:
         log.err()
         abort(400, "name was not set")
+
+    redis_conn = get_redis_client()
+    redis_conn.set("PROGRAM", content)
 
     program = Program(
         program=program, compiled=compiled, user=current_user, name=name)

@@ -39,8 +39,8 @@ def commit_script():
     except ValueError as e:
         log.err()
         abort(400, e)
+
     program = json.loads(content)
-    content = json.dumps({"compiled": compiled, "script": program})
 
     try:
         name = program.pop('name')
@@ -48,11 +48,17 @@ def commit_script():
         log.err()
         abort(400, "name was not set")
 
+    content = json.dumps({"compiled": compiled, "script": program})
+
     redis_conn = get_redis_client()
     redis_conn.set("PROGRAM", content)
 
     program = Program(
-        program=program, compiled=compiled, user=current_user, name=name)
+        program=program,
+        compiled=compiled,
+        user=current_user,
+        name=name,
+    )
 
     db.session.add(program)
     db.session.commit()
@@ -74,9 +80,9 @@ def get_schema():
 @login_required
 def get_my_scripts():
     query = Program.query.filter_by(user_id=current_user.id)
-    result = [{
+    result = list({
         "id": q.id,
-        "program": json.loads(q.program),
+        "program": q.program,
         "name": q.name
-    } for q in query]
+    } for q in query)
     return jsonify(result)

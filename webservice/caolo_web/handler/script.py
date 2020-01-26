@@ -81,8 +81,8 @@ def get_schema():
 def get_my_scripts():
     query = Program.query.filter_by(user_id=current_user.id)
     result = list({
-        "id": q.id,
-        "program": q.program,
-        "name": q.name
-    } for q in query)
+        "id": row.id,
+        "program": row.program,
+        "name": row.name
+    } for row in query)
     return jsonify(result)

@@ -3,7 +3,7 @@ use crate::{
     intents::{check_move_intent, MoveIntent},
     model::{self, EntityId, Point},
     profile,
-    storage::Storage,
+    storage::views::View,
     systems::pathfinding,
 };
 use caolo_api::OperationResult;
@@ -70,10 +70,16 @@ pub fn move_bot(
     result
 }
 
-pub fn build_bot(id: EntityId, storage: &Storage) -> Option<caolo_api::bots::Bot> {
+pub fn build_bot(
+    id: EntityId,
+    bot: View<EntityId, model::Bot>,
+    pos: View<EntityId, model::PositionComponent>,
+    carry: View<EntityId, model::CarryComponent>,
+    owners: View<EntityId, model::OwnedEntity>,
+) -> Option<caolo_api::bots::Bot> {
     profile!("build_bot");
 
-    let bot = storage.entity_table::<model::Bot>().get_by_id(&id);
+    let bot = bot.get_by_id(&id);
     if bot.is_none() {
         debug!(
             "Bot {:?} could not be built because it has no bot component",
@@ -82,23 +88,19 @@ pub fn build_bot(id: EntityId, storage: &Storage) -> Option<caolo_api::bots::Bot
         return None;
     }
 
-    let pos = storage
-        .entity_table::<model::PositionComponent>()
-        .get_by_id(&id)
-        .or_else(|| {
-            debug!("Bot {:?} could not be built because it has no position", id);
-            None
-        })?;
+    let pos = pos.get_by_id(&id).or_else(|| {
+        debug!("Bot {:?} could not be built because it has no position", id);
+        None
+    })?;
 
-    let carry = storage
-        .entity_table::<model::CarryComponent>()
+    let carry = carry
         .get_by_id(&id)
         .unwrap_or_else(|| &model::CarryComponent {
             carry: 0,
             carry_max: 0,
         });
 
-    let owner_id = storage.entity_table::<model::OwnedEntity>().get_by_id(&id);
+    let owner_id = owners.get_by_id(&id);
 
     Some(caolo_api::bots::Bot {
         id: id.0,

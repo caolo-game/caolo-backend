@@ -196,25 +196,26 @@ pub fn update_minerals(
 
     let mut rng = rand::thread_rng();
 
+    let minerals = resources.iter().filter(|(_, r)| match r.0 {
+        model::Resource::Mineral => true,
+    });
     let changeset = JoinIterator::new(
-        JoinIterator::new(resources.iter(), entity_positions.iter()),
+        JoinIterator::new(minerals, entity_positions.iter()),
         energy.iter(),
     )
-    .filter_map(|(id, ((resource, position), energy))| match resource.0 {
-        model::Resource::Mineral => {
-            if energy.energy > 0 {
-                return None;
-            }
-
-            let mut energy = energy.clone();
-            let mut position = position.clone();
-
-            energy.energy = energy.energy_max;
-
-            position.0 = random_uncontested_pos_in_range(&*position_entities, &mut rng, -14, 15);
-
-            Some((id, position, energy))
+    .filter_map(|(id, ((_resource, position), energy))| {
+        if energy.energy > 0 {
+            return None;
         }
+
+        let mut energy = energy.clone();
+        let mut position = position.clone();
+
+        energy.energy = energy.energy_max;
+
+        position.0 = random_uncontested_pos_in_range(&*position_entities, &mut rng, -14, 15);
+
+        Some((id, position, energy))
     })
     .collect::<Vec<_>>();
 

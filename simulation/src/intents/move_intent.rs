@@ -1,6 +1,6 @@
 use super::*;
 use crate::model::{self, EntityComponent, EntityId, Point, PositionComponent};
-use crate::storage::views::{UnsafeView, View};
+use crate::storage::views::View;
 use caolo_api::OperationResult;
 
 #[derive(Debug, Clone)]

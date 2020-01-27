@@ -56,7 +56,15 @@ pub fn move_bot(
     };
     let userid = vm.get_aux().userid().expect("userid to be set");
 
-    let checkresult = check_move_intent(&intent, userid, storage);
+    let checkresult = check_move_intent(
+        &intent,
+        userid,
+        View::from(storage as &_),
+        View::from(storage as &_),
+        View::from(storage as &_),
+        View::from(storage as &_),
+        View::from(storage as &_),
+    );
     let result = vm.set_value(checkresult);
 
     vm.get_aux_mut()

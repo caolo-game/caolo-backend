@@ -1,5 +1,6 @@
 use super::*;
-use crate::model::{self, EntityComponent, PositionComponent};
+use crate::model::{self, EntityComponent, EntityId, Point, PositionComponent};
+use crate::storage::views::{UnsafeView, View};
 use caolo_api::OperationResult;
 
 #[derive(Debug, Clone)]
@@ -45,14 +46,16 @@ impl MoveIntent {
 pub fn check_move_intent(
     intent: &caolo_api::bots::MoveIntent,
     userid: model::UserId,
-    storage: &crate::storage::Storage,
+    owner_ids: View<EntityId, model::OwnedEntity>,
+    positions: View<EntityId, PositionComponent>,
+    bots: View<EntityId, model::Bot>,
+    terrain: View<Point, model::TerrainComponent>,
+    entity_positions: View<Point, EntityComponent>,
 ) -> OperationResult {
-    let bots = storage.entity_table::<model::Bot>();
-
     let id = model::EntityId(intent.id);
     match bots.get_by_id(&id) {
         Some(_) => {
-            let owner_id = storage.entity_table::<model::OwnedEntity>().get_by_id(&id);
+            let owner_id = owner_ids.get_by_id(&id);
             if owner_id.map(|id| id.owner_id != userid).unwrap_or(true) {
                 return OperationResult::NotOwner;
             }
@@ -60,7 +63,7 @@ pub fn check_move_intent(
         None => return OperationResult::InvalidInput,
     };
 
-    let pos = match storage.entity_table::<PositionComponent>().get_by_id(&id) {
+    let pos = match positions.get_by_id(&id) {
         Some(pos) => pos,
         None => {
             debug!("Bot has no position");
@@ -77,7 +80,6 @@ pub fn check_move_intent(
         return OperationResult::InvalidInput;
     }
 
-    let terrain = storage.point_table::<model::TerrainComponent>();
     match terrain.get_by_id(&intent.position) {
         Some(model::TerrainComponent(model::TileTerrainType::Wall)) => {
             debug!("Position is occupied by terrain");
@@ -85,7 +87,6 @@ pub fn check_move_intent(
         }
         _ => {}
     }
-    let entity_positions = storage.point_table::<model::EntityComponent>();
     if let Some(entity) = entity_positions.get_by_id(&intent.position) {
         debug!("Position is occupied by another entity {:?}", entity);
         return OperationResult::InvalidInput;

@@ -17,6 +17,7 @@ mod utils;
 use systems::execute_world_update;
 use systems::intent_execution::execute_intents;
 use systems::script_execution::execute_scripts;
+use tables::{BTreeTable, MortonTable};
 
 pub fn forward(storage: &mut storage::Storage) -> Result<(), Box<dyn std::error::Error>> {
     profile!("forward world state");
@@ -41,10 +42,9 @@ pub fn forward(storage: &mut storage::Storage) -> Result<(), Box<dyn std::error:
 
 pub fn init_inmemory_storage() -> storage::Storage {
     use model::*;
-    use tables::{BTreeTable, MortonTable};
 
     profile!("init_inmemory_storage");
-    debug!("Init InMemoryStorage");
+    debug!("Init Storage");
 
     let mut storage = storage::Storage::new();
 
@@ -72,6 +72,6 @@ pub fn init_inmemory_storage() -> storage::Storage {
 
     storage.add_scripts_table::<ScriptComponent>(BTreeTable::new());
 
-    debug!("Init InMemoryStorage done");
+    debug!("Init Storage done");
     storage
 }

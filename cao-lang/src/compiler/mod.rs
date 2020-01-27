@@ -170,8 +170,8 @@ impl Compiler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::vm::VM;
     use crate::scalar::Scalar;
+    use crate::vm::VM;
 
     #[test]
     fn compiling_simple_program() {

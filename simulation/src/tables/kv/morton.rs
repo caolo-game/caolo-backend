@@ -7,9 +7,9 @@
 use super::*;
 use crate::model::{components::EntityComponent, Point};
 use rayon::prelude::*;
+use serde_derive::Serialize;
 use std::convert::TryInto;
 use std::marker::PhantomData;
-use serde_derive::Serialize;
 
 use crate::profile;
 

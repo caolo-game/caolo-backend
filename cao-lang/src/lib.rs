@@ -46,11 +46,11 @@
 //!
 pub mod compiler;
 pub mod instruction;
+mod macros;
 pub mod prelude;
 pub mod scalar;
 pub mod traits;
 pub mod vm;
-mod macros;
 
 use crate::compiler::NodeId;
 use crate::instruction::Instruction;

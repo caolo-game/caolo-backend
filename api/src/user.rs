@@ -1,11 +1,3 @@
-#[derive(Clone, Default, Serialize, Deserialize)]
+#[derive(Clone, Default, Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct UserData {}
-
-impl std::fmt::Debug for UserData {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "UserData")
-    }
-}
-
-impl UserData {}

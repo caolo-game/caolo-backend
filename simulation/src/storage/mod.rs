@@ -1,5 +1,6 @@
 mod homogenoustable;
 mod macros;
+pub mod views;
 
 pub use crate::tables::{Component, TableId, TableRow};
 

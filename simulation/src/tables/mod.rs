@@ -12,8 +12,8 @@ use crate::model::{self, Circle, EntityId, PositionComponent, UserData, UserId};
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::convert::TryInto;
     use serde_derive::Serialize;
+    use std::convert::TryInto;
 
     #[derive(Debug, Clone, Copy, Serialize)]
     struct Row1(i32);

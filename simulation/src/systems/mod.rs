@@ -258,6 +258,7 @@ pub fn update_positions(
     mut position_entities: UnsafeView<Point, model::EntityComponent>,
     positions: View<EntityId, model::PositionComponent>,
 ) {
+    debug!("update_positions called");
     let positions = positions
         .iter()
         .map(|(id, pos)| (pos.0, model::EntityComponent(id)))
@@ -268,4 +269,5 @@ pub fn update_positions(
     for (point, entity) in positions.into_iter() {
         position_entities.insert(point, entity);
     }
+    debug!("update_positions done");
 }

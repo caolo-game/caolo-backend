@@ -125,27 +125,9 @@ macro_rules! implement_id {
             }
         }
 
-        impl<'a, C: Component<$id>> From<&'a Storage> for View<'a, $id, C> {
-            fn from(s: &'a Storage) -> Self {
-                Self::new(s)
-            }
-        }
-
-        impl<'a, C: Component<$id>> From<&'a mut Storage> for View<'a, $id, C> {
-            fn from(s: &'a mut Storage) -> Self {
-                Self::new(s)
-            }
-        }
-
         impl<C: Component<$id>> HasNewMut for UnsafeView<$id, C> {
             fn new(storage: &mut Storage) -> Self {
                 Self(storage.$field_mut::<C>() as *mut _)
-            }
-        }
-
-        impl<C: Component<$id>> From<&mut Storage> for UnsafeView<$id, C> {
-            fn from(s: &mut Storage) -> Self {
-                Self::new(s)
             }
         }
     };
@@ -158,10 +140,34 @@ implement_id!(scripts_table, scripts_table_mut, ScriptId);
 implement_id!(log_table, log_table_mut, EntityTime);
 
 macro_rules! implement_tuple {
+    ($v: ident) => {
+            impl<'a, $v:HasNew<'a> >
+            From <&'a Storage> for ( $v, )
+            {
+                #[allow(unused)]
+                fn from(storage: &'a Storage) -> Self {
+                    (
+                        $v::new(storage) ,
+                    )
+                }
+            }
+
+            impl<$v:HasNewMut >
+            From <&mut Storage> for ( $v, )
+            {
+                #[allow(unused)]
+                fn from(storage: &mut Storage) -> Self {
+                    (
+                        $v ::new(storage),
+                    )
+                }
+            }
+    };
     ($($vv: ident),*) => {
             impl<'a, $($vv:HasNew<'a>),* >
             From <&'a Storage> for ( $($vv),* )
             {
+                #[allow(unused)]
                 fn from(storage: &'a Storage) -> Self {
                     (
                         $($vv ::new(storage)),*
@@ -172,15 +178,18 @@ macro_rules! implement_tuple {
             impl<$($vv:HasNewMut),* >
             From <&mut Storage> for ( $($vv),* )
             {
+                #[allow(unused)]
                 fn from(storage: &mut Storage) -> Self {
                     (
                         $($vv ::new(storage)),*
                     )
                 }
             }
-    }
+    };
 }
 
+implement_tuple!();
+implement_tuple!(V1);
 implement_tuple!(V1, V2);
 implement_tuple!(V1, V2, V3);
 implement_tuple!(V1, V2, V3, V4);

@@ -14,7 +14,6 @@ pub use self::spawn_intent::*;
 
 use crate::model::EntityId;
 use crate::storage::Storage;
-use caolo_api::point::Point;
 
 pub type IntentResult = Result<(), Box<dyn std::error::Error>>;
 

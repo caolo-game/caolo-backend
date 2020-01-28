@@ -31,7 +31,7 @@ pub struct Spawn {
     pub energy: u16,
     pub energy_max: u16,
 
-    pub time_to_spawn: u8,
+    pub time_to_spawn: i16,
     pub spawning: Option<EntityId>,
 
     pub hp: u16,

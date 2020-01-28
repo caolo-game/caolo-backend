@@ -51,7 +51,7 @@ impl<Id: TableId> Component<Id> for EnergyComponent {
 
 #[derive(Debug, Clone, Copy, Serialize)]
 pub struct SpawnComponent {
-    pub time_to_spawn: u8,
+    pub time_to_spawn: i16,
     pub spawning: Option<EntityId>,
 }
 impl<Id: TableId> Component<Id> for SpawnComponent {

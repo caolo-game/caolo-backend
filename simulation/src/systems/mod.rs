@@ -70,13 +70,12 @@ pub fn update_spawns(
 ) {
     let changeset = spawns
         .iter()
+        .filter(|(_id, s)| s.spawning.is_some())
         .map(|(id, s)| {
             let mut s = s.clone();
-            if s.time_to_spawn > 0 {
-                s.time_to_spawn -= 1;
-            }
+            s.time_to_spawn -= 1;
             let mut bot = None;
-            if s.spawning.is_some() && s.time_to_spawn == 0 {
+            if s.time_to_spawn == 0 {
                 bot = s.spawning;
                 s.spawning = None;
             }

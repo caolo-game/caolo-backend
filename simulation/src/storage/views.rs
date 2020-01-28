@@ -1,4 +1,4 @@
-use super::{Component, EntityId, Point, Storage, TableId};
+use super::{Component, EntityId, EntityTime, Point, ScriptId, Storage, TableId, UserId};
 use std::ops::{Deref, DerefMut};
 
 /// Fetch read-only tables from a Storage
@@ -78,18 +78,18 @@ impl<Id: TableId, C: Component<Id>> DerefMut for UnsafeView<Id, C> {
     }
 }
 
-pub trait HasNew<'a, Id: TableId, C: Component<Id>> {
+pub trait HasNew<'a> {
     fn new(s: &'a Storage) -> Self;
 }
 
-pub trait HasNewMut<Id: TableId, C: Component<Id>> {
+pub trait HasNewMut {
     fn new(s: &mut Storage) -> Self;
 }
 
 /// Implement the Ctor and conversion methods for a given TableId
 macro_rules! implement_id {
     ($field: ident, $field_mut: ident, $id: ty) => {
-        impl<'a, C: Component<$id>> HasNew<'a, $id, C> for View<'a, $id, C> {
+        impl<'a, C: Component<$id>> HasNew<'a> for View<'a, $id, C> {
             fn new(storage: &'a Storage) -> Self {
                 Self(storage.$field::<C>())
             }
@@ -107,7 +107,7 @@ macro_rules! implement_id {
             }
         }
 
-        impl<C: Component<$id>> HasNewMut<$id, C> for  UnsafeView<$id, C> {
+        impl<C: Component<$id>> HasNewMut for UnsafeView<$id, C> {
             fn new(storage: &mut Storage) -> Self {
                 Self(storage.$field_mut::<C>() as *mut _)
             }
@@ -123,3 +123,6 @@ macro_rules! implement_id {
 
 implement_id!(entity_table, entity_table_mut, EntityId);
 implement_id!(point_table, point_table_mut, Point);
+implement_id!(user_table, user_table_mut, UserId);
+implement_id!(scripts_table, scripts_table_mut, ScriptId);
+implement_id!(log_table, log_table_mut, EntityTime);

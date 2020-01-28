@@ -15,34 +15,16 @@ pub fn execute_world_update(storage: &mut Storage) {
         UnsafeView::from(storage as &mut _),
         View::from(storage as &_),
     );
-    update_spawns(
-        UnsafeView::from(storage as &mut _),
-        UnsafeView::from(storage as &mut _),
-        UnsafeView::from(storage as &mut _),
-        UnsafeView::from(storage as &mut _),
-        UnsafeView::from(storage as &mut _),
-        UnsafeView::from(storage as &mut _),
-        UnsafeView::from(storage as &mut _),
-        UnsafeView::from(storage as &mut _),
-    );
-    update_decay(
-        UnsafeView::from(storage as &mut _),
-        UnsafeView::from(storage as &mut _),
-        storage,
-    );
-    update_minerals(
-        UnsafeView::from(storage as &mut _),
-        UnsafeView::from(storage as &mut _),
-        View::from(storage as &_),
-        View::from(storage as &_),
-    );
+    update_spawns(From::from(storage as &mut _));
+    update_decay(From::from(storage as &mut _), storage);
+    update_minerals(From::from(storage as &mut _), From::from(storage as &_));
     update_positions(
         UnsafeView::from(storage as &mut _),
         View::from(storage as &_),
     );
 }
 
-pub fn update_energy(
+fn update_energy(
     mut energy: UnsafeView<EntityId, model::EnergyComponent>,
     energy_regen: View<EntityId, model::EnergyRegenComponent>,
 ) {
@@ -54,19 +36,21 @@ pub fn update_energy(
         })
         .collect::<Vec<_>>();
     for (id, e) in changeset.into_iter() {
-        energy.insert_or_update(id, e);
+        unsafe { energy.as_mut() }.insert_or_update(id, e);
     }
 }
 
-pub fn update_spawns(
-    mut spawns: UnsafeView<EntityId, model::SpawnComponent>,
-    spawn_bots: UnsafeView<EntityId, model::SpawnBotComponent>,
-    bots: UnsafeView<EntityId, model::Bot>,
-    hps: UnsafeView<EntityId, model::HpComponent>,
-    decay: UnsafeView<EntityId, model::DecayComponent>,
-    carry: UnsafeView<EntityId, model::CarryComponent>,
-    positions: UnsafeView<EntityId, model::PositionComponent>,
-    owned: UnsafeView<EntityId, model::OwnedEntity>,
+fn update_spawns(
+    (mut spawns, spawn_bots, bots, hps, decay, carry, positions, owned): (
+        UnsafeView<EntityId, model::SpawnComponent>,
+        UnsafeView<EntityId, model::SpawnBotComponent>,
+        UnsafeView<EntityId, model::Bot>,
+        UnsafeView<EntityId, model::HpComponent>,
+        UnsafeView<EntityId, model::DecayComponent>,
+        UnsafeView<EntityId, model::CarryComponent>,
+        UnsafeView<EntityId, model::PositionComponent>,
+        UnsafeView<EntityId, model::OwnedEntity>,
+    ),
 ) {
     let changeset = spawns
         .iter()
@@ -84,16 +68,18 @@ pub fn update_spawns(
         .collect::<Vec<_>>();
 
     for (id, s, e) in changeset.into_iter() {
-        spawns.insert_or_update(id, s);
-        if let Some(e) = e {
-            spawn_bot(id, e, spawn_bots, bots, hps, decay, carry, positions, owned);
+        unsafe {
+            spawns.as_mut().insert_or_update(id, s);
+            if let Some(e) = e {
+                spawn_bot(id, e, spawn_bots, bots, hps, decay, carry, positions, owned);
+            }
         }
     }
 }
 
 /// Spawns a bot from a spawn.
 /// Removes the spawning bot from the spawn and initializes a bot in the world
-fn spawn_bot(
+unsafe fn spawn_bot(
     spawn_id: model::EntityId,
     entity_id: model::EntityId,
     mut spawn_bots: UnsafeView<EntityId, model::SpawnBotComponent>,
@@ -110,17 +96,18 @@ fn spawn_bot(
     );
 
     let bot = spawn_bots
+        .as_mut()
         .delete(&entity_id)
         .expect("Spawning bot was not found");
-    bots.insert_or_update(entity_id, bot.bot);
-    hps.insert_or_update(
+    bots.as_mut().insert_or_update(entity_id, bot.bot);
+    hps.as_mut().insert_or_update(
         entity_id,
         crate::model::HpComponent {
             hp: 100,
             hp_max: 100,
         },
     );
-    decay.insert_or_update(
+    decay.as_mut().insert_or_update(
         entity_id,
         crate::model::DecayComponent {
             eta: 20,
@@ -128,7 +115,7 @@ fn spawn_bot(
             hp_amount: 100,
         },
     );
-    carry.insert_or_update(
+    carry.as_mut().insert_or_update(
         entity_id,
         crate::model::CarryComponent {
             carry: 0,
@@ -137,14 +124,15 @@ fn spawn_bot(
     );
 
     let pos = positions
+        .as_mut()
         .get_by_id(&spawn_id)
         .cloned()
         .expect("Spawn should have position");
-    positions.insert_or_update(entity_id, pos);
+    positions.as_mut().insert_or_update(entity_id, pos);
 
     let owner = owned.get_by_id(&spawn_id).cloned();
     if let Some(owner) = owner {
-        owned.insert_or_update(entity_id, owner);
+        owned.as_mut().insert_or_update(entity_id, owner);
     }
 
     debug!(
@@ -153,9 +141,11 @@ fn spawn_bot(
     );
 }
 
-pub fn update_decay(
-    mut hps: UnsafeView<EntityId, model::HpComponent>,
-    mut decays: UnsafeView<EntityId, model::DecayComponent>,
+fn update_decay(
+    (mut hps, mut decays): (
+        UnsafeView<EntityId, model::HpComponent>,
+        UnsafeView<EntityId, model::DecayComponent>,
+    ),
     storage: &mut Storage,
 ) {
     debug!("update decay system called");
@@ -178,18 +168,24 @@ pub fn update_decay(
             debug!("Entity {:?} has died, deleting", id);
             storage.delete_entity(id);
         } else {
-            hps.insert_or_update(id, hp);
-            decays.insert_or_update(id, d);
+            unsafe {
+                hps.as_mut().insert_or_update(id, hp);
+                decays.as_mut().insert_or_update(id, d);
+            }
         }
     }
     debug!("update decay system done");
 }
 
-pub fn update_minerals(
-    mut entity_positions: UnsafeView<EntityId, model::PositionComponent>,
-    mut energy: UnsafeView<EntityId, model::EnergyComponent>,
-    position_entities: View<Point, model::EntityComponent>,
-    resources: View<EntityId, model::ResourceComponent>,
+fn update_minerals(
+    (mut entity_positions, mut energy): (
+        UnsafeView<EntityId, model::PositionComponent>,
+        UnsafeView<EntityId, model::EnergyComponent>,
+    ),
+    (position_entities, resources): (
+        View<Point, model::EntityComponent>,
+        View<EntityId, model::ResourceComponent>,
+    ),
 ) {
     debug!("update minerals system called");
 
@@ -223,8 +219,10 @@ pub fn update_minerals(
             "Mineral [{:?}] has been depleted, respawning at {:?}",
             id, pos
         );
-        entity_positions.insert_or_update(id, pos);
-        energy.insert_or_update(id, en);
+        unsafe {
+            entity_positions.as_mut().insert_or_update(id, pos);
+            energy.as_mut().insert_or_update(id, en);
+        }
     }
 
     debug!("update minerals system done");
@@ -253,7 +251,7 @@ fn random_uncontested_pos_in_range<T: crate::tables::PositionTable>(
 }
 
 /// Rebuild the point tables
-pub fn update_positions(
+fn update_positions(
     mut position_entities: UnsafeView<Point, model::EntityComponent>,
     positions: View<EntityId, model::PositionComponent>,
 ) {
@@ -263,10 +261,12 @@ pub fn update_positions(
         .map(|(id, pos)| (pos.0, model::EntityComponent(id)))
         .collect::<Vec<_>>();
 
-    position_entities.clear();
+    unsafe {
+        position_entities.as_mut().clear();
 
-    for (point, entity) in positions.into_iter() {
-        position_entities.insert(point, entity);
+        for (point, entity) in positions.into_iter() {
+            position_entities.as_mut().insert(point, entity);
+        }
     }
     debug!("update positions system done");
 }

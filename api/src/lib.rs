@@ -4,6 +4,7 @@
 extern crate serde_derive;
 
 pub mod bots;
+pub mod messages;
 pub mod pathfinding;
 pub mod point;
 pub mod point3;
@@ -13,6 +14,7 @@ pub mod terrain;
 pub mod user;
 
 pub use cao_lang::prelude::*;
+pub use messages::*;
 
 use std::convert::TryFrom;
 

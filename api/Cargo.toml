@@ -3,11 +3,14 @@ name = "caolo-api"
 version = "0.1.0"
 authors = ["Daniel Kiss <littlesnorrboy@gmail.com>"]
 edition = "2018"
+build = "build.rs"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[build-dependencies]
+capnpc = "0.12"
 
 [dependencies]
 serde = "1"
 serde_derive = "1"
 uuid = { version="0.7", features=["serde"] }
 cao-lang = { path = "../cao-lang" }
+capnp = "0.12"

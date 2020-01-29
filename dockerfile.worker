@@ -1,11 +1,21 @@
 FROM rust:latest AS build
 
+# install Cap'n Proto
+
+WORKDIR /capnproto-install
+RUN curl -O https://capnproto.org/capnproto-c++-0.7.0.tar.gz
+RUN tar zxf capnproto-c++-0.7.0.tar.gz
+WORKDIR /capnproto-install/capnproto-c++-0.7.0
+RUN ./configure
+RUN make install
+
 WORKDIR /worker
 
 COPY ./Cargo.worker.toml ./Cargo.toml
 COPY ./Cargo.lock ./Cargo.lock
 COPY ./rust-toolchain ./rust-toolchain
 
+COPY ./capnp/ ./capnp/
 COPY ./simulation/ ./simulation/
 COPY ./worker/ ./worker/
 COPY ./api/ ./api/

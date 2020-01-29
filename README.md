@@ -5,6 +5,7 @@
 - [Cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html)
 - [Python](https://www.python.org/)
 - [Redis](https://redis.io/)
+- [Cap'n Proto](https://capnproto.org/install.html)
 - [Docker](https://www.docker.com/) (Optional)
 - [PostgeSQL](https://www.postgresql.org/) (for the webservice)
 

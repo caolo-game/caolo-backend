@@ -130,6 +130,24 @@ macro_rules! implement_id {
                 Self(storage.$field_mut::<C>() as *mut _)
             }
         }
+
+        impl<'a, C: Component<$id>> From<&'a Storage> for View<'a, $id, C> {
+            fn from(s: &'a Storage) -> Self {
+                Self::new(s)
+            }
+        }
+
+        impl<'a, C: Component<$id>> From<&'a mut Storage> for View<'a, $id, C> {
+            fn from(s: &'a mut Storage) -> Self {
+                Self::new(s)
+            }
+        }
+
+        impl<C: Component<$id>> From<&mut Storage> for UnsafeView<$id, C> {
+            fn from(s: &mut Storage) -> Self {
+                Self::new(s)
+            }
+        }
     };
 }
 
@@ -163,6 +181,7 @@ macro_rules! implement_tuple {
                 }
             }
     };
+
     ($($vv: ident),*) => {
             impl<'a, $($vv:HasNew<'a>),* >
             From <&'a Storage> for ( $($vv),* )

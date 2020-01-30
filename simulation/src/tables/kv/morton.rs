@@ -22,7 +22,7 @@ impl MortonKey {
     }
 
     fn morton2(x: u32, y: u32) -> u32 {
-        (Self::partition(x) + (Self::partition(y) << 1))
+        Self::partition(x) + (Self::partition(y) << 1)
     }
 
     fn partition(mut n: u32) -> u32 {

@@ -62,11 +62,7 @@ pub fn execute_single_script<'a>(
     let mut vm = VM::new(data);
     crate::api::make_import().execute_imports(&mut vm);
 
-    let program = program.0.compiled.as_ref().ok_or_else(|| {
-        error!("Script by ID {:?} was not compiled", scriptid);
-        "not compiled"
-    })?;
-    vm.run(program).map_err(|e| {
+    vm.run(&program.0).map_err(|e| {
         warn!(
             "Error while executing script {:?} of entity {:?}\n{:?}",
             scriptid, entityid, e

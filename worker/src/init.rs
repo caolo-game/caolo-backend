@@ -1,5 +1,5 @@
 use cao_lang::prelude::*;
-use caolo_api::{point::Point, Script, ScriptId};
+use caolo_api::{point::Point, ScriptId};
 use caolo_sim::model;
 use caolo_sim::storage::Storage;
 
@@ -15,13 +15,7 @@ pub fn init_storage(n_fake_users: usize) -> Storage {
     let compiled = Compiler::compile(script.clone()).expect("failed to compile example program");
     storage
         .scripts_table_mut::<model::ScriptComponent>()
-        .insert_or_update(
-            script_id,
-            model::ScriptComponent(Script {
-                compiled: Some(compiled),
-                script: script,
-            }),
-        );
+        .insert_or_update(script_id, model::ScriptComponent(compiled));
 
     let mut rng = rand::thread_rng();
 

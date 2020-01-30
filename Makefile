@@ -8,10 +8,10 @@ start: buildworker buildweb
 	docker-compose up -d
 
 startworker:
-	docker-compose up --scale web=0
+	docker-compose up --scale web=0 -d
 
 startweb:
-	docker-compose up --scale worker=0
+	docker-compose up --scale worker=0 -d
 
 buildworker:
 	docker build -t frenetiq/caolo-worker:latest -f dockerfile.worker .

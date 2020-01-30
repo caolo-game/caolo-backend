@@ -141,7 +141,7 @@ impl<Id: TableId> Component<Id> for ResourceComponent {
 
 /// Entities with Scripts
 #[derive(Debug, Clone, Serialize)]
-pub struct ScriptComponent(pub caolo_api::Script);
+pub struct ScriptComponent(pub caolo_api::CompiledProgram);
 impl<Id: TableId> Component<Id> for ScriptComponent {
     type Table = BTreeTable<Id, Self>;
 }

@@ -48,7 +48,7 @@ def commit_script():
         log.err()
         abort(400, "name was not set")
 
-    content = json.dumps({"compiled": compiled, "script": program})
+    content = json.dumps(compiled)
 
     redis_conn = get_redis_client()
     redis_conn.set("PROGRAM", content)

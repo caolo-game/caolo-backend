@@ -108,6 +108,24 @@ impl<Id: TableId, C: Component<Id>> Deref for UnsafeView<Id, C> {
     }
 }
 
+pub struct DeleteEntityView {
+    storage: *mut Storage,
+}
+
+impl DeleteEntityView {
+    pub unsafe fn delete_entity(&mut self, entity_id: EntityId) {
+        (*self.storage).delete_entity(entity_id)
+    }
+}
+
+impl HasNewMut for DeleteEntityView {
+    fn new(storage: &mut Storage) -> Self {
+        Self {
+            storage: storage as *mut _,
+        }
+    }
+}
+
 pub trait HasNew<'a> {
     fn new(s: &'a Storage) -> Self;
 }

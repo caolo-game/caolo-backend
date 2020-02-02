@@ -8,6 +8,7 @@ impl<'a> System<'a> for PositionSystem {
     type Mut = UnsafeView<Point, model::EntityComponent>;
     type Const = View<'a, EntityId, model::PositionComponent>;
 
+    /// Reset the entity positions table
     fn update(&mut self, mut position_entities: Self::Mut, positions: Self::Const) {
         debug!("update positions system called");
         let positions = positions

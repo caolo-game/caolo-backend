@@ -180,6 +180,22 @@ macro_rules! implement_tuple {
                     )
                 }
             }
+
+            impl<'a, $v:HasNew<'a> >
+            HasNew<'a> for ( $v, )
+            {
+                fn new(storage: &'a Storage) -> Self {
+                    Self::from(storage)
+                }
+            }
+
+            impl<$v:HasNewMut>
+            HasNewMut for ( $v, )
+            {
+                fn new(storage: &mut Storage) -> Self {
+                    Self::from(storage)
+                }
+            }
     };
 
     ($($vv: ident),*) => {
@@ -202,6 +218,22 @@ macro_rules! implement_tuple {
                     (
                         $($vv ::new(storage)),*
                     )
+                }
+            }
+
+            impl<'a, $($vv:HasNew<'a>),* >
+            HasNew<'a> for ( $($vv),* )
+            {
+                fn new(storage: &'a Storage) -> Self {
+                    Self::from(storage)
+                }
+            }
+
+            impl<$($vv:HasNewMut),* >
+            HasNewMut for ( $($vv),* )
+            {
+                fn new(storage: &mut Storage) -> Self {
+                    Self::from(storage)
                 }
             }
     };

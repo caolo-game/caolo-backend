@@ -15,12 +15,12 @@ impl<'a> System<'a> for PositionSystem {
         unsafe {
             position_entities.as_mut().clear();
 
-            for (point, entity) in positions
+            positions
                 .iter()
                 .map(|(id, pos)| (pos.0, model::EntityComponent(id)))
-            {
-                position_entities.as_mut().insert(point, entity);
-            }
+                .for_each(|(point, entity)| {
+                    position_entities.as_mut().insert(point, entity);
+                });
         }
 
         debug!("update positions system done");

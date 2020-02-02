@@ -24,7 +24,8 @@ impl<'a> System<'a> for SpawnSystem {
         (mut spawns, spawn_bots, bots, hps, decay, carry, positions, owned): Self::Mut,
         _: Self::Const,
     ) {
-        let changeset = unsafe { spawns.as_mut().iter_mut() }
+        let spawn_views = (spawn_bots, bots, hps, decay, carry, positions, owned);
+        unsafe { spawns.as_mut().iter_mut() }
             .filter(|(_id, s)| s.spawning.is_some())
             .filter_map(|(id, s)| {
                 s.time_to_spawn -= 1;
@@ -34,17 +35,10 @@ impl<'a> System<'a> for SpawnSystem {
                     s.spawning = None;
                 }
                 bot.map(|b| (id, b))
+            })
+            .for_each(|(id, e)| unsafe {
+                spawn_bot(id, e, spawn_views);
             });
-
-        for (id, e) in changeset {
-            unsafe {
-                spawn_bot(
-                    id,
-                    e,
-                    (spawn_bots, bots, hps, decay, carry, positions, owned),
-                );
-            }
-        }
     }
 }
 

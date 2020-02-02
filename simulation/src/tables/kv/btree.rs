@@ -28,6 +28,10 @@ where
         self.data.iter().map(|(id, row)| (*id, row))
     }
 
+    pub fn iter_mut<'a>(&'a mut self) -> impl TableIterator<Id, &'a mut Row> + 'a {
+        self.data.iter_mut().map(|(id, row)| (*id, row))
+    }
+
     pub fn get_by_id<'a>(&'a self, id: &Id) -> Option<&'a Row> {
         self.data.get(id)
     }

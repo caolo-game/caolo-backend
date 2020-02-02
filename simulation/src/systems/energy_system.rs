@@ -14,15 +14,10 @@ impl<'a> System<'a> for EnergySystem {
         mut energy: UnsafeView<EntityId, model::EnergyComponent>,
         energy_regen: View<EntityId, model::EnergyRegenComponent>,
     ) {
-        let changeset = JoinIterator::new(energy.iter(), energy_regen.iter())
-            .map(|(id, (e, er))| {
-                let mut e = e.clone();
-                e.energy = (e.energy + er.amount).min(e.energy_max);
-                (id, e)
-            })
-            .collect::<Vec<_>>();
-        for (id, e) in changeset.into_iter() {
-            unsafe { energy.as_mut() }.insert_or_update(id, e);
-        }
+        let energy_it = unsafe { energy.as_mut().iter_mut() };
+        let join = JoinIterator::new(energy_it, energy_regen.iter());
+        join.for_each(|(_id, (e, er))| {
+            e.energy = (e.energy + er.amount).min(e.energy_max);
+        });
     }
 }

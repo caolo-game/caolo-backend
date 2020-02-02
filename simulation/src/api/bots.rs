@@ -56,15 +56,7 @@ pub fn move_bot(
     };
     let userid = vm.get_aux().userid().expect("userid to be set");
 
-    let checkresult = check_move_intent(
-        &intent,
-        userid,
-        View::from(storage as &_),
-        View::from(storage as &_),
-        View::from(storage as &_),
-        View::from(storage as &_),
-        View::from(storage as &_),
-    );
+    let checkresult = check_move_intent(&intent, userid, From::from(storage as &_));
     let result = vm.set_value(checkresult);
 
     vm.get_aux_mut()
@@ -80,10 +72,12 @@ pub fn move_bot(
 
 pub fn build_bot(
     id: EntityId,
-    bot: View<EntityId, model::Bot>,
-    pos: View<EntityId, model::PositionComponent>,
-    carry: View<EntityId, model::CarryComponent>,
-    owners: View<EntityId, model::OwnedEntity>,
+    (bot, pos, carry, owners): (
+        View<EntityId, model::Bot>,
+        View<EntityId, model::PositionComponent>,
+        View<EntityId, model::CarryComponent>,
+        View<EntityId, model::OwnedEntity>,
+    ),
 ) -> Option<caolo_api::bots::Bot> {
     profile!("build_bot");
 

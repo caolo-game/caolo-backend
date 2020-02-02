@@ -1,4 +1,4 @@
-//! Methods that are exported to the WASM clients
+//! Methods that are exported to the Cao-lang clients
 //!
 //! Methods that may fail return an OperationResult
 //!

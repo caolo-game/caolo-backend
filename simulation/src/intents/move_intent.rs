@@ -46,11 +46,13 @@ impl MoveIntent {
 pub fn check_move_intent(
     intent: &caolo_api::bots::MoveIntent,
     userid: model::UserId,
-    owner_ids: View<EntityId, model::OwnedEntity>,
-    positions: View<EntityId, PositionComponent>,
-    bots: View<EntityId, model::Bot>,
-    terrain: View<Point, model::TerrainComponent>,
-    entity_positions: View<Point, EntityComponent>,
+    (owner_ids, positions, bots, terrain, entity_positions): (
+        View<EntityId, model::OwnedEntity>,
+        View<EntityId, PositionComponent>,
+        View<EntityId, model::Bot>,
+        View<Point, model::TerrainComponent>,
+        View<Point, EntityComponent>,
+    ),
 ) -> OperationResult {
     let id = model::EntityId(intent.id);
     match bots.get_by_id(&id) {

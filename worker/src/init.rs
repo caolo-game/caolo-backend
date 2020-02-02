@@ -3,7 +3,7 @@ use caolo_api::{point::Point, ScriptId};
 use caolo_sim::model;
 use caolo_sim::storage::Storage;
 
-const PROGRAM: &str = r#"{"nodes":{"0":{"node":{"ScalarInt":{"value":69}},"children":[1]},"1":{"node":{"ScalarInt":{"value":420}},"children":[2]},"2":{"node":{"Call":{"function":"make_point"}},"children":[3]},"3":{"node":{"Call":{"function":"bots::move_bot"}},"children":[5]},"4":{"node":{"Call":{"function":"make_operation_result"}},"children":[9]},"5":{"node":{"ScalarInt":{"value":0}},"children":[4]},"6":{"node":{"JumpIfTrue":{"nodeid":7}},"children":[10]},"7":{"node":{"StringLiteral":{"value":"Moving :)"}},"children":[8]},"8":{"node":{"Call":{"function":"console_log"}},"children":[]},"9":{"node":{"Equals":null},"children":[6]},"10":{"node":{"StringLiteral":{"value":"No moverino :("}},"children":[11]},"11":{"node":{"Call":{"function":"console_log"}},"children":[]},"12":{"node":{"Start":null},"children":[0]}},"name":"placeholder"}"#;
+const PROGRAM: &str = r#"{"nodes":{"0":{"node":{"ScalarInt":{"value":69}},"child":1},"1":{"node":{"ScalarInt":{"value":420}},"child":2},"2":{"node":{"Call":{"function":"make_point"}},"child":3},"3":{"node":{"Call":{"function":"bots::move_bot"}},"child":5},"4":{"node":{"Call":{"function":"make_operation_result"}},"child":9},"5":{"node":{"ScalarInt":{"value":0}},"child":4},"6":{"node":{"JumpIfTrue":{"nodeid":7}},"child":10},"7":{"node":{"StringLiteral":{"value":"Moving :)"}},"child":8},"8":{"node":{"Call":{"function":"console_log"}}},"9":{"node":{"Equals":null},"child":6},"10":{"node":{"StringLiteral":{"value":"No moverino :("}},"child":11},"11":{"node":{"Call":{"function":"console_log"}}},"12":{"node":{"Start":null},"child":0}},"name":"default"}"#;
 
 pub fn init_storage(n_fake_users: usize) -> Storage {
     let mut storage = caolo_sim::init_inmemory_storage();
@@ -63,14 +63,14 @@ fn uncontested_pos<T: caolo_sim::tables::TableRow + Send + Sync>(
 ) -> caolo_api::point::Point {
     use rand::Rng;
 
-    let mut pos = Point::default();
     loop {
-        pos.x = rng.gen_range(0, 500);
-        pos.y = rng.gen_range(0, 500);
+        let x = rng.gen_range(0, 500);
+        let y = rng.gen_range(0, 500);
+
+        let pos = Point::new(x, y);
 
         if positions_table.get_by_id(&pos).is_none() {
-            break;
+            return pos;
         }
     }
-    pos
 }

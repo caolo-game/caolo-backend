@@ -24,31 +24,25 @@ impl<'a> System<'a> for SpawnSystem {
         (mut spawns, spawn_bots, bots, hps, decay, carry, positions, owned): Self::Mut,
         _: Self::Const,
     ) {
-        let changeset = spawns
-            .iter()
+        let changeset = unsafe { spawns.as_mut().iter_mut() }
             .filter(|(_id, s)| s.spawning.is_some())
-            .map(|(id, s)| {
-                let mut s = s.clone();
+            .filter_map(|(id, s)| {
                 s.time_to_spawn -= 1;
                 let mut bot = None;
                 if s.time_to_spawn == 0 {
                     bot = s.spawning;
                     s.spawning = None;
                 }
-                (id, s, bot)
-            })
-            .collect::<Vec<_>>();
+                bot.map(|b| (id, b))
+            });
 
-        for (id, s, e) in changeset.into_iter() {
+        for (id, e) in changeset {
             unsafe {
-                spawns.as_mut().insert_or_update(id, s);
-                if let Some(e) = e {
-                    spawn_bot(
-                        id,
-                        e,
-                        (spawn_bots, bots, hps, decay, carry, positions, owned),
-                    );
-                }
+                spawn_bot(
+                    id,
+                    e,
+                    (spawn_bots, bots, hps, decay, carry, positions, owned),
+                );
             }
         }
     }

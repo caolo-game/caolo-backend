@@ -1,8 +1,8 @@
 use super::System;
-use rand::Rng;
-use crate::model::{self, EntityId, Point, Circle};
+use crate::model::{self, Circle, EntityId, Point};
 use crate::storage::views::{UnsafeView, View};
 use crate::tables::JoinIterator;
+use rand::Rng;
 
 pub struct MineralSystem;
 
@@ -25,39 +25,28 @@ impl<'a> System<'a> for MineralSystem {
 
         let mut rng = rand::thread_rng();
 
-        let minerals = resources.iter().filter(|(_, r)| match r.0 {
+        let minerals_it = resources.iter().filter(|(_, r)| match r.0 {
             model::Resource::Mineral => true,
         });
-        let changeset = JoinIterator::new(
-            JoinIterator::new(minerals, entity_positions.iter()),
-            energy.iter(),
+        let entity_positions_it = unsafe { entity_positions.as_mut().iter_mut() };
+        let energy_iter = unsafe { energy.as_mut().iter_mut() };
+        JoinIterator::new(
+            JoinIterator::new(minerals_it, entity_positions_it),
+            energy_iter,
         )
-        .filter_map(|(id, ((_resource, position), energy))| {
+        .for_each(|(id, ((_resource, position), energy))| {
             if energy.energy > 0 {
-                return None;
+                return;
             }
-
-            let mut energy = energy.clone();
-            let mut position = position.clone();
-
-            energy.energy = energy.energy_max;
-
-            position.0 = random_uncontested_pos_in_range(&*position_entities, &mut rng, -14, 15);
-
-            Some((id, position, energy))
-        })
-        .collect::<Vec<_>>();
-
-        for (id, pos, en) in changeset.into_iter() {
+            let pos = random_uncontested_pos_in_range(&*position_entities, &mut rng, -14, 15);
             debug!(
                 "Mineral [{:?}] has been depleted, respawning at {:?}",
                 id, pos
             );
-            unsafe {
-                entity_positions.as_mut().insert_or_update(id, pos);
-                energy.as_mut().insert_or_update(id, en);
-            }
-        }
+
+            energy.energy = energy.energy_max;
+            position.0 = pos;
+        });
 
         debug!("update minerals system done");
     }
@@ -84,4 +73,3 @@ fn random_uncontested_pos_in_range<T: crate::tables::PositionTable>(
     }
     pos
 }
-

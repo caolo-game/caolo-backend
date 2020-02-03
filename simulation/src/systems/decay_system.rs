@@ -18,12 +18,13 @@ impl<'a> System<'a> for DecaySystem {
 
         let iter =
             unsafe { JoinIterator::new(decays.as_mut().iter_mut(), hps.as_mut().iter_mut()) };
-        iter.for_each(|(id, (d, hp))| {
-            if d.t > 0 {
-                d.t -= 1;
-            }
-            if d.t == 0 {
-                hp.hp -= hp.hp.min(d.hp_amount);
+        iter.for_each(|(id, (decay, hp))| {
+            if decay.t > 0 {
+                decay.t -= 1;
+                if decay.t == 0 {
+                    hp.hp -= hp.hp.min(decay.hp_amount);
+                    decay.t = decay.eta;
+                }
             }
             if hp.hp == 0 {
                 debug!("Entity {:?} has died, deleting", id);

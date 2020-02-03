@@ -10,7 +10,8 @@ use caolo_sim::{
 use log::{debug, error};
 use redis::Commands;
 
-pub fn update_program(storage: &mut Storage, client: &redis::Client) {
+/// Update all programs submitted via the PROGRAM field in the Redis storage
+pub fn update_programs(storage: &mut Storage, client: &redis::Client) {
     debug!("Fetching new programs");
     let mut connection = client.get_connection().expect("Get redis conn");
     while let Ok(Some(program)) = connection

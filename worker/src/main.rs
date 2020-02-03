@@ -110,7 +110,7 @@ fn main() {
     send_schema(&client).expect("Send schema");
     loop {
         let start = Instant::now();
-        script_update::update_program(&mut storage, &client);
+        script_update::update_programs(&mut storage, &client);
         tick(&mut storage);
         send_world(&storage, &client).expect("Sending world");
         let t = Instant::now() - start;

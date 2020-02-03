@@ -1,5 +1,6 @@
 mod init;
 mod payload;
+mod script_update;
 
 use caolo_sim::{self, storage::Storage};
 use log::{debug, error, info};
@@ -89,48 +90,6 @@ fn send_schema(client: &redis::Client) -> Result<(), Box<dyn std::error::Error>>
     Ok(())
 }
 
-fn update_program(storage: &mut Storage, client: &redis::Client) {
-    debug!("Fetching new program");
-    let mut connection = client.get_connection().expect("Get redis conn");
-    redis::pipe()
-        .cmd("GET")
-        .arg("PROGRAM")
-        .cmd("DEL")
-        .arg("PROGRAM")
-        .ignore()
-        .query(&mut connection)
-        .map_err(|e| {
-            error!("Failed to GET script {:?}", e);
-        })
-        .and_then(|program: Vec<Option<String>>| {
-            program
-                .get(0)
-                .and_then(|program| program.clone())
-                .and_then(|program| {
-                    debug!("Deserializing program {:?}", program);
-                    serde_json::from_str::<caolo_api::CompiledProgram>(&program)
-                        .map_err(|e| {
-                            error!("Failed to deserialize script {:?}", e);
-                        })
-                        .ok()
-                })
-                .ok_or_else(|| ())
-        })
-        .map(|program| {
-            debug!("Inserting new program {:?}", program);
-
-            use caolo_sim::model::{ScriptComponent, ScriptId};
-
-            let script_id = ScriptId::default(); // TODO read from users?
-            let program = ScriptComponent(program);
-            storage
-                .scripts_table_mut::<ScriptComponent>()
-                .insert_or_update(script_id, program);
-        })
-        .unwrap_or(());
-    debug!("Fetching new program done");
-}
-
 fn main() {
     init();
     let n_actors = std::env::var("N_ACTORS")
@@ -151,7 +110,7 @@ fn main() {
     send_schema(&client).expect("Send schema");
     loop {
         let start = Instant::now();
-        update_program(&mut storage, &client);
+        script_update::update_program(&mut storage, &client);
         tick(&mut storage);
         send_world(&storage, &client).expect("Sending world");
         let t = Instant::now() - start;

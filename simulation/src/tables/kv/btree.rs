@@ -92,12 +92,13 @@ impl LogTable for BTreeTable<model::EntityTime, model::LogEntry> {
             .collect()
     }
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::model::EntityId;
     use rand::Rng;
-    use test::{black_box, Bencher};
+    use test::Bencher;
 
     #[bench]
     fn insert_at_random(b: &mut Bencher) {
@@ -110,7 +111,6 @@ mod tests {
             debug_assert!(res);
             res
         });
-        black_box(table);
     }
 
     #[bench]
@@ -131,6 +131,5 @@ mod tests {
             let res = table.get_by_id(&id);
             res
         });
-        black_box(table);
     }
 }

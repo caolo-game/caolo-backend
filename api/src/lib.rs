@@ -16,7 +16,7 @@ pub use cao_lang::prelude::*;
 
 use std::convert::TryFrom;
 
-pub type EntityId = u64;
+pub type EntityId = u32;
 pub type UserId = uuid::Uuid;
 
 #[derive(Default, Clone, Copy, Debug, Serialize, Deserialize, Eq, PartialEq, Ord, PartialOrd)]

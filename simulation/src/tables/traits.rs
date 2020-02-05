@@ -7,6 +7,16 @@ pub trait TableId:
 {
 }
 
+/// Implement for Ids that are incremented in a serial fashion.
+/// Intended to be used in tables that reserve memory for N items where N is the largest Id
+/// inserted.
+/// e.g. inserting ids 0, 3, 4, 10 will reserve memory for 11 ([0..10]) items.
+pub trait SerialId: TableId {
+    /// Return the next Id in the domain after `self`.
+    fn next(&self) -> Self;
+    fn as_usize(&self) -> usize;
+}
+
 impl<T> TableId for T where
     T: 'static
         + Ord

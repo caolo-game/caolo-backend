@@ -2,9 +2,11 @@
 //!
 mod btree;
 mod morton;
+mod vector;
 
 pub use btree::*;
 pub use morton::*;
+pub use vector::*;
 
 use super::*;
 use crate::storage::TableId;

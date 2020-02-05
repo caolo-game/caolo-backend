@@ -92,3 +92,45 @@ impl LogTable for BTreeTable<model::EntityTime, model::LogEntry> {
             .collect()
     }
 }
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::model::EntityId;
+    use rand::Rng;
+    use test::{black_box, Bencher};
+
+    #[bench]
+    fn insert_at_random(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        let mut table = BTreeTable::<EntityId, i32>::new();
+        b.iter(|| {
+            let id = rng.gen_range(0, 1 << 20);
+            let id = EntityId(id);
+            let res = table.insert_or_update(id, rng.gen_range(0, 200));
+            debug_assert!(res);
+            res
+        });
+        black_box(table);
+    }
+
+    #[bench]
+    fn get_by_id_random(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        let mut table = BTreeTable::<EntityId, i32>::new();
+        for i in 0..1 << 15 {
+            let mut res = false;
+            while !res {
+                let id = rng.gen_range(0, 1 << 25);
+                let id = EntityId(id);
+                res = table.insert_or_update(id, i);
+            }
+        }
+        b.iter(|| {
+            let id = rng.gen_range(0, 1 << 25);
+            let id = EntityId(id);
+            let res = table.get_by_id(&id);
+            res
+        });
+        black_box(table);
+    }
+}

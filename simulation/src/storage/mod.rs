@@ -72,8 +72,10 @@ impl Storage {
     }
 
     pub fn insert_entity(&mut self) -> EntityId {
+        use crate::tables::SerialId;
+
         let res = self.next_entity;
-        self.next_entity.0 += 1;
+        self.next_entity = self.next_entity.next();
         res
     }
 

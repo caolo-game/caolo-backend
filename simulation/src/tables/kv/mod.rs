@@ -36,25 +36,35 @@ mod tests {
     use super::*;
     use crate::model::EntityId;
     use rand::Rng;
+    use serde_derive::{Deserialize, Serialize};
     use test::{black_box, Bencher};
+
+    #[derive(Default, Debug, Clone, Serialize, Deserialize)]
+    struct LargeComponent {
+        _a: [u8; 10],
+        _b: [u8; 10],
+        _c: [u8; 10],
+        _d: [u8; 10],
+        _e: [u8; 10],
+        _f: [u8; 10],
+    }
 
     #[bench]
     fn join_vec_btree_2pow15(b: &mut Bencher) {
         let mut rng = rand::thread_rng();
-        let mut bt = BTreeTable::<EntityId, i32>::new();
-        let mut ve = VecTable::<EntityId, i32>::new();
-        for i in 0..1 << 15 {
+        let mut bt = BTreeTable::<EntityId, LargeComponent>::new();
+        let mut ve = VecTable::<EntityId, LargeComponent>::new();
+        for _ in 0..1 << 15 {
             let mut res = false;
             let mut id = EntityId::default();
             while !res {
                 id = EntityId(rng.gen_range(0, 1 << 16));
-                res = bt.insert_or_update(id, i);
+                res = bt.insert_or_update(id, LargeComponent::default());
             }
-            ve.insert_or_update(id, i);
-            ve.insert_or_update(id, i);
+            ve.insert_or_update(id, LargeComponent::default());
         }
         b.iter(move || {
-            let mut it = JoinIterator::new(ve.iter(), bt.iter());
+            let it = JoinIterator::new(ve.iter(), bt.iter());
             for joined in it {
                 black_box(joined);
             }
@@ -64,19 +74,63 @@ mod tests {
     #[bench]
     fn join_btree_vec_2pow15(b: &mut Bencher) {
         let mut rng = rand::thread_rng();
-        let mut bt = BTreeTable::<EntityId, i32>::new();
-        let mut ve = VecTable::<EntityId, i32>::new();
-        for i in 0..1 << 15 {
+        let mut bt = BTreeTable::<EntityId, LargeComponent>::new();
+        let mut ve = VecTable::<EntityId, LargeComponent>::new();
+        for _ in 0..1 << 15 {
             let mut res = false;
             let mut id = EntityId::default();
             while !res {
                 id = EntityId(rng.gen_range(0, 1 << 16));
-                res = bt.insert_or_update(id, i);
+                res = bt.insert_or_update(id, LargeComponent::default());
             }
-            ve.insert_or_update(id, i);
+            ve.insert_or_update(id, LargeComponent::default());
         }
         b.iter(move || {
-            let mut it = JoinIterator::new(bt.iter(), ve.iter());
+            let it = JoinIterator::new(bt.iter(), ve.iter());
+            for joined in it {
+                black_box(joined);
+            }
+        });
+    }
+
+    #[bench]
+    fn join_vec_vec_2pow15(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        let mut ta = VecTable::<EntityId, LargeComponent>::new();
+        let mut tb = VecTable::<EntityId, LargeComponent>::new();
+        for _ in 0..1 << 15 {
+            let mut res = false;
+            let mut id = EntityId::default();
+            while !res {
+                id = EntityId(rng.gen_range(0, 1 << 16));
+                res = ta.insert_or_update(id, LargeComponent::default());
+            }
+            tb.insert_or_update(id, LargeComponent::default());
+        }
+        b.iter(move || {
+            let it = JoinIterator::new(tb.iter(), ta.iter());
+            for joined in it {
+                black_box(joined);
+            }
+        });
+    }
+
+    #[bench]
+    fn join_bt_bt_2pow15(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        let mut ta = BTreeTable::<EntityId, LargeComponent>::new();
+        let mut tb = BTreeTable::<EntityId, LargeComponent>::new();
+        for _ in 0..1 << 15 {
+            let mut res = false;
+            let mut id = EntityId::default();
+            while !res {
+                id = EntityId(rng.gen_range(0, 1 << 16));
+                res = ta.insert_or_update(id, LargeComponent::default());
+            }
+            tb.insert_or_update(id, LargeComponent::default());
+        }
+        b.iter(move || {
+            let it = JoinIterator::new(tb.iter(), ta.iter());
             for joined in it {
                 black_box(joined);
             }

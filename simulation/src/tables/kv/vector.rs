@@ -62,9 +62,12 @@ where
 
     pub fn get_by_id<'a>(&'a self, id: &Id) -> Option<&'a Row> {
         let ind = id.as_usize();
-        self.keys
-            .get(ind)
-            .and_then(|key| key.map(|(_, ind)| &self.values[ind as usize]))
+        if self.keys.len() <= ind {
+            return None;
+        }
+        let keys = self.keys.as_ptr();
+        let values = self.values.as_ptr();
+        unsafe { (*keys.offset(ind as isize)).map(|(_, ind)| &*values.offset(ind as isize)) }
     }
 
     pub fn iter<'a>(&'a self) -> impl TableIterator<Id, &'a Row> + 'a {
@@ -150,20 +153,6 @@ mod tests {
     fn insert_at_random_w_reserve(b: &mut Bencher) {
         let mut rng = rand::thread_rng();
         let mut table = VecTable::<EntityId, i32>::with_capacity(1 << 20);
-        b.iter(|| {
-            let id = rng.gen_range(0, 1 << 20);
-            let id = EntityId(id);
-            let res = table.insert_or_update(id, rng.gen_range(0, 200));
-            debug_assert!(res);
-            res
-        });
-    }
-
-    #[bench]
-    fn insert_at_random_w_median(b: &mut Bencher) {
-        let mut rng = rand::thread_rng();
-        let mut table = VecTable::<EntityId, i32>::new();
-        table.insert_or_update(EntityId((1 << 20) / 2), 512);
         b.iter(|| {
             let id = rng.gen_range(0, 1 << 20);
             let id = EntityId(id);

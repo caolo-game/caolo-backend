@@ -30,3 +30,56 @@ pub trait SpatialKey2d: TableId + Add<Output = Self> {
         (self.get_axis(axis) - other.get_axis(axis)).abs() as u32
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::model::EntityId;
+    use rand::Rng;
+    use test::{black_box, Bencher};
+
+    #[bench]
+    fn join_vec_btree_2pow15(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        let mut bt = BTreeTable::<EntityId, i32>::new();
+        let mut ve = VecTable::<EntityId, i32>::new();
+        for i in 0..1 << 15 {
+            let mut res = false;
+            let mut id = EntityId::default();
+            while !res {
+                id = EntityId(rng.gen_range(0, 1 << 16));
+                res = bt.insert_or_update(id, i);
+            }
+            ve.insert_or_update(id, i);
+            ve.insert_or_update(id, i);
+        }
+        b.iter(move || {
+            let mut it = JoinIterator::new(ve.iter(), bt.iter());
+            for joined in it {
+                black_box(joined);
+            }
+        });
+    }
+
+    #[bench]
+    fn join_btree_vec_2pow15(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        let mut bt = BTreeTable::<EntityId, i32>::new();
+        let mut ve = VecTable::<EntityId, i32>::new();
+        for i in 0..1 << 15 {
+            let mut res = false;
+            let mut id = EntityId::default();
+            while !res {
+                id = EntityId(rng.gen_range(0, 1 << 16));
+                res = bt.insert_or_update(id, i);
+            }
+            ve.insert_or_update(id, i);
+        }
+        b.iter(move || {
+            let mut it = JoinIterator::new(bt.iter(), ve.iter());
+            for joined in it {
+                black_box(joined);
+            }
+        });
+    }
+}

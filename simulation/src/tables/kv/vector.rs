@@ -68,17 +68,16 @@ where
     }
 
     pub fn iter<'a>(&'a self) -> impl TableIterator<Id, &'a Row> + 'a {
-        let values = &self.values;
-        self.keys
-            .iter()
-            .filter_map(|k| *k)
-            .map(move |(id, ind)| (id, &values[ind as usize]))
+        let values = self.values.as_ptr();
+        self.keys.iter().filter_map(|k| *k).map(move |(id, ind)| {
+            let val = unsafe { &*values.offset(ind as isize) };
+            (id, val)
+        })
     }
 
     pub fn iter_mut<'a>(&'a mut self) -> impl TableIterator<Id, &'a mut Row> + 'a {
         let values = self.values.as_mut_ptr();
         self.keys.iter().filter_map(|k| *k).map(move |(id, ind)| {
-            // TODO this really ought to be tested
             let val = unsafe { &mut *values.offset(ind as isize) };
             (id, val)
         })
@@ -184,9 +183,10 @@ mod tests {
         for i in 0..LEN {
             let mut id = Default::default();
             while table.contains_id(&id) {
-                id = EntityId(
-                    rng.gen_range(0, u32::try_from(LEN * 6 / 5).expect("max len to fit into u32")),
-                );
+                id = EntityId(rng.gen_range(
+                    0,
+                    u32::try_from(LEN * 6 / 5).expect("max len to fit into u32"),
+                ));
             }
             table.insert_or_update(id, i);
         }
@@ -202,7 +202,7 @@ mod tests {
     fn update_all_iter_2pow14_dense(b: &mut Bencher) {
         /// The whole table is filled
         ///
-        const LEN: usize = 1 <<14;
+        const LEN: usize = 1 << 14;
         let mut table = VecTable::<EntityId, usize>::with_capacity(LEN);
         for i in 0..LEN {
             let id = EntityId(i as u32);

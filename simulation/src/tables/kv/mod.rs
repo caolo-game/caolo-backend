@@ -49,20 +49,36 @@ mod tests {
         _f: [u8; 10],
     }
 
-    #[bench]
-    fn join_vec_btree_2pow15(b: &mut Bencher) {
+    fn random_vec_table(len: usize, domain: u32) -> VecTable<EntityId, LargeComponent> {
         let mut rng = rand::thread_rng();
-        let mut bt = BTreeTable::<EntityId, LargeComponent>::new();
-        let mut ve = VecTable::<EntityId, LargeComponent>::new();
-        for _ in 0..1 << 15 {
+        let mut table = VecTable::with_capacity(domain as usize);
+        for _ in 0..len {
             let mut res = false;
-            let mut id = EntityId::default();
             while !res {
-                id = EntityId(rng.gen_range(0, 1 << 16));
-                res = bt.insert_or_update(id, LargeComponent::default());
+                let id = EntityId(rng.gen_range(0, domain));
+                res = table.insert_or_update(id, LargeComponent::default());
             }
-            ve.insert_or_update(id, LargeComponent::default());
         }
+        table
+    }
+
+    fn random_bt_table(len: usize, domain: u32) -> BTreeTable<EntityId, LargeComponent> {
+        let mut rng = rand::thread_rng();
+        let mut table = BTreeTable::new();
+        for _ in 0..len {
+            let mut res = false;
+            while !res {
+                let id = EntityId(rng.gen_range(0, domain));
+                res = table.insert_or_update(id, LargeComponent::default());
+            }
+        }
+        table
+    }
+
+    #[bench]
+    fn join_vec_btree_2pow15_sparse(b: &mut Bencher) {
+        let bt = random_bt_table(1 << 15, 1 << 16);
+        let ve = random_vec_table(1 << 15, 1 << 16);
         b.iter(move || {
             let it = JoinIterator::new(ve.iter(), bt.iter());
             for joined in it {
@@ -72,19 +88,9 @@ mod tests {
     }
 
     #[bench]
-    fn join_btree_vec_2pow15(b: &mut Bencher) {
-        let mut rng = rand::thread_rng();
-        let mut bt = BTreeTable::<EntityId, LargeComponent>::new();
-        let mut ve = VecTable::<EntityId, LargeComponent>::new();
-        for _ in 0..1 << 15 {
-            let mut res = false;
-            let mut id = EntityId::default();
-            while !res {
-                id = EntityId(rng.gen_range(0, 1 << 16));
-                res = bt.insert_or_update(id, LargeComponent::default());
-            }
-            ve.insert_or_update(id, LargeComponent::default());
-        }
+    fn join_btree_vec_2pow15_sparse(b: &mut Bencher) {
+        let bt = random_bt_table(1 << 15, 1 << 16);
+        let ve = random_vec_table(1 << 15, 1 << 16);
         b.iter(move || {
             let it = JoinIterator::new(bt.iter(), ve.iter());
             for joined in it {
@@ -94,19 +100,9 @@ mod tests {
     }
 
     #[bench]
-    fn join_vec_vec_2pow15(b: &mut Bencher) {
-        let mut rng = rand::thread_rng();
-        let mut ta = VecTable::<EntityId, LargeComponent>::new();
-        let mut tb = VecTable::<EntityId, LargeComponent>::new();
-        for _ in 0..1 << 15 {
-            let mut res = false;
-            let mut id = EntityId::default();
-            while !res {
-                id = EntityId(rng.gen_range(0, 1 << 16));
-                res = ta.insert_or_update(id, LargeComponent::default());
-            }
-            tb.insert_or_update(id, LargeComponent::default());
-        }
+    fn join_vec_vec_2pow15_sparse(b: &mut Bencher) {
+        let ta = random_vec_table(1 << 15, 1 << 16);
+        let tb = random_vec_table(1 << 15, 1 << 16);
         b.iter(move || {
             let it = JoinIterator::new(tb.iter(), ta.iter());
             for joined in it {
@@ -116,19 +112,57 @@ mod tests {
     }
 
     #[bench]
-    fn join_bt_bt_2pow15(b: &mut Bencher) {
-        let mut rng = rand::thread_rng();
-        let mut ta = BTreeTable::<EntityId, LargeComponent>::new();
-        let mut tb = BTreeTable::<EntityId, LargeComponent>::new();
-        for _ in 0..1 << 15 {
-            let mut res = false;
-            let mut id = EntityId::default();
-            while !res {
-                id = EntityId(rng.gen_range(0, 1 << 16));
-                res = ta.insert_or_update(id, LargeComponent::default());
+    fn join_bt_bt_2pow15_sparse(b: &mut Bencher) {
+        let ta = random_bt_table(1 << 15, 1 << 16);
+        let tb = random_bt_table(1 << 15, 1 << 16);
+        b.iter(move || {
+            let it = JoinIterator::new(tb.iter(), ta.iter());
+            for joined in it {
+                black_box(joined);
             }
-            tb.insert_or_update(id, LargeComponent::default());
-        }
+        });
+    }
+
+    #[bench]
+    fn join_vec_btree_2pow15_dense(b: &mut Bencher) {
+        let bt = random_bt_table(1 << 15, 1 << 15);
+        let ve = random_vec_table(1 << 15, 1 << 15);
+        b.iter(move || {
+            let it = JoinIterator::new(ve.iter(), bt.iter());
+            for joined in it {
+                black_box(joined);
+            }
+        });
+    }
+
+    #[bench]
+    fn join_btree_vec_2pow15_dense(b: &mut Bencher) {
+        let bt = random_bt_table(1 << 15, 1 << 15);
+        let ve = random_vec_table(1 << 15, 1 << 15);
+        b.iter(move || {
+            let it = JoinIterator::new(bt.iter(), ve.iter());
+            for joined in it {
+                black_box(joined);
+            }
+        });
+    }
+
+    #[bench]
+    fn join_vec_vec_2pow15_dense(b: &mut Bencher) {
+        let ta = random_vec_table(1 << 15, 1 << 15);
+        let tb = random_vec_table(1 << 15, 1 << 15);
+        b.iter(move || {
+            let it = JoinIterator::new(tb.iter(), ta.iter());
+            for joined in it {
+                black_box(joined);
+            }
+        });
+    }
+
+    #[bench]
+    fn join_bt_bt_2pow15_dense(b: &mut Bencher) {
+        let ta = random_bt_table(1 << 15, 1 << 15);
+        let tb = random_bt_table(1 << 15, 1 << 15);
         b.iter(move || {
             let it = JoinIterator::new(tb.iter(), ta.iter());
             for joined in it {

@@ -6,7 +6,7 @@
 //! ```
 //! use caolo_sim::model::{EntityId, Bot, SpawnComponent,Point, self};
 //! use caolo_sim::storage::{views::{View, UnsafeView}, Storage};
-//! use caolo_sim::tables::{BTreeTable, MortonTable};
+//! use caolo_sim::tables::{VecTable,BTreeTable, MortonTable};
 //!
 //! fn update_minerals(
 //!     (mut entity_positions, mut energy): (
@@ -22,7 +22,7 @@
 //! }
 //!
 //! let mut storage = Storage::new();
-//! storage.add_entity_table::<model::PositionComponent>(BTreeTable::new());
+//! storage.add_entity_table::<model::PositionComponent>(VecTable::new());
 //! storage.add_entity_table::<model::EnergyComponent>(BTreeTable::new());
 //! storage.add_point_table::<model::EntityComponent>(MortonTable::new());
 //! storage.add_entity_table::<model::ResourceComponent>(BTreeTable::new());
@@ -34,23 +34,6 @@ use std::ops::Deref;
 
 /// Fetch read-only tables from a Storage
 ///
-/// ```
-/// use caolo_sim::model::{EntityId, Bot, SpawnComponent};
-/// use caolo_sim::storage::{views::View, Storage};
-/// use caolo_sim::tables::BTreeTable;
-///
-/// let mut storage = Storage::new();
-/// storage.add_entity_table::<Bot>(BTreeTable::new());
-/// storage.add_entity_table::<SpawnComponent>(BTreeTable::new());
-///
-/// fn consumer(b: View<EntityId, Bot>, s: View<EntityId, SpawnComponent>) {
-///   let bot_component = b.get_by_id(&EntityId::default());
-///   let spawn_component = s.get_by_id(&EntityId::default());
-/// }
-///
-/// let storage = &storage;
-/// consumer(storage.into(), storage.into());
-/// ```
 #[derive(Clone, Copy)]
 pub struct View<'a, Id: TableId, C: Component<Id>>(&'a C::Table);
 
@@ -67,24 +50,6 @@ impl<'a, Id: TableId, C: Component<Id>> Deref for View<'a, Id, C> {
 /// Do not store UnsafeViews for longer than the function scope, that's just asking for trouble.
 /// Using UnsafeView after the Storage is destroyed is UB!
 ///
-/// ```
-/// use caolo_sim::model::{EntityId, Bot,CarryComponent};
-/// use caolo_sim::storage::{views::{View, UnsafeView}, Storage};
-/// use caolo_sim::tables::BTreeTable;
-///
-/// let mut storage = Storage::new();
-/// storage.add_entity_table::<Bot>(BTreeTable::new());
-/// storage.add_entity_table::<CarryComponent>(BTreeTable::new());
-///
-/// // obtain a writable reference to the CarryComponent table and a read-only reference to the Bot
-/// // table
-/// fn consumer(mut carry: UnsafeView<EntityId, CarryComponent>, bot: View<EntityId, Bot>) {
-///   let bot_component = bot.get_by_id(&EntityId::default());
-///   unsafe {carry.as_mut()}.insert_or_update(EntityId::default(), Default::default());
-/// }
-///
-/// consumer(UnsafeView::from(&mut storage),View::from(&storage));
-/// ```
 pub struct UnsafeView<Id: TableId, C: Component<Id>>(*mut C::Table);
 
 impl<Id: TableId, C: Component<Id>> UnsafeView<Id, C> {

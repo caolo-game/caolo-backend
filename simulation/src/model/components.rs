@@ -1,5 +1,5 @@
 use super::{EntityId, Point, ScriptId, UserData, UserId};
-use crate::tables::{BTreeTable, Component, MortonTable, SpatialKey2d, TableId};
+use crate::tables::{BTreeTable, Component, MortonTable, SpatialKey2d, TableId, VecTable};
 use serde_derive::Serialize;
 
 pub use caolo_api::terrain::TileTerrainType;
@@ -14,8 +14,8 @@ impl<Id: SpatialKey2d + Send + Sync> Component<Id> for EntityComponent {
 #[derive(Debug, Clone, Copy, Serialize)]
 pub struct Bot {}
 
-impl<Id: TableId> Component<Id> for Bot {
-    type Table = BTreeTable<Id, Self>;
+impl Component<EntityId> for Bot {
+    type Table = VecTable<EntityId, Self>;
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -36,8 +36,8 @@ impl<Id: TableId> Component<Id> for OwnedEntity {
 
 #[derive(Default, Debug, Clone, Copy, Ord, PartialOrd, PartialEq, Eq, Serialize)]
 pub struct PositionComponent(pub Point);
-impl<Id: TableId> Component<Id> for PositionComponent {
-    type Table = BTreeTable<Id, Self>;
+impl Component<EntityId> for PositionComponent {
+    type Table = VecTable<EntityId, Self>;
 }
 
 #[derive(Debug, Clone, Copy, Serialize)]

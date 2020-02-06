@@ -101,13 +101,13 @@ mod tests {
     use super::*;
     use crate::model::{Bot, EntityComponent, Point, PositionComponent};
     use crate::storage::Storage;
-    use crate::tables::{BTreeTable, MortonTable};
+    use crate::tables::{MortonTable, VecTable};
 
     #[test]
     fn test_move_intent_fails_if_node_is_occupied() {
         let mut storage = Storage::new();
-        storage.add_entity_table::<Bot>(BTreeTable::new());
-        storage.add_entity_table::<PositionComponent>(BTreeTable::new());
+        storage.add_entity_table::<Bot>(VecTable::new());
+        storage.add_entity_table::<PositionComponent>(VecTable::new());
         storage.add_point_table::<EntityComponent>(MortonTable::new());
 
         let id = storage.insert_entity();

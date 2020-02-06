@@ -92,18 +92,18 @@ impl<Id: 'static + TableId> Debug for HomogenousTable<Id> {
 mod tests {
     use super::*;
     use crate::model::{Bot, EntityId};
-    use crate::tables::BTreeTable;
+    use crate::tables::VecTable;
 
     #[test]
     fn can_downcast() {
-        let table = BTreeTable::new();
+        let table = VecTable::new();
         let homo = HomogenousTable::<EntityId>::new::<Bot>(table);
         homo.downcast_ref::<Bot>().unwrap();
     }
 
     #[test]
     fn can_downcast_mut() {
-        let table = BTreeTable::new();
+        let table = VecTable::new();
         let mut homo = HomogenousTable::<EntityId>::new::<Bot>(table);
         homo.downcast_mut::<Bot>().unwrap();
     }

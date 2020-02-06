@@ -1,14 +1,18 @@
 use cao_lang::prelude::*;
-use caolo_api::{point::Point, ScriptId};
-use caolo_sim::model;
-use caolo_sim::storage::Storage;
+use caolo_api::ScriptId;
+use caolo_sim::model::{self, EntityId, Point};
+use caolo_sim::storage::{
+    views::{UnsafeView, View},
+    Storage,
+};
+use rand::Rng;
 
 const PROGRAM: &str = r#"{"nodes":{"0":{"node":{"ScalarInt":{"value":69}},"child":1},"1":{"node":{"ScalarInt":{"value":420}},"child":2},"2":{"node":{"Call":{"function":"make_point"}},"child":3},"3":{"node":{"Call":{"function":"bots::move_bot"}},"child":5},"4":{"node":{"Call":{"function":"make_operation_result"}},"child":9},"5":{"node":{"ScalarInt":{"value":0}},"child":4},"6":{"node":{"JumpIfTrue":{"nodeid":7}},"child":10},"7":{"node":{"StringLiteral":{"value":"Moving :)"}},"child":8},"8":{"node":{"Call":{"function":"console_log"}}},"9":{"node":{"Equals":null},"child":6},"10":{"node":{"StringLiteral":{"value":"No moverino :("}},"child":11},"11":{"node":{"Call":{"function":"console_log"}}},"12":{"node":{"Start":null},"child":0}},"name":"default"}"#;
 
 pub fn init_storage(n_fake_users: usize) -> Storage {
     let mut storage = caolo_sim::init_inmemory_storage();
 
-    let script_id = ScriptId::default(); // TODO randomize
+    let script_id = ScriptId::default();
     let script_id = model::ScriptId(script_id);
     let script: CompilationUnit =
         serde_json::from_str(PROGRAM).expect("deserialize example program");
@@ -28,41 +32,52 @@ pub fn init_storage(n_fake_users: usize) -> Storage {
 
     for _ in 0..n_fake_users {
         let id = storage.insert_entity();
-        storage
-            .entity_table_mut::<model::EntityScript>()
-            .insert_or_update(id, model::EntityScript { script_id });
-        storage
-            .entity_table_mut::<model::Bot>()
-            .insert_or_update(id, model::Bot {});
-        storage
-            .entity_table_mut::<model::CarryComponent>()
-            .insert_or_update(id, Default::default());
-        storage
-            .entity_table_mut::<model::OwnedEntity>()
-            .insert_or_update(
-                id,
-                model::OwnedEntity {
-                    owner_id: Default::default(),
-                },
-            );
-
-        let pos = {
-            let entities_by_pos = storage.point_table::<model::EntityComponent>();
-            uncontested_pos(entities_by_pos, &mut rng)
-        };
-
-        let positions = storage.entity_table_mut::<model::PositionComponent>();
-        positions.insert_or_update(id, model::PositionComponent(pos));
+        let storage = &mut storage;
+        unsafe {
+            init_bot(id, script_id, &mut rng, storage.into(), storage.into());
+        }
     }
     storage
 }
 
+unsafe fn init_bot(
+    id: EntityId,
+    script_id: model::ScriptId,
+    rng: &mut impl Rng,
+    (mut entity_scripts, mut bots, mut carry_component, mut ownsers, mut positions): (
+        UnsafeView<EntityId, model::EntityScript>,
+        UnsafeView<EntityId, model::Bot>,
+        UnsafeView<EntityId, model::CarryComponent>,
+        UnsafeView<EntityId, model::OwnedEntity>,
+        UnsafeView<EntityId, model::PositionComponent>,
+    ),
+    entities_by_pos: View<Point, model::EntityComponent>,
+) {
+    entity_scripts
+        .as_mut()
+        .insert_or_update(id, model::EntityScript { script_id });
+    bots.as_mut().insert_or_update(id, model::Bot {});
+    carry_component
+        .as_mut()
+        .insert_or_update(id, Default::default());
+    ownsers.as_mut().insert_or_update(
+        id,
+        model::OwnedEntity {
+            owner_id: Default::default(),
+        },
+    );
+
+    let pos = uncontested_pos(&*entities_by_pos, rng);
+
+    positions
+        .as_mut()
+        .insert_or_update(id, model::PositionComponent(pos));
+}
+
 fn uncontested_pos<T: caolo_sim::tables::TableRow + Send + Sync>(
     positions_table: &caolo_sim::tables::MortonTable<Point, T>,
-    rng: &mut rand::rngs::ThreadRng,
+    rng: &mut impl Rng,
 ) -> caolo_api::point::Point {
-    use rand::Rng;
-
     loop {
         let x = rng.gen_range(0, 500);
         let y = rng.gen_range(0, 500);

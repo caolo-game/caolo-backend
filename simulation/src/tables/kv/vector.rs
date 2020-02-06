@@ -1,12 +1,9 @@
 //! Table with `Vec` back-end. Optimised for dense storage.
 //! The storage will allocate memory for N items where `N = the largest id inserted`.
 //! Because of this one should use this if the domain of the ids is small and/or dense.
-//! Note that the `delete` operation is extremely slow, one should prefer updates to deletions.
 //!
 use super::*;
-use rayon::prelude::*;
 use serde_derive::Serialize;
-use std::convert::TryFrom;
 use std::mem;
 
 #[derive(Default, Debug, Serialize)]
@@ -15,9 +12,7 @@ where
     Id: SerialId,
     Row: TableRow,
 {
-    /// Id, index pairs
-    keys: Vec<Option<(Id, u32)>>,
-    values: Vec<Row>,
+    data: Vec<Option<(Id, Row)>>,
 }
 
 impl<Id, Row> VecTable<Id, Row>
@@ -26,69 +21,59 @@ where
     Row: TableRow,
 {
     pub fn new() -> Self {
-        let size = mem::size_of::<Id>().max(mem::size_of::<Row>());
-        // reserve at most 1024 * 2 bytes
+        let size = mem::size_of::<(Id, Row)>();
         let size = 1024 / size;
         Self {
-            keys: Vec::with_capacity(size),
-            values: Vec::with_capacity(size),
+            data: Vec::with_capacity(size),
         }
     }
 
     pub fn with_capacity(cap: usize) -> Self {
-        let size = mem::size_of::<Id>().max(mem::size_of::<Row>());
+        let size = mem::size_of::<(Id, Row)>();
         let size = 1024 / size;
         Self {
-            keys: Vec::with_capacity(cap),
-            values: Vec::with_capacity(cap.min(size)),
+            data: Vec::with_capacity(size.min(cap)),
         }
     }
 
     pub fn insert_or_update(&mut self, id: Id, row: Row) -> bool {
         let i = id.as_usize();
-        let len = self.keys.len();
+        let len = self.data.len();
         // Extend the vector if necessary
         if i >= len {
-            self.keys.resize(i + 1, None);
-        } else if let Some((_, ind)) = self.keys[i] {
-            self.values[ind as usize] = row;
+            self.data.resize(i + 1, None);
+        } else if let Some((_, r)) = self.data[i].as_mut() {
+            *r = row;
             return true;
         }
-        self.keys[i] = Some((id, u32::try_from(self.values.len()).unwrap()));
-        self.values.push(row);
-
+        self.data[i] = Some((id, row));
         true
     }
 
     pub fn get_by_id<'a>(&'a self, id: &Id) -> Option<&'a Row> {
         let ind = id.as_usize();
-        if self.keys.len() <= ind {
-            return None;
-        }
-        let keys = self.keys.as_ptr();
-        let values = self.values.as_ptr();
-        unsafe { (*keys.offset(ind as isize)).map(|(_, ind)| &*values.offset(ind as isize)) }
+        self.data
+            .get(ind)
+            .and_then(|x| x.as_ref().map(|(_, row)| row))
     }
 
     pub fn iter<'a>(&'a self) -> impl TableIterator<Id, &'a Row> + 'a {
-        let values = self.values.as_ptr();
-        self.keys.iter().filter_map(|k| *k).map(move |(id, ind)| {
-            let val = unsafe { &*values.offset(ind as isize) };
-            (id, val)
-        })
+        self.data
+            .iter()
+            .filter_map(|k| k.as_ref())
+            .map(move |(id, row)| (*id, row))
     }
 
     pub fn iter_mut<'a>(&'a mut self) -> impl TableIterator<Id, &'a mut Row> + 'a {
-        let values = self.values.as_mut_ptr();
-        self.keys.iter().filter_map(|k| *k).map(move |(id, ind)| {
-            let val = unsafe { &mut *values.offset(ind as isize) };
-            (id, val)
-        })
+        self.data
+            .iter_mut()
+            .filter_map(|k| k.as_mut())
+            .map(move |(id, row)| (*id, row))
     }
 
     pub fn contains_id(&self, id: &Id) -> bool {
         let i = id.as_usize();
-        self.keys.get(i).and_then(|x| x.as_ref()).is_some()
+        self.data.get(i).and_then(|x| x.as_ref()).is_some()
     }
 }
 
@@ -105,26 +90,10 @@ where
             return None;
         }
         let ind = id.as_usize();
-        let i = self.keys[ind].unwrap().1 as usize;
-        let limes = self.values.len() - 1;
-        if i == limes {
-            // the value is the last one
-            self.keys[ind] = None;
-            return self.values.pop();
-        }
-        // find the id of the last value
-        let last = self
-            .keys
-            .par_iter_mut()
-            .filter_map(|x| x.as_mut())
-            .find_any(|(_, ind)| *ind as usize == limes)
-            .expect("id corresponding to the last value");
-
-        self.values.swap(i, limes);
-        last.1 = i as u32;
-
-        self.keys[ind] = None;
-        self.values.pop()
+        self.data.push(None);
+        let res = self.data.swap_remove(ind);
+        self.data.pop();
+        res.map(|(_, row)| row)
     }
 }
 
@@ -134,6 +103,7 @@ mod tests {
     use crate::model::EntityId;
     use rand::seq::SliceRandom;
     use rand::Rng;
+    use std::convert::TryFrom;
     use test::Bencher;
 
     #[bench]
@@ -270,10 +240,14 @@ mod tests {
             ids.push(id);
         }
         ids.as_mut_slice().shuffle(&mut rng);
+        let mut i = 0;
+        let mask = (1 << 15) - 1;
         b.iter(|| {
-            let id = ids.pop().expect("out of ids");
+            i = (i + 1) & mask;
+            let id = ids[i];
             let res = table.delete(&id);
             debug_assert!(res.is_some());
+            table.insert_or_update(id, 123);
             res
         });
     }

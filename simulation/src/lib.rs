@@ -17,7 +17,7 @@ mod utils;
 use systems::execute_world_update;
 use systems::intent_execution::execute_intents;
 use systems::script_execution::execute_scripts;
-use tables::{BTreeTable, VecTable, MortonTable};
+use tables::{BTreeTable, MortonTable, VecTable};
 
 pub fn forward(storage: &mut storage::Storage) -> Result<(), Box<dyn std::error::Error>> {
     profile!("forward world state");
@@ -35,8 +35,8 @@ pub fn forward(storage: &mut storage::Storage) -> Result<(), Box<dyn std::error:
     execute_world_update(storage);
     info!("Executing systems update - done");
 
-    info!("-----------Tick {} done-----------", storage.time());
     crate::utils::profiler::save_global();
+    info!("-----------Tick {} done-----------", storage.time());
     Ok(())
 }
 
@@ -49,6 +49,7 @@ pub fn init_inmemory_storage() -> storage::Storage {
     let mut storage = storage::Storage::new();
 
     storage.add_entity_table::<Bot>(VecTable::new());
+    storage.add_entity_table::<PositionComponent>(VecTable::new());
     storage.add_entity_table::<SpawnBotComponent>(BTreeTable::new());
     storage.add_entity_table::<DecayComponent>(BTreeTable::new());
     storage.add_entity_table::<CarryComponent>(BTreeTable::new());
@@ -56,7 +57,6 @@ pub fn init_inmemory_storage() -> storage::Storage {
     storage.add_entity_table::<HpComponent>(BTreeTable::new());
     storage.add_entity_table::<EnergyRegenComponent>(BTreeTable::new());
     storage.add_entity_table::<EnergyComponent>(BTreeTable::new());
-    storage.add_entity_table::<PositionComponent>(VecTable::new());
     storage.add_entity_table::<ResourceComponent>(BTreeTable::new());
     storage.add_entity_table::<DecayComponent>(BTreeTable::new());
     storage.add_entity_table::<EntityScript>(BTreeTable::new());

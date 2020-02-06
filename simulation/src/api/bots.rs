@@ -37,22 +37,22 @@ pub fn move_bot(
         })?;
 
     let mut path = Vec::with_capacity(1000);
-    match pathfinding::find_path(botpos.0, point, positions, terrain, 1000, &mut path) {
-        Ok(_) => {}
-        Err(e) => {
-            debug!("pathfinding failed {:?}", e);
+    if let Err(e) = pathfinding::find_path(botpos.0, point, positions, terrain, 1000, &mut path) {
+        debug!("pathfinding failed {:?}", e);
+        return vm.set_value(OperationResult::InvalidTarget);
+    }
+
+    let intent = match path.get(0) {
+        Some(position) => {
+            caolo_api::bots::MoveIntent {
+                id: entity.0,
+                position: *position, // TODO: cache path
+            }
+        }
+        None => {
+            debug!("Entity {:?} is trying to move to its own position", entity);
             return vm.set_value(OperationResult::InvalidTarget);
         }
-    };
-
-    let intent = if let Some(position) = path.get(0).cloned() {
-        caolo_api::bots::MoveIntent {
-            id: entity.0,
-            position, // TODO: cache path
-        }
-    } else {
-        debug!("Entity {:?} is trying to move to its own position", entity);
-        return vm.set_value(OperationResult::InvalidTarget);
     };
     let userid = vm.get_aux().userid().expect("userid to be set");
 

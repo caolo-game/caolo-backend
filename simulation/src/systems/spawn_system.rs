@@ -20,24 +20,24 @@ impl<'a> System<'a> for SpawnSystem {
 
     fn update(
         &mut self,
-
         (mut spawns, spawn_bots, bots, hps, decay, carry, positions, owned): Self::Mut,
         _: Self::Const,
     ) {
         let spawn_views = (spawn_bots, bots, hps, decay, carry, positions, owned);
         unsafe { spawns.as_mut().iter_mut() }
-            .filter(|(_id, s)| s.spawning.is_some())
-            .filter_map(|(id, s)| {
-                s.time_to_spawn -= 1;
-                let mut bot = None;
-                if s.time_to_spawn == 0 {
-                    bot = s.spawning;
-                    s.spawning = None;
+            .filter(|(_spawn_id, spawn_component)| spawn_component.spawning.is_some())
+            .filter_map(|(spawn_id, spawn_component)| {
+                spawn_component.time_to_spawn -= 1;
+                if spawn_component.time_to_spawn == 0 {
+                    let bot = spawn_component.spawning.map(|b| (spawn_id, b));
+                    spawn_component.spawning = None;
+                    bot
+                } else {
+                    None
                 }
-                bot.map(|b| (id, b))
             })
-            .for_each(|(id, e)| unsafe {
-                spawn_bot(id, e, spawn_views);
+            .for_each(|(spawn_id, entity_id)| unsafe {
+                spawn_bot(spawn_id, entity_id, spawn_views)
             });
     }
 }
@@ -47,7 +47,6 @@ impl<'a> System<'a> for SpawnSystem {
 unsafe fn spawn_bot(
     spawn_id: model::EntityId,
     entity_id: model::EntityId,
-
     (mut spawn_bots, mut bots, mut hps, mut decay, mut carry, mut positions, mut owned): (
         UnsafeView<EntityId, model::SpawnBotComponent>,
         UnsafeView<EntityId, model::Bot>,
@@ -70,14 +69,14 @@ unsafe fn spawn_bot(
     bots.as_mut().insert_or_update(entity_id, bot.bot);
     hps.as_mut().insert_or_update(
         entity_id,
-        crate::model::HpComponent {
+        model::HpComponent {
             hp: 100,
             hp_max: 100,
         },
     );
     decay.as_mut().insert_or_update(
         entity_id,
-        crate::model::DecayComponent {
+        model::DecayComponent {
             eta: 20,
             t: 100,
             hp_amount: 100,
@@ -85,7 +84,7 @@ unsafe fn spawn_bot(
     );
     carry.as_mut().insert_or_update(
         entity_id,
-        crate::model::CarryComponent {
+        model::CarryComponent {
             carry: 0,
             carry_max: 50,
         },

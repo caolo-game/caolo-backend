@@ -51,6 +51,7 @@ fn send_world(storage: &Storage, client: &redis::Client) -> Result<(), Box<dyn s
 
     debug!("sending {} bots", world.get_bots().len());
 
+    // Python can not read the serialized bytes so I'll fall back to JSON
     let payload = serde_json::to_string(&world)?;
 
     debug!("sending {} bytes", payload.len());

@@ -14,7 +14,7 @@ pub fn init_storage(n_fake_users: usize) -> Storage {
     let script_id = ScriptId::default();
     let script: CompilationUnit =
         serde_json::from_str(PROGRAM).expect("deserialize example program");
-    let compiled = Compiler::compile(script.clone()).expect("failed to compile example program");
+    let compiled = Compiler::compile(script).expect("failed to compile example program");
     storage
         .scripts_table_mut::<components::ScriptComponent>()
         .insert_or_update(script_id, components::ScriptComponent(compiled));
@@ -41,17 +41,19 @@ pub fn init_storage(n_fake_users: usize) -> Storage {
     storage
 }
 
+type InitBotMuts = (
+    UnsafeView<EntityId, components::EntityScript>,
+    UnsafeView<EntityId, components::Bot>,
+    UnsafeView<EntityId, components::CarryComponent>,
+    UnsafeView<EntityId, components::OwnedEntity>,
+    UnsafeView<EntityId, components::PositionComponent>,
+);
+
 unsafe fn init_bot(
     id: EntityId,
     script_id: model::ScriptId,
     rng: &mut impl Rng,
-    (mut entity_scripts, mut bots, mut carry_component, mut ownsers, mut positions): (
-        UnsafeView<EntityId, components::EntityScript>,
-        UnsafeView<EntityId, components::Bot>,
-        UnsafeView<EntityId, components::CarryComponent>,
-        UnsafeView<EntityId, components::OwnedEntity>,
-        UnsafeView<EntityId, components::PositionComponent>,
-    ),
+    (mut entity_scripts, mut bots, mut carry_component, mut ownsers, mut positions): InitBotMuts,
     entities_by_pos: View<Point, components::EntityComponent>,
 ) {
     entity_scripts

@@ -5,17 +5,19 @@ use crate::tables::Table;
 
 pub struct SpawnSystem;
 
+type SpawnSystemMut = (
+    UnsafeView<EntityId, components::SpawnComponent>,
+    UnsafeView<EntityId, components::SpawnBotComponent>,
+    UnsafeView<EntityId, components::Bot>,
+    UnsafeView<EntityId, components::HpComponent>,
+    UnsafeView<EntityId, components::DecayComponent>,
+    UnsafeView<EntityId, components::CarryComponent>,
+    UnsafeView<EntityId, components::PositionComponent>,
+    UnsafeView<EntityId, components::OwnedEntity>,
+);
+
 impl<'a> System<'a> for SpawnSystem {
-    type Mut = (
-        UnsafeView<EntityId, components::SpawnComponent>,
-        UnsafeView<EntityId, components::SpawnBotComponent>,
-        UnsafeView<EntityId, components::Bot>,
-        UnsafeView<EntityId, components::HpComponent>,
-        UnsafeView<EntityId, components::DecayComponent>,
-        UnsafeView<EntityId, components::CarryComponent>,
-        UnsafeView<EntityId, components::PositionComponent>,
-        UnsafeView<EntityId, components::OwnedEntity>,
-    );
+    type Mut = SpawnSystemMut;
     type Const = ();
 
     fn update(
@@ -42,20 +44,22 @@ impl<'a> System<'a> for SpawnSystem {
     }
 }
 
+type SpawnBotMut = (
+    UnsafeView<EntityId, components::SpawnBotComponent>,
+    UnsafeView<EntityId, components::Bot>,
+    UnsafeView<EntityId, components::HpComponent>,
+    UnsafeView<EntityId, components::DecayComponent>,
+    UnsafeView<EntityId, components::CarryComponent>,
+    UnsafeView<EntityId, components::PositionComponent>,
+    UnsafeView<EntityId, components::OwnedEntity>,
+);
+
 /// Spawns a bot from a spawn.
 /// Removes the spawning bot from the spawn and initializes a bot in the world
 unsafe fn spawn_bot(
     spawn_id: EntityId,
     entity_id: EntityId,
-    (mut spawn_bots, mut bots, mut hps, mut decay, mut carry, mut positions, mut owned): (
-        UnsafeView<EntityId, components::SpawnBotComponent>,
-        UnsafeView<EntityId, components::Bot>,
-        UnsafeView<EntityId, components::HpComponent>,
-        UnsafeView<EntityId, components::DecayComponent>,
-        UnsafeView<EntityId, components::CarryComponent>,
-        UnsafeView<EntityId, components::PositionComponent>,
-        UnsafeView<EntityId, components::OwnedEntity>,
-    ),
+    (mut spawn_bots, mut bots, mut hps, mut decay, mut carry, mut positions, mut owned): SpawnBotMut,
 ) {
     debug!(
         "spawn_bot spawn_id: {:?} entity_id: {:?}",

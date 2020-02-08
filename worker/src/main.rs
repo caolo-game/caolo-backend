@@ -93,9 +93,9 @@ fn send_schema(client: &redis::Client) -> Result<(), Box<dyn std::error::Error>>
             let import = &import.desc;
             SchemaFunctionDTO {
                 name: import.name,
-                input: import.input.iter().cloned().collect(),
+                input: import.input.to_vec(),
                 description: import.description,
-                output: import.output.iter().cloned().collect(),
+                output: import.output.to_vec(),
             }
         })
         .collect::<Vec<_>>();
@@ -118,7 +118,8 @@ fn main() {
         .and_then(|s| s.parse::<usize>().ok())
         .unwrap_or(8);
 
-    let redis_url = std::env::var("REDIS_URL").unwrap_or("redis://localhost:6379/0".to_owned());
+    let redis_url =
+        std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379/0".to_owned());
 
     let mut storage = init::init_storage(n_actors);
     let client = redis::Client::open(redis_url.as_str()).expect("Redis client");

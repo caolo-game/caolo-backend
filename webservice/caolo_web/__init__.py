@@ -69,14 +69,14 @@ class SimulationProtocol(WebSocketServerProtocol):
     Stream the world state to the clients
     """
     done = True
-    redis_conn = None
+    loop = None
+    latency = 0
 
     def onOpen(self):
-        self.redis_conn = get_redis_client()
         self.done = False
         latency = os.getenv("TARGET_TICK_FREQUENCY_MS", "2000")
-        latency = int(latency)
-        reactor.callLater(latency, self.send_world_state)
+        self.latency = int(latency) / 1000
+        reactor.callLater(self.latency, self.send_world_state)
 
     def onClose(self, *args):
         super().onClose(*args)
@@ -85,10 +85,16 @@ class SimulationProtocol(WebSocketServerProtocol):
     def send_world_state(self):
         if self.done:
             return
-        payload = self.redis_conn.get("WORLD_STATE")
+        else:
+            reactor.callLater(self.latency, self.send_world_state)
+
+        redis_conn = get_redis_client()
+        payload = redis_conn.get("WORLD_STATE")
         if payload:
-            self.sendMessage(payload)
-        reactor.callLater(0.2, self.send_world_state)
+            world_state = json.loads(payload)
+            payload = {"WORLD_STATE": world_state}
+            payload = json.dumps(payload)
+            self.sendMessage(payload.encode('utf8'))
 
 
 def main():

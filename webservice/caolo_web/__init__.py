@@ -73,9 +73,10 @@ class SimulationProtocol(WebSocketServerProtocol):
     latency = 0
 
     def onOpen(self):
-        self.done = False
+        log.msg("opened simulation comms")
         latency = os.getenv("TARGET_TICK_FREQUENCY_MS", "2000")
         self.latency = int(latency) / 1000
+        self.done = False
         reactor.callLater(self.latency, self.send_world_state)
 
     def onClose(self, *args):
@@ -83,6 +84,10 @@ class SimulationProtocol(WebSocketServerProtocol):
         self.done = True
 
     def send_world_state(self):
+        import world_pb2
+        from google.protobuf.json_format import MessageToDict
+
+        log.msg(f"Handling world_state")
         if self.done:
             return
         else:
@@ -92,6 +97,7 @@ class SimulationProtocol(WebSocketServerProtocol):
         payload = redis_conn.get("WORLD_STATE")
         if payload:
             world_state = json.loads(payload)
+            log.msg(f"sending world state")
             payload = {"WORLD_STATE": world_state}
             payload = json.dumps(payload)
             self.sendMessage(payload.encode('utf8'))

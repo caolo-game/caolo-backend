@@ -4,6 +4,7 @@ extern crate serde_derive;
 
 mod init;
 mod input;
+mod output;
 mod protos;
 
 use caolo_sim::{self, storage::Storage};
@@ -39,20 +40,27 @@ fn tick(storage: &mut Storage) {
 }
 
 fn send_world(storage: &Storage, client: &redis::Client) -> Result<(), Box<dyn std::error::Error>> {
-    debug!("Sending world state to redis");
+    use protos::world::WorldState;
 
-    todo!();
+    debug!("Sending world state");
 
-    // let payload = payload::Payload::new(storage);
-    // let js = serde_json::to_string(&payload)?;
-    //
-    // let mut con = client.get_connection()?;
-    //
-    // redis::pipe()
-    //     .cmd("SET")
-    //     .arg("WORLD_STATE")
-    //     .arg(js)
-    //     .query(&mut con)?;
+    let mut world = WorldState::new();
+    for bot in output::build_bots(storage.into()) {
+        world.mut_bots().push(bot);
+    }
+
+    debug!("sending {} bots", world.get_bots().len());
+
+    let payload = serde_json::to_string(&world)?;
+
+    debug!("sending {} bytes", payload.len());
+
+    let mut con = client.get_connection()?;
+    redis::pipe()
+        .cmd("SET")
+        .arg("WORLD_STATE")
+        .arg(payload)
+        .query(&mut con)?;
 
     debug!("Sending world state done");
     Ok(())

@@ -38,6 +38,12 @@ use std::ops::Deref;
 #[derive(Clone, Copy)]
 pub struct View<'a, Id: TableId, C: Component<Id>>(&'a C::Table);
 
+impl<'a, Id: TableId, C: Component<Id>> View<'a, Id, C> {
+    pub fn reborrow(self) -> &'a C::Table {
+        self.0
+    }
+}
+
 impl<'a, Id: TableId, C: Component<Id>> Deref for View<'a, Id, C> {
     type Target = C::Table;
 

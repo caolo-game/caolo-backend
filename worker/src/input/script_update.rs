@@ -32,7 +32,7 @@ pub fn update_program(storage: &mut Storage, mut msg: UpdateScriptMsg) -> Update
             error!("Failed to parse script_id {:?}", e);
             UpdateProgramError::BadScriptId
         })
-        .map(|id| caolo_api::ScriptId(id))?;
+        .map(caolo_api::ScriptId)?;
 
     let program = msg.take_compiled_script();
     let program = cao_lang::CompiledProgram {

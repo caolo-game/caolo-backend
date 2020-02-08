@@ -57,6 +57,6 @@ enum UuidDeserializeError {
 
 fn parse_uuid(id: &[u8]) -> Result<Uuid, UuidDeserializeError> {
     from_utf8(&id)
-        .map_err(|e| UuidDeserializeError::BadString(e))
-        .and_then(|id| Uuid::parse_str(id).map_err(|e| UuidDeserializeError::BadUuid(e)))
+        .map_err(UuidDeserializeError::BadString)
+        .and_then(|id| Uuid::parse_str(id).map_err(UuidDeserializeError::BadUuid))
 }

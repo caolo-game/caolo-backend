@@ -1,3 +1,4 @@
+use super::parse_uuid;
 use crate::protos::scripts::UpdateScript as UpdateScriptMsg;
 use caolo_sim::model::ScriptComponent;
 use caolo_sim::{
@@ -10,8 +11,6 @@ use caolo_sim::{
     tables::JoinIterator,
 };
 use log::{debug, error};
-use std::str::from_utf8;
-use uuid::Uuid;
 
 #[derive(Debug, Clone)]
 pub enum UpdateProgramError {
@@ -24,27 +23,14 @@ type UpdateResult = Result<(), UpdateProgramError>;
 pub fn update_program(storage: &mut Storage, mut msg: UpdateScriptMsg) -> UpdateResult {
     debug!("Updating program {:?}", msg);
 
-    let user_id = from_utf8(&msg.user_id)
+    let user_id = parse_uuid(&msg.user_id).map_err(|e| {
+        error!("Failed to parse user_id  {:?}", e);
+        UpdateProgramError::BadUserId
+    })?;
+    let script_id = parse_uuid(&msg.script_id)
         .map_err(|e| {
-            error!("Failed to parse user_id as a utf8 string {:?}", e);
-            UpdateProgramError::BadUserId
-        })
-        .and_then(|user_id| {
-            Uuid::parse_str(user_id).map_err(|e| {
-                error!("Failed to deserialize user_id {:?}", e);
-                UpdateProgramError::BadUserId
-            })
-        })?;
-    let script_id = from_utf8(&msg.script_id)
-        .map_err(|e| {
-            error!("Failed to parse script_id as a utf8 string {:?}", e);
+            error!("Failed to parse script_id {:?}", e);
             UpdateProgramError::BadScriptId
-        })
-        .and_then(|script_id| {
-            Uuid::parse_str(script_id).map_err(|e| {
-                error!("Failed to deserialize script_id {:?}", e);
-                UpdateProgramError::BadScriptId
-            })
         })
         .map(|id| caolo_api::ScriptId(id))?;
 

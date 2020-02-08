@@ -41,6 +41,11 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Install protoc
+          command: |
+            curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v3.11.3/protoc-3.11.3-linux-x86_64.zip
+            unzip -o  protoc-3.11.3-linux-x86_64.zip -d /usr/local bin/protoc
+      - run:
           name: Build docs
           command: cargo doc --no-deps
       - restore_cache:

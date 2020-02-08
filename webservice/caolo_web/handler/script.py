@@ -8,6 +8,7 @@ from twisted.python import log
 
 from ..model.program import Program
 from ..model import db
+from ..model.command import Command
 
 from ..service import get_redis_client
 
@@ -62,12 +63,19 @@ def commit_script():
     db.session.commit()
 
     msg = input_messages_pb2.InputMsg()
-    msg.msg_id = b""  # TODO
     msg.update_script.user_id = current_user.id.encode('utf8')
     msg.update_script.script_id = program.id.encode('utf8')
     for k, v in compiled['labels'].items():
         msg.update_script.compiled_script.labels[k].block = v[0]
         msg.update_script.compiled_script.labels[k].myself = v[1]
+
+    command = Command(
+        user=current_user, raw_payload=msg.update_script.SerializeToString())
+
+    db.session.add(command)
+    db.session.commit()
+
+    msg.msg_id = command.id.encode('utf8')
 
     content = msg.SerializeToString()
 

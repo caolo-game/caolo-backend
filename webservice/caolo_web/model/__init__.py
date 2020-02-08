@@ -3,3 +3,4 @@ db = SQLAlchemy()
 
 from .user import *
 from .program import *
+from .command import *

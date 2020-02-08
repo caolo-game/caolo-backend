@@ -10,6 +10,7 @@ pub use self::indices::*;
 pub use cao_lang::prelude::*;
 
 use self::geometry::point::Point;
+use crate::storage::{views, Storage};
 use serde_derive::{Deserialize, Serialize};
 use std::convert::TryFrom;
 
@@ -76,4 +77,13 @@ impl cao_lang::traits::AutoByteEncodeProperties for OperationResult {}
 pub struct Script {
     pub compiled: Option<CompiledProgram>,
     pub script: CompilationUnit,
+}
+
+#[derive(Clone, Debug, Copy, Serialize, Deserialize)]
+pub struct Time(pub u64);
+
+impl<'a> views::HasNew<'a> for Time {
+    fn new(storage: &'a Storage) -> Self {
+        Self(storage.time())
+    }
 }

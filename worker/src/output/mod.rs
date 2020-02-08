@@ -1,6 +1,8 @@
 use crate::protos::world::Bot as BotMsg;
+use crate::protos::world::LogEntry as LogMsg;
 use caolo_sim::model::{
-    components::{Bot, OwnedEntity, PositionComponent},
+    components::{Bot, LogEntry, OwnedEntity, PositionComponent},
+    indices::EntityTime,
     EntityId,
 };
 use caolo_sim::storage::views::View;
@@ -26,4 +28,18 @@ pub fn build_bots<'a>(
         }
         msg
     })
+}
+
+pub fn build_logs<'a>(v: View<'a, EntityTime, LogEntry>) -> impl Iterator<Item = LogMsg> + 'a {
+    v.reborrow()
+        .iter()
+        .map(|(EntityTime(EntityId(eid), time), entries)| {
+            let mut msg = LogMsg::new();
+            msg.set_entity_id(eid);
+            msg.set_time(time);
+            for e in entries.payload.iter() {
+                msg.mut_payload().push(e.clone());
+            }
+            msg
+        })
 }

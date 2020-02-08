@@ -1,6 +1,7 @@
 pub mod decay_system;
 pub mod energy_system;
 pub mod intent_execution;
+pub mod log_system;
 pub mod mineral_system;
 pub mod pathfinding;
 pub mod positions_system;
@@ -39,6 +40,9 @@ pub fn execute_world_update(storage: &mut Storage) {
 
     let mut positions_sys = positions_system::PositionSystem;
     update(&mut positions_sys, storage);
+
+    let mut log_sys = log_system::LogSystem;
+    update(&mut log_sys, storage);
 }
 
 #[inline]

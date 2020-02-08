@@ -1,18 +1,21 @@
 use super::System;
-use crate::model::{self, EntityId};
+use crate::model::{
+    components::{EnergyComponent, EnergyRegenComponent},
+    EntityId,
+};
 use crate::storage::views::{UnsafeView, View};
 use crate::tables::JoinIterator;
 
 pub struct EnergySystem;
 
 impl<'a> System<'a> for EnergySystem {
-    type Mut = UnsafeView<EntityId, model::EnergyComponent>;
-    type Const = View<'a, EntityId, model::EnergyRegenComponent>;
+    type Mut = UnsafeView<EntityId, EnergyComponent>;
+    type Const = View<'a, EntityId, EnergyRegenComponent>;
 
     fn update(
         &mut self,
-        mut energy: UnsafeView<EntityId, model::EnergyComponent>,
-        energy_regen: View<EntityId, model::EnergyRegenComponent>,
+        mut energy: UnsafeView<EntityId, EnergyComponent>,
+        energy_regen: View<EntityId, EnergyRegenComponent>,
     ) {
         let energy_it = unsafe { energy.as_mut().iter_mut() };
         let join = JoinIterator::new(energy_it, energy_regen.iter());

@@ -1,7 +1,5 @@
 use super::*;
-use crate::model::{self, UserId};
-use caolo_api::structures::BotDescription;
-use caolo_api::OperationResult;
+use crate::model::{self, components, structures::BotDescription, OperationResult, UserId};
 
 #[derive(Debug, Clone)]
 pub struct SpawnIntent {
@@ -15,7 +13,7 @@ impl SpawnIntent {
         debug!("Spawning bot {:?} from structure {:?}", self.bot, self.id);
 
         let mut spawn = storage
-            .entity_table::<model::SpawnComponent>()
+            .entity_table::<components::SpawnComponent>()
             .get_by_id(&self.id)
             .cloned()
             .ok_or_else(|| "structure does not have spawn component")?;
@@ -25,7 +23,7 @@ impl SpawnIntent {
         }
 
         let energy = storage
-            .entity_table::<model::EnergyComponent>()
+            .entity_table::<components::EnergyComponent>()
             .get_by_id(&self.id)
             .ok_or_else(|| "structure does not have energy")?;
 
@@ -35,19 +33,24 @@ impl SpawnIntent {
 
         let bot_id = storage.insert_entity();
         storage
-            .entity_table_mut::<model::SpawnBotComponent>()
-            .insert_or_update(bot_id, model::SpawnBotComponent { bot: model::Bot {} });
+            .entity_table_mut::<components::SpawnBotComponent>()
+            .insert_or_update(
+                bot_id,
+                components::SpawnBotComponent {
+                    bot: components::Bot {},
+                },
+            );
         if let Some(owner_id) = self.owner_id {
             storage
-                .entity_table_mut::<model::OwnedEntity>()
-                .insert_or_update(bot_id, model::OwnedEntity { owner_id: owner_id });
+                .entity_table_mut::<components::OwnedEntity>()
+                .insert_or_update(bot_id, components::OwnedEntity { owner_id: owner_id });
         }
 
         spawn.time_to_spawn = 5;
         spawn.spawning = Some(bot_id);
 
         storage
-            .entity_table_mut::<model::SpawnComponent>()
+            .entity_table_mut::<components::SpawnComponent>()
             .insert_or_update(self.id, spawn);
 
         Ok(())
@@ -55,16 +58,21 @@ impl SpawnIntent {
 }
 
 pub fn check_spawn_intent(
-    intent: &caolo_api::structures::SpawnIntent,
+    intent: &model::structures::SpawnIntent,
     userid: Option<model::UserId>,
     storage: &crate::storage::Storage,
 ) -> OperationResult {
-    let id = model::EntityId(intent.id);
+    let id = intent.id;
 
     if let Some(userid) = userid {
-        match storage.entity_table::<model::Structure>().get_by_id(&id) {
+        match storage
+            .entity_table::<components::Structure>()
+            .get_by_id(&id)
+        {
             Some(_) => {
-                let owner_id = storage.entity_table::<model::OwnedEntity>().get_by_id(&id);
+                let owner_id = storage
+                    .entity_table::<components::OwnedEntity>()
+                    .get_by_id(&id);
                 if owner_id.map(|id| id.owner_id != userid).unwrap_or(true) {
                     return OperationResult::NotOwner;
                 }
@@ -77,7 +85,7 @@ pub fn check_spawn_intent(
     }
 
     if let Some(spawn) = storage
-        .entity_table::<model::SpawnComponent>()
+        .entity_table::<components::SpawnComponent>()
         .get_by_id(&id)
     {
         if spawn.spawning.is_some() {

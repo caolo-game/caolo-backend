@@ -19,7 +19,6 @@ with-serde = [] # for protobuf
 
 [dependencies]
 caolo-sim = { path = "../simulation", features=[] }
-caolo-api = { path = "../api" }
 cao-lang = { path = "../cao-lang" }
 log = "*"
 env_logger = "*"

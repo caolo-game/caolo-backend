@@ -3,7 +3,6 @@
 extern crate serde_derive;
 
 mod init;
-mod payload;
 mod input;
 mod protos;
 
@@ -42,16 +41,18 @@ fn tick(storage: &mut Storage) {
 fn send_world(storage: &Storage, client: &redis::Client) -> Result<(), Box<dyn std::error::Error>> {
     debug!("Sending world state to redis");
 
-    let payload = payload::Payload::new(storage);
-    let js = serde_json::to_string(&payload)?;
+    todo!();
 
-    let mut con = client.get_connection()?;
-
-    redis::pipe()
-        .cmd("SET")
-        .arg("WORLD_STATE")
-        .arg(js)
-        .query(&mut con)?;
+    // let payload = payload::Payload::new(storage);
+    // let js = serde_json::to_string(&payload)?;
+    //
+    // let mut con = client.get_connection()?;
+    //
+    // redis::pipe()
+    //     .cmd("SET")
+    //     .arg("WORLD_STATE")
+    //     .arg(js)
+    //     .query(&mut con)?;
 
     debug!("Sending world state done");
     Ok(())

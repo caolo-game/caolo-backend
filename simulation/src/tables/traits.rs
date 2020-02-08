@@ -1,4 +1,8 @@
-use crate::model::{self, Circle, EntityId, PositionComponent, UserData, UserId};
+use crate::model::{
+    components::{self, PositionComponent},
+    geometry::Circle,
+    indices, EntityId,
+};
 use serde::Serialize;
 
 /// TableIds may be used as indices of tables
@@ -48,10 +52,6 @@ pub trait Table: Serialize {
     fn delete(&mut self, id: &Self::Id) -> Option<Self::Row>;
 }
 
-pub trait UserDataTable {
-    fn create_new(&mut self, row: UserData) -> UserId;
-}
-
 pub trait PositionTable {
     /// Vision is AABB with topleft - bottomleft points
     fn get_entities_in_range(&self, vision: &Circle) -> Vec<(EntityId, PositionComponent)>;
@@ -59,5 +59,5 @@ pub trait PositionTable {
 }
 
 pub trait LogTable {
-    fn get_logs_by_time(&self, time: u64) -> Vec<(model::EntityTime, model::LogEntry)>;
+    fn get_logs_by_time(&self, time: u64) -> Vec<(indices::EntityTime, components::LogEntry)>;
 }

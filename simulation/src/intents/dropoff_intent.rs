@@ -1,6 +1,9 @@
 use super::*;
-use crate::model::{self, EntityId, ResourceType};
-use caolo_api::OperationResult;
+use crate::model::{
+    self,
+    components::{Bot, CarryComponent, EnergyComponent, OwnedEntity, PositionComponent, Resource},
+    EntityId, OperationResult,
+};
 
 pub const DROPOFF_RANGE: u64 = 1;
 
@@ -9,19 +12,19 @@ pub struct DropoffIntent {
     pub bot: EntityId,
     pub structure: EntityId,
     pub amount: u16,
-    pub ty: ResourceType,
+    pub ty: Resource,
 }
 
 impl DropoffIntent {
     pub fn execute(&self, storage: &mut crate::storage::Storage) -> IntentResult {
         // dropoff amount = min(bot carry , amount , structure capacity)
         let mut carry_component = storage
-            .entity_table::<model::CarryComponent>()
+            .entity_table::<CarryComponent>()
             .get_by_id(&self.bot)
             .cloned()
             .ok_or_else(|| "Bot has no carry")?;
         let mut store_component = storage
-            .entity_table::<model::EnergyComponent>()
+            .entity_table::<EnergyComponent>()
             .get_by_id(&self.bot)
             .cloned()
             .ok_or_else(|| "Bot has no carry")?;
@@ -34,10 +37,10 @@ impl DropoffIntent {
         carry_component.carry -= dropoff;
 
         storage
-            .entity_table_mut::<model::CarryComponent>()
+            .entity_table_mut::<CarryComponent>()
             .insert_or_update(self.bot, carry_component);
         storage
-            .entity_table_mut::<model::EnergyComponent>()
+            .entity_table_mut::<EnergyComponent>()
             .insert_or_update(self.structure, store_component);
 
         Ok(())
@@ -50,14 +53,14 @@ impl DropoffIntent {
 /// - the target is not full
 /// - the target is within dropoff range
 pub fn check_dropoff_intent(
-    intent: &caolo_api::bots::DropoffIntent,
+    intent: model::bots::DropoffIntent,
     userid: model::UserId,
     storage: &crate::storage::Storage,
 ) -> OperationResult {
-    let id = EntityId(intent.id);
-    match storage.entity_table::<model::Bot>().get_by_id(&id) {
+    let id = intent.id;
+    match storage.entity_table::<Bot>().get_by_id(&id) {
         Some(_) => {
-            let owner_id = storage.entity_table::<model::OwnedEntity>().get_by_id(&id);
+            let owner_id = storage.entity_table::<OwnedEntity>().get_by_id(&id);
             if owner_id.map(|id| id.owner_id != userid).unwrap_or(true) {
                 return OperationResult::NotOwner;
             }
@@ -66,7 +69,7 @@ pub fn check_dropoff_intent(
     };
 
     if storage
-        .entity_table::<model::CarryComponent>()
+        .entity_table::<CarryComponent>()
         .get_by_id(&id)
         .map(|carry| carry.carry == 0)
         .unwrap_or(true)
@@ -74,9 +77,9 @@ pub fn check_dropoff_intent(
         return OperationResult::Empty;
     }
 
-    let positions = storage.entity_table::<model::PositionComponent>();
+    let positions = storage.entity_table::<PositionComponent>();
 
-    let target = EntityId(intent.target);
+    let target = intent.target;
     let nearby = positions.get_by_id(&id).and_then(|botpos| {
         positions
             .get_by_id(&target)
@@ -91,9 +94,7 @@ pub fn check_dropoff_intent(
             return OperationResult::NotInRange;
         }
         Some(true) => {
-            let capacity = storage
-                .entity_table::<model::EnergyComponent>()
-                .get_by_id(&target);
+            let capacity = storage.entity_table::<EnergyComponent>().get_by_id(&target);
             if capacity.is_none() {
                 error!("Target has no energy component {:?}", intent);
                 return OperationResult::InvalidInput;

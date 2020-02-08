@@ -1,6 +1,9 @@
-use crate::model::{EntityComponent, TerrainComponent, TileTerrainType};
+use crate::model::{
+    components::{EntityComponent, TerrainComponent},
+    geometry::{Circle, Point},
+    terrain::TileTerrainType,
+};
 use crate::tables::PositionTable;
-use caolo_api::point::{Circle, Point};
 
 use std::collections::{BTreeSet, HashMap, HashSet};
 
@@ -133,7 +136,7 @@ pub fn find_path(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{EntityComponent, EntityId};
+    use crate::model::{components::EntityComponent, EntityId};
     use crate::tables::MortonTable;
 
     #[test]

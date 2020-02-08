@@ -1,5 +1,5 @@
 use super::System;
-use crate::model::{self, EntityId};
+use crate::model::{components, EntityId};
 use crate::storage::views::UnsafeView;
 use crate::tables::Table;
 
@@ -7,14 +7,14 @@ pub struct SpawnSystem;
 
 impl<'a> System<'a> for SpawnSystem {
     type Mut = (
-        UnsafeView<EntityId, model::SpawnComponent>,
-        UnsafeView<EntityId, model::SpawnBotComponent>,
-        UnsafeView<EntityId, model::Bot>,
-        UnsafeView<EntityId, model::HpComponent>,
-        UnsafeView<EntityId, model::DecayComponent>,
-        UnsafeView<EntityId, model::CarryComponent>,
-        UnsafeView<EntityId, model::PositionComponent>,
-        UnsafeView<EntityId, model::OwnedEntity>,
+        UnsafeView<EntityId, components::SpawnComponent>,
+        UnsafeView<EntityId, components::SpawnBotComponent>,
+        UnsafeView<EntityId, components::Bot>,
+        UnsafeView<EntityId, components::HpComponent>,
+        UnsafeView<EntityId, components::DecayComponent>,
+        UnsafeView<EntityId, components::CarryComponent>,
+        UnsafeView<EntityId, components::PositionComponent>,
+        UnsafeView<EntityId, components::OwnedEntity>,
     );
     type Const = ();
 
@@ -45,16 +45,16 @@ impl<'a> System<'a> for SpawnSystem {
 /// Spawns a bot from a spawn.
 /// Removes the spawning bot from the spawn and initializes a bot in the world
 unsafe fn spawn_bot(
-    spawn_id: model::EntityId,
-    entity_id: model::EntityId,
+    spawn_id: EntityId,
+    entity_id: EntityId,
     (mut spawn_bots, mut bots, mut hps, mut decay, mut carry, mut positions, mut owned): (
-        UnsafeView<EntityId, model::SpawnBotComponent>,
-        UnsafeView<EntityId, model::Bot>,
-        UnsafeView<EntityId, model::HpComponent>,
-        UnsafeView<EntityId, model::DecayComponent>,
-        UnsafeView<EntityId, model::CarryComponent>,
-        UnsafeView<EntityId, model::PositionComponent>,
-        UnsafeView<EntityId, model::OwnedEntity>,
+        UnsafeView<EntityId, components::SpawnBotComponent>,
+        UnsafeView<EntityId, components::Bot>,
+        UnsafeView<EntityId, components::HpComponent>,
+        UnsafeView<EntityId, components::DecayComponent>,
+        UnsafeView<EntityId, components::CarryComponent>,
+        UnsafeView<EntityId, components::PositionComponent>,
+        UnsafeView<EntityId, components::OwnedEntity>,
     ),
 ) {
     debug!(
@@ -69,14 +69,14 @@ unsafe fn spawn_bot(
     bots.as_mut().insert_or_update(entity_id, bot.bot);
     hps.as_mut().insert_or_update(
         entity_id,
-        model::HpComponent {
+        components::HpComponent {
             hp: 100,
             hp_max: 100,
         },
     );
     decay.as_mut().insert_or_update(
         entity_id,
-        model::DecayComponent {
+        components::DecayComponent {
             eta: 20,
             t: 100,
             hp_amount: 100,
@@ -84,7 +84,7 @@ unsafe fn spawn_bot(
     );
     carry.as_mut().insert_or_update(
         entity_id,
-        model::CarryComponent {
+        components::CarryComponent {
             carry: 0,
             carry_max: 50,
         },

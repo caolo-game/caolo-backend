@@ -5,17 +5,16 @@
 mod bots;
 mod resources;
 mod spawns;
-mod structures;
 pub use self::bots::*;
 pub use self::resources::*;
 pub use self::spawns::*;
-pub use self::structures::*;
-use crate::model::Point;
+use crate::model;
+use crate::model::geometry::point::Point;
+use crate::model::OperationResult;
 use crate::systems::script_execution::ScriptExecutionData;
 use cao_lang::prelude::*;
 use cao_lang::scalar::Scalar;
 use cao_lang::traits::ByteEncodeProperties;
-use caolo_api::OperationResult;
 use std::convert::TryFrom;
 
 /// Write an OperationResult to the program
@@ -146,7 +145,7 @@ pub fn make_import() -> Schema {
                 desc: subprogram_description!(
                     spawn,
                     "Spawn a new bot from given configuration.",
-                    [caolo_api::structures::SpawnIntent],
+                    [model::structures::SpawnIntent],
                     [OperationResult]
                 ),
                 fo: FunctionObject::new(FunctionWrapper::new(spawn)),

@@ -5,7 +5,7 @@
 //! constructing from iterators is much faster than quadtrees.
 //!
 use super::*;
-use crate::model::{components::EntityComponent, Point};
+use crate::model::{components::EntityComponent, geometry::Point};
 use rayon::prelude::*;
 use serde_derive::Serialize;
 use std::convert::TryInto;
@@ -308,7 +308,6 @@ impl PositionTable for MortonTable<Point, EntityComponent> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use caolo_api::point::Point;
     use rand::prelude::*;
     use std::collections::HashMap;
     use test::Bencher;

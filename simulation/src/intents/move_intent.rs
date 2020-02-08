@@ -1,7 +1,11 @@
 use super::*;
-use crate::model::{self, EntityComponent, EntityId, Point, PositionComponent};
+use crate::model::{
+    self,
+    components::{self, Bot, EntityComponent, PositionComponent},
+    geometry::Point,
+    terrain, EntityId, OperationResult,
+};
 use crate::storage::views::View;
-use caolo_api::OperationResult;
 
 #[derive(Debug, Clone)]
 pub struct MoveIntent {
@@ -15,11 +19,7 @@ impl MoveIntent {
 
         let table = storage.point_table::<EntityComponent>();
 
-        if storage
-            .entity_table::<model::Bot>()
-            .get_by_id(&self.bot)
-            .is_none()
-        {
+        if storage.entity_table::<Bot>().get_by_id(&self.bot).is_none() {
             debug!("Bot by id {:?} does not exist", self.bot);
             return Err("Bot not found".into());
         }
@@ -44,17 +44,17 @@ impl MoveIntent {
 }
 
 pub fn check_move_intent(
-    intent: &caolo_api::bots::MoveIntent,
+    intent: &model::bots::MoveIntent,
     userid: model::UserId,
     (owner_ids, positions, bots, terrain, entity_positions): (
-        View<EntityId, model::OwnedEntity>,
+        View<EntityId, components::OwnedEntity>,
         View<EntityId, PositionComponent>,
-        View<EntityId, model::Bot>,
-        View<Point, model::TerrainComponent>,
+        View<EntityId, components::Bot>,
+        View<Point, components::TerrainComponent>,
         View<Point, EntityComponent>,
     ),
 ) -> OperationResult {
-    let id = model::EntityId(intent.id);
+    let id = intent.id;
     match bots.get_by_id(&id) {
         Some(_) => {
             let owner_id = owner_ids.get_by_id(&id);
@@ -83,7 +83,7 @@ pub fn check_move_intent(
     }
 
     match terrain.get_by_id(&intent.position) {
-        Some(model::TerrainComponent(model::TileTerrainType::Wall)) => {
+        Some(components::TerrainComponent(terrain::TileTerrainType::Wall)) => {
             debug!("Position is occupied by terrain");
             return OperationResult::InvalidInput;
         }
@@ -99,7 +99,10 @@ pub fn check_move_intent(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{Bot, EntityComponent, Point, PositionComponent};
+    use crate::model::{
+        components::{Bot, EntityComponent, PositionComponent},
+        geometry::Point,
+    };
     use crate::storage::Storage;
     use crate::tables::{MortonTable, VecTable};
 

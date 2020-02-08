@@ -1,18 +1,17 @@
 use crate::tables::SerialId;
-use caolo_api::{EntityId as EId, ScriptId as SId, UserId as UId};
 use serde_derive::Serialize;
 
 #[derive(Debug, Clone, Default, Ord, PartialOrd, Eq, PartialEq, Copy, Hash, Serialize)]
-pub struct EntityTime(pub EId, pub u64);
+pub struct EntityTime(pub u32, pub u64);
 
 #[derive(Debug, Clone, Default, Ord, PartialOrd, Eq, PartialEq, Copy, Hash, Serialize)]
-pub struct EntityId(pub EId);
+pub struct EntityId(pub u32);
 
 #[derive(Debug, Clone, Default, Ord, PartialOrd, Eq, PartialEq, Copy, Serialize)]
-pub struct ScriptId(pub SId);
+pub struct ScriptId(pub uuid::Uuid);
 
 #[derive(Debug, Clone, Default, Ord, PartialOrd, Eq, PartialEq, Copy, Hash, Serialize)]
-pub struct UserId(pub UId);
+pub struct UserId(pub uuid::Uuid);
 
 impl SerialId for EntityId {
     fn next(&self) -> Self {

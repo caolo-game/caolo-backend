@@ -1,4 +1,5 @@
 use super::*;
+use crate::model::{components::LogEntry, indices::EntityTime};
 use crate::storage::TableId;
 use rayon::prelude::*;
 use serde_derive::Serialize;
@@ -63,28 +64,8 @@ where
     }
 }
 
-impl UserDataTable for BTreeTable<UserId, UserData> {
-    fn create_new(&mut self, row: UserData) -> UserId {
-        use rand::RngCore;
-        use uuid::{Builder, Variant, Version};
-
-        let mut rng = rand::thread_rng();
-        let mut random_bytes = [0; 16];
-        rng.fill_bytes(&mut random_bytes);
-
-        let id = Builder::from_slice(&random_bytes)
-            .unwrap()
-            .set_variant(Variant::RFC4122)
-            .set_version(Version::Random)
-            .build();
-        let id = UserId(id);
-        self.insert_or_update(id, row);
-        id
-    }
-}
-
-impl LogTable for BTreeTable<model::EntityTime, model::LogEntry> {
-    fn get_logs_by_time(&self, time: u64) -> Vec<(model::EntityTime, model::LogEntry)> {
+impl LogTable for BTreeTable<EntityTime, LogEntry> {
+    fn get_logs_by_time(&self, time: u64) -> Vec<(EntityTime, LogEntry)> {
         self.data
             .par_iter()
             .filter(|(t, _)| t.1 == time)

@@ -1,8 +1,7 @@
-use super::{EntityId, Point, ScriptId, UserData, UserId};
+use super::terrain::TileTerrainType;
+use super::{geometry::Point, EntityId, ScriptId, UserId};
 use crate::tables::{BTreeTable, Component, MortonTable, SpatialKey2d, TableId, VecTable};
 use serde_derive::Serialize;
-
-pub use caolo_api::terrain::TileTerrainType;
 
 /// For tables that store entity ids as values
 #[derive(Debug, Clone, Serialize, Copy)]
@@ -141,14 +140,13 @@ impl<Id: TableId> Component<Id> for ResourceComponent {
 
 /// Entities with Scripts
 #[derive(Debug, Clone, Serialize)]
-pub struct ScriptComponent(pub caolo_api::CompiledProgram);
+pub struct ScriptComponent(pub cao_lang::CompiledProgram);
 impl<Id: TableId> Component<Id> for ScriptComponent {
     type Table = BTreeTable<Id, Self>;
 }
 
-/// Entities with UserData
 #[derive(Debug, Clone, Serialize)]
-pub struct UserComponent(pub UserData);
+pub struct UserComponent;
 impl<Id: TableId> Component<Id> for UserComponent {
     type Table = BTreeTable<Id, Self>;
 }

@@ -41,7 +41,7 @@ pub fn forward(storage: &mut storage::Storage) -> Result<(), Box<dyn std::error:
 }
 
 pub fn init_inmemory_storage() -> storage::Storage {
-    use model::*;
+    use model::components::*;
 
     profile!("init_inmemory_storage");
     debug!("Init Storage");

@@ -91,7 +91,7 @@ impl<Id: 'static + TableId> Debug for HomogenousTable<Id> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{Bot, EntityId};
+    use crate::model::{components::Bot, EntityId};
     use crate::tables::VecTable;
 
     #[test]

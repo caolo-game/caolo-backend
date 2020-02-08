@@ -7,7 +7,7 @@ mod traits;
 pub use self::iterators::*;
 pub use self::kv::*;
 pub use self::traits::*;
-use crate::model::{self, Circle, EntityId, PositionComponent, UserData, UserId};
+use crate::model::{components::PositionComponent, geometry::Circle, EntityId};
 
 #[cfg(test)]
 mod tests {

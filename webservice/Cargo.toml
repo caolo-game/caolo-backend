@@ -14,7 +14,6 @@ name = "caolo_web_lib"
 crate-type = ["cdylib"]
 
 [dependencies]
-caolo-api = { path = "../api", version = "0.1"}
 cao-lang = { path = "../cao-lang", version = "0.1"}
 serde_json = "*"
 pyo3 = { version="0.8", features=["extension-module"] }

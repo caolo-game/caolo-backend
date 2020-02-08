@@ -1,5 +1,8 @@
 use super::System;
-use crate::model::{self, EntityId};
+use crate::model::{
+    components::{DecayComponent, HpComponent},
+    EntityId,
+};
 use crate::storage::views::{DeleteEntityView, UnsafeView};
 use crate::tables::JoinIterator;
 
@@ -7,8 +10,8 @@ pub struct DecaySystem;
 
 impl<'a> System<'a> for DecaySystem {
     type Mut = (
-        UnsafeView<EntityId, model::HpComponent>,
-        UnsafeView<EntityId, model::DecayComponent>,
+        UnsafeView<EntityId, HpComponent>,
+        UnsafeView<EntityId, DecayComponent>,
         DeleteEntityView,
     );
     type Const = ();

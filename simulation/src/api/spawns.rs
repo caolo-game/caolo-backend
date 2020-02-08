@@ -1,9 +1,8 @@
 use crate::intents::{check_spawn_intent, SpawnIntent as InnerSpawnIntent};
-use crate::model::EntityId;
+use crate::model::structures::SpawnIntent;
+use crate::model::OperationResult;
 use crate::systems::script_execution::ScriptExecutionData;
 use cao_lang::prelude::*;
-use caolo_api::structures::SpawnIntent;
-use caolo_api::OperationResult;
 
 /// Given a SpawnIntent as input instructs the current spawn to spawn a new Bot
 pub fn spawn(vm: &mut VM<ScriptExecutionData>, intent: TPointer) -> Result<Object, ExecutionError> {
@@ -27,7 +26,7 @@ pub fn spawn(vm: &mut VM<ScriptExecutionData>, intent: TPointer) -> Result<Objec
     }
 
     let intent = InnerSpawnIntent {
-        id: EntityId(intent.id),
+        id: intent.id,
         owner_id: vm.get_aux().userid(),
         bot: intent.bot,
     };

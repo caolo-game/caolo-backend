@@ -1,4 +1,7 @@
-use crate::model::{self, EntityId, ScriptId, UserId};
+use crate::model::{
+    components::{EntityScript, ScriptComponent},
+    EntityId, ScriptId, UserId,
+};
 use crate::{intents, profile, storage::Storage};
 use cao_lang::prelude::*;
 use std::sync::{Arc, Mutex};
@@ -14,7 +17,7 @@ pub fn execute_scripts(storage: &Storage) -> intents::Intents {
     {
         let intents = intents.clone();
         rayon::scope(move |s| {
-            for (entityid, script) in storage.entity_table::<model::EntityScript>().iter() {
+            for (entityid, script) in storage.entity_table::<EntityScript>().iter() {
                 let intents = intents.clone();
                 s.spawn(move |_| {
                     match execute_single_script(entityid, script.script_id, storage) {
@@ -46,7 +49,7 @@ pub fn execute_single_script<'a>(
     profile!("execute_single_script");
 
     let program = storage
-        .scripts_table::<model::ScriptComponent>()
+        .scripts_table::<ScriptComponent>()
         .get_by_id(&scriptid)
         .ok_or_else(|| {
             error!("Script by ID {:?} does not exist", scriptid);

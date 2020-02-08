@@ -19,7 +19,6 @@ WORKDIR /web
 COPY ./Cargo.web.toml ./Cargo.toml
 COPY ./Cargo.lock ./Cargo.lock
 COPY ./rust-toolchain ./rust-toolchain
-COPY ./api/ ./api/
 COPY ./cao-lang/ ./cao-lang/
 COPY ./protos/ ./protos/
 COPY ./webservice/Cargo.toml ./webservice/Cargo.toml

@@ -1,12 +1,10 @@
 use super::*;
 use crate::{
     intents::{check_move_intent, MoveIntent},
-    model::{self, EntityId, Point},
+    model::{bots, components, geometry::point::Point, OperationResult},
     profile,
-    storage::views::View,
     systems::pathfinding,
 };
-use caolo_api::OperationResult;
 
 /// In: x, y coordinates
 /// Out: OperationResult
@@ -25,11 +23,11 @@ pub fn move_bot(
     })?;
     let storage = vm.get_aux().storage();
 
-    let positions = storage.point_table::<model::EntityComponent>();
-    let terrain = storage.point_table::<model::TerrainComponent>();
+    let positions = storage.point_table::<components::EntityComponent>();
+    let terrain = storage.point_table::<components::TerrainComponent>();
 
     let botpos = storage
-        .entity_table::<model::PositionComponent>()
+        .entity_table::<components::PositionComponent>()
         .get_by_id(&entity)
         .ok_or_else(|| {
             error!("entity {:?} does not have position component!", entity);
@@ -44,8 +42,8 @@ pub fn move_bot(
 
     let intent = match path.get(0) {
         Some(position) => {
-            caolo_api::bots::MoveIntent {
-                id: entity.0,
+            bots::MoveIntent {
+                id: entity,
                 position: *position, // TODO: cache path
             }
         }
@@ -63,52 +61,9 @@ pub fn move_bot(
         .intents_mut()
         .move_intents
         .push(MoveIntent {
-            bot: EntityId(intent.id),
+            bot: intent.id,
             position: intent.position,
         });
 
     result
-}
-
-pub fn build_bot(
-    id: EntityId,
-    (bot, pos, carry, owners): (
-        View<EntityId, model::Bot>,
-        View<EntityId, model::PositionComponent>,
-        View<EntityId, model::CarryComponent>,
-        View<EntityId, model::OwnedEntity>,
-    ),
-) -> Option<caolo_api::bots::Bot> {
-    profile!("build_bot");
-
-    let bot = bot.get_by_id(&id);
-    if bot.is_none() {
-        debug!(
-            "Bot {:?} could not be built because it has no bot component",
-            id
-        );
-        return None;
-    }
-
-    let pos = pos.get_by_id(&id).or_else(|| {
-        debug!("Bot {:?} could not be built because it has no position", id);
-        None
-    })?;
-
-    let carry = carry
-        .get_by_id(&id)
-        .unwrap_or_else(|| &model::CarryComponent {
-            carry: 0,
-            carry_max: 0,
-        });
-
-    let owner_id = owners.get_by_id(&id);
-
-    Some(caolo_api::bots::Bot {
-        id: id.0,
-        owner_id: owner_id.map(|id| id.owner_id.0),
-        position: pos.0,
-        carry: carry.carry,
-        carry_max: carry.carry_max,
-    })
 }

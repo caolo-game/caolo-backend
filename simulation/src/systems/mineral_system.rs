@@ -1,5 +1,9 @@
 use super::System;
-use crate::model::{self, Circle, EntityId, Point};
+use crate::model::{
+    components,
+    geometry::{Circle, Point},
+    EntityId,
+};
 use crate::storage::views::{UnsafeView, View};
 use crate::tables::JoinIterator;
 use rand::Rng;
@@ -8,12 +12,12 @@ pub struct MineralSystem;
 
 impl<'a> System<'a> for MineralSystem {
     type Mut = (
-        UnsafeView<EntityId, model::PositionComponent>,
-        UnsafeView<EntityId, model::EnergyComponent>,
+        UnsafeView<EntityId, components::PositionComponent>,
+        UnsafeView<EntityId, components::EnergyComponent>,
     );
     type Const = (
-        View<'a, Point, model::EntityComponent>,
-        View<'a, EntityId, model::ResourceComponent>,
+        View<'a, Point, components::EntityComponent>,
+        View<'a, EntityId, components::ResourceComponent>,
     );
 
     fn update(
@@ -26,7 +30,7 @@ impl<'a> System<'a> for MineralSystem {
         let mut rng = rand::thread_rng();
 
         let minerals_it = resources.iter().filter(|(_, r)| match r.0 {
-            model::Resource::Mineral => true,
+            components::Resource::Mineral => true,
         });
         let entity_positions_it = unsafe { entity_positions.as_mut().iter_mut() };
         let energy_iter = unsafe { energy.as_mut().iter_mut() };
@@ -58,7 +62,7 @@ fn random_uncontested_pos_in_range<T: crate::tables::PositionTable>(
     from: i32,
     to: i32,
 ) -> Point {
-    let mut pos = model::Point::default();
+    let mut pos = Point::default();
     loop {
         pos.x = rng.gen_range(from, to);
         pos.y = rng.gen_range(from, to);

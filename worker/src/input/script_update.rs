@@ -1,6 +1,6 @@
 use super::parse_uuid;
 use crate::protos::scripts::UpdateScript as UpdateScriptMsg;
-use caolo_sim::model::ScriptComponent;
+use caolo_sim::model::components::{EntityScript, OwnedEntity, ScriptComponent};
 use caolo_sim::{
     self,
     model::{self, EntityId, ScriptId, UserId},
@@ -32,7 +32,7 @@ pub fn update_program(storage: &mut Storage, mut msg: UpdateScriptMsg) -> Update
             error!("Failed to parse script_id {:?}", e);
             UpdateProgramError::BadScriptId
         })
-        .map(caolo_api::ScriptId)?;
+        .map(model::ScriptId)?;
 
     let program = msg.take_compiled_script();
     let program = cao_lang::CompiledProgram {
@@ -50,7 +50,7 @@ pub fn update_program(storage: &mut Storage, mut msg: UpdateScriptMsg) -> Update
     debug!("Inserting new program for user {} {:?}", user_id, script_id);
 
     let program = ScriptComponent(program);
-    let script_id = ScriptId(script_id);
+    let script_id = script_id;
     storage
         .scripts_table_mut::<ScriptComponent>()
         .insert_or_update(script_id, program);
@@ -69,8 +69,8 @@ pub fn update_program(storage: &mut Storage, mut msg: UpdateScriptMsg) -> Update
 fn update_user_bot_scripts(
     script_id: ScriptId,
     user_id: UserId,
-    mut entity_scripts: UnsafeView<EntityId, model::EntityScript>,
-    owned_entities: View<EntityId, model::OwnedEntity>,
+    mut entity_scripts: UnsafeView<EntityId, EntityScript>,
+    owned_entities: View<EntityId, OwnedEntity>,
 ) {
     let entity_scripts = unsafe { entity_scripts.as_mut().iter_mut() };
     let join = JoinIterator::new(

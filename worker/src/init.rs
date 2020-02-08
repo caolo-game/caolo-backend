@@ -1,6 +1,5 @@
 use cao_lang::prelude::*;
-use caolo_api::ScriptId;
-use caolo_sim::model::{self, EntityId, Point};
+use caolo_sim::model::{self, components, geometry::Point, terrain, EntityId, ScriptId};
 use caolo_sim::storage::{
     views::{UnsafeView, View},
     Storage,
@@ -13,21 +12,23 @@ pub fn init_storage(n_fake_users: usize) -> Storage {
     let mut storage = caolo_sim::init_inmemory_storage();
 
     let script_id = ScriptId::default();
-    let script_id = model::ScriptId(script_id);
     let script: CompilationUnit =
         serde_json::from_str(PROGRAM).expect("deserialize example program");
     let compiled = Compiler::compile(script.clone()).expect("failed to compile example program");
     storage
-        .scripts_table_mut::<model::ScriptComponent>()
-        .insert_or_update(script_id, model::ScriptComponent(compiled));
+        .scripts_table_mut::<components::ScriptComponent>()
+        .insert_or_update(script_id, components::ScriptComponent(compiled));
 
     let mut rng = rand::thread_rng();
 
-    let terrain = storage.point_table_mut::<model::TerrainComponent>();
+    let terrain = storage.point_table_mut::<components::TerrainComponent>();
 
     for _ in 0..1000 {
         let pos = uncontested_pos(terrain, &mut rng);
-        terrain.insert(pos, model::TerrainComponent(model::TileTerrainType::Wall));
+        terrain.insert(
+            pos,
+            components::TerrainComponent(terrain::TileTerrainType::Wall),
+        );
     }
 
     for _ in 0..n_fake_users {
@@ -45,24 +46,24 @@ unsafe fn init_bot(
     script_id: model::ScriptId,
     rng: &mut impl Rng,
     (mut entity_scripts, mut bots, mut carry_component, mut ownsers, mut positions): (
-        UnsafeView<EntityId, model::EntityScript>,
-        UnsafeView<EntityId, model::Bot>,
-        UnsafeView<EntityId, model::CarryComponent>,
-        UnsafeView<EntityId, model::OwnedEntity>,
-        UnsafeView<EntityId, model::PositionComponent>,
+        UnsafeView<EntityId, components::EntityScript>,
+        UnsafeView<EntityId, components::Bot>,
+        UnsafeView<EntityId, components::CarryComponent>,
+        UnsafeView<EntityId, components::OwnedEntity>,
+        UnsafeView<EntityId, components::PositionComponent>,
     ),
-    entities_by_pos: View<Point, model::EntityComponent>,
+    entities_by_pos: View<Point, components::EntityComponent>,
 ) {
     entity_scripts
         .as_mut()
-        .insert_or_update(id, model::EntityScript { script_id });
-    bots.as_mut().insert_or_update(id, model::Bot {});
+        .insert_or_update(id, components::EntityScript { script_id });
+    bots.as_mut().insert_or_update(id, components::Bot {});
     carry_component
         .as_mut()
         .insert_or_update(id, Default::default());
     ownsers.as_mut().insert_or_update(
         id,
-        model::OwnedEntity {
+        components::OwnedEntity {
             owner_id: Default::default(),
         },
     );
@@ -71,13 +72,13 @@ unsafe fn init_bot(
 
     positions
         .as_mut()
-        .insert_or_update(id, model::PositionComponent(pos));
+        .insert_or_update(id, components::PositionComponent(pos));
 }
 
 fn uncontested_pos<T: caolo_sim::tables::TableRow + Send + Sync>(
     positions_table: &caolo_sim::tables::MortonTable<Point, T>,
     rng: &mut impl Rng,
-) -> caolo_api::point::Point {
+) -> Point {
     loop {
         let x = rng.gen_range(0, 500);
         let y = rng.gen_range(0, 500);

@@ -1,7 +1,6 @@
 use super::*;
-use crate::model::{self, EntityId};
+use crate::model::{bots, components, EntityId, OperationResult, UserId};
 use crate::storage::views::View;
-use caolo_api::OperationResult;
 
 const MINE_AMOUNT: u16 = 10; // TODO: get from bot body
 
@@ -15,13 +14,13 @@ impl MineIntent {
     pub fn execute(&self, storage: &mut Storage) -> IntentResult {
         debug!("Bot [{:?}] is mining [{:?}]", self.bot, self.resource);
         match storage
-            .entity_table::<model::ResourceComponent>()
+            .entity_table::<components::ResourceComponent>()
             .get_by_id(&self.resource)
         {
             None => Err("Resource not found".into()),
-            Some(model::ResourceComponent(model::Resource::Mineral)) => {
+            Some(components::ResourceComponent(components::Resource::Mineral)) => {
                 let mut energy = match storage
-                    .entity_table::<model::EnergyComponent>()
+                    .entity_table::<components::EnergyComponent>()
                     .get_by_id(&self.resource)
                 {
                     Some(energy) => {
@@ -35,7 +34,7 @@ impl MineIntent {
                     }
                 };
                 let mut carry = storage
-                    .entity_table::<model::CarryComponent>()
+                    .entity_table::<components::CarryComponent>()
                     .get_by_id(&self.bot)
                     .cloned()
                     .ok_or_else(|| {
@@ -49,10 +48,10 @@ impl MineIntent {
                 energy.energy -= mined;
 
                 storage
-                    .entity_table_mut::<model::CarryComponent>()
+                    .entity_table_mut::<components::CarryComponent>()
                     .insert_or_update(self.bot, carry);
                 storage
-                    .entity_table_mut::<model::EnergyComponent>()
+                    .entity_table_mut::<components::EnergyComponent>()
                     .insert_or_update(self.resource, energy);
                 debug!("Mine succeeded");
                 Ok(())
@@ -62,15 +61,15 @@ impl MineIntent {
 }
 
 pub fn check_mine_intent(
-    intent: &caolo_api::bots::MineIntent,
-    userid: model::UserId,
-    bots: View<EntityId, model::Bot>,
-    owner_ids: View<EntityId, model::OwnedEntity>,
-    positions: View<EntityId, model::PositionComponent>,
-    resources: View<EntityId, model::ResourceComponent>,
-    energy: View<EntityId, model::EnergyComponent>,
+    intent: &bots::MineIntent,
+    userid: UserId,
+    bots: View<EntityId, components::Bot>,
+    owner_ids: View<EntityId, components::OwnedEntity>,
+    positions: View<EntityId, components::PositionComponent>,
+    resources: View<EntityId, components::ResourceComponent>,
+    energy: View<EntityId, components::EnergyComponent>,
 ) -> OperationResult {
-    let id = EntityId(intent.id);
+    let id = intent.id;
     match bots.get_by_id(&id) {
         Some(_) => {
             let owner_id = owner_ids.get_by_id(&id);
@@ -89,7 +88,7 @@ pub fn check_mine_intent(
         }
     };
 
-    let target = EntityId(intent.target);
+    let target = intent.target;
     let mineralpos = match positions.get_by_id(&target) {
         Some(pos) => pos,
         None => {
@@ -103,7 +102,7 @@ pub fn check_mine_intent(
     }
 
     match resources.get_by_id(&target) {
-        Some(model::ResourceComponent(model::Resource::Mineral)) => {
+        Some(components::ResourceComponent(components::Resource::Mineral)) => {
             match energy.get_by_id(&target) {
                 Some(energy) => {
                     if energy.energy > 0 {

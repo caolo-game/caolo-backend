@@ -1,4 +1,6 @@
-#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+use serde_derive::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 #[repr(u8)]
 pub enum TileTerrainType {
     Empty = 0,

@@ -4,7 +4,7 @@
 //! Using tuples of views:
 //!
 //! ```
-//! use caolo_sim::model::{EntityId, Bot, SpawnComponent,Point, self};
+//! use caolo_sim::model::{EntityId,components::{ Bot, SpawnComponent},geometry::Point, self};
 //! use caolo_sim::storage::{views::{View, UnsafeView}, Storage};
 //! use caolo_sim::tables::{VecTable,BTreeTable, MortonTable};
 //!

@@ -62,7 +62,7 @@ def commit_script():
     db.session.commit()
 
     msg = input_messages_pb2.InputMsg()
-    msg.msg_id = b"asd"  # TODO
+    msg.msg_id = b""  # TODO
     msg.update_script.user_id = current_user.id.encode('utf8')
     msg.update_script.script_id = program.id.encode('utf8')
     for k, v in compiled['labels'].items():

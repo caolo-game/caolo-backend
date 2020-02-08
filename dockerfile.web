@@ -8,6 +8,12 @@ RUN sh ./install_rust.sh -y
 RUN cargo --version
 RUN pip install maturin
 
+# install protoc
+WORKDIR /usr/protocinstall
+ENV PROTOC_ZIP=protoc-3.11.3-linux-x86_64.zip
+RUN curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v3.11.3/$PROTOC_ZIP
+RUN unzip -o $PROTOC_ZIP -d /usr/local bin/protoc
+
 WORKDIR /web
 
 COPY ./Cargo.web.toml ./Cargo.toml
@@ -15,6 +21,7 @@ COPY ./Cargo.lock ./Cargo.lock
 COPY ./rust-toolchain ./rust-toolchain
 COPY ./api/ ./api/
 COPY ./cao-lang/ ./cao-lang/
+COPY ./protos/ ./protos/
 COPY ./webservice/Cargo.toml ./webservice/Cargo.toml
 COPY ./webservice/src/ ./webservice/src
 COPY ./webservice/pyproject.toml ./webservice/pyproject.toml
@@ -23,6 +30,10 @@ WORKDIR /web/webservice
 RUN mkdir build
 RUN maturin build --release -o ./build/
 RUN ls -al build
+
+WORKDIR /web
+RUN protoc -Iprotos --python_out=webservice/build/ protos/*.proto 
+
 
 # --------------
 
@@ -38,5 +49,6 @@ RUN pip install build/caolo_web-0.1.0-cp38-cp38-manylinux1_x86_64.whl
 
 # Copy the non-packaged scripts
 COPY ./webservice/*.py ./
+COPY ./webservice/build/ ./build
 COPY ./webservice/migrations/ ./migrations
 COPY ./webservice/caolo_web/ ./caolo_web

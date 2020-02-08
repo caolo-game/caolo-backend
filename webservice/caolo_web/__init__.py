@@ -1,3 +1,8 @@
+# hack path for protobufs
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent / "build"))
+
 import os, sys, json
 
 from flask import Flask, request, jsonify, abort, redirect, url_for

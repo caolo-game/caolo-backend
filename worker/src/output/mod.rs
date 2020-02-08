@@ -1,4 +1,5 @@
 use crate::protos::world::Bot as BotMsg;
+
 use crate::protos::world::LogEntry as LogMsg;
 use caolo_sim::model::{
     components::{Bot, LogEntry, OwnedEntity, PositionComponent},
@@ -20,8 +21,8 @@ pub fn build_bots<'a>(
     JoinIterator::new(bots, positions).map(move |(id, (_bot, pos))| {
         let mut msg = BotMsg::default();
         msg.set_id(id.0);
-        msg.mut_position().set_x(pos.0.x);
-        msg.mut_position().set_y(pos.0.y);
+        msg.mut_position().set_q(pos.0.x);
+        msg.mut_position().set_r(pos.0.y);
         msg.mut_owner().clear();
         if let Some(owner) = owned_entities.get_by_id(&id) {
             *msg.mut_owner() = owner.owner_id.0.as_bytes().to_vec();

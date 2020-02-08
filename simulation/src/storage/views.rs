@@ -4,28 +4,29 @@
 //! Using tuples of views:
 //!
 //! ```
-//! use caolo_sim::model::{EntityId,components::{ Bot, SpawnComponent},geometry::Point, self};
+//! use caolo_sim::model::{EntityId,components::{Bot, SpawnComponent, PositionComponent,
+//! EnergyComponent, EntityComponent, ResourceComponent} ,geometry::Point, self};
 //! use caolo_sim::storage::{views::{View, UnsafeView}, Storage};
 //! use caolo_sim::tables::{VecTable,BTreeTable, MortonTable};
 //!
 //! fn update_minerals(
 //!     (mut entity_positions, mut energy): (
-//!         UnsafeView<EntityId, model::PositionComponent>,
-//!         UnsafeView<EntityId, model::EnergyComponent>,
+//!         UnsafeView<EntityId, PositionComponent>,
+//!         UnsafeView<EntityId, EnergyComponent>,
 //!     ),
 //!     (position_entities, resources): (
-//!         View<Point, model::EntityComponent>,
-//!         View<EntityId, model::ResourceComponent>,
+//!         View<Point, EntityComponent>,
+//!         View<EntityId, ResourceComponent>,
 //!     ),
 //! ) {
 //!     // do stuff
 //! }
 //!
 //! let mut storage = Storage::new();
-//! storage.add_entity_table::<model::PositionComponent>(VecTable::new());
-//! storage.add_entity_table::<model::EnergyComponent>(BTreeTable::new());
-//! storage.add_point_table::<model::EntityComponent>(MortonTable::new());
-//! storage.add_entity_table::<model::ResourceComponent>(BTreeTable::new());
+//! storage.add_entity_table::<PositionComponent>(VecTable::new());
+//! storage.add_entity_table::<EnergyComponent>(BTreeTable::new());
+//! storage.add_point_table::<EntityComponent>(MortonTable::new());
+//! storage.add_entity_table::<ResourceComponent>(BTreeTable::new());
 //! update_minerals(From::from(&mut storage), From::from(&storage));
 //! ```
 //!

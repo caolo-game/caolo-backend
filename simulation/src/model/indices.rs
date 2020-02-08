@@ -2,7 +2,7 @@ use crate::tables::SerialId;
 use serde_derive::Serialize;
 
 #[derive(Debug, Clone, Default, Ord, PartialOrd, Eq, PartialEq, Copy, Hash, Serialize)]
-pub struct EntityTime(pub u32, pub u64);
+pub struct EntityTime(pub EntityId, pub u64);
 
 #[derive(Debug, Clone, Default, Ord, PartialOrd, Eq, PartialEq, Copy, Hash, Serialize)]
 pub struct EntityId(pub u32);

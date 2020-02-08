@@ -13,7 +13,7 @@ pub struct LogIntent {
 
 impl LogIntent {
     pub fn execute(&self, storage: &mut Storage) -> IntentResult {
-        let id = EntityTime(self.entity.0, self.time);
+        let id = EntityTime(self.entity, self.time);
         let table = storage.log_table_mut::<LogEntry>();
         let entry = match table.get_by_id(&id).cloned() {
             Some(mut entry) => {

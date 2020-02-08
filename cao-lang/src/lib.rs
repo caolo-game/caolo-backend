@@ -57,6 +57,7 @@ use crate::instruction::Instruction;
 use arrayvec::ArrayString;
 use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::ops::Index;
 
 pub type TPointer = i32;
 
@@ -68,7 +69,29 @@ pub type InputString = ArrayString<[u8; INPUT_STR_LEN]>;
 pub struct CompiledProgram {
     pub bytecode: Vec<u8>,
     /// Label: [block, self]
-    pub labels: HashMap<NodeId, [usize; 2]>,
+    pub labels: HashMap<NodeId, Label>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct Label {
+    pub block: u32,
+    pub myself: u32,
+}
+
+impl Label {
+    pub fn new(block: u32, myself: u32) -> Self {
+        Self { block, myself }
+    }
+}
+
+impl Index<i32> for Label {
+    type Output = u32;
+    fn index(&self, ind: i32) -> &Self::Output {
+        match ind {
+            0 => &self.block,
+            1 => &self.myself,
+            _ => unreachable!("Label index must be 0 or 1"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -127,8 +150,8 @@ macro_rules! subprogram_description {
 
     (input [$($result:expr),*], $head: ty) => {
         vec![
-        $($result),*
-        , <$head as ByteEncodeProperties>::displayname()
+            $($result),*
+                , <$head as ByteEncodeProperties>::displayname()
         ]
     };
 

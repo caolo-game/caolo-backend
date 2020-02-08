@@ -173,7 +173,7 @@ impl<Aux> VM<Aux> {
                     ptr = program
                         .labels
                         .get(&label)
-                        .ok_or(ExecutionError::InvalidLabel)?[0];
+                        .ok_or(ExecutionError::InvalidLabel)?[0] as usize;
                 }
                 Instruction::Exit => {
                     debug!("Exit called");
@@ -206,7 +206,8 @@ impl<Aux> VM<Aux> {
                         ptr = program
                             .labels
                             .get(&label)
-                            .ok_or(ExecutionError::InvalidLabel)?[0];
+                            .ok_or(ExecutionError::InvalidLabel)?[0]
+                            as usize;
                     } else {
                         ptr += len;
                     }

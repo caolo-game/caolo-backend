@@ -33,7 +33,7 @@ fn compile(py: Python, cu: String) -> PyResult<&PyDict> {
             program
                 .labels
                 .iter()
-                .map(|(k, [x, y])| (k, vec![x, y]))
+                .map(|(k, label)| (k, vec![label.block, label.myself]))
                 .collect::<HashMap<_, _>>(),
         )
         .map_err(|e| {

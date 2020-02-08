@@ -3,12 +3,19 @@ name = "caolo-worker"
 version = "0.1.0"
 authors = ["Daniel Kiss <littlesnorrboy@gmail.com>"]
 edition = "2018"
+build="build.rs"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[[bin]]
+name = "caolo-worker"
+required-features = ["with-serde"]
+
+[build-dependencies]
+protoc-rust = { version="2" }
 
 [features]
-default = ["dotenv"]
+default = ["dotenv", "with-serde"]
 dotenv = ["dep-dotenv"]
+with-serde = [] # for protobuf
 
 [dependencies]
 caolo-sim = { path = "../simulation", features=[] }
@@ -25,3 +32,4 @@ rand="*"
 
 dep-dotenv = { version="0.14", optional=true, package="dotenv" }
 uuid = { version="0.7" }
+protobuf = { version="2", features=["with-serde"] }

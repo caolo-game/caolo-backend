@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package input_messages;
+
+import "scripts.proto";
+
+message InputMsg
+{
+  bytes msg_id = 1;
+  oneof msg
+  {
+    scripts.UpdateScript update_script = 2;
+  }
+}

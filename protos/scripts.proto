@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package scripts;
+
+message UpdateScript
+{
+  bytes user_id = 1;
+  bytes script_id = 2;
+  CompiledScript compiled_script = 3;
+}
+
+message CompiledScript
+{
+  bytes bytecode = 1;
+  map<int32, Label> labels = 2;
+}
+
+message Label
+{
+  uint32 block = 1;
+  uint32 myself = 2;
+}

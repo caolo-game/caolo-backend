@@ -3,11 +3,12 @@
 //!
 mod astnode;
 use crate::{
-    traits::ByteEncodeProperties, CompiledProgram, InputString, Instruction, INPUT_STR_LEN,
+    traits::ByteEncodeProperties, CompiledProgram, InputString, Instruction, Label, INPUT_STR_LEN,
 };
 pub use astnode::*;
 use serde_derive::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::convert::TryFrom;
 use std::fmt::Debug;
 
 /// Unique id of each nodes in a single compilation
@@ -114,10 +115,11 @@ impl Compiler {
             .ok_or_else(|| format!("node [{}] not found in `nodes`", nodeid))?
             .clone();
 
-        let fromlabel = self.program.bytecode.len();
+        let fromlabel = u32::try_from(self.program.bytecode.len())
+            .expect("bytecode length to fit into 32 bits");
         self.program
             .labels
-            .insert(nodeid, [fromlabel, self.program.bytecode.len()]);
+            .insert(nodeid, Label::new(fromlabel, fromlabel));
 
         let instruction = node.node;
 

@@ -1,6 +1,11 @@
+// for protobuf
+#[macro_use]
+extern crate serde_derive;
+
 mod init;
 mod payload;
-mod script_update;
+mod input;
+mod protos;
 
 use caolo_sim::{self, storage::Storage};
 use log::{debug, error, info};
@@ -110,7 +115,7 @@ fn main() {
     send_schema(&client).expect("Send schema");
     loop {
         let start = Instant::now();
-        script_update::update_programs(&mut storage, &client);
+        input::handle_messages(&mut storage, &client);
         tick(&mut storage);
         send_world(&storage, &client).expect("Sending world");
         let t = Instant::now() - start;

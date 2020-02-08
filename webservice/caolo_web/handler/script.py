@@ -11,6 +11,9 @@ from ..model import db
 
 from ..service import get_redis_client
 
+import input_messages_pb2
+import scripts_pb2
+
 script_bp = Blueprint("script", __name__, url_prefix="/script")
 
 
@@ -58,10 +61,18 @@ def commit_script():
     db.session.add(program)
     db.session.commit()
 
-    content = json.dumps((current_user.id, program.id, compiled))
+    msg = input_messages_pb2.InputMsg()
+    msg.msg_id = b"asd"  # TODO
+    msg.update_script.user_id = current_user.id.encode('utf8')
+    msg.update_script.script_id = program.id.encode('utf8')
+    for k, v in compiled['labels'].items():
+        msg.update_script.compiled_script.labels[k].block = v[0]
+        msg.update_script.compiled_script.labels[k].myself = v[1]
+
+    content = msg.SerializeToString()
 
     redis_conn = get_redis_client()
-    redis_conn.lpush("PROGRAM", content)
+    redis_conn.lpush("INPUTS", content)
 
     return program.id
 

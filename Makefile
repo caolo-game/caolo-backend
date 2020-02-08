@@ -34,3 +34,6 @@ deploy: buildall pushall
 
 migrate:
 	docker-compose exec web python manage.py db upgrade
+
+protopy:
+	protoc -Iprotos --python_out=webservice/build/ protos/*.proto 

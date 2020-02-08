@@ -37,3 +37,4 @@ psycopg2-binary
 Flask-Migrate
 Flask-Script
 sqlalchemy-utils
+protobuf~=3.11

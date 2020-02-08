@@ -10,6 +10,7 @@ use caolo_sim::{
     tables::JoinIterator,
 };
 use log::{debug, error};
+use std::str::from_utf8;
 use uuid::Uuid;
 
 #[derive(Debug, Clone)]
@@ -23,14 +24,27 @@ type UpdateResult = Result<(), UpdateProgramError>;
 pub fn update_program(storage: &mut Storage, mut msg: UpdateScriptMsg) -> UpdateResult {
     debug!("Updating program {:?}", msg);
 
-    let user_id = Uuid::from_slice(&msg.user_id).map_err(|e| {
-        error!("Failed to deserialize userid {:?}", e);
-        UpdateProgramError::BadUserId
-    })?;
-    let script_id = Uuid::from_slice(&msg.script_id)
+    let user_id = from_utf8(&msg.user_id)
         .map_err(|e| {
-            error!("Failed to deserialize script_id {:?}", e);
+            error!("Failed to parse user_id as a utf8 string {:?}", e);
+            UpdateProgramError::BadUserId
+        })
+        .and_then(|user_id| {
+            Uuid::parse_str(user_id).map_err(|e| {
+                error!("Failed to deserialize user_id {:?}", e);
+                UpdateProgramError::BadUserId
+            })
+        })?;
+    let script_id = from_utf8(&msg.script_id)
+        .map_err(|e| {
+            error!("Failed to parse script_id as a utf8 string {:?}", e);
             UpdateProgramError::BadScriptId
+        })
+        .and_then(|script_id| {
+            Uuid::parse_str(script_id).map_err(|e| {
+                error!("Failed to deserialize script_id {:?}", e);
+                UpdateProgramError::BadScriptId
+            })
         })
         .map(|id| caolo_api::ScriptId(id))?;
 

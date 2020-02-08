@@ -81,6 +81,7 @@ class SimulationProtocol(WebSocketServerProtocol):
         self.send_world_state()
 
     def onClose(self, *args):
+        log.msg("closing simulation comms")
         super().onClose(*args)
         self.done = True
 

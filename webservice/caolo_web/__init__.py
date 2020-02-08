@@ -78,6 +78,7 @@ class SimulationProtocol(WebSocketServerProtocol):
         self.latency = int(latency) / 1000
         self.done = False
         reactor.callLater(self.latency, self.send_world_state)
+        self.send_world_state()
 
     def onClose(self, *args):
         super().onClose(*args)

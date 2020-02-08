@@ -3,8 +3,8 @@ import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent / "build"))
 
+import logging
 import os, sys, json
-
 from flask import Flask, request, jsonify, abort, redirect, url_for
 from flask_cors import CORS
 from twisted.python import log
@@ -87,7 +87,7 @@ class SimulationProtocol(WebSocketServerProtocol):
         import world_pb2
         from google.protobuf.json_format import MessageToDict
 
-        log.msg(f"Handling world_state")
+        log.msg(f"Handling world_state",logLevel=logging.DEBUG)
         if self.done:
             return
         else:
@@ -97,7 +97,6 @@ class SimulationProtocol(WebSocketServerProtocol):
         payload = redis_conn.get("WORLD_STATE")
         if payload:
             world_state = json.loads(payload)
-            log.msg(f"sending world state")
             payload = {"WORLD_STATE": world_state}
             payload = json.dumps(payload)
             self.sendMessage(payload.encode('utf8'))

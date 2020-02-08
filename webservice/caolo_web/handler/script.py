@@ -70,7 +70,9 @@ def commit_script():
         msg.update_script.compiled_script.labels[k].myself = v[1]
 
     command = Command(
-        user=current_user, raw_payload=msg.update_script.SerializeToString())
+        user=current_user,
+        raw_payload=msg.update_script.SerializeToString(),
+        status="sending")
 
     db.session.add(command)
     db.session.commit()
@@ -79,8 +81,16 @@ def commit_script():
 
     content = msg.SerializeToString()
 
-    redis_conn = get_redis_client()
-    redis_conn.lpush("INPUTS", content)
+    try:
+        redis_conn = get_redis_client()
+        redis_conn.lpush("INPUTS", content)
+    except:
+        command.status = "failed_to_send"
+        raise
+    else:
+        command.status = "pending"
+    finally:
+        db.session.commit()
 
     return program.id
 

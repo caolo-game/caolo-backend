@@ -19,7 +19,7 @@ pub fn build_bots<'a>(
         let mut msg = BotMsg::default();
         msg.set_id(id.0);
         msg.mut_position().set_x(pos.0.x);
-        msg.mut_position().set_x(pos.0.y);
+        msg.mut_position().set_y(pos.0.y);
         msg.mut_owner().clear();
         if let Some(owner) = owned_entities.get_by_id(&id) {
             *msg.mut_owner() = owner.owner_id.0.as_bytes().to_vec();

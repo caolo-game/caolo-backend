@@ -1,9 +1,11 @@
 use crate::protos::world::Bot as BotMsg;
-
 use crate::protos::world::LogEntry as LogMsg;
+use crate::protos::world::{Tile as TileMsg, Tile_TerrainType};
 use caolo_sim::model::{
-    components::{Bot, LogEntry, OwnedEntity, PositionComponent},
+    components::{Bot, LogEntry, OwnedEntity, PositionComponent, TerrainComponent},
+    geometry::point::Point,
     indices::EntityTime,
+    terrain::TileTerrainType,
     EntityId,
 };
 use caolo_sim::storage::views::View;
@@ -43,4 +45,19 @@ pub fn build_logs<'a>(v: View<'a, EntityTime, LogEntry>) -> impl Iterator<Item =
             }
             msg
         })
+}
+
+pub fn build_terrain<'a>(
+    v: View<'a, Point, TerrainComponent>,
+) -> impl Iterator<Item = TileMsg> + 'a {
+    v.reborrow().iter().filter_map(|(pos, tile)| match tile.0 {
+        TileTerrainType::Empty => None,
+        TileTerrainType::Wall => {
+            let mut msg = TileMsg::new();
+            msg.mut_position().set_q(pos.x);
+            msg.mut_position().set_r(pos.y);
+            msg.set_ty(Tile_TerrainType::WALL);
+            Some(msg)
+        }
+    })
 }

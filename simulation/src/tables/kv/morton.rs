@@ -90,6 +90,16 @@ where
         }
     }
 
+    pub fn iter<'a>(&'a self) -> impl Iterator<Item = (Id, &'a Row)> + 'a {
+        self.keys.iter().map(move |node| {
+            let val = node.ind;
+            let val = &self.values[val];
+            let x = node.x;
+            let y = node.y;
+            (Id::new(x as i32, y as i32), val)
+        })
+    }
+
     pub fn from_iterator<It>(it: It) -> Self
     where
         It: Iterator<Item = (Id, Row)>,

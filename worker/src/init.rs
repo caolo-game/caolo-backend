@@ -6,7 +6,7 @@ use caolo_sim::storage::{
 };
 use rand::Rng;
 
-const PROGRAM: &str = r#"{"nodes":{"0":{"node":{"ScalarInt":{"value":69}},"child":1},"1":{"node":{"ScalarInt":{"value":420}},"child":2},"2":{"node":{"Call":{"function":"make_point"}},"child":3},"3":{"node":{"Call":{"function":"bots::move_bot"}},"child":5},"4":{"node":{"Call":{"function":"make_operation_result"}},"child":9},"5":{"node":{"ScalarInt":{"value":0}},"child":4},"6":{"node":{"JumpIfTrue":{"nodeid":7}},"child":10},"7":{"node":{"StringLiteral":{"value":"Moving :)"}},"child":8},"8":{"node":{"Call":{"function":"console_log"}}},"9":{"node":{"Equals":null},"child":6},"10":{"node":{"StringLiteral":{"value":"No moverino :("}},"child":11},"11":{"node":{"Call":{"function":"console_log"}}},"12":{"node":{"Start":null},"child":0}},"name":"default"}"#;
+const PROGRAM: &str = r#"{"nodes":{"0":{"node":{"ScalarInt":{"value":25}},"child":1},"1":{"node":{"ScalarInt":{"value":25}},"child":2},"2":{"node":{"Call":{"function":"make_point"}},"child":3},"3":{"node":{"Call":{"function":"bots::move_bot"}},"child":5},"4":{"node":{"Call":{"function":"make_operation_result"}},"child":9},"5":{"node":{"ScalarInt":{"value":0}},"child":4},"6":{"node":{"JumpIfTrue":{"nodeid":7}},"child":10},"7":{"node":{"StringLiteral":{"value":"Moving :)"}},"child":8},"8":{"node":{"Call":{"function":"console_log"}}},"9":{"node":{"Equals":null},"child":6},"10":{"node":{"StringLiteral":{"value":"No moverino :("}},"child":11},"11":{"node":{"Call":{"function":"console_log"}}},"12":{"node":{"Start":null},"child":0}},"name":"default"}"#;
 
 pub fn init_storage(n_fake_users: usize) -> Storage {
     let mut storage = caolo_sim::init_inmemory_storage();
@@ -23,7 +23,7 @@ pub fn init_storage(n_fake_users: usize) -> Storage {
 
     let terrain = storage.point_table_mut::<components::TerrainComponent>();
 
-    for _ in 0..1000 {
+    for _ in 0..100 {
         let pos = uncontested_pos(terrain, &mut rng);
         terrain.insert(
             pos,
@@ -82,8 +82,8 @@ fn uncontested_pos<T: caolo_sim::tables::TableRow + Send + Sync>(
     rng: &mut impl Rng,
 ) -> Point {
     loop {
-        let x = rng.gen_range(0, 500);
-        let y = rng.gen_range(0, 500);
+        let x = rng.gen_range(0, 50);
+        let y = rng.gen_range(0, 50);
 
         let pos = Point::new(x, y);
 

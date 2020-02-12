@@ -171,6 +171,20 @@ where
         }
     }
 
+    pub fn contains_key(&self, id: &Id) -> bool {
+        profile!("contains_key");
+
+        if !self.intersects(&id) {
+            return false;
+        }
+        let [x, y] = id.as_array();
+        let [x, y] = [x as u16, y as u16];
+
+        self.keys
+            .binary_search_by_key(&MortonKey::new(x, y), |node| node.key)
+            .is_ok()
+    }
+
     /// For each id returns the first item with given id, if any
     pub fn get_by_ids<'a>(&'a self, ids: &[Id]) -> Vec<(Id, &'a Row)> {
         profile!("get_by_ids");

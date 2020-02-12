@@ -1,11 +1,8 @@
 use crate::model::{
     components::{EntityComponent, TerrainComponent},
-    geometry::{Circle, Point},
-    terrain::TileTerrainType,
+    geometry::Point,
 };
-use crate::tables::PositionTable;
-
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap};
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 struct Node {
@@ -40,29 +37,10 @@ pub fn find_path(
     mut max_iterations: u32,
     path: &mut Vec<Point>,
 ) -> Result<(), PathFindingError> {
-    let center = (from + to) / 2;
-    let circle = Circle {
-        radius: from.hex_distance(center) as u32,
-        center,
-    };
-
-    let mut terrain_tiles = Vec::with_capacity((circle.radius * circle.radius) as usize);
-    terrain.find_by_range(&center, circle.radius, &mut terrain_tiles);
-
-    let obsticles = positions
-        .get_entities_in_range(&circle)
-        .into_iter()
-        .map(|(_, pos)| pos.0)
-        .chain(terrain_tiles.iter().filter_map(|(p, t)| match t.0 {
-            TileTerrainType::Wall => Some(*p),
-            TileTerrainType::Empty => None,
-        }))
-        .collect::<HashSet<_>>();
-
     let current = from;
     let end = to;
 
-    let mut closed_set = HashMap::<Point, Node>::with_capacity(circle.radius as usize * 2);
+    let mut closed_set = HashMap::<Point, Node>::with_capacity(max_iterations as usize);
     let mut open_set = BTreeSet::new();
 
     let mut current = Node::new(current, current, current.hex_distance(end) as i32, 0);
@@ -86,12 +64,9 @@ pub fn find_path(
                 res
             })
             .filter(|p| {
-                let is_inside = circle.is_inside(**p);
-
-                (is_inside && !obsticles.contains(p))
-                    || (positions.get_by_id(*p).is_none()
-                        && terrain.get_by_id(*p).map(|x| &x.0) != Some(&TileTerrainType::Wall))
-                    || **p == end // End may be in the positions table!
+                // Filter only the free neighbours
+                // End may be in the either tables!
+                (!positions.contains_key(*p) && !terrain.contains_key(*p) || **p == end)
             })
             .for_each(|point| {
                 let node = Node::new(

@@ -111,7 +111,7 @@ pub fn find_path(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{components::EntityComponent, EntityId};
+    use crate::model::{components::EntityComponent, terrain::TileTerrainType, EntityId};
     use crate::tables::MortonTable;
 
     #[test]

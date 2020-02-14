@@ -1,6 +1,7 @@
 use crate::model::{
     components::{EntityComponent, TerrainComponent},
     geometry::Point,
+    terrain::TileTerrainType,
 };
 use std::collections::{BTreeSet, HashMap};
 
@@ -53,8 +54,9 @@ pub fn find_path(
         closed_set.insert(current.pos, current.clone());
         current
             .pos
-            .neighbours()
+            .hex_neighbours()
             .iter()
+            .cloned()
             .filter(|p| {
                 let res = positions.intersects(&p);
                 debug_assert!(
@@ -64,21 +66,30 @@ pub fn find_path(
                 res
             })
             .filter(|p| {
+                let is_wall = || {
+                    terrain
+                        .get_by_id(p)
+                        .map(|tile| match tile.0 {
+                            TileTerrainType::Wall => true,
+                            _ => false,
+                        })
+                        .unwrap_or(false)
+                };
                 // Filter only the free neighbours
                 // End may be in the either tables!
-                (!positions.contains_key(*p) && !terrain.contains_key(*p) || **p == end)
+                (!positions.contains_key(p) && !is_wall() || *p == end)
             })
             .for_each(|point| {
                 let node = Node::new(
-                    *point,
+                    point,
                     current.pos,
                     point.hex_distance(end) as i32,
                     current.g + 1,
                 );
-                if !open_set.contains(&node) && !closed_set.contains_key(point) {
+                if !open_set.contains(&node) && !closed_set.contains_key(&point) {
                     open_set.insert(node);
                 }
-                if let Some(node) = closed_set.get_mut(point) {
+                if let Some(node) = closed_set.get_mut(&point) {
                     if current.g + 1 < node.g {
                         node.g = current.g + 1;
                         node.parent = current.pos;

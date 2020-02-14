@@ -203,14 +203,15 @@ where
         let max = *center + Id::new(r, r);
 
         let [min, max] = self.morton_min_max(&min, &max);
-
-        for i in min..max {
-            let node = &self.keys[i];
+        let it = self.keys[min..=max].iter().filter_map(|node| {
             let id = Id::new(node.x as i32, node.y as i32);
             if center.dist(&id) < radius {
-                out.push((id, &self.values[node.ind]));
+                Some((id, &self.values[node.ind]))
+            } else {
+                None
             }
-        }
+        });
+        out.extend(it)
     }
 
     /// Find in AABB
@@ -223,43 +224,43 @@ where
 
         let [min, max] = self.morton_min_max(&min, &max);
 
-        let mut count = 0;
-        for i in min..max {
-            let node = &self.keys[i];
-            let id = Id::new(node.x as i32, node.y as i32);
-            if center.dist(&id) < radius {
-                count += 1;
-            }
-        }
-        count
+        self.keys[min..=max]
+            .iter()
+            .filter(move |node| {
+                let id = Id::new(node.x as i32, node.y as i32);
+                center.dist(&id) < radius
+            })
+            .count()
+            .try_into()
+            .expect("count to fit into 32 bits")
     }
 
     /// Turn AABB min-max to from-to indices
     /// Clamps `min` and `max` to intersect `self`
     fn morton_min_max(&self, min: &Id, max: &Id) -> [usize; 2] {
-        let [minx, miny] = min.as_array();
-        let [maxx, maxy] = max.as_array();
-
-        let [minx, miny, maxx, maxy] = [
-            minx.max(0x0000) as u16,
-            miny.max(0x0000) as u16,
-            maxx.min(0xffff) as u16,
-            maxy.min(0xffff) as u16,
-        ];
-
-        // calculate the range we have to check
-        let min = MortonKey::new(minx, miny);
-        let max = MortonKey::new(maxx, maxy);
-
-        // find the index for the min/max hash, or their place
-        let min: usize = self
-            .keys
-            .binary_search_by_key(&min, |node| node.key)
-            .unwrap_or_else(|i| i);
-        let max: usize = self.keys[min..]
-            .binary_search_by_key(&max, |node| node.key)
-            .unwrap_or_else(|i| i);
-
+        let min: usize = {
+            if !self.intersects(&min) {
+                0
+            } else {
+                let [minx, miny] = min.as_array();
+                let min = MortonKey::new(minx as u16, miny as u16);
+                self.keys
+                    .binary_search_by_key(&min, |node| node.key)
+                    .unwrap_or_else(|i| i)
+            }
+        };
+        let max: usize = {
+            let lim = (self.keys.len() as i64 - 1).max(0) as usize;
+            if !self.intersects(&max) {
+                lim
+            } else {
+                let [maxx, maxy] = max.as_array();
+                let max = MortonKey::new(maxx as u16, maxy as u16);
+                self.keys
+                    .binary_search_by_key(&max, |node| node.key)
+                    .unwrap_or_else(|i| i.min(lim))
+            }
+        };
         [min, max]
     }
 
@@ -267,7 +268,7 @@ where
     pub fn intersects(&self, point: &Id) -> bool {
         let [x, y] = point.as_array();
         // at most 16 bits long non-negative integers
-        x >= 0 && y >= 0 && (x & 0x0000ffff) == x && (y & 0x0000ffff) == y
+        x >= 0 && y >= 0 && (x & 0xffff) == x && (y & 0xffff) == y
     }
 }
 

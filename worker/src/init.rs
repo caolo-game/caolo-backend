@@ -23,7 +23,7 @@ pub fn init_storage(n_fake_users: usize) -> Storage {
 
     let terrain = storage.point_table_mut::<components::TerrainComponent>();
 
-    for _ in 0..100 {
+    for _ in 0..200 {
         let pos = uncontested_pos(terrain, &mut rng);
         terrain.insert(
             pos,

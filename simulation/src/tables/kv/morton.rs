@@ -36,6 +36,34 @@ impl MortonKey {
         n = (n ^ (n << 2)) & 0x33333333; // (3)
         (n ^ (n << 1)) & 0x55555555 // (4)
     }
+
+    #[allow(unused)]
+    pub fn as_point(&self) -> [u16; 2] {
+        let x = Self::reconstruct(self.0) as u16;
+        let y = Self::reconstruct(self.0 >> 1) as u16;
+        [x, y]
+    }
+
+    fn reconstruct(mut n: u32) -> u32 {
+        // -f-e-d-c-b-a-9-8-7-6-5-4-3-2-1-0
+        // -ffeeddccbbaa9988776655443322110
+        // --fe--dc--ba--98--76--54--32--10
+        // --fefedcdcbaba989876765454323210
+        // ----fedc----ba98----7654----3210
+        // ----fedcfedcba98ba98765476543210
+        // --------fedcba98--------76543210
+        // --------fedcba98fedcba9876543210
+        // ----------------fedcba9876543210
+        n = n & 0x55555555;
+        n = n | (n >> 1);
+        n = n & 0x33333333;
+        n = n | (n >> 2);
+        n = n & 0x0f0f0f0f;
+        n = n | (n >> 4);
+        n = n & 0x00ff00ff;
+        n = n | (n >> 8);
+        n & 0x0000ffff
+    }
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -44,7 +72,7 @@ struct Node {
     y: u16,
     key: MortonKey,
     /// index of the corresponding Row
-    ind: usize,
+    ind: u32,
 }
 
 impl Node {
@@ -52,7 +80,7 @@ impl Node {
         Self {
             x,
             y,
-            ind,
+            ind: ind.try_into().unwrap(),
             key: MortonKey::new(x, y),
         }
     }
@@ -93,10 +121,8 @@ where
     pub fn iter<'a>(&'a self) -> impl Iterator<Item = (Id, &'a Row)> + 'a {
         self.keys.iter().map(move |node| {
             let val = node.ind;
-            let val = &self.values[val];
-            let x = node.x;
-            let y = node.y;
-            (Id::new(x as i32, y as i32), val)
+            let val = &self.values[val as usize];
+            (Id::new(node.x as i32, node.y as i32), val)
         })
     }
 
@@ -165,7 +191,7 @@ where
             .keys
             .binary_search_by_key(&MortonKey::new(x, y), |node| node.key)
         {
-            Some(&self.values[self.keys[ind].ind])
+            Some(&self.values[self.keys[ind as usize].ind as usize])
         } else {
             None
         }
@@ -206,7 +232,7 @@ where
         let it = self.keys[min..=max].iter().filter_map(|node| {
             let id = Id::new(node.x as i32, node.y as i32);
             if center.dist(&id) < radius {
-                Some((id, &self.values[node.ind]))
+                Some((id, &self.values[node.ind as usize]))
             } else {
                 None
             }
@@ -295,10 +321,10 @@ where
                 let i = self.keys[ind].ind;
                 let last = self.values.len() - 1;
 
-                self.values.swap(i, last);
+                self.values.swap(i as usize, last);
 
                 for n in self.keys.iter_mut() {
-                    if n.ind == last {
+                    if n.ind as usize == last {
                         n.ind = i;
                         break;
                     }
@@ -653,5 +679,21 @@ mod tests {
             }
             v.len()
         });
+    }
+
+    #[test]
+    fn morton_key_reconstruction_rand() {
+        let mut rng = rand::thread_rng();
+
+        for _ in 0..(1 << 12) {
+            let x = rng.gen_range(0, 2000);
+            let y = rng.gen_range(0, 2000);
+
+            let morton = MortonKey::new(x, y);
+
+            let res = morton.as_point();
+
+            assert_eq!([x, y], res);
+        }
     }
 }

@@ -69,33 +69,14 @@ impl MortonKey {
     }
 }
 
-#[derive(Debug, Clone, Serialize)]
-struct Node {
-    x: u16,
-    y: u16,
-    key: MortonKey,
-    /// index of the corresponding Row
-    ind: u32,
-}
-
-impl Node {
-    pub fn new(x: u16, y: u16, ind: usize) -> Self {
-        Self {
-            x,
-            y,
-            ind: ind.try_into().unwrap(),
-            key: MortonKey::new(x, y),
-        }
-    }
-}
-
 #[derive(Default, Debug, Clone, Serialize)]
 pub struct MortonTable<Id, Row>
 where
     Id: SpatialKey2d,
     Row: TableRow,
 {
-    keys: Vec<Node>,
+    keys: Vec<MortonKey>,
+    poss: Vec<Id>,
     values: Vec<Row>,
 
     _m: PhantomData<Id>,
@@ -117,16 +98,16 @@ where
         Self {
             values: vec![],
             keys: vec![],
+            poss: vec![],
             _m: Default::default(),
         }
     }
 
     pub fn iter<'a>(&'a self) -> impl Iterator<Item = (Id, &'a Row)> + 'a {
         let values = self.values.as_ptr();
-        self.keys.iter().map(move |node| {
-            let val = node.ind;
-            let val = unsafe { &*values.offset(val as isize) };
-            (Id::new(node.x as i32, node.y as i32), val)
+        self.poss.iter().enumerate().map(move |(i, id)| {
+            let val = unsafe { &*values.offset(i as isize) };
+            (*id, val)
         })
     }
 
@@ -141,6 +122,7 @@ where
 
     pub fn clear(&mut self) {
         self.values.clear();
+        self.poss.clear();
         self.keys.clear();
     }
 
@@ -150,14 +132,56 @@ where
     {
         for (id, value) in it {
             let [x, y] = id.as_array();
-            self.keys.push(Node::new(
+            let key = MortonKey::new(
                 x.try_into().expect("positive integer fitting into 16 bits"),
                 y.try_into().expect("positive integer fitting into 16 bits"),
-                self.keys.len(),
-            ));
+            );
+            self.keys.push(key);
+            self.poss.push(id);
             self.values.push(value);
         }
-        self.sort();
+        Self::sort(
+            self.keys.as_mut_slice(),
+            self.poss.as_mut_slice(),
+            self.values.as_mut_slice(),
+        );
+    }
+
+    fn sort(keys: &mut [MortonKey], poss: &mut [Id], values: &mut [Row]) {
+        debug_assert!(keys.len() == poss.len(), "{} {}", keys.len(), poss.len());
+        debug_assert!(
+            keys.len() == values.len(),
+            "{} {}",
+            keys.len(),
+            values.len()
+        );
+        if keys.len() < 2 {
+            return;
+        }
+        let pivot = Self::sort_pivot(keys);
+        let (klo, khi) = keys.split_at_mut(pivot);
+        let (plo, phi) = poss.split_at_mut(pivot);
+        let (vlo, vhi) = values.split_at_mut(pivot);
+        rayon::join(
+            || Self::sort(klo, plo, vlo),
+            || Self::sort(&mut khi[1..], &mut phi[1..], &mut vhi[1..]),
+        );
+    }
+
+    fn sort_pivot(keys: &mut [MortonKey]) -> usize {
+        debug_assert!(keys.len() > 0);
+
+        let lim = keys.len() - 1;
+        let mut i = 0;
+        let pivot = keys[lim];
+        for j in 0..lim {
+            if keys[j] < pivot {
+                keys.swap(i, j);
+                i += 1;
+            }
+        }
+        keys.swap(i, lim);
+        i
     }
 
     /// May trigger reordering of items, if applicable prefer `extend` and insert many keys at once.
@@ -170,15 +194,12 @@ where
 
         let ind = self
             .keys
-            .binary_search_by_key(&MortonKey::new(x, y), |node| node.key)
+            .binary_search(&MortonKey::new(x, y))
             .unwrap_or_else(|i| i);
-        self.keys.insert(ind, Node::new(x, y, self.values.len()));
-        self.values.push(row);
+        self.keys.insert(ind, MortonKey::new(x, y));
+        self.poss.insert(ind, id);
+        self.values.insert(ind, row);
         true
-    }
-
-    fn sort(&mut self) {
-        self.keys.par_sort_by_key(|node| node.key);
     }
 
     /// Returns the first item with given id, if any
@@ -191,11 +212,8 @@ where
         let [x, y] = id.as_array();
         let [x, y] = [x as u16, y as u16];
 
-        if let Ok(ind) = self
-            .keys
-            .binary_search_by_key(&MortonKey::new(x, y), |node| node.key)
-        {
-            Some(&self.values[self.keys[ind as usize].ind as usize])
+        if let Ok(ind) = self.keys.binary_search(&MortonKey::new(x, y)) {
+            Some(&self.values[ind])
         } else {
             None
         }
@@ -210,9 +228,7 @@ where
         let [x, y] = id.as_array();
         let [x, y] = [x as u16, y as u16];
 
-        self.keys
-            .binary_search_by_key(&MortonKey::new(x, y), |node| node.key)
-            .is_ok()
+        self.keys.binary_search(&MortonKey::new(x, y)).is_ok()
     }
 
     /// For each id returns the first item with given id, if any
@@ -233,18 +249,20 @@ where
         let max = *center + Id::new(r, r);
 
         let [min, max] = self.morton_min_max(&min, &max);
-        let it = self.keys[min..=max].iter().filter_map(|node| {
-            let id = Id::new(node.x as i32, node.y as i32);
-            if center.dist(&id) < radius {
-                Some((id, &self.values[node.ind as usize]))
-            } else {
-                None
-            }
-        });
+        let it = self.poss[min..=max]
+            .iter()
+            .enumerate()
+            .filter_map(|(i, id)| {
+                if center.dist(&id) < radius {
+                    Some((*id, &self.values[i + min]))
+                } else {
+                    None
+                }
+            });
         out.extend(it)
     }
 
-    /// Find in AABB
+    /// Count in AABB
     pub fn count_in_range<'a>(&'a self, center: &Id, radius: u32) -> u32 {
         profile!("count_in_range");
 
@@ -254,12 +272,9 @@ where
 
         let [min, max] = self.morton_min_max(&min, &max);
 
-        self.keys[min..=max]
+        self.poss[min..=max]
             .iter()
-            .filter(move |node| {
-                let id = Id::new(node.x as i32, node.y as i32);
-                center.dist(&id) < radius
-            })
+            .filter(move |id| center.dist(&id) < radius)
             .count()
             .try_into()
             .expect("count to fit into 32 bits")
@@ -274,9 +289,7 @@ where
             } else {
                 let [minx, miny] = min.as_array();
                 let min = MortonKey::new(minx as u16, miny as u16);
-                self.keys
-                    .binary_search_by_key(&min, |node| node.key)
-                    .unwrap_or_else(|i| i)
+                self.keys.binary_search(&min).unwrap_or_else(|i| i)
             }
         };
         let max: usize = {
@@ -286,9 +299,7 @@ where
             } else {
                 let [maxx, maxy] = max.as_array();
                 let max = MortonKey::new(maxx as u16, maxy as u16);
-                self.keys
-                    .binary_search_by_key(&max, |node| node.key)
-                    .unwrap_or_else(|i| i.min(lim))
+                self.keys.binary_search(&max).unwrap_or_else(|i| i.min(lim))
             }
         };
         [min, max]
@@ -317,25 +328,12 @@ where
         let x = x.try_into().ok()?;
         let y = y.try_into().ok()?;
         let id = MortonKey::new(x, y);
-        match self.keys.binary_search_by_key(&id, |node| node.key) {
+        match self.keys.binary_search(&id) {
             Err(_) => None,
             Ok(ind) => {
-                // swap with the last, reassign the corresponding key
-                //
-                let i = self.keys[ind].ind;
-                let last = self.values.len() - 1;
-
-                self.values.swap(i as usize, last);
-
-                for n in self.keys.iter_mut() {
-                    if n.ind as usize == last {
-                        n.ind = i;
-                        break;
-                    }
-                }
-
                 self.keys.remove(ind);
-                Some(self.values.remove(last))
+                self.poss.remove(ind);
+                Some(self.values.remove(ind))
             }
         }
     }

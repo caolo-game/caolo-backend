@@ -8,12 +8,11 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Install dependencies
-          command: |
-            apt-get update
-            apt-get install libssl-dev pkg-config cmake zlib1g-dev -y
-            cargo install cargo-tarpaulin
-            cargo tarpaulin --version
+          name: Calculate dependencies
+          command: cargo generate-lockfile
+      - restore_cache:
+          keys:
+            - v4-cargo-cache-{{ arch }}-{{ checksum "Cargo.lock" }}
       - run:
           name: Update submodules
           command: |
@@ -25,17 +24,11 @@ jobs:
             curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v3.11.3/protoc-3.11.3-linux-x86_64.zip
             unzip -o  protoc-3.11.3-linux-x86_64.zip -d /usr/local bin/protoc
       - run:
-          name: Calculate dependencies
-          command: cargo generate-lockfile
-      - restore_cache:
-          keys:
-            - v4-cargo-cache-{{ arch }}-{{ checksum "Cargo.lock" }}
-      - run:
           name: Check
           command: cargo check
       - run:
           name: Test
-          command: cargo tarpaulin -v
+          command: cargo test
       - save_cache:
           paths:
             - /usr/local/cargo/registry
@@ -43,6 +36,16 @@ jobs:
             - target/debug/build
             - target/debug/deps
           key: v4-cargo-cache-{{ arch }}-{{ checksum "Cargo.lock" }}
+      - run:
+          name: Install dependencies
+          command: |
+            apt-get update
+            apt-get install libssl-dev pkg-config cmake zlib1g-dev -y
+            cargo install cargo-tarpaulin
+            cargo tarpaulin --version
+      - run:
+          name: Report coverage
+          command: cargo tarpaulin
 
   docs:
     docker:

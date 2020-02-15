@@ -77,7 +77,7 @@ pub fn find_path(
                 };
                 // Filter only the free neighbours
                 // End may be in the either tables!
-                (!positions.contains_key(p) && !is_wall() || *p == end)
+                (!positions.contains_key(p) && !is_wall()) || *p == end
             })
             .for_each(|point| {
                 let node = Node::new(

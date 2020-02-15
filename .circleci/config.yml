@@ -36,15 +36,6 @@ jobs:
             - target/debug/build
             - target/debug/deps
           key: v4-cargo-cache-{{ arch }}-{{ checksum "Cargo.lock" }}
-
-  coverage:
-    machine:
-      image: ubuntu-1604:201903-01
-    steps:
-      - checkout
-      - run:
-          name: Coverage with docker
-          command: docker run --security-opt seccomp=unconfined -v "${PWD}:/volume" xd009642/tarpaulin
   docs:
     docker:
       - image: rust:1.40.0
@@ -104,9 +95,6 @@ workflows:
   build_test:
     jobs:
       - test_worker
-      - coverage:
-          requires:
-            - test_worker
       - docs:
           requires:
             - test_worker

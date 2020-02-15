@@ -49,6 +49,14 @@ where
         }
     }
 
+    pub fn with_capacity(cap: usize) -> Self {
+        Self {
+            values: Vec::with_capacity(cap),
+            keys: Vec::with_capacity(cap),
+            poss: Vec::with_capacity(cap),
+        }
+    }
+
     pub fn iter<'a>(&'a self) -> impl Iterator<Item = (Id, &'a Row)> + 'a {
         let values = self.values.as_ptr();
         self.poss.iter().enumerate().map(move |(i, id)| {
@@ -78,10 +86,11 @@ where
     {
         for (id, value) in it {
             let [x, y] = id.as_array();
-            let key = MortonKey::new(
+            let [x, y] = [
                 x.try_into().expect("positive integer fitting into 16 bits"),
                 y.try_into().expect("positive integer fitting into 16 bits"),
-            );
+            ];
+            let key = MortonKey::new(x, y);
             self.keys.push(key);
             self.poss.push(id);
             self.values.push(value);

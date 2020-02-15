@@ -67,8 +67,8 @@ pub fn init_inmemory_storage() -> storage::Storage {
 
     storage.add_user_table::<UserComponent>(BTreeTable::new());
 
-    storage.add_point_table::<TerrainComponent>(MortonTable::new());
-    storage.add_point_table::<EntityComponent>(MortonTable::new());
+    storage.add_point_table::<TerrainComponent>(MortonTable::with_capacity(1024));
+    storage.add_point_table::<EntityComponent>(MortonTable::with_capacity(1024));
 
     storage.add_scripts_table::<ScriptComponent>(BTreeTable::new());
 

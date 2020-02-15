@@ -8,6 +8,12 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Install dependencies
+          command: |
+            apt-get update && apt-get install libssl-dev pkg-config cmake zlib1g-dev
+            cargo install cargo-tarpauling
+            cargo tarpaulin --version
+      - run:
           name: Update submodules
           command: |
             git submodule init

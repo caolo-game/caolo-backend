@@ -35,7 +35,7 @@ jobs:
           command: cargo check
       - run:
           name: Test
-          command: cargo test
+          command: cargo tarpaulin -v
       - save_cache:
           paths:
             - /usr/local/cargo/registry

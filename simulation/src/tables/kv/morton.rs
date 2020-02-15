@@ -9,7 +9,6 @@ use crate::model::{components::EntityComponent, geometry::Point};
 use rayon::prelude::*;
 use serde_derive::Serialize;
 use std::convert::TryInto;
-use std::marker::PhantomData;
 
 use crate::profile;
 
@@ -78,8 +77,6 @@ where
     keys: Vec<MortonKey>,
     poss: Vec<Id>,
     values: Vec<Row>,
-
-    _m: PhantomData<Id>,
 }
 
 unsafe impl<Id, Row> Send for MortonTable<Id, Row>
@@ -99,7 +96,6 @@ where
             values: vec![],
             keys: vec![],
             poss: vec![],
-            _m: Default::default(),
         }
     }
 

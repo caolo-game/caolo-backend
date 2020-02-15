@@ -154,7 +154,7 @@ where
         if keys.len() < 2 {
             return;
         }
-        let pivot = Self::sort_pivot(keys);
+        let pivot = Self::sort_partition(keys, poss, values);
         let (klo, khi) = keys.split_at_mut(pivot);
         let (plo, phi) = poss.split_at_mut(pivot);
         let (vlo, vhi) = values.split_at_mut(pivot);
@@ -164,7 +164,7 @@ where
         );
     }
 
-    fn sort_pivot(keys: &mut [MortonKey]) -> usize {
+    fn sort_partition(keys: &mut [MortonKey], poss: &mut [Id], values: &mut [Row]) -> usize {
         debug_assert!(keys.len() > 0);
 
         let lim = keys.len() - 1;
@@ -173,10 +173,14 @@ where
         for j in 0..lim {
             if keys[j] < pivot {
                 keys.swap(i, j);
+                poss.swap(i, j);
+                values.swap(i, j);
                 i += 1;
             }
         }
         keys.swap(i, lim);
+        poss.swap(i, lim);
+        values.swap(i, lim);
         i
     }
 
@@ -576,6 +580,28 @@ mod tests {
         });
     }
 
+    #[test]
+    fn from_iterator_inserts_correctly() {
+        let mut rng = rand::thread_rng();
+
+        let len = 1 << 12;
+        let mut points = Vec::with_capacity(len);
+        let tree = MortonTable::from_iterator((0..len).map(|_| {
+            let pos = Point {
+                x: rng.gen_range(0, 3900 * 2),
+                y: rng.gen_range(0, 3900 * 2),
+            };
+            let val = rng.next_u32();
+            points.push((pos.clone(), val));
+            (pos, val)
+        }));
+
+        for (pos, val) in points {
+            let v = *tree.get_by_id(&pos).expect("to find the value");
+            assert_eq!(val, v);
+        }
+    }
+
     #[bench]
     fn bench_get_by_id_in_tree(b: &mut Bencher) {
         let mut rng = rand::thread_rng();
@@ -693,5 +719,27 @@ mod tests {
 
             assert_eq!([x, y], res);
         }
+    }
+
+    #[bench]
+    fn bench_random_insert(b: &mut Bencher) {
+        let mut rng = rand::thread_rng();
+        let mut table = MortonTable::<Point, usize>::new();
+
+        for _ in 0..10_000 {
+            let x = rng.gen_range(0, 29000);
+            let y = rng.gen_range(0, 29000);
+            let p = Point::new(x, y);
+
+            table.insert(p, 420);
+        }
+
+        b.iter(|| {
+            let x = rng.gen_range(0, 29000);
+            let y = rng.gen_range(0, 29000);
+            let p = Point::new(x, y);
+
+            table.insert(p, 420)
+        })
     }
 }

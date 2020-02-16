@@ -3,9 +3,10 @@ use crate::model::{
     geometry::Point,
     terrain::TileTerrainType,
 };
-use std::collections::{BTreeSet, HashMap};
+use crate::tables::Component;
+use std::collections::{HashMap, HashSet};
 
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 struct Node {
     pub pos: Point,
     pub parent: Point,
@@ -29,12 +30,18 @@ pub enum PathFindingError {
     Unreachable,
 }
 
+type EntityComponentTable = <EntityComponent as Component<Point>>::Table;
+type TerrainComponentTable = <TerrainComponent as Component<Point>>::Table;
+
 /// Find path from `from` to `to`. Will append the resulting path to the `path` output vector.
+/// The output' path is in reverse order. Pop the elements to walk the path.
+/// This is a performance consideration, as most callers should not need to reverse the order of
+/// elements.
 pub fn find_path(
     from: Point,
     to: Point,
-    positions: &<EntityComponent as crate::tables::Component<Point>>::Table,
-    terrain: &<TerrainComponent as crate::tables::Component<Point>>::Table,
+    positions: &EntityComponentTable,
+    terrain: &TerrainComponentTable,
     mut max_iterations: u32,
     path: &mut Vec<Point>,
 ) -> Result<(), PathFindingError> {
@@ -42,7 +49,7 @@ pub fn find_path(
     let end = to;
 
     let mut closed_set = HashMap::<Point, Node>::with_capacity(max_iterations as usize);
-    let mut open_set = BTreeSet::new();
+    let mut open_set = HashSet::with_capacity(max_iterations as usize);
 
     let mut current = Node::new(current, current, current.hex_distance(end) as i32, 0);
     closed_set.insert(current.pos, current.clone());
@@ -77,7 +84,7 @@ pub fn find_path(
                 };
                 // Filter only the free neighbours
                 // End may be in the either tables!
-                (!positions.contains_key(p) && !is_wall()) || *p == end
+                *p == end || (!positions.contains_key(p) && !is_wall())
             })
             .for_each(|point| {
                 let node = Node::new(
@@ -86,7 +93,7 @@ pub fn find_path(
                     point.hex_distance(end) as i32,
                     current.g + 1,
                 );
-                if !open_set.contains(&node) && !closed_set.contains_key(&point) {
+                if !closed_set.contains_key(&point) {
                     open_set.insert(node);
                 }
                 if let Some(node) = closed_set.get_mut(&point) {
@@ -101,6 +108,7 @@ pub fn find_path(
 
     if current.pos != end {
         if max_iterations > 0 {
+            // we ran out of possible paths
             Err(PathFindingError::Unreachable)?;
         }
         Err(PathFindingError::NotFound)?;
@@ -109,13 +117,10 @@ pub fn find_path(
     // reconstruct path
     let mut current = end;
     let end = from;
-    let from = path.len();
     while current != end {
         path.push(current);
         current = closed_set[&current].parent;
     }
-    // path is reconstructed from the end backwards, so fix the order of points
-    path[from..].reverse();
     Ok(())
 }
 
@@ -138,6 +143,7 @@ mod tests {
 
         let mut path = vec![];
         find_path(from, to, &positions, &terrain, 512, &mut path).expect("Path finding failed");
+        path.reverse();
 
         let mut current = from;
         for point in path.iter() {
@@ -151,18 +157,16 @@ mod tests {
     }
 
     #[test]
-    fn test_simple() {
+    fn test_path_is_continous() {
         let from = Point::new(17, 6);
         let to = Point::new(7, 16);
 
-        let mut positions = MortonTable::new();
+        let positions = MortonTable::new();
         let terrain = MortonTable::new();
-
-        positions.insert(from, EntityComponent(EntityId(0)));
-        positions.insert(to, EntityComponent(EntityId(1)));
 
         let mut path = vec![];
         find_path(from, to, &positions, &terrain, 512, &mut path).expect("Path finding failed");
+        path.reverse();
 
         let mut current = from;
         for point in path.iter() {

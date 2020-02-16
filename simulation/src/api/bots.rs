@@ -40,11 +40,11 @@ pub fn move_bot(
         return vm.set_value(OperationResult::InvalidTarget);
     }
 
-    let intent = match path.get(0) {
+    let intent = match path.pop() {
         Some(position) => {
             bots::MoveIntent {
                 id: entity,
-                position: *position, // TODO: cache path
+                position: position, // TODO: cache path
             }
         }
         None => {

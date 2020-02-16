@@ -23,9 +23,6 @@ pub fn move_bot(
     })?;
     let storage = vm.get_aux().storage();
 
-    let positions = storage.point_table::<components::EntityComponent>();
-    let terrain = storage.point_table::<components::TerrainComponent>();
-
     let botpos = storage
         .entity_table::<components::PositionComponent>()
         .get_by_id(&entity)
@@ -35,7 +32,7 @@ pub fn move_bot(
         })?;
 
     let mut path = Vec::with_capacity(1000);
-    if let Err(e) = pathfinding::find_path(botpos.0, point, positions, terrain, 1000, &mut path) {
+    if let Err(e) = pathfinding::find_path(botpos.0, point, storage.into(), 1000, &mut path) {
         debug!("pathfinding failed {:?}", e);
         return vm.set_value(OperationResult::InvalidTarget);
     }

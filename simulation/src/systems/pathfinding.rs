@@ -3,7 +3,7 @@ use crate::model::{
     geometry::Point,
     terrain::TileTerrainType,
 };
-use crate::tables::Component;
+use crate::storage::views::View;
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -30,9 +30,6 @@ pub enum PathFindingError {
     Unreachable,
 }
 
-type EntityComponentTable = <EntityComponent as Component<Point>>::Table;
-type TerrainComponentTable = <TerrainComponent as Component<Point>>::Table;
-
 /// Find path from `from` to `to`. Will append the resulting path to the `path` output vector.
 /// The output' path is in reverse order. Pop the elements to walk the path.
 /// This is a performance consideration, as most callers should not need to reverse the order of
@@ -40,8 +37,7 @@ type TerrainComponentTable = <TerrainComponent as Component<Point>>::Table;
 pub fn find_path(
     from: Point,
     to: Point,
-    positions: &EntityComponentTable,
-    terrain: &TerrainComponentTable,
+    (positions, terrain): (View<Point, EntityComponent>, View<Point, TerrainComponent>),
     mut max_iterations: u32,
     path: &mut Vec<Point>,
 ) -> Result<(), PathFindingError> {
@@ -70,30 +66,20 @@ pub fn find_path(
                     terrain.intersects(&p) == res,
                     "if p intersects positions it must also intersect terrain!"
                 );
-                res
-            })
-            .filter(|p| {
-                let is_wall = || {
-                    terrain
-                        .get_by_id(p)
-                        .map(|tile| match tile.0 {
-                            TileTerrainType::Wall => true,
-                            _ => false,
-                        })
-                        .unwrap_or(false)
-                };
-                // Filter only the free neighbours
-                // End may be in the either tables!
-                *p == end || (!positions.contains_key(p) && !is_wall())
+                res && (
+                    // Filter only the free neighbours
+                    // End may be in the either tables!
+                    *p == end || (!positions.contains_key(p) && !is_wall(p, terrain.clone()))
+                )
             })
             .for_each(|point| {
-                let node = Node::new(
-                    point,
-                    current.pos,
-                    point.hex_distance(end) as i32,
-                    current.g + 1,
-                );
                 if !closed_set.contains_key(&point) {
+                    let node = Node::new(
+                        point,
+                        current.pos,
+                        point.hex_distance(end) as i32,
+                        current.g + 1,
+                    );
                     open_set.insert(node);
                 }
                 if let Some(node) = closed_set.get_mut(&point) {
@@ -124,6 +110,16 @@ pub fn find_path(
     Ok(())
 }
 
+fn is_wall(p: &Point, terrain: View<Point, TerrainComponent>) -> bool {
+    terrain
+        .get_by_id(p)
+        .map(|tile| match tile.0 {
+            TileTerrainType::Wall => true,
+            _ => false,
+        })
+        .unwrap_or(false)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -141,7 +137,14 @@ mod tests {
         }
 
         let mut path = vec![];
-        find_path(from, to, &positions, &terrain, 512, &mut path).expect("Path finding failed");
+        find_path(
+            from,
+            to,
+            (View::from_table(&positions), View::from_table(&terrain)),
+            512,
+            &mut path,
+        )
+        .expect("Path finding failed");
         path.reverse();
 
         let mut current = from;
@@ -164,7 +167,14 @@ mod tests {
         let terrain = MortonTable::new();
 
         let mut path = vec![];
-        find_path(from, to, &positions, &terrain, 512, &mut path).expect("Path finding failed");
+        find_path(
+            from,
+            to,
+            (View::from_table(&positions), View::from_table(&terrain)),
+            512,
+            &mut path,
+        )
+        .expect("Path finding failed");
         path.reverse();
 
         let mut current = from;

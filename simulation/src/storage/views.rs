@@ -42,6 +42,10 @@ impl<'a, Id: TableId, C: Component<Id>> View<'a, Id, C> {
     pub fn reborrow(self) -> &'a C::Table {
         self.0
     }
+
+    pub fn from_table(t: &'a C::Table) -> Self {
+        Self(t)
+    }
 }
 
 impl<'a, Id: TableId, C: Component<Id>> Deref for View<'a, Id, C> {

@@ -109,9 +109,9 @@ pub fn find_path(
     if current.pos != end {
         if max_iterations > 0 {
             // we ran out of possible paths
-            Err(PathFindingError::Unreachable)?;
+            return Err(PathFindingError::Unreachable);
         }
-        Err(PathFindingError::NotFound)?;
+        return Err(PathFindingError::NotFound);
     }
 
     // reconstruct path
@@ -127,7 +127,6 @@ pub fn find_path(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{components::EntityComponent, terrain::TileTerrainType, EntityId};
     use crate::tables::MortonTable;
 
     #[test]

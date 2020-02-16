@@ -2,43 +2,44 @@ use crate::model::{
     components::{EntityScript, ScriptComponent},
     EntityId, ScriptId, UserId,
 };
-use crate::{intents, profile, storage::Storage};
+use crate::{intents::Intents, profile, storage::Storage};
 use cao_lang::prelude::*;
 use std::sync::{Arc, Mutex};
 
-pub type ExecutionResult = Result<intents::Intents, String>;
+pub type ExecutionResult = Result<Intents, String>;
 
 /// Must be called from a tokio runtime!
 /// Returns the intents that are expected to be executed
-pub fn execute_scripts(storage: &Storage) -> intents::Intents {
+pub fn execute_scripts(storage: &Storage) -> Intents {
     profile!("execute_scripts");
 
-    let intents = Arc::new(Mutex::new(intents::Intents::new()));
-    {
-        let intents = intents.clone();
-        rayon::scope(move |s| {
-            for (entityid, script) in storage.entity_table::<EntityScript>().iter() {
-                let intents = intents.clone();
-                s.spawn(move |_| {
-                    match execute_single_script(entityid, script.script_id, storage) {
-                        Ok(ints) => {
-                            let mut intents = intents.lock().unwrap();
-                            intents.merge(ints);
-                        }
-                        Err(e) => {
-                            error!(
-                                "Execution failure of script {:?} of entity {:?} {:?}",
-                                entityid, script, e
-                            );
-                        }
-                    }
-                });
-            }
-        });
-    }
+    let intents = Arc::new(Mutex::new(Intents::new()));
+    execute_scripts_parallel(Arc::clone(&intents), storage);
 
     let intents = Arc::try_unwrap(intents).expect("Arc unwrap");
     intents.into_inner().expect("Mutex unwrap")
+}
+
+fn execute_scripts_parallel(intents: Arc<Mutex<Intents>>, storage: &Storage) {
+    rayon::scope(move |s| {
+        for (entityid, script) in storage.entity_table::<EntityScript>().iter() {
+            let intents = intents.clone();
+            s.spawn(
+                move |_| match execute_single_script(entityid, script.script_id, storage) {
+                    Ok(ints) => {
+                        let mut intents = intents.lock().unwrap();
+                        intents.merge(ints);
+                    }
+                    Err(e) => {
+                        error!(
+                            "Execution failure of script {:?} of entity {:?} {:?}",
+                            entityid, script, e
+                        );
+                    }
+                },
+            );
+        }
+    });
 }
 
 pub fn execute_single_script<'a>(
@@ -57,7 +58,7 @@ pub fn execute_single_script<'a>(
         })?;
 
     let data = ScriptExecutionData {
-        intents: intents::Intents::new(),
+        intents: Intents::new(),
         storage: storage as *const _,
         entityid,
         current_user: Some(Default::default()), // None, // TODO
@@ -77,7 +78,7 @@ pub fn execute_single_script<'a>(
 }
 
 pub struct ScriptExecutionData {
-    intents: intents::Intents,
+    intents: Intents,
     storage: *const Storage,
     entityid: EntityId,
     current_user: Option<UserId>,
@@ -92,7 +93,7 @@ impl ScriptExecutionData {
         unsafe { &*self.storage }
     }
 
-    pub fn intents_mut(&mut self) -> &mut intents::Intents {
+    pub fn intents_mut(&mut self) -> &mut Intents {
         &mut self.intents
     }
 

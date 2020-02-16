@@ -1,3 +1,5 @@
+//! Structs intended to be used as table indices.
+//!
 use crate::tables::SerialId;
 use serde_derive::Serialize;
 

@@ -4,6 +4,7 @@ use crate::model::{
     components::{Bot, CarryComponent, EnergyComponent, OwnedEntity, PositionComponent, Resource},
     EntityId, OperationResult,
 };
+use crate::storage::views::View;
 
 pub const DROPOFF_RANGE: u64 = 1;
 
@@ -55,12 +56,18 @@ impl DropoffIntent {
 pub fn check_dropoff_intent(
     intent: model::bots::DropoffIntent,
     userid: model::UserId,
-    storage: &crate::storage::Storage,
+    (bots, owners, positions, carry, energy): (
+        View<EntityId, Bot>,
+        View<EntityId, OwnedEntity>,
+        View<EntityId, PositionComponent>,
+        View<EntityId, CarryComponent>,
+        View<EntityId, EnergyComponent>,
+    ),
 ) -> OperationResult {
     let id = intent.id;
-    match storage.entity_table::<Bot>().get_by_id(&id) {
+    match bots.get_by_id(&id) {
         Some(_) => {
-            let owner_id = storage.entity_table::<OwnedEntity>().get_by_id(&id);
+            let owner_id = owners.get_by_id(&id);
             if owner_id.map(|id| id.owner_id != userid).unwrap_or(true) {
                 return OperationResult::NotOwner;
             }
@@ -68,16 +75,13 @@ pub fn check_dropoff_intent(
         None => return OperationResult::InvalidInput,
     };
 
-    if storage
-        .entity_table::<CarryComponent>()
+    if carry
         .get_by_id(&id)
         .map(|carry| carry.carry == 0)
         .unwrap_or(true)
     {
         return OperationResult::Empty;
     }
-
-    let positions = storage.entity_table::<PositionComponent>();
 
     let target = intent.target;
     let nearby = positions.get_by_id(&id).and_then(|botpos| {
@@ -88,22 +92,21 @@ pub fn check_dropoff_intent(
     match nearby {
         None => {
             error!("Bot or target has no position components {:?}", intent);
-            return OperationResult::InvalidInput;
+            OperationResult::InvalidInput
         }
-        Some(false) => {
-            return OperationResult::NotInRange;
-        }
+        Some(false) => OperationResult::NotInRange,
         Some(true) => {
-            let capacity = storage.entity_table::<EnergyComponent>().get_by_id(&target);
+            let capacity = energy.get_by_id(&target);
             if capacity.is_none() {
                 error!("Target has no energy component {:?}", intent);
                 return OperationResult::InvalidInput;
             }
             let capacity = capacity.unwrap();
             if capacity.energy < capacity.energy_max {
-                return OperationResult::Ok;
+                OperationResult::Ok
+            } else {
+                OperationResult::Full
             }
-            return OperationResult::Full;
         }
     }
 }

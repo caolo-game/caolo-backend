@@ -37,13 +37,12 @@ pub fn move_bot(
         return vm.set_value(OperationResult::InvalidTarget);
     }
 
+    // TODO: cache path
     let intent = match path.pop() {
-        Some(position) => {
-            bots::MoveIntent {
-                id: entity,
-                position: position, // TODO: cache path
-            }
-        }
+        Some(position) => bots::MoveIntent {
+            id: entity,
+            position: position,
+        },
         None => {
             debug!("Entity {:?} is trying to move to its own position", entity);
             return vm.set_value(OperationResult::InvalidTarget);
@@ -51,7 +50,7 @@ pub fn move_bot(
     };
     let userid = vm.get_aux().userid().expect("userid to be set");
 
-    let checkresult = check_move_intent(&intent, userid, From::from(storage as &_));
+    let checkresult = check_move_intent(&intent, userid, storage.into());
     let result = vm.set_value(checkresult);
 
     vm.get_aux_mut()

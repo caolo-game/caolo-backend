@@ -11,10 +11,11 @@ pub use cao_lang::prelude::*;
 
 use self::geometry::point::Point;
 use crate::storage::{views, Storage};
+use crate::tables::SpatialKey2d;
 use serde_derive::{Deserialize, Serialize};
 use std::convert::TryFrom;
 
-impl crate::tables::SpatialKey2d for Point {
+impl SpatialKey2d for Point {
     fn as_array(&self) -> [i32; 2] {
         [self.x, self.y]
     }

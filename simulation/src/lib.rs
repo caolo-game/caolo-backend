@@ -15,7 +15,7 @@ mod systems;
 mod utils;
 
 use systems::execute_world_update;
-use systems::intent_execution::execute_intents;
+use systems::intent_system::execute_intents;
 use systems::script_execution::execute_scripts;
 use tables::{BTreeTable, MortonTable, VecTable};
 

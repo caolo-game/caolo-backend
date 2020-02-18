@@ -102,6 +102,24 @@ impl HasNewMut for DeleteEntityView {
     }
 }
 
+pub struct InsertEntityView {
+    storage: *mut Storage,
+}
+
+impl InsertEntityView {
+    pub unsafe fn insert_entity(&mut self) -> EntityId {
+        (*self.storage).insert_entity()
+    }
+}
+
+impl HasNewMut for InsertEntityView {
+    fn new(storage: &mut Storage) -> Self {
+        Self {
+            storage: storage as *mut _,
+        }
+    }
+}
+
 pub trait HasNew<'a> {
     fn new(s: &'a Storage) -> Self;
 }

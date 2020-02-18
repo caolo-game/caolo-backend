@@ -1,4 +1,3 @@
-use super::*;
 use crate::model::{
     self,
     components::{Bot, CarryComponent, EnergyComponent, OwnedEntity, PositionComponent, Resource},
@@ -14,38 +13,6 @@ pub struct DropoffIntent {
     pub structure: EntityId,
     pub amount: u16,
     pub ty: Resource,
-}
-
-impl DropoffIntent {
-    pub fn execute(&self, storage: &mut crate::storage::Storage) -> IntentResult {
-        // dropoff amount = min(bot carry , amount , structure capacity)
-        let mut carry_component = storage
-            .entity_table::<CarryComponent>()
-            .get_by_id(&self.bot)
-            .cloned()
-            .ok_or_else(|| "Bot has no carry")?;
-        let mut store_component = storage
-            .entity_table::<EnergyComponent>()
-            .get_by_id(&self.bot)
-            .cloned()
-            .ok_or_else(|| "Bot has no carry")?;
-        let dropoff = self
-            .amount
-            .min(carry_component.carry)
-            .min(store_component.energy_max - store_component.energy);
-
-        store_component.energy += dropoff;
-        carry_component.carry -= dropoff;
-
-        storage
-            .entity_table_mut::<CarryComponent>()
-            .insert_or_update(self.bot, carry_component);
-        storage
-            .entity_table_mut::<EnergyComponent>()
-            .insert_or_update(self.structure, store_component);
-
-        Ok(())
-    }
 }
 
 /// A valid dropoff intent has the following characteristics:

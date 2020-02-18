@@ -1,4 +1,4 @@
-//! Actions _intented_ to be executed by clients
+//! Actions, world updates the clients _intented_ to be executed.
 //!
 mod dropoff_intent;
 mod log_intent;
@@ -13,13 +13,6 @@ pub use self::move_intent::*;
 pub use self::spawn_intent::*;
 
 use crate::model::EntityId;
-use crate::storage::Storage;
-
-pub type IntentResult = Result<(), Box<dyn std::error::Error>>;
-
-pub trait ExecutableIntent {
-    fn execute(&self, storage: &mut Storage) -> IntentResult;
-}
 
 #[derive(Debug, Clone, Default)]
 pub struct Intents {

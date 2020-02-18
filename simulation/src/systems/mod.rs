@@ -1,6 +1,6 @@
 pub mod decay_system;
 pub mod energy_system;
-pub mod intent_execution;
+pub mod intent_system;
 pub mod log_system;
 pub mod mineral_system;
 pub mod pathfinding;

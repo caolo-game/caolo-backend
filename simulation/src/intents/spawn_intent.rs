@@ -8,55 +8,6 @@ pub struct SpawnIntent {
     pub owner_id: Option<UserId>,
 }
 
-impl SpawnIntent {
-    pub fn execute(self, storage: &mut Storage) -> IntentResult {
-        debug!("Spawning bot {:?} from structure {:?}", self.bot, self.id);
-
-        let mut spawn = storage
-            .entity_table::<components::SpawnComponent>()
-            .get_by_id(&self.id)
-            .cloned()
-            .ok_or_else(|| "structure does not have spawn component")?;
-
-        if spawn.spawning.is_some() {
-            Err("busy")?;
-        }
-
-        let energy = storage
-            .entity_table::<components::EnergyComponent>()
-            .get_by_id(&self.id)
-            .ok_or_else(|| "structure does not have energy")?;
-
-        if energy.energy < 200 {
-            return Err("not enough energy".into());
-        }
-
-        let bot_id = storage.insert_entity();
-        storage
-            .entity_table_mut::<components::SpawnBotComponent>()
-            .insert_or_update(
-                bot_id,
-                components::SpawnBotComponent {
-                    bot: components::Bot {},
-                },
-            );
-        if let Some(owner_id) = self.owner_id {
-            storage
-                .entity_table_mut::<components::OwnedEntity>()
-                .insert_or_update(bot_id, components::OwnedEntity { owner_id: owner_id });
-        }
-
-        spawn.time_to_spawn = 5;
-        spawn.spawning = Some(bot_id);
-
-        storage
-            .entity_table_mut::<components::SpawnComponent>()
-            .insert_or_update(self.id, spawn);
-
-        Ok(())
-    }
-}
-
 pub fn check_spawn_intent(
     intent: &model::structures::SpawnIntent,
     userid: Option<model::UserId>,

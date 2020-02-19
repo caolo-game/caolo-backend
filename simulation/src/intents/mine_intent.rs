@@ -1,4 +1,4 @@
-use crate::model::{bots, components, EntityId, OperationResult, UserId};
+use crate::model::{components, EntityId, OperationResult, UserId};
 use crate::storage::views::View;
 
 #[derive(Debug, Clone)]
@@ -8,15 +8,17 @@ pub struct MineIntent {
 }
 
 pub fn check_mine_intent(
-    intent: &bots::MineIntent,
+    intent: &MineIntent,
     userid: UserId,
-    bots: View<EntityId, components::Bot>,
-    owner_ids: View<EntityId, components::OwnedEntity>,
-    positions: View<EntityId, components::PositionComponent>,
-    resources: View<EntityId, components::ResourceComponent>,
-    energy: View<EntityId, components::EnergyComponent>,
+    (bots, owner_ids, positions, resources, energy): (
+        View<EntityId, components::Bot>,
+        View<EntityId, components::OwnedEntity>,
+        View<EntityId, components::PositionComponent>,
+        View<EntityId, components::ResourceComponent>,
+        View<EntityId, components::EnergyComponent>,
+    ),
 ) -> OperationResult {
-    let id = intent.id;
+    let id = intent.bot;
     match bots.get_by_id(&id) {
         Some(_) => {
             let owner_id = owner_ids.get_by_id(&id);
@@ -35,7 +37,7 @@ pub fn check_mine_intent(
         }
     };
 
-    let target = intent.target;
+    let target = intent.resource;
     let mineralpos = match positions.get_by_id(&target) {
         Some(pos) => pos,
         None => {

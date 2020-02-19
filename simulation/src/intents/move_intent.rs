@@ -13,7 +13,7 @@ pub struct MoveIntent {
 }
 
 pub fn check_move_intent(
-    intent: &model::bots::MoveIntent,
+    intent: &MoveIntent,
     userid: model::UserId,
     (owner_ids, positions, bots, terrain, entity_positions): (
         View<EntityId, components::OwnedEntity>,
@@ -23,7 +23,7 @@ pub fn check_move_intent(
         View<Point, EntityComponent>,
     ),
 ) -> OperationResult {
-    let id = intent.id;
+    let id = intent.bot;
     match bots.get_by_id(&id) {
         Some(_) => {
             let owner_id = owner_ids.get_by_id(&id);

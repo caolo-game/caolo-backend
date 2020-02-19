@@ -10,7 +10,7 @@ pub use self::resources::*;
 pub use self::spawns::*;
 use crate::model;
 use crate::model::geometry::point::Point;
-use crate::model::OperationResult;
+use crate::model::{OperationResult, EntityId};
 use crate::systems::script_execution::ScriptExecutionData;
 use cao_lang::prelude::*;
 use cao_lang::scalar::Scalar;
@@ -125,12 +125,30 @@ pub fn make_import() -> Schema {
             },
             FunctionRow {
                 desc: subprogram_description!(
-                    bots::move_bot,
+                    bots::mine_resource,
+                    "Move the bot to the given Point",
+                    [EntityId],
+                    [OperationResult]
+                ),
+                fo: FunctionObject::new(FunctionWrapper::new(bots::mine_resource)),
+            },
+            FunctionRow {
+                desc: subprogram_description!(
+                    bots::approach_entity,
+                    "Move the bot to the given Entity",
+                    [EntityId],
+                    [OperationResult]
+                ),
+                fo: FunctionObject::new(FunctionWrapper::new(bots::approach_entity)),
+            },
+            FunctionRow {
+                desc: subprogram_description!(
+                    bots::move_bot_to_position,
                     "Move the bot to the given Point",
                     [Point],
                     [OperationResult]
                 ),
-                fo: FunctionObject::new(FunctionWrapper::new(bots::move_bot)),
+                fo: FunctionObject::new(FunctionWrapper::new(bots::move_bot_to_position)),
             },
             FunctionRow {
                 desc: subprogram_description!(
@@ -155,7 +173,7 @@ pub fn make_import() -> Schema {
                     find_closest_resource_by_range,
                     "Find the resource closest to the current entity",
                     [],
-                    [OperationResult, Point]
+                    [OperationResult, EntityId]
                 ),
                 fo: FunctionObject::new(FunctionWrapper::new(find_closest_resource_by_range)),
             },

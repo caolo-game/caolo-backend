@@ -1,7 +1,5 @@
 use super::*;
-use crate::model::{
-    components::{EntityComponent, PositionComponent, ResourceComponent},
-};
+use crate::model::components::{EntityComponent, PositionComponent, ResourceComponent};
 use crate::profile;
 
 pub const MAX_SEARCH_RADIUS: u32 = 256;
@@ -41,10 +39,10 @@ pub fn find_closest_resource_by_range(
         .min_by_key(|(pos, _)| pos.hex_distance(position.0))
     {
         None => vm.set_value((OperationResult::OperationFailed,)),
-        Some((pos, _entity)) => {
+        Some((_pos, entity)) => {
             // move out of the result to free the storage borrow
-            let pos = *pos;
-            vm.set_value((OperationResult::Ok, pos))
+            let id = entity.0;
+            vm.set_value((OperationResult::Ok, id.0))
         }
     }
 }

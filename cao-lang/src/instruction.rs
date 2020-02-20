@@ -58,6 +58,8 @@ pub enum Instruction {
     Less = 25,
     /// Is the first param less than or equal to the second?
     LessOrEq = 26,
+    /// Pops the top of the stack and discards it
+    Pop = 27,
 }
 
 impl TryFrom<u8> for Instruction {
@@ -88,6 +90,7 @@ impl TryFrom<u8> for Instruction {
             24 => Ok(NotEquals),
             25 => Ok(Less),
             26 => Ok(LessOrEq),
+            27 => Ok(Pop),
             _ => Err(format!("Unrecognized instruction [{}]", c)),
         }
     }
@@ -153,6 +156,12 @@ pub fn get_instruction_descriptions() -> Vec<SubProgram<'static>> {
             "Return 1 if the first input is less than or equal to the second, 0 otherwise",
             [Scalar, Scalar],
             [Scalar]
+        ),
+        subprogram_description!(
+            Instruction::Pop,
+            "Pops the top elements on the stack and discards it",
+            [Scalar],
+            []
         ),
     ]
 }

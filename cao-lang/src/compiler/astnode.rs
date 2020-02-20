@@ -30,6 +30,7 @@ pub enum InstructionNode {
     LessOrEq,
     Equals,
     NotEquals,
+    Pop,
     ScalarInt(IntegerNode),
     ScalarFloat(FloatNode),
     ScalarLabel(IntegerNode),
@@ -58,6 +59,7 @@ impl InstructionNode {
             LessOrEq => Instruction::LessOrEq,
             Equals => Instruction::Equals,
             NotEquals => Instruction::NotEquals,
+            Pop => Instruction::Pop,
             ScalarInt(_) => Instruction::ScalarInt,
             ScalarFloat(_) => Instruction::ScalarFloat,
             ScalarArray(_) => Instruction::ScalarArray,
@@ -77,9 +79,9 @@ impl InstructionNode {
     fn _instruction_to_node(instr: Instruction) {
         use Instruction::*;
         match instr {
-            Less | LessOrEq | Equals | NotEquals | Exit | StringLiteral | WriteReg | ReadReg
-            | Start | JumpIfTrue | Jump | CopyLast | Call | Sub | Mul | Div | ScalarArray
-            | ScalarLabel | ScalarFloat | ScalarInt | Add | Pass => {}
+            Pop | Less | LessOrEq | Equals | NotEquals | Exit | StringLiteral | WriteReg
+            | ReadReg | Start | JumpIfTrue | Jump | CopyLast | Call | Sub | Mul | Div
+            | ScalarArray | ScalarLabel | ScalarFloat | ScalarInt | Add | Pass => {}
         };
     }
 }

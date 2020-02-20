@@ -140,6 +140,12 @@ impl<Aux> VM<Aux> {
             );
             ptr += 1;
             match instr {
+                Instruction::Pop => {
+                    self.stack.pop().ok_or_else(|| {
+                        debug!("Value not found");
+                        ExecutionError::InvalidArgument
+                    })?;
+                }
                 Instruction::Start => {}
                 Instruction::WriteReg => {
                     let value = self.stack.pop().ok_or_else(|| {

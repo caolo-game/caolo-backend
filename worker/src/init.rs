@@ -6,7 +6,7 @@ use caolo_sim::storage::{
 };
 use rand::Rng;
 
-const PROGRAM: &str = r#"{"nodes":{"0":{"node":{"ScalarInt":{"value":25}},"child":1},"1":{"node":{"ScalarInt":{"value":25}},"child":2},"2":{"node":{"Call":{"function":"make_point"}},"child":3},"3":{"node":{"Call":{"function":"bots::move_bot"}},"child":5},"4":{"node":{"Call":{"function":"make_operation_result"}},"child":9},"5":{"node":{"ScalarInt":{"value":0}},"child":4},"6":{"node":{"JumpIfTrue":{"nodeid":7}},"child":10},"7":{"node":{"StringLiteral":{"value":"Moving :)"}},"child":8},"8":{"node":{"Call":{"function":"console_log"}}},"9":{"node":{"Equals":null},"child":6},"10":{"node":{"StringLiteral":{"value":"No moverino :("}},"child":11},"11":{"node":{"Call":{"function":"console_log"}}},"12":{"node":{"Start":null},"child":0}},"name":"default"}"#;
+const PROGRAM: &str = r#"{"nodes":{"0":{"node":{"ScalarInt":{"value":25}},"child":1},"1":{"node":{"ScalarInt":{"value":25}},"child":2},"2":{"node":{"Call":{"function":"make_point"}},"child":3},"3":{"node":{"Call":{"function":"bots::move_bot_to_position"}},"child":5},"4":{"node":{"Call":{"function":"make_operation_result"}},"child":9},"5":{"node":{"ScalarInt":{"value":0}},"child":4},"6":{"node":{"JumpIfTrue":{"nodeid":7}},"child":10},"7":{"node":{"StringLiteral":{"value":"Moving :)"}},"child":8},"8":{"node":{"Call":{"function":"console_log"}}},"9":{"node":{"Equals":null},"child":6},"10":{"node":{"StringLiteral":{"value":"No moverino :("}},"child":11},"11":{"node":{"Call":{"function":"console_log"}}},"12":{"node":{"Start":null},"child":0}},"name":"default"}"#;
 
 pub fn init_storage(n_fake_users: usize) -> Storage {
     let mut storage = caolo_sim::init_inmemory_storage();

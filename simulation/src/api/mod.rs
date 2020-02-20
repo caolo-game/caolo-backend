@@ -10,7 +10,7 @@ pub use self::resources::*;
 pub use self::spawns::*;
 use crate::model;
 use crate::model::geometry::point::Point;
-use crate::model::{OperationResult, EntityId};
+use crate::model::{EntityId, OperationResult};
 use crate::systems::script_execution::ScriptExecutionData;
 use cao_lang::prelude::*;
 use cao_lang::scalar::Scalar;

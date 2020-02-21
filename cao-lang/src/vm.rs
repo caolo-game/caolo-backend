@@ -10,32 +10,22 @@ use std::convert::TryFrom;
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Object {
     /// index of the Object's data in the VM memory
-    data_index: u32,
+    pub index: u32,
     /// size of the data in the VM memory
-    data_size: i32,
-}
-
-impl Object {
-    pub fn index(&self) -> u32 {
-        self.data_index
-    }
-
-    pub fn size(&self) -> u32 {
-        self.data_size as u32
-    }
+    pub size: u32,
 }
 
 /// Cao-Lang bytecode interpreter.
 /// Aux is an auxiliary data structure passed to custom functions.
 #[derive(Debug)]
 pub struct VM<Aux = ()> {
+    stack: Vec<Scalar>,
     auxiliary_data: Aux,
     memory: Vec<u8>,
     memory_limit: usize,
     callables: HashMap<String, FunctionObject<Aux>>,
-    stack: Vec<Scalar>,
-    registers: [Scalar; 16],
     objects: HashMap<TPointer, Object>,
+    registers: [Scalar; 16],
 }
 
 impl<Aux> VM<Aux> {
@@ -81,9 +71,9 @@ impl<Aux> VM<Aux> {
     }
 
     pub fn get_value<T: ByteEncodeProperties>(&self, ptr: TPointer) -> Option<T> {
-        let size = T::BYTELEN as i32;
+        let size = T::BYTELEN;
         let object = self.objects.get(&ptr)?;
-        if object.data_size != size {
+        if object.size as usize != size {
             debug!(
                 "Attempting to reference an object with the wrong type ({}) at address {}",
                 T::displayname(),
@@ -91,7 +81,7 @@ impl<Aux> VM<Aux> {
             );
             return None;
         }
-        let head = object.data_index as usize;
+        let head = object.index as usize;
         let tail = (head + size as usize).min(self.memory.len());
         T::decode(&self.memory[head..tail])
     }
@@ -101,8 +91,8 @@ impl<Aux> VM<Aux> {
         let result = self.memory.len();
         let bytes = val.encode();
         let object = Object {
-            data_index: result as u32,
-            data_size: T::BYTELEN as i32,
+            index: result as u32,
+            size: T::BYTELEN as u32,
         };
 
         self.memory.extend(bytes.iter());
@@ -284,7 +274,7 @@ impl<Aux> VM<Aux> {
                     let literal = Self::read_str(&mut ptr, &program.bytecode)
                         .ok_or(ExecutionError::InvalidArgument)?;
                     let obj = self.set_value(literal)?;
-                    self.stack.push(Scalar::Pointer(obj.index() as i32));
+                    self.stack.push(Scalar::Pointer(obj.index as i32));
                 }
                 Instruction::Call => {
                     let fun_name =
@@ -312,8 +302,8 @@ impl<Aux> VM<Aux> {
                     })?;
                     debug!("Function call returned value: {:?}", res);
 
-                    if res.size() > 0 {
-                        self.stack.push(Scalar::Pointer(res.index() as i32));
+                    if res.size > 0 {
+                        self.stack.push(Scalar::Pointer(res.index as i32));
                     }
 
                     self.callables.insert(fun_name, fun);

@@ -17,12 +17,16 @@ use std::convert::TryFrom;
 
 pub fn unload(
     vm: &mut VM<ScriptExecutionData>,
-    (amount, ty, structure): (i32, Resource, EntityId),
+    (amount, ty, structure): (i32, Resource, TPointer),
 ) -> Result<Object, ExecutionError> {
     profile!("unload");
 
     let amount = TryFrom::try_from(amount).map_err(|e| {
         debug!("unload called with invalid amount: {}", e);
+        ExecutionError::InvalidArgument
+    })?;
+    let structure: EntityId = vm.get_value(structure).ok_or_else(|| {
+        warn!("upload called without a structure");
         ExecutionError::InvalidArgument
     })?;
 
@@ -50,12 +54,19 @@ pub fn unload(
 
 pub fn mine_resource(
     vm: &mut VM<ScriptExecutionData>,
-    entityid: EntityId,
+    entityid: TPointer,
 ) -> Result<Object, ExecutionError> {
     profile!("mine_resource");
 
+    let entityid: EntityId = vm.get_value(entityid).ok_or_else(|| {
+        warn!("approach_entity called without a target");
+        ExecutionError::InvalidArgument
+    })?;
+
     let aux = vm.get_aux();
     let storage = aux.storage();
+    let userid = aux.userid().expect("userid to be set");
+
     if storage
         .entity_table::<ResourceComponent>()
         .get_by_id(&entityid)
@@ -70,8 +81,6 @@ pub fn mine_resource(
         resource: entityid,
     };
 
-    let userid = aux.userid().expect("userid to be set");
-
     let checkresult = check_mine_intent(&intent, userid, storage.into());
     if let OperationResult::Ok = checkresult {
         vm.get_aux_mut().intents_mut().mine_intents.push(intent);
@@ -82,9 +91,14 @@ pub fn mine_resource(
 
 pub fn approach_entity(
     vm: &mut VM<ScriptExecutionData>,
-    target: EntityId,
+    target: TPointer,
 ) -> Result<Object, ExecutionError> {
     profile!("approach_entity");
+
+    let target: EntityId = vm.get_value(target).ok_or_else(|| {
+        warn!("approach_entity called without a target");
+        ExecutionError::InvalidArgument
+    })?;
 
     let aux = vm.get_aux();
     let entity = aux.entityid();
@@ -124,7 +138,7 @@ pub fn move_bot_to_position(
     let userid = aux.userid().expect("userid to be set");
 
     let point: Point = vm.get_value(point).ok_or_else(|| {
-        error!("move_bot called without a point");
+        warn!("move_bot called without a point");
         ExecutionError::InvalidArgument
     })?;
 

@@ -118,6 +118,15 @@ impl<Aux> VM<Aux> {
         Ok(object)
     }
 
+    pub fn stack_push(&mut self, value: Scalar) -> Result<(), ExecutionError> {
+        self.stack.push(value);
+        Ok(())
+    }
+
+    pub fn stack_pop(&mut self) -> Option<Scalar> {
+        self.stack.pop()
+    }
+
     pub fn run(&mut self, program: &CompiledProgram) -> Result<i32, ExecutionError> {
         debug!("Running program");
         let mut ptr = 0;
@@ -295,19 +304,15 @@ impl<Aux> VM<Aux> {
                             ExecutionError::MissingArgument
                         })?)
                     }
-                    let outptr = self.memory.len() as i32;
-                    debug!(
-                        "Calling function {} with inputs: {:?} output: {:?}",
-                        fun_name, inputs, outptr
-                    );
+                    debug!("Calling function {} with inputs: {:?}", fun_name, inputs);
                     let res = fun.call(self, &inputs).map_err(|e| {
                         error!("Calling function {:?} failed with {:?}", fun_name, e);
                         e
                     })?;
                     debug!("Function call returned value: {:?}", res);
 
-                    if res.data_size > 0 {
-                        self.stack.push(Scalar::Pointer(outptr));
+                    if res.size() > 0 {
+                        self.stack.push(Scalar::Pointer(res.index() as i32));
                     }
 
                     self.callables.insert(fun_name, fun);

@@ -10,7 +10,7 @@ pub use self::resources::*;
 pub use self::spawns::*;
 use crate::model;
 use crate::model::geometry::point::Point;
-use crate::model::{EntityId, OperationResult};
+use crate::model::{components, EntityId, OperationResult};
 use crate::systems::script_execution::ScriptExecutionData;
 use cao_lang::prelude::*;
 use cao_lang::scalar::Scalar;
@@ -154,7 +154,7 @@ pub fn make_import() -> Schema {
                 desc: subprogram_description!(
                     make_point,
                     "Create a point from x and y coordinates",
-                    [Scalar, Scalar],
+                    [i32, i32],
                     [Point]
                 ),
                 fo: FunctionObject::new(FunctionWrapper::new(make_point)),
@@ -185,6 +185,15 @@ pub fn make_import() -> Schema {
                     [OperationResult]
                 ),
                 fo: FunctionObject::new(FunctionWrapper::new(make_operation_result)),
+            },
+            FunctionRow {
+                desc: subprogram_description!(
+                    unload,
+                    "Unload resources",
+                    [u16, components::Resource, EntityId],
+                    [OperationResult]
+                ),
+                fo: FunctionObject::new(FunctionWrapper::new(unload)),
             },
         ],
     }

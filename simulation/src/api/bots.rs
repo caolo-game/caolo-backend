@@ -1,29 +1,64 @@
 use super::*;
 use crate::{
-    intents::{check_mine_intent, check_move_intent, MineIntent, MoveIntent},
+    intents::{
+        check_dropoff_intent, check_mine_intent, check_move_intent, DropoffIntent, MineIntent,
+        MoveIntent,
+    },
     model::{
-        components, components::ResourceComponent, geometry::point::Point, EntityId,
-        OperationResult, UserId,
+        components::{self, Resource, ResourceComponent},
+        geometry::point::Point,
+        EntityId, OperationResult, UserId,
     },
     profile,
     storage::Storage,
     systems::pathfinding,
 };
+use std::convert::TryFrom;
+
+pub fn unload(
+    vm: &mut VM<ScriptExecutionData>,
+    (amount, ty, structure): (i32, Resource, EntityId),
+) -> Result<Object, ExecutionError> {
+    profile!("unload");
+
+    let amount = TryFrom::try_from(amount).map_err(|e| {
+        debug!("unload called with invalid amount: {}", e);
+        ExecutionError::InvalidArgument
+    })?;
+
+    let aux = vm.get_aux();
+    let storage = aux.storage();
+    let entityid = aux.entityid();
+    let userid = aux.userid().expect("userid to be set");
+
+    let dropoff_intent = DropoffIntent {
+        bot: entityid,
+        amount,
+        ty,
+        structure,
+    };
+
+    let checkresult = check_dropoff_intent(&dropoff_intent, userid, storage.into());
+    if let OperationResult::Ok = checkresult {
+        vm.get_aux_mut()
+            .intents_mut()
+            .dropoff_intents
+            .push(dropoff_intent);
+    }
+    vm.set_value(checkresult)
+}
 
 pub fn mine_resource(
     vm: &mut VM<ScriptExecutionData>,
-    entity_id: TPointer,
+    entityid: EntityId,
 ) -> Result<Object, ExecutionError> {
     profile!("mine_resource");
-    let entity_id: EntityId = vm.get_value(entity_id).ok_or_else(|| {
-        error!("mine_resource called without an entity_id");
-        ExecutionError::InvalidArgument
-    })?;
+
     let aux = vm.get_aux();
     let storage = aux.storage();
     if storage
         .entity_table::<ResourceComponent>()
-        .get_by_id(&entity_id)
+        .get_by_id(&entityid)
         .is_none()
     {
         warn!("mine_resource called on an entity that is not a resource");
@@ -32,7 +67,7 @@ pub fn mine_resource(
 
     let intent = MineIntent {
         bot: aux.entityid(),
-        resource: entity_id,
+        resource: entityid,
     };
 
     let userid = aux.userid().expect("userid to be set");
@@ -47,18 +82,14 @@ pub fn mine_resource(
 
 pub fn approach_entity(
     vm: &mut VM<ScriptExecutionData>,
-    target: TPointer,
+    target: EntityId,
 ) -> Result<Object, ExecutionError> {
     profile!("approach_entity");
 
-    let entity = vm.get_aux().entityid();
-
-    let target: EntityId = vm.get_value(target).ok_or_else(|| {
-        error!("approach_entity called without an entity");
-        ExecutionError::InvalidArgument
-    })?;
-
-    let storage = vm.get_aux().storage();
+    let aux = vm.get_aux();
+    let entity = aux.entityid();
+    let storage = aux.storage();
+    let userid = aux.userid().expect("userid to be set");
 
     let targetpos = match storage
         .entity_table::<components::PositionComponent>()
@@ -70,7 +101,6 @@ pub fn approach_entity(
             return vm.set_value(OperationResult::InvalidInput);
         }
     };
-    let userid = vm.get_aux().userid().expect("userid to be set");
 
     let checkresult = match move_to_pos(entity, targetpos.0, userid, storage) {
         Ok(intent) => {
@@ -88,14 +118,15 @@ pub fn move_bot_to_position(
 ) -> Result<Object, ExecutionError> {
     profile!("move_bot_to_position");
 
-    let entity = vm.get_aux().entityid();
+    let aux = vm.get_aux();
+    let entity = aux.entityid();
+    let storage = aux.storage();
+    let userid = aux.userid().expect("userid to be set");
 
     let point: Point = vm.get_value(point).ok_or_else(|| {
         error!("move_bot called without a point");
         ExecutionError::InvalidArgument
     })?;
-    let storage = vm.get_aux().storage();
-    let userid = vm.get_aux().userid().expect("userid to be set");
 
     let checkresult = match move_to_pos(entity, point, userid, storage) {
         Ok(intent) => {

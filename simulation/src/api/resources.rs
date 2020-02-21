@@ -1,6 +1,7 @@
 use super::*;
 use crate::model::components::{EntityComponent, PositionComponent, ResourceComponent};
 use crate::profile;
+use cao_lang::prelude::Scalar;
 
 pub const MAX_SEARCH_RADIUS: u32 = 256;
 
@@ -42,7 +43,10 @@ pub fn find_closest_resource_by_range(
         Some((_pos, entity)) => {
             // move out of the result to free the storage borrow
             let id = entity.0;
-            vm.set_value((OperationResult::Ok, id.0))
+            let id = vm.set_value(id.0)?;
+            let id = Scalar::Pointer(id.index() as i32);
+            vm.stack_push(id)?;
+            vm.set_value(OperationResult::Ok)
         }
     }
 }

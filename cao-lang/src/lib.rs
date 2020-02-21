@@ -144,38 +144,12 @@ macro_rules! subprogram_description {
         }
     };
 
-    (input $head: ty) => {
-        vec![ <$head as ByteEncodeProperties>::displayname() ]
-    };
-
-    (input [$($result:expr),*], $head: ty) => {
+    (input $($lst:ty),*) => {
         vec![
-            $($result),*
-                , <$head as ByteEncodeProperties>::displayname()
+            $(
+                <$lst as ByteEncodeProperties>::displayname()
+            ),*
         ]
-    };
-
-    (input [$($result:expr),*], $head: ty, $($tail: ty),*) => {
-        subprogram_description!(
-            input
-            [
-            $($result),*
-            , <$head as ByteEncodeProperties>::displayname()
-            ],
-            $($tail)*
-        )
-    };
-
-    (input $head:ty, $($tail: ty),*) => {
-        subprogram_description!(
-            input
-            [ <$head as ByteEncodeProperties>::displayname() ],
-            $($tail),*
-        )
-    };
-
-    (input [$($result:expr),*]) => {
-        vec![$($result),*]
     };
 
     (input) => {

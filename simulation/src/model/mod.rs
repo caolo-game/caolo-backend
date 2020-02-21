@@ -1,4 +1,3 @@
-pub mod bots;
 pub mod components;
 pub mod geometry;
 pub mod indices;

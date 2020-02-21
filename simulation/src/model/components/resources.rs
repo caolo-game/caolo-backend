@@ -1,0 +1,35 @@
+use crate::tables::{BTreeTable, Component, TableId};
+use cao_lang::{prelude::Scalar, traits::AutoByteEncodeProperties};
+use serde_derive::Serialize;
+use std::convert::TryFrom;
+
+#[derive(Debug, Serialize, Clone, Copy)]
+#[repr(u8)]
+pub enum Resource {
+    Mineral = 1,
+}
+
+impl AutoByteEncodeProperties for Resource {}
+impl TryFrom<Scalar> for Resource {
+    type Error = Scalar;
+    fn try_from(s: Scalar) -> Result<Resource, Scalar> {
+        match s {
+            Scalar::Integer(i) => {
+                if i < 0 {
+                    return Err(s);
+                }
+                match i {
+                    1 => Ok(Resource::Mineral),
+                    _ => Err(s),
+                }
+            }
+            _ => Err(s),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct ResourceComponent(pub Resource);
+impl<Id: TableId> Component<Id> for ResourceComponent {
+    type Table = BTreeTable<Id, Self>;
+}

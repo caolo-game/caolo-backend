@@ -1,3 +1,6 @@
+mod resources;
+pub use resources::*;
+
 use super::terrain::TileTerrainType;
 use super::{geometry::Point, EntityId, ScriptId, UserId};
 use crate::tables::{BTreeTable, Component, MortonTable, SpatialKey2d, TableId, VecTable};
@@ -86,12 +89,6 @@ impl<Id: TableId> Component<Id> for DecayComponent {
     type Table = BTreeTable<Id, Self>;
 }
 
-#[derive(Debug, Serialize, Clone, Copy)]
-#[repr(u8)]
-pub enum Resource {
-    Mineral,
-}
-
 #[derive(Debug, Clone, Serialize)]
 pub struct SpawnBotComponent {
     pub bot: Bot,
@@ -130,12 +127,6 @@ impl<Id: TableId> Component<Id> for LogEntry {
 pub struct TerrainComponent(pub TileTerrainType);
 impl<Id: SpatialKey2d + Send + Sync> Component<Id> for TerrainComponent {
     type Table = MortonTable<Id, Self>;
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct ResourceComponent(pub Resource);
-impl<Id: TableId> Component<Id> for ResourceComponent {
-    type Table = BTreeTable<Id, Self>;
 }
 
 /// Entities with Scripts

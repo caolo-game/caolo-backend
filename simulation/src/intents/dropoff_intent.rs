@@ -21,7 +21,7 @@ pub struct DropoffIntent {
 /// - the target is not full
 /// - the target is within dropoff range
 pub fn check_dropoff_intent(
-    intent: model::bots::DropoffIntent,
+    intent: &DropoffIntent,
     userid: model::UserId,
     (bots, owners, positions, carry, energy): (
         View<EntityId, Bot>,
@@ -31,7 +31,7 @@ pub fn check_dropoff_intent(
         View<EntityId, EnergyComponent>,
     ),
 ) -> OperationResult {
-    let id = intent.id;
+    let id = intent.bot;
     match bots.get_by_id(&id) {
         Some(_) => {
             let owner_id = owners.get_by_id(&id);
@@ -50,7 +50,7 @@ pub fn check_dropoff_intent(
         return OperationResult::Empty;
     }
 
-    let target = intent.target;
+    let target = intent.structure;
     let nearby = positions.get_by_id(&id).and_then(|botpos| {
         positions
             .get_by_id(&target)

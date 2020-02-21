@@ -223,15 +223,18 @@ fn from_iterator_inserts_correctly() {
     let mut rng = rand::thread_rng();
 
     let len = 1 << 12;
-    let mut points = Vec::with_capacity(len);
-    let tree = MortonTable::from_iterator((0..len).map(|_| {
+    let mut points = HashMap::with_capacity(len);
+    let tree = MortonTable::from_iterator((0..len).filter_map(|_| {
         let pos = Point {
             x: rng.gen_range(0, 3900 * 2),
             y: rng.gen_range(0, 3900 * 2),
         };
+        if !points.contains_key(&pos) {
+            return None;
+        }
         let val = rng.next_u32();
-        points.push((pos.clone(), val));
-        (pos, val)
+        points.insert(pos.clone(), val);
+        Some((pos, val))
     }));
 
     for (pos, val) in points {

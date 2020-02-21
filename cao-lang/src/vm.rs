@@ -299,10 +299,11 @@ impl<Aux> VM<Aux> {
                     let n_inputs = fun.num_params();
                     let mut inputs = Vec::with_capacity(n_inputs as usize);
                     for _ in 0..n_inputs {
-                        inputs.push(self.stack.pop().ok_or_else(|| {
+                        let arg = self.stack.pop().ok_or_else(|| {
                             error!("Missing argument to function call {:?}", fun_name);
                             ExecutionError::MissingArgument
-                        })?)
+                        })?;
+                        inputs.push(arg)
                     }
                     debug!("Calling function {} with inputs: {:?}", fun_name, inputs);
                     let res = fun.call(self, &inputs).map_err(|e| {
@@ -322,7 +323,6 @@ impl<Aux> VM<Aux> {
                 return Err(ExecutionError::OutOfMemory);
             }
             debug!("Stack {:?}", self.stack);
-            debug!("Top of stack: {:?}", self.stack.last());
         }
 
         Err(ExecutionError::UnexpectedEndOfInput)

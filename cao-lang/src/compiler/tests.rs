@@ -1,6 +1,7 @@
 use super::*;
 use crate::scalar::Scalar;
 use crate::vm::VM;
+use arrayvec::ArrayString;
 
 #[test]
 fn compiling_simple_program() {
@@ -79,36 +80,72 @@ fn simple_looping_program() {
         (
             1,
             AstNode {
-                node: InstructionNode::ScalarInt(IntegerNode { value: 1 }),
+                node: InstructionNode::SetVar(VarNode {
+                    name: ArrayString::from("i").unwrap(),
+                }),
                 child: Some(2),
             },
         ),
         (
-            3,
+            7,
             AstNode {
-                node: InstructionNode::CopyLast,
-                child: Some(4),
+                // push this value in each iteration
+                node: InstructionNode::ScalarInt(IntegerNode { value: 42069 }),
+                child: Some(2),
             },
         ),
         (
             2,
             AstNode {
-                node: InstructionNode::Sub,
+                node: InstructionNode::ReadVar(VarNode {
+                    name: ArrayString::from("i").unwrap(),
+                }),
                 child: Some(3),
+            },
+        ),
+        (
+            3,
+            AstNode {
+                node: InstructionNode::ScalarInt(IntegerNode { value: 1 }),
+                child: Some(4),
             },
         ),
         (
             4,
             AstNode {
-                node: InstructionNode::JumpIfTrue(JumpNode { nodeid: 5 }),
-                child: None,
+                node: InstructionNode::Sub,
+                child: Some(5),
             },
         ),
         (
             5,
             AstNode {
                 node: InstructionNode::CopyLast,
-                child: Some(1),
+                child: Some(6),
+            },
+        ),
+        (
+            6,
+            AstNode {
+                node: InstructionNode::SetVar(VarNode {
+                    name: ArrayString::from("i").unwrap(),
+                }),
+                child: Some(8),
+            },
+        ),
+        (
+            8,
+            AstNode {
+                node: InstructionNode::JumpIfTrue(JumpNode { nodeid: 7 }),
+                child: Some(9),
+            },
+        ),
+        (
+            9,
+            AstNode {
+                // return value
+                node: InstructionNode::ScalarInt(IntegerNode { value: 0 }),
+                child: None,
             },
         ),
     ]
@@ -119,21 +156,20 @@ fn simple_looping_program() {
     let program = CompilationUnit { nodes };
     let program = Compiler::compile(program).unwrap();
 
-    log::warn!("Program: {:?}", program);
-
     // Compilation was successful
 
     let mut vm = VM::new(()).with_max_iter(50);
     let exit_code = vm.run(&program).unwrap();
 
     assert_eq!(exit_code, 0);
-    assert_eq!(vm.stack().len(), 3, "{:?}", vm.stack());
+    assert_eq!(vm.read_var("i").unwrap(), Scalar::Integer(0));
 
-    println!("stack: {:?}", vm.stack());
-    for (i, value) in vm.stack().iter().enumerate() {
-        match value {
-            Scalar::Integer(num) => assert_eq!(*num, 3 - i as i32),
-            _ => panic!("Invalid value on the stack"),
-        }
-    }
+    assert_eq!(
+        vm.stack(),
+        &[
+            Scalar::Integer(42069),
+            Scalar::Integer(42069),
+            Scalar::Integer(42069),
+        ]
+    );
 }

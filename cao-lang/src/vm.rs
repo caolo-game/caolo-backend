@@ -25,7 +25,7 @@ pub struct VM<Aux = ()> {
     stack: Vec<Scalar>,
     callables: HashMap<String, FunctionObject<Aux>>,
     objects: HashMap<TPointer, Object>,
-    variables: HashMap<VarName, TPointer>,
+    variables: HashMap<VarName, Scalar>,
     auxiliary_data: Aux,
     max_iter: i32,
 }
@@ -42,6 +42,11 @@ impl<Aux> VM<Aux> {
             variables: HashMap::with_capacity(128),
             max_iter: 1000,
         }
+    }
+
+    pub fn read_var(&self, name: &str) -> Option<Scalar> {
+        let name = VarName::from(name).ok()?;
+        self.variables.get(&name).cloned()
     }
 
     pub fn with_max_iter(mut self, max_iter: i32) -> Self {
@@ -148,10 +153,9 @@ impl<Aux> VM<Aux> {
                     let varname = VarName::decode(&program.bytecode[ptr..ptr + len])
                         .ok_or(ExecutionError::InvalidArgument)?;
                     ptr += len;
-                    let pointer: TPointer = self
+                    let pointer: Scalar = self
                         .stack
                         .pop()
-                        .and_then(|x| TryFrom::try_from(x).ok())
                         .ok_or_else(|| ExecutionError::InvalidArgument)?;
                     self.variables.insert(varname, pointer);
                 }
@@ -160,11 +164,11 @@ impl<Aux> VM<Aux> {
                     let varname = VarName::decode(&program.bytecode[ptr..ptr + len])
                         .ok_or(ExecutionError::InvalidArgument)?;
                     ptr += len;
-                    let pointer = self.variables.get(&varname).ok_or_else(|| {
+                    let value = self.variables.get(&varname).ok_or_else(|| {
                         debug!("Variable {} does not exist", varname);
                         ExecutionError::InvalidArgument
                     })?;
-                    self.stack.push(Scalar::Pointer(*pointer));
+                    self.stack.push(*value);
                 }
                 Instruction::Pop => {
                     self.stack.pop().ok_or_else(|| {

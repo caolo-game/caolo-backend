@@ -49,7 +49,7 @@ nodes:
     3:
         node:
             Call:
-                function: bots::move_bot_to_position
+                function: move_bot_to_position
         child: 5
     4:
         node:

@@ -20,7 +20,6 @@ pub struct Object {
 /// Aux is an auxiliary data structure passed to custom functions.
 #[derive(Debug)]
 pub struct VM<Aux = ()> {
-    memory_limit: usize,
     memory: Vec<u8>,
     stack: Vec<Scalar>,
     callables: HashMap<String, FunctionObject<Aux>>,
@@ -28,6 +27,7 @@ pub struct VM<Aux = ()> {
     variables: HashMap<VarName, Scalar>,
     auxiliary_data: Aux,
     max_iter: i32,
+    memory_limit: usize,
 }
 
 impl<Aux> VM<Aux> {
@@ -45,8 +45,7 @@ impl<Aux> VM<Aux> {
     }
 
     pub fn read_var(&self, name: &str) -> Option<Scalar> {
-        let name = VarName::from(name).ok()?;
-        self.variables.get(&name).cloned()
+        self.variables.get(name).cloned()
     }
 
     pub fn with_max_iter(mut self, max_iter: i32) -> Self {
@@ -90,15 +89,20 @@ impl<Aux> VM<Aux> {
             );
             return None;
         }
+        let data = &self.memory;
         let head = object.index as usize;
-        let tail = (head + size as usize).min(self.memory.len());
-        T::decode(&self.memory[head..tail])
+        let tail = (head + size as usize).min(data.len());
+        T::decode(&data[head..tail])
     }
 
-    // TODO: check if maximum size was exceeded
     pub fn set_value<T: ByteEncodeProperties>(&mut self, val: T) -> Result<Object, ExecutionError> {
         let result = self.memory.len();
         let bytes = val.encode();
+
+        if bytes.len() + result >= self.memory_limit {
+            return Err(ExecutionError::OutOfMemory);
+        }
+
         let object = Object {
             index: result as u32,
             size: T::BYTELEN as u32,
@@ -148,6 +152,7 @@ impl<Aux> VM<Aux> {
             );
             ptr += 1;
             match instr {
+                Instruction::Start => {}
                 Instruction::SetVar => {
                     let len = VarName::BYTELEN;
                     let varname = VarName::decode(&program.bytecode[ptr..ptr + len])
@@ -176,7 +181,6 @@ impl<Aux> VM<Aux> {
                         ExecutionError::InvalidArgument
                     })?;
                 }
-                Instruction::Start => {}
                 Instruction::Jump => {
                     let len = i32::BYTELEN;
                     let label = i32::decode(&program.bytecode[ptr..ptr + len])
@@ -282,38 +286,7 @@ impl<Aux> VM<Aux> {
                     let obj = self.set_value(literal)?;
                     self.stack.push(Scalar::Pointer(obj.index as i32));
                 }
-                Instruction::Call => {
-                    let fun_name =
-                        Self::read_str(&mut ptr, &program.bytecode).ok_or_else(|| {
-                            error!("Could not read function name");
-                            ExecutionError::InvalidArgument
-                        })?;
-                    let mut fun = self.callables.remove(fun_name.as_str()).ok_or_else(|| {
-                        ExecutionError::FunctionNotFound(fun_name.as_str().to_owned())
-                    })?;
-
-                    let n_inputs = fun.num_params();
-                    let mut inputs = Vec::with_capacity(n_inputs as usize);
-                    for _ in 0..n_inputs {
-                        let arg = self.stack.pop().ok_or_else(|| {
-                            error!("Missing argument to function call {:?}", fun_name);
-                            ExecutionError::MissingArgument
-                        })?;
-                        inputs.push(arg)
-                    }
-                    debug!("Calling function {} with inputs: {:?}", fun_name, inputs);
-                    let res = fun.call(self, &inputs).map_err(|e| {
-                        error!("Calling function {:?} failed with {:?}", fun_name, e);
-                        e
-                    })?;
-                    debug!("Function call returned value: {:?}", res);
-
-                    if res.size > 0 {
-                        self.stack.push(Scalar::Pointer(res.index as i32));
-                    }
-
-                    self.callables.insert(fun_name, fun);
-                }
+                Instruction::Call => self.execute_call(&mut ptr, &program.bytecode)?,
             }
             if self.memory.len() > self.memory_limit {
                 return Err(ExecutionError::OutOfMemory);
@@ -322,6 +295,40 @@ impl<Aux> VM<Aux> {
         }
 
         Err(ExecutionError::UnexpectedEndOfInput)
+    }
+
+    fn execute_call(&mut self, ptr: &mut usize, bytecode: &[u8]) -> Result<(), ExecutionError> {
+        let fun_name = Self::read_str(ptr, bytecode).ok_or_else(|| {
+            error!("Could not read function name");
+            ExecutionError::InvalidArgument
+        })?;
+        let mut fun = self
+            .callables
+            .remove(fun_name.as_str())
+            .ok_or_else(|| ExecutionError::FunctionNotFound(fun_name.as_str().to_owned()))?;
+
+        let n_inputs = fun.num_params();
+        let mut inputs = Vec::with_capacity(n_inputs as usize);
+        for _ in 0..n_inputs {
+            let arg = self.stack.pop().ok_or_else(|| {
+                error!("Missing argument to function call {:?}", fun_name);
+                ExecutionError::MissingArgument
+            })?;
+            inputs.push(arg)
+        }
+        debug!("Calling function {} with inputs: {:?}", fun_name, inputs);
+        let res = fun.call(self, &inputs).map_err(|e| {
+            error!("Calling function {:?} failed with {:?}", fun_name, e);
+            e
+        })?;
+        debug!("Function call returned value: {:?}", res);
+
+        if res.size > 0 {
+            self.stack.push(Scalar::Pointer(res.index as i32));
+        }
+
+        self.callables.insert(fun_name, fun);
+        Ok(())
     }
 
     fn load_ptr_from_stack(&self) -> Option<i32> {

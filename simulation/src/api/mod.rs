@@ -125,7 +125,7 @@ pub fn make_import() -> Schema {
             },
             FunctionRow {
                 desc: subprogram_description!(
-                    bots::mine_resource,
+                    mine_resource,
                     "Move the bot to the given Point",
                     [EntityId],
                     [OperationResult]
@@ -134,7 +134,7 @@ pub fn make_import() -> Schema {
             },
             FunctionRow {
                 desc: subprogram_description!(
-                    bots::approach_entity,
+                    approach_entity,
                     "Move the bot to the given Entity",
                     [EntityId],
                     [OperationResult]
@@ -143,7 +143,7 @@ pub fn make_import() -> Schema {
             },
             FunctionRow {
                 desc: subprogram_description!(
-                    bots::move_bot_to_position,
+                    move_bot_to_position,
                     "Move the bot to the given Point",
                     [Point],
                     [OperationResult]
@@ -193,7 +193,7 @@ pub fn make_import() -> Schema {
                     [u16, components::Resource, EntityId],
                     [OperationResult]
                 ),
-                fo: FunctionObject::new(FunctionWrapper::new(unload)),
+                fo: FunctionObject::new(FunctionWrapper::new(bots::unload)),
             },
         ],
     }

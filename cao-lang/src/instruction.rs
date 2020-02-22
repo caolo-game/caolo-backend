@@ -1,5 +1,7 @@
 use crate::scalar::Scalar;
 use crate::traits::ByteEncodeProperties;
+use crate::TPointer;
+use crate::VarName;
 use crate::{subprogram_description, SubProgram};
 use serde_derive::{Deserialize, Serialize};
 use std::convert::TryFrom;
@@ -46,10 +48,6 @@ pub enum Instruction {
     Exit = 18,
     /// Jump to the label on top of the stack
     Jump = 20,
-    /// Write the top value on the stack to the given register
-    WriteReg = 21,
-    /// Read the value in the given register and push it on the stack
-    ReadReg = 22,
     /// Compares two scalars
     Equals = 23,
     /// Compares two scalars
@@ -60,6 +58,10 @@ pub enum Instruction {
     LessOrEq = 26,
     /// Pops the top of the stack and discards it
     Pop = 27,
+    /// Sets the variable at the top of the stack to the value of the second item on the stack
+    SetVar = 28,
+    /// Reads the variable and pushes its value onto the stack
+    ReadVar = 29,
 }
 
 impl TryFrom<u8> for Instruction {
@@ -84,13 +86,13 @@ impl TryFrom<u8> for Instruction {
             18 => Ok(Exit),
             19 => Ok(StringLiteral),
             20 => Ok(Jump),
-            21 => Ok(WriteReg),
-            22 => Ok(ReadReg),
             23 => Ok(Equals),
             24 => Ok(NotEquals),
             25 => Ok(Less),
             26 => Ok(LessOrEq),
             27 => Ok(Pop),
+            28 => Ok(SetVar),
+            29 => Ok(ReadVar),
             _ => Err(format!("Unrecognized instruction [{}]", c)),
         }
     }
@@ -162,6 +164,18 @@ pub fn get_instruction_descriptions() -> Vec<SubProgram<'static>> {
             "Pops the top elements on the stack and discards it",
             [Scalar],
             []
+        ),
+        subprogram_description!(
+            Instruction::SetVar,
+            "Sets the value of a variable",
+            [VarName, TPointer],
+            []
+        ),
+        subprogram_description!(
+            Instruction::ReadVar,
+            "Read the value of a variable",
+            [VarName],
+            [TPointer]
         ),
     ]
 }

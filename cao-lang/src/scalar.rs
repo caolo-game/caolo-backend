@@ -1,5 +1,4 @@
-use crate::traits::AutoByteEncodeProperties;
-use crate::TPointer;
+use crate::{traits::AutoByteEncodeProperties, TPointer};
 use serde_derive::{Deserialize, Serialize};
 use std::convert::{From, TryFrom};
 use std::ops::{Add, Div, Mul, Sub};

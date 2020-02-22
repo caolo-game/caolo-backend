@@ -2,6 +2,7 @@ use crate::compiler::NodeId;
 use crate::instruction::Instruction;
 use crate::prelude::*;
 use crate::scalar::Scalar;
+use crate::VarName;
 use crate::{binary_compare, pop_stack};
 use log::{debug, error};
 use std::collections::HashMap;
@@ -19,13 +20,14 @@ pub struct Object {
 /// Aux is an auxiliary data structure passed to custom functions.
 #[derive(Debug)]
 pub struct VM<Aux = ()> {
-    stack: Vec<Scalar>,
-    auxiliary_data: Aux,
-    memory: Vec<u8>,
     memory_limit: usize,
+    memory: Vec<u8>,
+    stack: Vec<Scalar>,
     callables: HashMap<String, FunctionObject<Aux>>,
     objects: HashMap<TPointer, Object>,
-    registers: [Scalar; 16],
+    variables: HashMap<VarName, TPointer>,
+    auxiliary_data: Aux,
+    max_iter: i32,
 }
 
 impl<Aux> VM<Aux> {
@@ -36,13 +38,15 @@ impl<Aux> VM<Aux> {
             callables: HashMap::with_capacity(128),
             memory_limit: 40000,
             stack: Vec::with_capacity(128),
-            registers: Default::default(),
             objects: HashMap::with_capacity(128),
+            variables: HashMap::with_capacity(128),
+            max_iter: 1000,
         }
     }
 
-    pub fn registers(&self) -> &[Scalar] {
-        &self.registers
+    pub fn with_max_iter(mut self, max_iter: i32) -> Self {
+        self.max_iter = max_iter;
+        self
     }
 
     pub fn stack(&self) -> &[Scalar] {
@@ -120,7 +124,7 @@ impl<Aux> VM<Aux> {
     pub fn run(&mut self, program: &CompiledProgram) -> Result<i32, ExecutionError> {
         debug!("Running program");
         let mut ptr = 0;
-        let mut max_iter = 1000;
+        let mut max_iter = self.max_iter;
         while ptr < program.bytecode.len() {
             max_iter -= 1;
             if max_iter <= 0 {
@@ -139,6 +143,29 @@ impl<Aux> VM<Aux> {
             );
             ptr += 1;
             match instr {
+                Instruction::SetVar => {
+                    let len = VarName::BYTELEN;
+                    let varname = VarName::decode(&program.bytecode[ptr..ptr + len])
+                        .ok_or(ExecutionError::InvalidArgument)?;
+                    ptr += len;
+                    let pointer: TPointer = self
+                        .stack
+                        .pop()
+                        .and_then(|x| TryFrom::try_from(x).ok())
+                        .ok_or_else(|| ExecutionError::InvalidArgument)?;
+                    self.variables.insert(varname, pointer);
+                }
+                Instruction::ReadVar => {
+                    let len = VarName::BYTELEN;
+                    let varname = VarName::decode(&program.bytecode[ptr..ptr + len])
+                        .ok_or(ExecutionError::InvalidArgument)?;
+                    ptr += len;
+                    let pointer = self.variables.get(&varname).ok_or_else(|| {
+                        debug!("Variable {} does not exist", varname);
+                        ExecutionError::InvalidArgument
+                    })?;
+                    self.stack.push(Scalar::Pointer(*pointer));
+                }
                 Instruction::Pop => {
                     self.stack.pop().ok_or_else(|| {
                         debug!("Value not found");
@@ -146,35 +173,10 @@ impl<Aux> VM<Aux> {
                     })?;
                 }
                 Instruction::Start => {}
-                Instruction::WriteReg => {
-                    let value = self.stack.pop().ok_or_else(|| {
-                        debug!("Value not found");
-                        ExecutionError::InvalidArgument
-                    })?;
-                    let len = i32::BYTELEN;
-                    let index = i32::decode(&program.bytecode[ptr..ptr + len])
-                        .filter(|x| *x < self.registers.len() as i32)
-                        .ok_or(ExecutionError::InvalidArgument)?;
-                    self.registers[index as usize] = value;
-                    ptr += len;
-                }
-                Instruction::ReadReg => {
-                    let len = i32::BYTELEN;
-                    let index = i32::decode(&program.bytecode[ptr..ptr + len])
-                        .filter(|x| *x < self.registers.len() as i32)
-                        .ok_or(ExecutionError::InvalidArgument)?;
-                    let value = self.registers[index as usize].clone();
-                    self.stack.push(value);
-                    ptr += len;
-                }
                 Instruction::Jump => {
-                    let label = self
-                        .stack
-                        .pop()
-                        .ok_or_else(|| ExecutionError::InvalidArgument)
-                        .and_then(|x| {
-                            NodeId::try_from(x).map_err(|_| ExecutionError::InvalidArgument)
-                        })?;
+                    let len = i32::BYTELEN;
+                    let label = i32::decode(&program.bytecode[ptr..ptr + len])
+                        .ok_or_else(|| ExecutionError::InvalidLabel)?;
                     ptr = program
                         .labels
                         .get(&label)

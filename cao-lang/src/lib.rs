@@ -109,6 +109,9 @@ pub enum ExecutionError {
     TaskFailure(String),
 }
 
+pub type VarName = ArrayString<[u8; 64]>;
+impl crate::traits::AutoByteEncodeProperties for VarName {}
+
 /// Metadata about a subprogram in the program.
 /// Subprograms consume their inputs and produce outputs.
 #[derive(Clone, Serialize, Deserialize, Default)]

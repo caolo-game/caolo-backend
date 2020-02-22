@@ -1,15 +1,16 @@
 //! Compiles Graphs with vertices of `AstNode` into _caol-lang_ bytecode.
 //! Programs must start with a `Start` instruction.
 //!
-#[cfg(test)]
-mod tests ;
 mod astnode;
+#[cfg(test)]
+mod tests;
 use crate::{
     traits::ByteEncodeProperties, CompiledProgram, InputString, Instruction, Label, INPUT_STR_LEN,
 };
 pub use astnode::*;
+use log::debug;
 use serde_derive::{Deserialize, Serialize};
-use std::collections::{BTreeMap, BTreeSet, VecDeque};
+use std::collections::{BTreeMap, HashSet, VecDeque};
 use std::convert::TryFrom;
 use std::fmt::Debug;
 
@@ -60,6 +61,7 @@ pub struct Compiler {
 
 impl Compiler {
     pub fn compile(unit: CompilationUnit) -> Result<CompiledProgram, String> {
+        debug!("compilation start");
         if unit.nodes.is_empty() {
             return Err("Program is empty!".to_owned());
         }
@@ -82,19 +84,31 @@ impl Compiler {
             .nodes
             .iter()
             .map(|(k, _)| *k)
-            .collect::<BTreeSet<_>>();
-        let mut todo = VecDeque::with_capacity(compiler.unit.nodes.len());
+            .collect::<HashSet<_>>();
+        let mut todo = VecDeque::<i32>::with_capacity(compiler.unit.nodes.len());
         todo.push_back(*start.0);
+        let mut seen = HashSet::with_capacity(compiler.unit.nodes.len());
 
         loop {
             while !todo.is_empty() {
                 let current = todo.pop_front().unwrap();
+                debug!("procesing node {:?}", current);
                 nodes.remove(&current);
+                seen.insert(current);
                 compiler.process_node(current)?;
                 match compiler.unit.nodes[&current].child.as_ref() {
                     None => compiler.program.bytecode.push(Instruction::Exit as u8),
                     Some(node) => {
-                        todo.push_back(*node);
+                        if !seen.contains(node) {
+                            todo.push_front(*node);
+                        } else {
+                            debug!(
+                                "child node of node {:?} already visited: {:?}",
+                                current, node
+                            );
+                            compiler.program.bytecode.push(Instruction::Jump as u8);
+                            compiler.program.bytecode.append(&mut node.encode());
+                        }
                     }
                 }
             }
@@ -104,6 +118,7 @@ impl Compiler {
             }
         }
 
+        debug!("compilation end");
         Ok(compiler.program)
     }
 
@@ -130,6 +145,10 @@ impl Compiler {
             | Sub | Mul | Div => {
                 self.push_node(nodeid);
             }
+            ReadVar(variable) | SetVar(variable) => {
+                self.push_node(nodeid);
+                self.program.bytecode.append(&mut variable.name.encode());
+            }
             JumpIfTrue(j) | Jump(j) => {
                 self.push_node(nodeid);
                 let label = j.nodeid;
@@ -146,11 +165,6 @@ impl Compiler {
             ScalarArray(n) => {
                 self.push_node(nodeid);
                 self.program.bytecode.append(&mut n.value.encode());
-            }
-            ReadReg(r) | WriteReg(r) => {
-                self.push_node(nodeid);
-                let value = r.register;
-                self.program.bytecode.append(&mut value.encode());
             }
             ScalarLabel(s) | ScalarInt(s) => {
                 self.push_node(nodeid);
@@ -170,4 +184,3 @@ impl Compiler {
         }
     }
 }
-

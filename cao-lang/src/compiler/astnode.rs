@@ -1,5 +1,6 @@
 use super::*;
 use crate::InputString;
+use crate::VarName;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AstNode {
@@ -39,8 +40,8 @@ pub enum InstructionNode {
     Call(CallNode),
     JumpIfTrue(JumpNode),
     Jump(JumpNode),
-    WriteReg(RegisterNode),
-    ReadReg(RegisterNode),
+    SetVar(VarNode),
+    ReadVar(VarNode),
 }
 
 impl InstructionNode {
@@ -67,9 +68,9 @@ impl InstructionNode {
             Call(_) => Instruction::Call,
             JumpIfTrue(_) => Instruction::JumpIfTrue,
             Jump(_) => Instruction::Jump,
-            ReadReg(_) => Instruction::ReadReg,
-            WriteReg(_) => Instruction::WriteReg,
             StringLiteral(_) => Instruction::StringLiteral,
+            SetVar(_) => Instruction::SetVar,
+            ReadVar(_) => Instruction::ReadVar,
         }
     }
 
@@ -79,8 +80,8 @@ impl InstructionNode {
     fn _instruction_to_node(instr: Instruction) {
         use Instruction::*;
         match instr {
-            Pop | Less | LessOrEq | Equals | NotEquals | Exit | StringLiteral | WriteReg
-            | ReadReg | Start | JumpIfTrue | Jump | CopyLast | Call | Sub | Mul | Div
+            SetVar | ReadVar | Pop | Less | LessOrEq | Equals | NotEquals | Exit
+            | StringLiteral | Start | JumpIfTrue | Jump | CopyLast | Call | Sub | Mul | Div
             | ScalarArray | ScalarLabel | ScalarFloat | ScalarInt | Add | Pass => {}
         };
     }
@@ -111,6 +112,6 @@ pub struct JumpNode {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default, Copy)]
-pub struct RegisterNode {
-    pub register: i32,
+pub struct VarNode {
+    pub name: VarName,
 }

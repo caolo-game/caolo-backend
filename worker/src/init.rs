@@ -4,12 +4,13 @@ use caolo_sim::storage::{
     views::{UnsafeView, View},
     Storage,
 };
+use log::debug;
 use rand::Rng;
 
-const PROGRAM : &str = r#"
+const PROGRAM: &str = r#"
 name: "default"
 nodes:
-    8: 
+    8:
         node:
             Call:
                 function: console_log
@@ -54,7 +55,7 @@ nodes:
         node:
             Call:
                 function: make_operation_result
-        child: 0
+        child: 9
     5:
         node:
             ScalarInt:
@@ -70,15 +71,17 @@ nodes:
             StringLiteral:
                 value: "Moving :)"
         child: 8
-
 "#;
+
 pub fn init_storage(n_fake_users: usize) -> Storage {
     let mut storage = caolo_sim::init_inmemory_storage();
 
     let script_id = ScriptId::default();
     let script: CompilationUnit =
         serde_yaml::from_str(PROGRAM).expect("deserialize example program");
+    debug!("compiling default program");
     let compiled = Compiler::compile(script).expect("failed to compile example program");
+    debug!("compilation done");
     storage
         .scripts_table_mut::<components::ScriptComponent>()
         .insert_or_update(script_id, components::ScriptComponent(compiled));

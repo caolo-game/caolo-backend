@@ -123,17 +123,17 @@ fn simple_looping_program() {
 
     // Compilation was successful
 
-    let mut vm = VM::new(());
+    let mut vm = VM::new(()).with_max_iter(50);
     let exit_code = vm.run(&program).unwrap();
 
     assert_eq!(exit_code, 0);
     assert_eq!(vm.stack().len(), 3, "{:?}", vm.stack());
 
-    for i in 3..=1 {
-        let value = vm.stack()[i - 1];
+    println!("stack: {:?}", vm.stack());
+    for (i, value) in vm.stack().iter().enumerate() {
         match value {
-            Scalar::Integer(num) => assert_eq!(num as usize, i),
-            _ => panic!("Invalid value in the stack"),
+            Scalar::Integer(num) => assert_eq!(*num, 3 - i as i32),
+            _ => panic!("Invalid value on the stack"),
         }
     }
 }

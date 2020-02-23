@@ -45,6 +45,10 @@ where
             .collect()
     }
 
+    pub fn contains_id(&self, id: &Id) -> bool {
+        self.data.get(id).is_some()
+    }
+
     pub fn insert_or_update(&mut self, id: Id, row: Row) -> bool {
         self.data.insert(id, row);
         true
@@ -79,6 +83,7 @@ mod tests {
     use super::*;
     use crate::model::EntityId;
     use rand::Rng;
+    use std::convert::TryFrom;
     use test::Bencher;
 
     #[bench]
@@ -111,6 +116,49 @@ mod tests {
             let id = EntityId(id);
             let res = table.get_by_id(&id);
             res
+        });
+    }
+
+    #[bench]
+    fn update_all_iter_2pow14_sparse(b: &mut Bencher) {
+        // The Id domain is 1.2 * LEN
+
+        const LEN: usize = 1 << 14;
+        let mut rng = rand::thread_rng();
+        let mut table = BTreeTable::<EntityId, usize>::new();
+        for i in 0..LEN {
+            let mut id = Default::default();
+            while table.contains_id(&id) {
+                id = EntityId(rng.gen_range(
+                    0,
+                    u32::try_from(LEN * 6 / 5).expect("max len to fit into u32"),
+                ));
+            }
+            table.insert_or_update(id, i);
+        }
+        b.iter(|| {
+            table.iter_mut().for_each(|(_, val)| {
+                *val += 8;
+                test::black_box(val);
+            });
+        });
+    }
+
+    #[bench]
+    fn update_all_iter_2pow14_dense(b: &mut Bencher) {
+        // The whole table is filled
+
+        const LEN: usize = 1 << 14;
+        let mut table = BTreeTable::<EntityId, usize>::new();
+        for i in 0..LEN {
+            let id = EntityId(i as u32);
+            table.insert_or_update(id, i);
+        }
+        b.iter(|| {
+            table.iter_mut().for_each(|(_, val)| {
+                *val += 8;
+                test::black_box(val);
+            });
         });
     }
 }

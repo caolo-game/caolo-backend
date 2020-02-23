@@ -1,6 +1,6 @@
 //! Table with `Vec` back-end. Optimised for dense storage.
 //! The storage will allocate memory for N items where `N = the largest id inserted`.
-//! Because of this one should use this if the domain of the ids is small and/or dense.
+//! Because of this one should use this if the domain of the ids is small or dense.
 //!
 use super::*;
 use serde_derive::Serialize;
@@ -13,6 +13,8 @@ where
     Row: TableRow,
 {
     data: Vec<Option<(Id, Row)>>,
+    /// the `as_usize` index of the first item in the vector
+    offset: usize,
 }
 
 impl<Id, Row> VecTable<Id, Row>
@@ -24,6 +26,7 @@ where
         let size = mem::size_of::<(Id, Row)>();
         let size = 1024 / size;
         Self {
+            offset: 0,
             data: Vec::with_capacity(size),
         }
     }
@@ -32,26 +35,37 @@ where
         let size = mem::size_of::<(Id, Row)>();
         let size = 1024 / size;
         Self {
+            offset: 0,
             data: Vec::with_capacity(size.min(cap)),
         }
     }
 
     pub fn insert_or_update(&mut self, id: Id, row: Row) -> bool {
+        // Extend the vector if necessary
         let i = id.as_usize();
         let len = self.data.len();
-        // Extend the vector if necessary
+        if i < self.offset {
+            self.data.resize(self.offset - i + len, None);
+            self.data.rotate_right(self.offset - i);
+            self.offset = i;
+        }
+        let i = i - self.offset;
         if i >= len {
             self.data.resize(i + 1, None);
         } else if let Some((_, r)) = self.data[i].as_mut() {
             *r = row;
-            return true;
+        } else {
+            self.data[i] = Some((id, row));
         }
-        self.data[i] = Some((id, row));
         true
     }
 
     pub fn get_by_id<'a>(&'a self, id: &Id) -> Option<&'a Row> {
         let ind = id.as_usize();
+        if ind < self.offset {
+            return None;
+        }
+        let ind = ind - self.offset;
         self.data
             .get(ind)
             .and_then(|x| x.as_ref().map(|(_, row)| row))
@@ -73,6 +87,10 @@ where
 
     pub fn contains_id(&self, id: &Id) -> bool {
         let i = id.as_usize();
+        if i < self.offset {
+            return false;
+        }
+        let i = i - self.offset;
         self.data.get(i).and_then(|x| x.as_ref()).is_some()
     }
 }
@@ -89,7 +107,7 @@ where
         if !self.contains_id(id) {
             return None;
         }
-        let ind = id.as_usize();
+        let ind = id.as_usize() - self.offset;
         self.data.push(None);
         let res = self.data.swap_remove(ind);
         self.data.pop();
@@ -134,8 +152,8 @@ mod tests {
 
     #[bench]
     fn update_all_iter_2pow14_sparse(b: &mut Bencher) {
-        /// The Id domain is 1.2 * LEN
-        ///
+        // The Id domain is 1.2 * LEN
+
         const LEN: usize = 1 << 14;
         let mut rng = rand::thread_rng();
         let mut table = VecTable::<EntityId, usize>::with_capacity(LEN);
@@ -159,8 +177,8 @@ mod tests {
 
     #[bench]
     fn update_all_iter_2pow14_dense(b: &mut Bencher) {
-        /// The whole table is filled
-        ///
+        // The whole table is filled
+
         const LEN: usize = 1 << 14;
         let mut table = VecTable::<EntityId, usize>::with_capacity(LEN);
         for i in 0..LEN {

@@ -38,7 +38,7 @@ Then open the client in your browser by visiting [http://localhost:3000](http://
     pip install -r requirements.txt
     maturin develop
     # create database called `caolo`
-    python manager.py db upgrade
+    python manage.py db upgrade
     python app.py
     ```
 

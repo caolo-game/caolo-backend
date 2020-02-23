@@ -32,7 +32,7 @@ services:
   postgres:
     image: postgres:11.1
     environment:
-      POSTGRES_PASSWORD: almafa1
+      POSTGRES_PASSWORD: admin
       POSTGRES_USER: postgres
     ports:
       - "5432:5432"

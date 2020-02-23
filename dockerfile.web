@@ -26,7 +26,7 @@ COPY ./webservice/pyproject.toml ./webservice/pyproject.toml
 
 WORKDIR /web/webservice
 RUN mkdir build
-RUN maturin build --release -o ./build/
+RUN maturin build --release -o build --no-sdist
 RUN ls -al build
 
 WORKDIR /web

@@ -150,8 +150,14 @@ impl Compiler {
                 self.program.bytecode.append(&mut variable.name.encode());
             }
             JumpIfTrue(j) | Jump(j) => {
-                self.push_node(nodeid);
                 let label = j.nodeid;
+                if label == nodeid {
+                    return Err(format!(
+                        "Node {:?} is trying to Jump to its own location which is not supported",
+                        nodeid
+                    ));
+                }
+                self.push_node(nodeid);
                 self.program.bytecode.append(&mut label.encode());
             }
             StringLiteral(c) => {

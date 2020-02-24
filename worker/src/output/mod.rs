@@ -1,8 +1,12 @@
 use crate::protos::world::Bot as BotMsg;
 use crate::protos::world::LogEntry as LogMsg;
+use crate::protos::world::{Resource as ResourceMsg, Resource_ResourceType};
 use crate::protos::world::{Tile as TileMsg, Tile_TerrainType};
 use caolo_sim::model::{
-    components::{Bot, LogEntry, OwnedEntity, PositionComponent, TerrainComponent},
+    components::{
+        Bot, EnergyComponent, LogEntry, OwnedEntity, PositionComponent, Resource,
+        ResourceComponent, TerrainComponent,
+    },
     geometry::point::Point,
     indices::EntityTime,
     terrain::TileTerrainType,
@@ -60,4 +64,32 @@ pub fn build_terrain<'a>(
             Some(msg)
         }
     })
+}
+
+pub fn build_resources<'a>(
+    (resource_table, position_table, energy_table): (
+        View<'a, EntityId, ResourceComponent>,
+        View<'a, EntityId, PositionComponent>,
+        View<'a, EntityId, EnergyComponent>,
+    ),
+) -> impl Iterator<Item = ResourceMsg> + 'a {
+    let join = JoinIterator::new(
+        resource_table.reborrow().iter(),
+        position_table.reborrow().iter(),
+    );
+
+    JoinIterator::new(join, energy_table.reborrow().iter()).map(
+        |(id, ((resource, pos), energy))| match resource.0 {
+            Resource::Energy => {
+                let mut msg = ResourceMsg::new();
+                msg.set_id(id.0);
+                msg.mut_position().set_q(pos.0.x);
+                msg.mut_position().set_r(pos.0.y);
+                msg.set_ty(Resource_ResourceType::ENERGY);
+                msg.set_energy(energy.energy as u32);
+                msg.set_energyMax(energy.energy_max as u32);
+                msg
+            }
+        },
+    )
 }

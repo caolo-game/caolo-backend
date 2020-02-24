@@ -63,6 +63,12 @@ fn send_world(storage: &Storage, client: &redis::Client) -> Result<(), Box<dyn s
 
     debug!("sending {} terrain", world.get_terrain().len());
 
+    for resource in output::build_resources(storage.into()) {
+        world.mut_resources().push(resource);
+    }
+
+    debug!("sending {} resources", world.get_resources().len());
+
     // Python can not read the serialized bytes so I'll fall back to JSON
     let payload = serde_json::to_string(&world)?;
 

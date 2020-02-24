@@ -51,7 +51,7 @@ pub fn check_mine_intent(
     }
 
     match resources.get_by_id(&target) {
-        Some(components::ResourceComponent(components::Resource::Mineral)) => {
+        Some(components::ResourceComponent(components::Resource::Energy)) => {
             match energy.get_by_id(&target) {
                 Some(energy) => {
                     if energy.energy > 0 {

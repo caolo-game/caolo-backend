@@ -71,7 +71,7 @@ nodes:
             StringLiteral:
                 value: "Moving :)"
         child: 8
-"#;
+        "#;
 
 pub fn init_storage(n_fake_users: usize) -> Storage {
     let mut storage = caolo_sim::init_inmemory_storage();
@@ -103,6 +103,14 @@ pub fn init_storage(n_fake_users: usize) -> Storage {
         let storage = &mut storage;
         unsafe {
             init_bot(id, script_id, &mut rng, storage.into(), storage.into());
+        }
+    }
+
+    for _ in 0..5.min(n_fake_users - 1) {
+        let id = storage.insert_entity();
+        let storage = &mut storage;
+        unsafe {
+            init_resource(id, &mut rng, storage.into(), storage.into());
         }
     }
     storage
@@ -140,6 +148,37 @@ unsafe fn init_bot(
     let pos = uncontested_pos(&*entities_by_pos, rng);
 
     positions
+        .as_mut()
+        .insert_or_update(id, components::PositionComponent(pos));
+}
+
+type InitResourceMuts = (
+    UnsafeView<EntityId, components::PositionComponent>,
+    UnsafeView<EntityId, components::ResourceComponent>,
+    UnsafeView<EntityId, components::EnergyComponent>,
+);
+
+unsafe fn init_resource(
+    id: EntityId,
+    rng: &mut impl Rng,
+    (mut positions_table, mut resources_table, mut energy_table): InitResourceMuts,
+    entities_by_pos: View<Point, components::EntityComponent>,
+) {
+    resources_table.as_mut().insert_or_update(
+        id,
+        components::ResourceComponent(components::Resource::Energy),
+    );
+    energy_table.as_mut().insert_or_update(
+        id,
+        components::EnergyComponent {
+            energy: 250,
+            energy_max: 250,
+        },
+    );
+
+    let pos = uncontested_pos(&*entities_by_pos, rng);
+
+    positions_table
         .as_mut()
         .insert_or_update(id, components::PositionComponent(pos));
 }

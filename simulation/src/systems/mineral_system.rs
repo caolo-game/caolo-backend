@@ -30,7 +30,7 @@ impl<'a> System<'a> for MineralSystem {
         let mut rng = rand::thread_rng();
 
         let minerals_it = resources.iter().filter(|(_, r)| match r.0 {
-            components::Resource::Mineral => true,
+            components::Resource::Energy => true,
         });
         let entity_positions_it = unsafe { entity_positions.as_mut().iter_mut() };
         let energy_iter = unsafe { energy.as_mut().iter_mut() };

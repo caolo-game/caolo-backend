@@ -6,7 +6,7 @@ use std::convert::TryFrom;
 #[derive(Debug, Serialize, Clone, Copy)]
 #[repr(u8)]
 pub enum Resource {
-    Mineral = 1,
+    Energy = 1,
 }
 
 impl AutoByteEncodeProperties for Resource {}
@@ -19,7 +19,7 @@ impl TryFrom<Scalar> for Resource {
                     return Err(s);
                 }
                 match i {
-                    1 => Ok(Resource::Mineral),
+                    1 => Ok(Resource::Energy),
                     _ => Err(s),
                 }
             }

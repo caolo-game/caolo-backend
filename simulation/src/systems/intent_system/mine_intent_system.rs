@@ -28,7 +28,7 @@ impl<'a> IntentExecutionSystem<'a> for MineSystem {
             debug!("Bot [{:?}] is mining [{:?}]", intent.bot, intent.resource);
             match resource_table.get_by_id(&intent.resource) {
                 None => warn!("Resource not found"),
-                Some(ResourceComponent(Resource::Mineral)) => {
+                Some(ResourceComponent(Resource::Energy)) => {
                     let mut energy = match energy_table.get_by_id(&intent.resource) {
                         Some(energy) => {
                             if energy.energy == 0 {

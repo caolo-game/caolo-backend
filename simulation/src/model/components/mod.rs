@@ -32,8 +32,8 @@ pub struct OwnedEntity {
     pub owner_id: UserId,
 }
 
-impl<Id: TableId> Component<Id> for OwnedEntity {
-    type Table = BTreeTable<Id, Self>;
+impl Component<EntityId> for OwnedEntity {
+    type Table = VecTable<EntityId, Self>;
 }
 
 #[derive(Default, Debug, Clone, Copy, Ord, PartialOrd, PartialEq, Eq, Serialize)]
@@ -65,8 +65,8 @@ pub struct HpComponent {
     pub hp: u16,
     pub hp_max: u16,
 }
-impl<Id: TableId> Component<Id> for HpComponent {
-    type Table = BTreeTable<Id, Self>;
+impl Component<EntityId> for HpComponent {
+    type Table = VecTable<EntityId, Self>;
 }
 
 #[derive(Debug, Clone, Copy, Serialize)]

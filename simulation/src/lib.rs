@@ -54,14 +54,14 @@ pub fn init_inmemory_storage() -> storage::Storage {
     storage.add_entity_table::<DecayComponent>(BTreeTable::new());
     storage.add_entity_table::<CarryComponent>(BTreeTable::new());
     storage.add_entity_table::<Structure>(BTreeTable::new());
-    storage.add_entity_table::<HpComponent>(BTreeTable::new());
+    storage.add_entity_table::<HpComponent>(VecTable::new());
     storage.add_entity_table::<EnergyRegenComponent>(BTreeTable::new());
     storage.add_entity_table::<EnergyComponent>(BTreeTable::new());
     storage.add_entity_table::<ResourceComponent>(BTreeTable::new());
     storage.add_entity_table::<DecayComponent>(BTreeTable::new());
     storage.add_entity_table::<EntityScript>(BTreeTable::new());
     storage.add_entity_table::<SpawnComponent>(BTreeTable::new());
-    storage.add_entity_table::<OwnedEntity>(BTreeTable::new());
+    storage.add_entity_table::<OwnedEntity>(VecTable::new());
 
     storage.add_log_table::<LogEntry>(BTreeTable::new());
 

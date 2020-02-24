@@ -1,9 +1,6 @@
 use cao_lang::prelude::*;
 use caolo_sim::model::{self, components, geometry::Point, terrain, EntityId, ScriptId};
-use caolo_sim::storage::{
-    views::{UnsafeView, View},
-    Storage,
-};
+use caolo_sim::storage::{views::UnsafeView, Storage};
 use log::debug;
 use rand::Rng;
 
@@ -74,6 +71,8 @@ nodes:
         "#;
 
 pub fn init_storage(n_fake_users: usize) -> Storage {
+    assert!(n_fake_users >= 1);
+
     let mut storage = caolo_sim::init_inmemory_storage();
 
     let script_id = ScriptId::default();
@@ -102,17 +101,18 @@ pub fn init_storage(n_fake_users: usize) -> Storage {
         let id = storage.insert_entity();
         let storage = &mut storage;
         unsafe {
-            init_bot(id, script_id, &mut rng, storage.into(), storage.into());
+            init_bot(id, script_id, &mut rng, storage.into());
         }
     }
 
-    for _ in 0..5.min(n_fake_users - 1) {
+    for _ in 0..(n_fake_users - 1).max(1) {
         let id = storage.insert_entity();
         let storage = &mut storage;
         unsafe {
-            init_resource(id, &mut rng, storage.into(), storage.into());
+            init_resource(id, &mut rng, storage.into());
         }
     }
+
     storage
 }
 
@@ -122,14 +122,21 @@ type InitBotMuts = (
     UnsafeView<EntityId, components::CarryComponent>,
     UnsafeView<EntityId, components::OwnedEntity>,
     UnsafeView<EntityId, components::PositionComponent>,
+    UnsafeView<Point, components::EntityComponent>,
 );
 
 unsafe fn init_bot(
     id: EntityId,
     script_id: model::ScriptId,
     rng: &mut impl Rng,
-    (mut entity_scripts, mut bots, mut carry_component, mut ownsers, mut positions): InitBotMuts,
-    entities_by_pos: View<Point, components::EntityComponent>,
+    (
+        mut entity_scripts,
+        mut bots,
+        mut carry_component,
+        mut owners,
+        mut positions,
+        mut entities_by_pos,
+    ): InitBotMuts,
 ) {
     entity_scripts
         .as_mut()
@@ -138,7 +145,7 @@ unsafe fn init_bot(
     carry_component
         .as_mut()
         .insert_or_update(id, Default::default());
-    ownsers.as_mut().insert_or_update(
+    owners.as_mut().insert_or_update(
         id,
         components::OwnedEntity {
             owner_id: Default::default(),
@@ -150,19 +157,22 @@ unsafe fn init_bot(
     positions
         .as_mut()
         .insert_or_update(id, components::PositionComponent(pos));
+    entities_by_pos
+        .as_mut()
+        .insert(pos, components::EntityComponent(id));
 }
 
 type InitResourceMuts = (
     UnsafeView<EntityId, components::PositionComponent>,
     UnsafeView<EntityId, components::ResourceComponent>,
     UnsafeView<EntityId, components::EnergyComponent>,
+    UnsafeView<Point, components::EntityComponent>,
 );
 
 unsafe fn init_resource(
     id: EntityId,
     rng: &mut impl Rng,
-    (mut positions_table, mut resources_table, mut energy_table): InitResourceMuts,
-    entities_by_pos: View<Point, components::EntityComponent>,
+    (mut positions_table, mut resources_table, mut energy_table, mut entities_by_pos): InitResourceMuts,
 ) {
     resources_table.as_mut().insert_or_update(
         id,
@@ -181,6 +191,9 @@ unsafe fn init_resource(
     positions_table
         .as_mut()
         .insert_or_update(id, components::PositionComponent(pos));
+    entities_by_pos
+        .as_mut()
+        .insert(pos, components::EntityComponent(id));
 }
 
 fn uncontested_pos<T: caolo_sim::tables::TableRow + Send + Sync>(
@@ -193,7 +206,7 @@ fn uncontested_pos<T: caolo_sim::tables::TableRow + Send + Sync>(
 
         let pos = Point::new(x, y);
 
-        if positions_table.get_by_id(&pos).is_none() {
+        if !positions_table.contains_key(&pos) {
             return pos;
         }
     }

@@ -13,7 +13,7 @@ use super::*;
 use crate::model::{components::EntityComponent, geometry::Point};
 use morton_key::*;
 use rayon::prelude::*;
-use serde_derive::{Serialize, Deserialize};
+use serde_derive::{Deserialize, Serialize};
 use std::convert::TryInto;
 
 use crate::profile;

@@ -1,7 +1,7 @@
 use super::*;
 use crate::model::{components::LogEntry, indices::EntityTime};
 use rayon::prelude::*;
-use serde_derive::{Serialize, Deserialize};
+use serde_derive::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 #[derive(Default, Debug, Serialize, Deserialize)]

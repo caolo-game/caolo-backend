@@ -1,9 +1,9 @@
 use crate::tables::{BTreeTable, Component, TableId};
 use cao_lang::{prelude::Scalar, traits::AutoByteEncodeProperties};
-use serde_derive::Serialize;
+use serde_derive::{Deserialize, Serialize};
 use std::convert::TryFrom;
 
-#[derive(Debug, Serialize, Clone, Copy)]
+#[derive(Debug, Serialize, Clone, Copy, Deserialize)]
 #[repr(u8)]
 pub enum Resource {
     Energy = 1,
@@ -28,7 +28,7 @@ impl TryFrom<Scalar> for Resource {
     }
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResourceComponent(pub Resource);
 impl<Id: TableId> Component<Id> for ResourceComponent {
     type Table = BTreeTable<Id, Self>;

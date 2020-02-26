@@ -2,19 +2,25 @@
 //!
 use crate::tables::SerialId;
 use cao_lang::{prelude::Scalar, traits::AutoByteEncodeProperties};
-use serde_derive::Serialize;
+use serde_derive::{Deserialize, Serialize};
 use std::convert::TryFrom;
 
-#[derive(Debug, Clone, Default, Ord, PartialOrd, Eq, PartialEq, Copy, Hash, Serialize)]
+#[derive(
+    Debug, Clone, Default, Ord, PartialOrd, Eq, PartialEq, Copy, Hash, Serialize, Deserialize,
+)]
 pub struct EntityTime(pub EntityId, pub u64);
 
-#[derive(Debug, Clone, Default, Ord, PartialOrd, Eq, PartialEq, Copy, Hash, Serialize)]
+#[derive(
+    Debug, Clone, Default, Ord, PartialOrd, Eq, PartialEq, Copy, Hash, Serialize, Deserialize,
+)]
 pub struct EntityId(pub u32);
 
-#[derive(Debug, Clone, Default, Ord, PartialOrd, Eq, PartialEq, Copy, Serialize)]
+#[derive(Debug, Clone, Default, Ord, PartialOrd, Eq, PartialEq, Copy, Serialize, Deserialize)]
 pub struct ScriptId(pub uuid::Uuid);
 
-#[derive(Debug, Clone, Default, Ord, PartialOrd, Eq, PartialEq, Copy, Hash, Serialize)]
+#[derive(
+    Debug, Clone, Default, Ord, PartialOrd, Eq, PartialEq, Copy, Hash, Serialize, Deserialize,
+)]
 pub struct UserId(pub uuid::Uuid);
 
 impl SerialId for EntityId {

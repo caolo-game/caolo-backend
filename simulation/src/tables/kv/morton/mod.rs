@@ -13,12 +13,12 @@ use super::*;
 use crate::model::{components::EntityComponent, geometry::Point};
 use morton_key::*;
 use rayon::prelude::*;
-use serde_derive::Serialize;
+use serde_derive::{Serialize, Deserialize};
 use std::convert::TryInto;
 
 use crate::profile;
 
-#[derive(Default, Debug, Clone, Serialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct MortonTable<Id, Row>
 where
     Id: SpatialKey2d,

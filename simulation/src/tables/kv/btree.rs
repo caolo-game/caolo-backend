@@ -1,10 +1,10 @@
 use super::*;
 use crate::model::{components::LogEntry, indices::EntityTime};
 use rayon::prelude::*;
-use serde_derive::Serialize;
+use serde_derive::{Serialize, Deserialize};
 use std::collections::BTreeMap;
 
-#[derive(Default, Debug, Serialize)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 pub struct BTreeTable<Id, Row>
 where
     Id: TableId,

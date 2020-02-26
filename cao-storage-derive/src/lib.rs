@@ -1,3 +1,5 @@
+//! Helper crate to generate the caolo-sim crate's data storage structs'
+//!
 #![crate_type = "proc-macro"]
 use proc_macro::TokenStream;
 use proc_macro2::TokenTree;

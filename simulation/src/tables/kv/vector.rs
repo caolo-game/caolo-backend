@@ -3,10 +3,10 @@
 //! Because of this one should use this if the domain of the ids is small or dense.
 //!
 use super::*;
-use serde_derive::Serialize;
+use serde_derive::{Serialize, Deserialize};
 use std::mem;
 
-#[derive(Default, Debug, Serialize)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 pub struct VecTable<Id, Row>
 where
     Id: SerialId,

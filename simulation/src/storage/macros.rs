@@ -10,11 +10,11 @@ macro_rules! storage {
             use super::*;
             use crate::storage::views::{UnsafeView, View};
             use crate::storage::{HasTable, Epic};
-            use serde_derive::Serialize;
+            use serde_derive::{Serialize, Deserialize};
             use cao_storage_derive::CaoStorage;
             use crate::tables::Table;
 
-            #[derive(Debug, Serialize, CaoStorage, Default)]
+            #[derive(Debug, Serialize, CaoStorage, Default, Deserialize)]
             $(
                 #[cao_storage($id, $name)]
             )*

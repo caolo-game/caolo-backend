@@ -52,7 +52,8 @@ where
         let i = i - self.offset;
         if i >= len {
             self.data.resize(i + 1, None);
-        } else if let Some((_, r)) = self.data[i].as_mut() {
+        }
+        if let Some((_, r)) = self.data[i].as_mut() {
             *r = row;
         } else {
             self.data[i] = Some((id, row));

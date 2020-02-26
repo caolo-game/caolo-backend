@@ -6,8 +6,7 @@
 //! ```
 //! use caolo_sim::model::{EntityId,components::{Bot, SpawnComponent, PositionComponent,
 //! EnergyComponent, EntityComponent, ResourceComponent} ,geometry::Point, self};
-//! use caolo_sim::storage::views::{View, UnsafeView};
-//! use caolo_sim::World;
+//! use caolo_sim::prelude::*;
 //! use caolo_sim::tables::{VecTable,BTreeTable, MortonTable};
 //!
 //! fn update_minerals(
@@ -24,11 +23,7 @@
 //! }
 //!
 //! let mut storage = World::new();
-//! storage.add_entity_table::<PositionComponent>(VecTable::new());
-//! storage.add_entity_table::<EnergyComponent>(BTreeTable::new());
-//! storage.add_point_table::<EntityComponent>(MortonTable::new());
-//! storage.add_entity_table::<ResourceComponent>(BTreeTable::new());
-//! update_minerals(From::from(&mut storage), From::from(&storage));
+//! update_minerals(FromWorldMut::new(&mut storage), FromWorld::new(&storage));
 //! ```
 //!
 use super::{Component, Epic, TableId};

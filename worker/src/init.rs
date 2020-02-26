@@ -91,11 +91,13 @@ pub fn init_storage(n_fake_users: usize) -> World {
 
     let mut rng = rand::thread_rng();
 
-    let mut terrain = storage.unsafe_view::<Point, components::TerrainComponent>();
-
     for _ in 0..200 {
-        let pos = uncontested_pos(&*terrain, &mut rng);
+        let pos = uncontested_pos(
+            &*storage.view::<Point, components::TerrainComponent>(),
+            &mut rng,
+        );
         unsafe {
+            let mut terrain = storage.unsafe_view::<Point, components::TerrainComponent>();
             terrain.as_mut().insert(
                 pos,
                 components::TerrainComponent(terrain::TileTerrainType::Wall),

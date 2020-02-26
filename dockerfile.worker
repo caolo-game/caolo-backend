@@ -17,6 +17,7 @@ COPY ./Cargo.lock ./Cargo.lock
 COPY ./protos/ ./protos/
 COPY ./simulation/ ./simulation/
 COPY ./worker/ ./worker/
+COPY ./cao-storage-derive/ ./cao-storage-derive/
 COPY ./cao-lang/ ./cao-lang/
 
 RUN cargo install --path worker --root . --no-default-features --features="with-serde"

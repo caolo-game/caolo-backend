@@ -1,7 +1,7 @@
 [workspace]
 
 members = [
-    "cao_storage_derive",
+    "cao-storage-derive",
     "simulation",
     "worker",
     "cao-lang",

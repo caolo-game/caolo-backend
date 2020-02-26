@@ -13,7 +13,7 @@ log_tables = []
 
 [dependencies]
 cao-lang = { path = "../cao-lang" }
-cao_storage_derive = { path = "../cao_storage_derive" }
+cao_storage_derive = { path = "../cao-storage-derive" }
 
 log = "0.4"
 rand = "0.7"

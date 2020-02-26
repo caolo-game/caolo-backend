@@ -9,7 +9,6 @@ pub use self::indices::*;
 pub use cao_lang::prelude::*;
 
 use self::geometry::point::Point;
-use crate::storage::{views, Storage};
 use crate::tables::SpatialKey2d;
 use serde_derive::{Deserialize, Serialize};
 use std::convert::TryFrom;
@@ -81,9 +80,3 @@ pub struct Script {
 
 #[derive(Clone, Debug, Copy, Serialize, Deserialize)]
 pub struct Time(pub u64);
-
-impl<'a> views::HasNew<'a> for Time {
-    fn new(storage: &'a Storage) -> Self {
-        Self(storage.time())
-    }
-}

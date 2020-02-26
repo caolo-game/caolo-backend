@@ -15,7 +15,8 @@ pub fn find_closest_resource_by_range(
     let storage = vm.get_aux().storage();
 
     let position = match storage
-        .entity_table::<PositionComponent>()
+        .view::<EntityId, PositionComponent>()
+        .reborrow()
         .get_by_id(&entityid)
     {
         Some(p) => p,
@@ -26,13 +27,12 @@ pub fn find_closest_resource_by_range(
     };
 
     let mut candidates = Vec::with_capacity(MAX_SEARCH_RADIUS as usize * 2);
-    storage.point_table::<EntityComponent>().find_by_range(
-        &position.0,
-        MAX_SEARCH_RADIUS,
-        &mut candidates,
-    );
+    storage
+        .view::<Point, EntityComponent>()
+        .reborrow()
+        .find_by_range(&position.0, MAX_SEARCH_RADIUS, &mut candidates);
 
-    let resources = storage.entity_table::<ResourceComponent>();
+    let resources = storage.view::<EntityId, ResourceComponent>();
 
     candidates.retain(|(_pos, entityid)| resources.get_by_id(&entityid.0).is_some());
     match candidates

@@ -9,21 +9,19 @@ pub mod script_execution;
 pub mod spawn_system;
 
 use crate::profile;
-use crate::storage::{
-    views::{HasNew, HasNewMut},
-    Storage,
-};
+use crate::storage::views::{FromWorld, FromWorldMut};
+use crate::World;
 
 pub trait System<'a> {
     // Requiring these traits instead of From impl disallows Storage as an `update` parameter
     // Thus requiring callers to explicitly state their dependencies
-    type Mut: HasNewMut;
-    type Const: HasNew<'a>;
+    type Mut: FromWorldMut;
+    type Const: FromWorld<'a>;
 
     fn update(&mut self, m: Self::Mut, c: Self::Const);
 }
 
-pub fn execute_world_update(storage: &mut Storage) {
+pub fn execute_world_update(storage: &mut World) {
     profile!("execute_world_update");
 
     let mut energy_sys = energy_system::EnergySystem;
@@ -46,6 +44,6 @@ pub fn execute_world_update(storage: &mut Storage) {
 }
 
 #[inline]
-fn update<'a, Sys: System<'a>>(sys: &mut Sys, storage: &'a mut Storage) {
-    sys.update(Sys::Mut::new(storage), Sys::Const::new(storage));
+fn update<'a, Sys: System<'a>>(sys: &mut Sys, storage: &'a mut World) {
+    sys.update(Sys::Mut::new(storage), Sys::Const::new(storage as &_));
 }

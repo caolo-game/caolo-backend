@@ -7,7 +7,7 @@ mod input;
 mod output;
 mod protos;
 
-use caolo_sim::{self, storage::Storage};
+use caolo_sim::prelude::*;
 use log::{debug, error, info};
 use serde_derive::Serialize;
 use std::thread;
@@ -20,7 +20,7 @@ fn init() {
     env_logger::init();
 }
 
-fn tick(storage: &mut Storage) {
+fn tick(storage: &mut World) {
     let start = chrono::Utc::now();
 
     caolo_sim::forward(storage)
@@ -39,31 +39,31 @@ fn tick(storage: &mut Storage) {
         .unwrap();
 }
 
-fn send_world(storage: &Storage, client: &redis::Client) -> Result<(), Box<dyn std::error::Error>> {
+fn send_world(storage: &World, client: &redis::Client) -> Result<(), Box<dyn std::error::Error>> {
     use protos::world::WorldState;
 
     debug!("Sending world state");
 
     let mut world = WorldState::new();
-    for bot in output::build_bots(storage.into()) {
+    for bot in output::build_bots(FromWorld::new(storage)) {
         world.mut_bots().push(bot);
     }
 
     debug!("sending {} bots", world.get_bots().len());
 
-    for log in output::build_logs(storage.into()) {
+    for log in output::build_logs(FromWorld::new(storage)) {
         world.mut_logs().push(log);
     }
 
     debug!("sending {} logs", world.get_logs().len());
 
-    for tile in output::build_terrain(storage.into()) {
+    for tile in output::build_terrain(FromWorld::new(storage)) {
         world.mut_terrain().push(tile);
     }
 
     debug!("sending {} terrain", world.get_terrain().len());
 
-    for resource in output::build_resources(storage.into()) {
+    for resource in output::build_resources(FromWorld::new(storage)) {
         world.mut_resources().push(resource);
     }
 

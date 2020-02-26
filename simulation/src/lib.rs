@@ -14,12 +14,15 @@ mod intents;
 mod systems;
 mod utils;
 
+use chrono::{DateTime, Duration, Utc};
+use serde_derive::Serialize;
+use storage::views::{UnsafeView, View};
 use systems::execute_world_update;
 use systems::intent_system::execute_intents;
 use systems::script_execution::execute_scripts;
-use tables::{BTreeTable, MortonTable, VecTable};
+use tables::{Component, TableId};
 
-pub fn forward(storage: &mut storage::Storage) -> Result<(), Box<dyn std::error::Error>> {
+pub fn forward(storage: &mut World) -> Result<(), Box<dyn std::error::Error>> {
     profile!("forward world state");
 
     info!("Executing scripts");
@@ -40,38 +43,139 @@ pub fn forward(storage: &mut storage::Storage) -> Result<(), Box<dyn std::error:
     Ok(())
 }
 
-pub fn init_inmemory_storage() -> storage::Storage {
-    use model::components::*;
+mod data_store {
+    use super::storage;
+    use crate::model::components::*;
+    use crate::model::geometry::Point;
+    use crate::model::*;
 
+    storage!(
+        module store_impl
+
+        key EntityId, table Bot = entitybot,
+        key EntityId, table PositionComponent = entitypos,
+        key EntityId, table SpawnBotComponent = entityspawnbot,
+        key EntityId, table CarryComponent = entitycarry,
+        key EntityId, table Structure = entitystructure,
+        key EntityId, table HpComponent = entityhp,
+        key EntityId, table EnergyRegenComponent = entityenergyregen,
+        key EntityId, table EnergyComponent = entityenergy,
+        key EntityId, table ResourceComponent = entityresource,
+        key EntityId, table DecayComponent = entitydecay,
+        key EntityId, table EntityScript = entityscript,
+        key EntityId, table SpawnComponent = entityspawn,
+        key EntityId, table OwnedEntity = entityowner,
+
+        key EntityTime, table LogEntry = timelog,
+
+        key UserId, table UserComponent = useruser,
+
+        key Point, table TerrainComponent = pointterrain,
+        key Point, table EntityComponent = pointentity,
+
+        key ScriptId, table ScriptComponent = scriptscript
+    );
+
+    pub use self::store_impl::*;
+}
+
+#[derive(Debug, Serialize)]
+pub struct World {
+    store: data_store::Storage,
+
+    time: u64,
+    next_entity: crate::model::EntityId,
+    last_tick: DateTime<Utc>,
+    #[serde(skip)]
+    dt: Duration,
+}
+
+impl<Id: TableId, C: Component<Id>> storage::HasTable<Id, C> for World
+where
+    data_store::Storage: storage::HasTable<Id, C>,
+{
+    fn view<'a>(&'a self) -> View<'a, Id, C> {
+        self.store.view()
+    }
+
+    fn unsafe_view(&mut self) -> UnsafeView<Id, C> {
+        self.store.unsafe_view()
+    }
+}
+
+unsafe impl Send for World {}
+unsafe impl Sync for World {}
+
+impl World {
+    pub fn new() -> Self {
+        let store = data_store::Storage::default();
+        Self {
+            time: 0,
+            store,
+            last_tick: Utc::now(),
+            next_entity: crate::model::EntityId::default(),
+            dt: Duration::zero(),
+        }
+    }
+
+    pub fn view<'a, Id: TableId, C: Component<Id>>(&'a self) -> View<'a, Id, C>
+    where
+        data_store::Storage: storage::HasTable<Id, C>,
+    {
+        (&self.store as &dyn storage::HasTable<Id, C>).view()
+    }
+
+    pub fn unsafe_view<Id: TableId, C: Component<Id>>(&mut self) -> UnsafeView<Id, C>
+    where
+        data_store::Storage: storage::HasTable<Id, C>,
+    {
+        (&mut self.store as &mut dyn storage::HasTable<Id, C>).unsafe_view()
+    }
+
+    pub fn delete<Id: TableId>(&mut self, id: &Id)
+    where
+        data_store::Storage: storage::Epic<Id>,
+    {
+        let storage = &mut self.store as &mut dyn storage::Epic<Id>;
+        storage.delete(id);
+    }
+
+    pub fn delta_time(&self) -> Duration {
+        self.dt
+    }
+
+    pub fn time(&self) -> u64 {
+        self.time
+    }
+
+    pub fn signal_done(&mut self, _intents: &crate::intents::Intents) {
+        let now = Utc::now();
+        self.dt = now - self.last_tick;
+        self.last_tick = now;
+        self.time += 1;
+    }
+
+    pub fn insert_entity(&mut self) -> crate::model::EntityId {
+        use crate::tables::SerialId;
+
+        let res = self.next_entity;
+        self.next_entity = self.next_entity.next();
+        res
+    }
+}
+
+impl<'a> storage::views::FromWorld<'a> for model::Time {
+    fn new(w: &'a World) -> Self {
+        model::Time(w.time())
+    }
+}
+
+pub fn init_inmemory_storage() -> World {
     profile!("init_inmemory_storage");
     debug!("Init Storage");
 
-    let mut storage = storage::Storage::new();
-
-    storage.add_entity_table::<Bot>(VecTable::new());
-    storage.add_entity_table::<PositionComponent>(VecTable::new());
-    storage.add_entity_table::<SpawnBotComponent>(BTreeTable::new());
-    storage.add_entity_table::<DecayComponent>(BTreeTable::new());
-    storage.add_entity_table::<CarryComponent>(BTreeTable::new());
-    storage.add_entity_table::<Structure>(BTreeTable::new());
-    storage.add_entity_table::<HpComponent>(VecTable::new());
-    storage.add_entity_table::<EnergyRegenComponent>(BTreeTable::new());
-    storage.add_entity_table::<EnergyComponent>(BTreeTable::new());
-    storage.add_entity_table::<ResourceComponent>(BTreeTable::new());
-    storage.add_entity_table::<DecayComponent>(BTreeTable::new());
-    storage.add_entity_table::<EntityScript>(BTreeTable::new());
-    storage.add_entity_table::<SpawnComponent>(BTreeTable::new());
-    storage.add_entity_table::<OwnedEntity>(VecTable::new());
-
-    storage.add_log_table::<LogEntry>(BTreeTable::new());
-
-    storage.add_user_table::<UserComponent>(BTreeTable::new());
-
-    storage.add_point_table::<TerrainComponent>(MortonTable::with_capacity(1024));
-    storage.add_point_table::<EntityComponent>(MortonTable::with_capacity(1024));
-
-    storage.add_scripts_table::<ScriptComponent>(BTreeTable::new());
+    let world = World::new();
 
     debug!("Init Storage done");
-    storage
+    world
 }

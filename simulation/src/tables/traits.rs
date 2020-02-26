@@ -42,10 +42,10 @@ impl<T: 'static + Clone + Send + std::fmt::Debug + Serialize> TableRow for T {}
 /// Components define both their shape (via their type) and the storage backend that shall be used to
 /// store them.
 pub trait Component<Id: TableId>: TableRow {
-    type Table: Table<Row = Self> + Send + std::fmt::Debug;
+    type Table: Table<Row = Self> + Send + std::fmt::Debug + Default + Serialize;
 }
 
-pub trait Table: Serialize {
+pub trait Table {
     type Id: TableId;
     type Row: TableRow;
 

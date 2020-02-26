@@ -1,43 +1,58 @@
 #[macro_export(local_inner_macros)]
-macro_rules! implement_table_type {
-    ($field_name: ident, $getter: ident, $mutter: ident, $setter: ident,$deleter: ident, $id: tt) => {
-        pub fn $getter<'a, Row: Component<$id>>(&'a self) -> &'a Row::Table {
-            let rowtype = TypeId::of::<Row>();
-            self.$field_name
-                .get(&rowtype)
-                .and_then(|a| a.downcast_ref::<Row>())
-                .ok_or_else(|| {
-                    log::error!("Table {:?} was not registered", type_name::<($id, Row)>());
-                    std::format!("{:?}", type_name::<($id, Row)>())
-                })
-                .expect("Table was not registered!")
-        }
+macro_rules! storage {
+    (
+        module $module: ident
+        $(
+            key $id:ty, table $row: ty = $name: ident
+        ),*
+    ) => {
+        pub mod $module {
+            use super::*;
+            use crate::storage::views::{UnsafeView, View};
+            use crate::storage::{HasTable, Epic};
+            use serde_derive::Serialize;
+            use cao_storage_derive::CaoStorage;
+            use crate::tables::Table;
 
-        pub fn $mutter<'a, Row: Component<$id>>(&'a mut self) -> &'a mut Row::Table {
-            let rowtype = TypeId::of::<Row>();
-            self.$field_name
-                .get_mut(&rowtype)
-                .and_then(|a| a.downcast_mut::<Row>())
-                .ok_or_else(|| {
-                    log::error!("Table {:?} was not registered", type_name::<($id, Row)>());
-                    std::format!("{:?}", type_name::<($id, Row)>())
-                })
-                .expect("Table was not registered!")
-        }
+            #[derive(Debug, Serialize, CaoStorage, Default)]
+            $(
+                #[cao_storage($id, $name)]
+            )*
+            pub struct Storage {
+                $( $name: <$row as crate::tables::Component<$id>>::Table ),* ,
+            }
 
-        pub fn $setter<Row: Component<$id> + Sync>(&mut self, table: <Row as Component<$id>>::Table)
-        where
-            <Row as Component<$id>>::Table: crate::storage::homogenoustable::DynTable<$id>,
-        {
-            let id = TypeId::of::<Row>();
-            self.$field_name
-                .insert(id, HomogenousTable::new::<Row>(table));
-        }
+            storage!(@implement_tables $($name, $id,  $row )*);
 
-        pub fn $deleter(&mut self, id: $id) {
-            for (_key, table) in self.$field_name.iter_mut() {
-                table.delete_entity(&id);
+            impl Storage {
+                #[allow(unused)]
+                pub fn new(
+                    $(
+                        $name: <$row as crate::tables::Component<$id>>::Table
+                        ),*
+                ) -> Self {
+                    Self {
+                        $( $name ),*
+                    }
+                }
             }
         }
+    };
+
+    (
+        @implement_tables
+        $($name: ident, $id: ty,  $row: ty )*
+    ) => {
+        $(
+            impl HasTable<$id, $row> for Storage {
+                fn view<'a>(&'a self) -> View<'a, $id, $row>{
+                    View::from_table(&self.$name)
+                }
+
+                fn unsafe_view(&mut self) -> UnsafeView<$id, $row>{
+                    UnsafeView::from_table(&mut self.$name)
+                }
+            }
+        )*
     };
 }

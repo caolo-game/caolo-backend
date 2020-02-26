@@ -1,14 +1,14 @@
 //! Handle inputs received via the message bus
 mod script_update;
 use crate::protos::input_messages::{InputMsg, InputMsg_oneof_msg};
-use caolo_sim::storage::Storage;
+use caolo_sim::prelude::*;
 use log::{debug, error};
 use protobuf::parse_from_bytes;
 use redis::Commands;
 use std::str::{from_utf8, Utf8Error};
 use uuid::{self, Uuid};
 
-pub fn handle_messages(storage: &mut Storage, client: &redis::Client) {
+pub fn handle_messages(storage: &mut World, client: &redis::Client) {
     debug!("handling incoming messages");
     let mut connection = client.get_connection().expect("Get redis conn");
     'a: while let Ok(Some(message)) = connection

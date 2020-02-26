@@ -9,7 +9,6 @@ pub use morton::*;
 pub use vector::*;
 
 use super::*;
-use crate::storage::TableId;
 use std::ops::Add;
 
 pub trait SpatialKey2d: TableId + Add<Output = Self> {

@@ -6,7 +6,8 @@
 //! ```
 //! use caolo_sim::model::{EntityId,components::{Bot, SpawnComponent, PositionComponent,
 //! EnergyComponent, EntityComponent, ResourceComponent} ,geometry::Point, self};
-//! use caolo_sim::storage::{views::{View, UnsafeView}, Storage};
+//! use caolo_sim::storage::views::{View, UnsafeView};
+//! use caolo_sim::World;
 //! use caolo_sim::tables::{VecTable,BTreeTable, MortonTable};
 //!
 //! fn update_minerals(
@@ -22,7 +23,7 @@
 //!     // do stuff
 //! }
 //!
-//! let mut storage = Storage::new();
+//! let mut storage = World::new();
 //! storage.add_entity_table::<PositionComponent>(VecTable::new());
 //! storage.add_entity_table::<EnergyComponent>(BTreeTable::new());
 //! storage.add_point_table::<EntityComponent>(MortonTable::new());
@@ -30,7 +31,9 @@
 //! update_minerals(From::from(&mut storage), From::from(&storage));
 //! ```
 //!
-use super::{Component, EntityId, EntityTime, Point, ScriptId, Storage, TableId, UserId};
+use super::{Component, Epic, TableId};
+use crate::model::EntityId;
+use crate::World;
 use std::ops::Deref;
 
 /// Fetch read-only tables from a Storage
@@ -56,16 +59,45 @@ impl<'a, Id: TableId, C: Component<Id>> Deref for View<'a, Id, C> {
     }
 }
 
+pub trait FromWorld<'a> {
+    fn new(w: &'a World) -> Self;
+}
+
+pub trait FromWorldMut {
+    fn new(w: &mut World) -> Self;
+}
+
 /// Fetch read-write table reference from a Storage.
 /// This is a pretty unsafe way to obtain mutable references. Use with caution.
 /// Do not store UnsafeViews for longer than the function scope, that's just asking for trouble.
-/// Using UnsafeView after the Storage is destroyed is UB!
 ///
 pub struct UnsafeView<Id: TableId, C: Component<Id>>(*mut C::Table);
 
 impl<Id: TableId, C: Component<Id>> UnsafeView<Id, C> {
     pub unsafe fn as_mut(&mut self) -> &mut C::Table {
         &mut *self.0
+    }
+
+    pub fn from_table(t: &mut C::Table) -> Self {
+        Self(t)
+    }
+}
+
+impl<'a, Id: TableId, C: Component<Id>> FromWorld<'a> for View<'a, Id, C>
+where
+    crate::data_store::Storage: super::HasTable<Id, C>,
+{
+    fn new(w: &'a World) -> Self {
+        w.view()
+    }
+}
+
+impl<Id: TableId, C: Component<Id>> FromWorldMut for UnsafeView<Id, C>
+where
+    crate::data_store::Storage: super::HasTable<Id, C>,
+{
+    fn new(w: &mut World) -> Self {
+        w.unsafe_view()
     }
 }
 
@@ -74,6 +106,7 @@ impl<Id: TableId, C: Component<Id>> Clone for UnsafeView<Id, C> {
         Self(self.0)
     }
 }
+
 impl<Id: TableId, C: Component<Id>> Copy for UnsafeView<Id, C> {}
 
 impl<Id: TableId, C: Component<Id>> Deref for UnsafeView<Id, C> {
@@ -85,167 +118,88 @@ impl<Id: TableId, C: Component<Id>> Deref for UnsafeView<Id, C> {
 }
 
 pub struct DeleteEntityView {
-    storage: *mut Storage,
+    storage: *mut World,
 }
 
 impl DeleteEntityView {
-    pub unsafe fn delete_entity(&mut self, entity_id: EntityId) {
-        (*self.storage).delete_entity(entity_id)
+    pub unsafe fn delete_entity(&mut self, id: &EntityId) {
+        let storage = &mut (*self.storage).store as &mut dyn Epic<EntityId>;
+        storage.delete(id);
     }
 }
 
-impl HasNewMut for DeleteEntityView {
-    fn new(storage: &mut Storage) -> Self {
+impl FromWorldMut for DeleteEntityView {
+    fn new(w: &mut World) -> Self {
         Self {
-            storage: storage as *mut _,
+            storage: w as *mut _,
         }
     }
 }
 
 pub struct InsertEntityView {
-    storage: *mut Storage,
+    storage: *mut World,
+}
+
+impl FromWorldMut for InsertEntityView {
+    fn new(w: &mut World) -> Self {
+        Self {
+            storage: w as *mut _,
+        }
+    }
 }
 
 impl InsertEntityView {
     pub unsafe fn insert_entity(&mut self) -> EntityId {
-        (*self.storage).insert_entity()
+        let storage = &mut *self.storage;
+        storage.insert_entity()
     }
 }
-
-impl HasNewMut for InsertEntityView {
-    fn new(storage: &mut Storage) -> Self {
-        Self {
-            storage: storage as *mut _,
-        }
-    }
-}
-
-pub trait HasNew<'a> {
-    fn new(s: &'a Storage) -> Self;
-}
-
-pub trait HasNewMut {
-    fn new(s: &mut Storage) -> Self;
-}
-
-/// Implement the Ctor and conversion methods for a given TableId
-macro_rules! implement_id {
-    ($field: ident, $field_mut: ident, $id: ty) => {
-        impl<'a, C: Component<$id>> HasNew<'a> for View<'a, $id, C> {
-            fn new(storage: &'a Storage) -> Self {
-                Self(storage.$field::<C>())
-            }
-        }
-
-        impl<C: Component<$id>> HasNewMut for UnsafeView<$id, C> {
-            fn new(storage: &mut Storage) -> Self {
-                Self(storage.$field_mut::<C>() as *mut _)
-            }
-        }
-
-        impl<'a, C: Component<$id>> From<&'a Storage> for View<'a, $id, C> {
-            fn from(s: &'a Storage) -> Self {
-                Self::new(s)
-            }
-        }
-
-        impl<'a, C: Component<$id>> From<&'a mut Storage> for View<'a, $id, C> {
-            fn from(s: &'a mut Storage) -> Self {
-                Self::new(s)
-            }
-        }
-
-        impl<C: Component<$id>> From<&mut Storage> for UnsafeView<$id, C> {
-            fn from(s: &mut Storage) -> Self {
-                Self::new(s)
-            }
-        }
-    };
-}
-
-implement_id!(entity_table, entity_table_mut, EntityId);
-implement_id!(point_table, point_table_mut, Point);
-implement_id!(user_table, user_table_mut, UserId);
-implement_id!(scripts_table, scripts_table_mut, ScriptId);
-implement_id!(log_table, log_table_mut, EntityTime);
 
 macro_rules! implement_tuple {
     ($v: ident) => {
-            impl<'a, $v:HasNew<'a> >
-            From <&'a Storage> for ( $v, )
+        impl<'a, $v: FromWorld<'a> >
+            FromWorld <'a> for ( $v, )
             {
                 #[allow(unused)]
-                fn from(storage: &'a Storage) -> Self {
+                fn new(storage: &'a World) -> Self {
                     (
                         $v::new(storage) ,
                     )
                 }
             }
 
-            impl<$v:HasNewMut >
-            From <&mut Storage> for ( $v, )
+        impl<$v:FromWorldMut >
+            FromWorldMut  for ( $v, )
             {
                 #[allow(unused)]
-                fn from(storage: &mut Storage) -> Self {
+                fn new(storage: &mut World) -> Self {
                     (
-                        $v ::new(storage),
+                        $v::new(storage),
                     )
-                }
-            }
-
-            impl<'a, $v:HasNew<'a> >
-            HasNew<'a> for ( $v, )
-            {
-                fn new(storage: &'a Storage) -> Self {
-                    Self::from(storage)
-                }
-            }
-
-            impl<$v:HasNewMut>
-            HasNewMut for ( $v, )
-            {
-                fn new(storage: &mut Storage) -> Self {
-                    Self::from(storage)
                 }
             }
     };
 
     ($($vv: ident),*) => {
-            impl<'a, $($vv:HasNew<'a>),* >
-            From <&'a Storage> for ( $($vv),* )
+        impl<'a, $($vv:FromWorld<'a>),* >
+            FromWorld <'a> for ( $($vv),* )
             {
                 #[allow(unused)]
-                fn from(storage: &'a Storage) -> Self {
+                fn new(storage: &'a World) -> Self {
                     (
-                        $($vv ::new(storage)),*
+                        $($vv::new(storage)),*
                     )
                 }
             }
 
-            impl<$($vv:HasNewMut),* >
-            From <&mut Storage> for ( $($vv),* )
+        impl<'a, $($vv:FromWorldMut),* >
+            FromWorldMut  for ( $($vv),* )
             {
                 #[allow(unused)]
-                fn from(storage: &mut Storage) -> Self {
+                fn new(storage: &mut World) -> Self {
                     (
-                        $($vv ::new(storage)),*
+                        $($vv::new(storage)),*
                     )
-                }
-            }
-
-            impl<'a, $($vv:HasNew<'a>),* >
-            HasNew<'a> for ( $($vv),* )
-            {
-                fn new(storage: &'a Storage) -> Self {
-                    Self::from(storage)
-                }
-            }
-
-            impl<$($vv:HasNewMut),* >
-            HasNewMut for ( $($vv),* )
-            {
-                fn new(storage: &mut Storage) -> Self {
-                    Self::from(storage)
                 }
             }
     };

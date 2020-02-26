@@ -10,8 +10,9 @@ use crate::{
         EntityId, OperationResult, UserId,
     },
     profile,
-    storage::Storage,
+    storage::views::FromWorld,
     systems::pathfinding,
+    World,
 };
 use std::convert::TryFrom;
 
@@ -42,7 +43,7 @@ pub fn unload(
         structure,
     };
 
-    let checkresult = check_dropoff_intent(&dropoff_intent, userid, storage.into());
+    let checkresult = check_dropoff_intent(&dropoff_intent, userid, FromWorld::new(storage));
     if let OperationResult::Ok = checkresult {
         vm.get_aux_mut()
             .intents_mut()
@@ -68,7 +69,7 @@ pub fn mine_resource(
     let userid = aux.userid().expect("userid to be set");
 
     if storage
-        .entity_table::<ResourceComponent>()
+        .view::<EntityId, ResourceComponent>()
         .get_by_id(&entityid)
         .is_none()
     {
@@ -81,7 +82,7 @@ pub fn mine_resource(
         resource: entityid,
     };
 
-    let checkresult = check_mine_intent(&intent, userid, storage.into());
+    let checkresult = check_mine_intent(&intent, userid, FromWorld::new(storage));
     if let OperationResult::Ok = checkresult {
         vm.get_aux_mut().intents_mut().mine_intents.push(intent);
     }
@@ -106,7 +107,8 @@ pub fn approach_entity(
     let userid = aux.userid().expect("userid to be set");
 
     let targetpos = match storage
-        .entity_table::<components::PositionComponent>()
+        .view::<EntityId, components::PositionComponent>()
+        .reborrow()
         .get_by_id(&target)
     {
         Some(x) => x,
@@ -156,17 +158,18 @@ fn move_to_pos(
     bot: EntityId,
     to: Point,
     userid: UserId,
-    storage: &Storage,
+    storage: &World,
 ) -> Result<MoveIntent, OperationResult> {
     let botpos = storage
-        .entity_table::<components::PositionComponent>()
+        .view::<EntityId, components::PositionComponent>()
+        .reborrow()
         .get_by_id(&bot)
         .ok_or_else(|| {
             warn!("entity {:?} does not have position component!", bot);
             OperationResult::InvalidInput
         })?;
     let mut path = Vec::with_capacity(1000);
-    if let Err(e) = pathfinding::find_path(botpos.0, to, storage.into(), 1000, &mut path) {
+    if let Err(e) = pathfinding::find_path(botpos.0, to, FromWorld::new(storage), 1000, &mut path) {
         debug!("pathfinding failed {:?}", e);
         return Err(OperationResult::InvalidTarget);
     }
@@ -182,7 +185,7 @@ fn move_to_pos(
             return Err(OperationResult::InvalidTarget);
         }
     };
-    let checkresult = check_move_intent(&intent, userid, storage.into());
+    let checkresult = check_move_intent(&intent, userid, FromWorld::new(storage));
     if let OperationResult::Ok = checkresult {
         Ok(intent)
     } else {

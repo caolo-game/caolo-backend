@@ -33,3 +33,9 @@ pub struct ResourceComponent(pub Resource);
 impl<Id: TableId> Component<Id> for ResourceComponent {
     type Table = BTreeTable<Id, Self>;
 }
+
+impl Default for ResourceComponent {
+    fn default() -> Self {
+        Self(Resource::Energy)
+    }
+}

@@ -1,13 +1,10 @@
 use super::parse_uuid;
 use crate::protos::scripts::UpdateScript as UpdateScriptMsg;
 use caolo_sim::model::components::{EntityScript, OwnedEntity, ScriptComponent};
+use caolo_sim::prelude::*;
 use caolo_sim::{
     self,
     model::{self, EntityId, ScriptId, UserId},
-    storage::{
-        views::{UnsafeView, View},
-        Storage,
-    },
     tables::JoinIterator,
 };
 use log::{debug, error};
@@ -20,7 +17,7 @@ pub enum UpdateProgramError {
 type UpdateResult = Result<(), UpdateProgramError>;
 
 /// Update all programs submitted via the PROGRAM field in the Redis storage
-pub fn update_program(storage: &mut Storage, mut msg: UpdateScriptMsg) -> UpdateResult {
+pub fn update_program(storage: &mut World, mut msg: UpdateScriptMsg) -> UpdateResult {
     debug!("Updating program {:?}", msg);
 
     let user_id = parse_uuid(&msg.user_id).map_err(|e| {
@@ -51,15 +48,18 @@ pub fn update_program(storage: &mut Storage, mut msg: UpdateScriptMsg) -> Update
 
     let program = ScriptComponent(program);
     let script_id = script_id;
-    storage
-        .scripts_table_mut::<ScriptComponent>()
-        .insert_or_update(script_id, program);
+    unsafe {
+        storage
+            .unsafe_view::<ScriptId, ScriptComponent>()
+            .as_mut()
+            .insert_or_update(script_id, program);
+    }
 
     update_user_bot_scripts(
         script_id,
         UserId(user_id),
-        From::from(storage as &mut _),
-        From::from(storage as &_),
+        FromWorldMut::new(storage as &mut _),
+        FromWorld::new(storage as &_),
     );
 
     debug!("Updating program done");

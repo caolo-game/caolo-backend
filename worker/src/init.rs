@@ -1,6 +1,7 @@
 use cao_lang::prelude::*;
 use caolo_sim::model::{self, components, geometry::Point, terrain, EntityId, ScriptId};
-use caolo_sim::storage::{views::UnsafeView, Storage};
+use caolo_sim::storage::views::{FromWorldMut, UnsafeView};
+use caolo_sim::World;
 use log::debug;
 use rand::Rng;
 
@@ -70,7 +71,7 @@ nodes:
         child: 8
         "#;
 
-pub fn init_storage(n_fake_users: usize) -> Storage {
+pub fn init_storage(n_fake_users: usize) -> World {
     assert!(n_fake_users >= 1);
 
     let mut storage = caolo_sim::init_inmemory_storage();
@@ -81,27 +82,32 @@ pub fn init_storage(n_fake_users: usize) -> Storage {
     debug!("compiling default program");
     let compiled = Compiler::compile(script).expect("failed to compile example program");
     debug!("compilation done");
-    storage
-        .scripts_table_mut::<components::ScriptComponent>()
-        .insert_or_update(script_id, components::ScriptComponent(compiled));
+    unsafe {
+        storage
+            .unsafe_view::<ScriptId, components::ScriptComponent>()
+            .as_mut()
+            .insert_or_update(script_id, components::ScriptComponent(compiled));
+    };
 
     let mut rng = rand::thread_rng();
 
-    let terrain = storage.point_table_mut::<components::TerrainComponent>();
+    let mut terrain = storage.unsafe_view::<Point, components::TerrainComponent>();
 
     for _ in 0..200 {
-        let pos = uncontested_pos(terrain, &mut rng);
-        terrain.insert(
-            pos,
-            components::TerrainComponent(terrain::TileTerrainType::Wall),
-        );
+        let pos = uncontested_pos(&*terrain, &mut rng);
+        unsafe {
+            terrain.as_mut().insert(
+                pos,
+                components::TerrainComponent(terrain::TileTerrainType::Wall),
+            );
+        }
     }
 
     for _ in 0..n_fake_users {
         let id = storage.insert_entity();
         let storage = &mut storage;
         unsafe {
-            init_bot(id, script_id, &mut rng, storage.into());
+            init_bot(id, script_id, &mut rng, FromWorldMut::new(storage));
         }
     }
 
@@ -109,10 +115,11 @@ pub fn init_storage(n_fake_users: usize) -> Storage {
         let id = storage.insert_entity();
         let storage = &mut storage;
         unsafe {
-            init_resource(id, &mut rng, storage.into());
+            init_resource(id, &mut rng, FromWorldMut::new(storage));
         }
     }
 
+    debug!("init done");
     storage
 }
 

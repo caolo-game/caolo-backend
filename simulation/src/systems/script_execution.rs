@@ -2,7 +2,7 @@ use crate::model::{
     components::{EntityScript, ScriptComponent},
     EntityId, ScriptId, UserId,
 };
-use crate::{intents::Intents, profile, storage::Storage};
+use crate::{intents::Intents, profile, World};
 use cao_lang::prelude::*;
 use std::sync::{Arc, Mutex};
 
@@ -10,7 +10,7 @@ pub type ExecutionResult = Result<Intents, String>;
 
 /// Must be called from a tokio runtime!
 /// Returns the intents that are expected to be executed
-pub fn execute_scripts(storage: &Storage) -> Intents {
+pub fn execute_scripts(storage: &World) -> Intents {
     profile!("execute_scripts");
 
     let intents = Arc::new(Mutex::new(Intents::new()));
@@ -20,9 +20,9 @@ pub fn execute_scripts(storage: &Storage) -> Intents {
     intents.into_inner().expect("Mutex unwrap")
 }
 
-fn execute_scripts_parallel(intents: Arc<Mutex<Intents>>, storage: &Storage) {
+fn execute_scripts_parallel(intents: Arc<Mutex<Intents>>, storage: &World) {
     rayon::scope(move |s| {
-        for (entityid, script) in storage.entity_table::<EntityScript>().iter() {
+        for (entityid, script) in storage.view::<EntityId, EntityScript>().reborrow().iter() {
             let intents = intents.clone();
             s.spawn(
                 move |_| match execute_single_script(entityid, script.script_id, storage) {
@@ -45,12 +45,13 @@ fn execute_scripts_parallel(intents: Arc<Mutex<Intents>>, storage: &Storage) {
 pub fn execute_single_script<'a>(
     entityid: EntityId,
     scriptid: ScriptId,
-    storage: &'a Storage,
+    storage: &'a World,
 ) -> ExecutionResult {
     profile!("execute_single_script");
 
     let program = storage
-        .scripts_table::<ScriptComponent>()
+        .view::<ScriptId, ScriptComponent>()
+        .reborrow()
         .get_by_id(&scriptid)
         .ok_or_else(|| {
             error!("Script by ID {:?} does not exist", scriptid);
@@ -79,7 +80,7 @@ pub fn execute_single_script<'a>(
 
 pub struct ScriptExecutionData {
     intents: Intents,
-    storage: *const Storage,
+    storage: *const World,
     entityid: EntityId,
     current_user: Option<UserId>,
 }
@@ -89,7 +90,7 @@ impl ScriptExecutionData {
         self.entityid
     }
 
-    pub fn storage(&self) -> &Storage {
+    pub fn storage(&self) -> &World {
         unsafe { &*self.storage }
     }
 

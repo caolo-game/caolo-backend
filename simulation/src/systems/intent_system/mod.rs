@@ -11,58 +11,56 @@ use self::move_intent_system::MoveSystem;
 use self::spawn_intent_system::SpawnSystem;
 use crate::intents::{Intents, MoveIntent};
 use crate::profile;
-use crate::storage::{
-    views::{HasNew, HasNewMut},
-    Storage,
-};
+use crate::storage::views::{FromWorld, FromWorldMut};
+use crate::World;
 use rayon::prelude::*;
 
 pub trait IntentExecutionSystem<'a> {
-    type Mut: HasNewMut;
-    type Const: HasNew<'a>;
+    type Mut: FromWorldMut;
+    type Const: FromWorld<'a>;
     type Intent;
 
     fn execute(&mut self, m: Self::Mut, c: Self::Const, intents: &[Self::Intent]);
 }
 
 /// Executes all intents in order of priority (as defined by this system)
-pub fn execute_intents(mut intents: Intents, storage: &mut Storage) {
+pub fn execute_intents(mut intents: Intents, storage: &mut World) {
     profile!("execute_intents");
 
     pre_process_move_intents(&mut intents.move_intents);
 
     let mut move_sys = MoveSystem;
     move_sys.execute(
-        From::from(storage as &mut _),
-        From::from(storage as &_),
+        FromWorldMut::new(storage as &mut _),
+        FromWorld::new(storage as &_),
         intents.move_intents.as_slice(),
     );
 
     let mut mine_sys = MineSystem;
     mine_sys.execute(
-        From::from(storage as &mut _),
-        From::from(storage as &_),
+        FromWorldMut::new(storage as &mut _),
+        FromWorld::new(storage as &_),
         intents.mine_intents.as_slice(),
     );
 
     let mut dropoff_sys = DropoffSystem;
     dropoff_sys.execute(
-        From::from(storage as &mut _),
-        From::from(storage as &_),
+        FromWorldMut::new(storage as &mut _),
+        FromWorld::new(storage as &_),
         intents.dropoff_intents.as_slice(),
     );
 
     let mut spawn_sys = SpawnSystem;
     spawn_sys.execute(
-        From::from(storage as &mut _),
-        From::from(storage as &_),
+        FromWorldMut::new(storage as &mut _),
+        FromWorld::new(storage as &_),
         intents.spawn_intents.as_slice(),
     );
 
     let mut log_sys = LogSystem;
     log_sys.execute(
-        From::from(storage as &mut _),
-        From::from(storage as &_),
+        FromWorldMut::new(storage as &mut _),
+        FromWorld::new(storage as &_),
         intents.log_intents.as_slice(),
     );
 }

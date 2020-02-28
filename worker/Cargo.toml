@@ -18,7 +18,7 @@ dotenv = ["dep-dotenv"]
 with-serde = [] # for protobuf
 
 [dependencies]
-caolo-sim = { path = "../simulation", features=["profile"] }
+caolo-sim = { path = "../simulation", features=[] }
 cao-lang = { path = "../cao-lang" }
 
 log = "*"

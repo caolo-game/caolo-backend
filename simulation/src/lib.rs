@@ -23,8 +23,6 @@ use systems::script_execution::execute_scripts;
 use tables::{Component, TableId};
 
 pub fn forward(storage: &mut World) -> Result<(), Box<dyn std::error::Error>> {
-    profile!("forward world state");
-
     info!("Executing scripts");
     let final_intents = execute_scripts(storage);
     info!("Executing scripts - done");

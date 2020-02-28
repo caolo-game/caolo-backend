@@ -64,19 +64,16 @@ fn get_by_id() {
 }
 
 #[bench]
-fn bench_contains_rand_at_2pow15(b: &mut Bencher) {
+fn bench_contains_rand_at_2pow16(b: &mut Bencher) {
     let mut rng = rand::thread_rng();
 
-    let mut table = MortonTable::new();
-
-    for i in 0..(1 << 15) {
+    let table = MortonTable::from_iterator((0..(1 << 16)).map(|i| {
         let p = Point {
             x: rng.gen_range(0, 3900 * 2),
             y: rng.gen_range(0, 3900 * 2),
         };
-        let inserted = table.insert(p, i);
-        assert!(inserted);
-    }
+        (p, i)
+    }));
 
     b.iter(|| {
         let p = Point {
@@ -219,7 +216,7 @@ fn rebuild_morton_table(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_get_by_id_rand(b: &mut Bencher) {
+fn bench_get_by_id_rand_2pow16(b: &mut Bencher) {
     let mut rng = rand::thread_rng();
 
     let len = 1 << 16;
@@ -266,7 +263,7 @@ fn from_iterator_inserts_correctly() {
 }
 
 #[bench]
-fn bench_get_by_id_in_table(b: &mut Bencher) {
+fn bench_get_by_id_in_table_rand_2pow16(b: &mut Bencher) {
     let mut rng = rand::thread_rng();
 
     let len = 1 << 16;

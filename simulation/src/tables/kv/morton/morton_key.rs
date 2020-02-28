@@ -1,7 +1,7 @@
 use serde_derive::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, Hash, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize)]
-pub struct MortonKey(u32);
+#[derive(Debug, Clone, Copy, Hash, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize, Default)]
+pub struct MortonKey(pub u32);
 
 impl MortonKey {
     pub fn new(x: u16, y: u16) -> Self {

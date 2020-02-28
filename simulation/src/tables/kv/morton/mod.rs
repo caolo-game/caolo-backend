@@ -5,13 +5,19 @@
 //! constructing from iterators is much faster than quadtrees.
 //!
 
+#![cfg(all(any(target_arch = "x86", target_arch = "x86_64"),))]
+#[cfg(target_arch = "x86")]
+use std::arch::x86::*;
+#[cfg(target_arch = "x86_64")]
+use std::arch::x86_64::*;
+use std::mem;
+
 mod morton_key;
 #[cfg(test)]
 mod tests;
 
 use super::*;
 use crate::model::{components::EntityComponent, geometry::Point};
-use arrayvec::ArrayVec;
 use morton_key::*;
 use rayon::prelude::*;
 use serde_derive::{Deserialize, Serialize};
@@ -19,10 +25,11 @@ use std::convert::TryInto;
 
 use crate::profile;
 
-const SKIP_LEN: usize = 9;
-type SkipList = ArrayVec<[MortonKey; SKIP_LEN]>;
+// We'll use 8 keys to be able to utilize avx2 compare instrincts
+const SKIP_LEN: usize = 8;
+type SkipList = [u32; SKIP_LEN];
 
-#[derive(Default, Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MortonTable<Id, Row>
 where
     Id: SpatialKey2d,
@@ -30,12 +37,26 @@ where
 {
     // keys is 24 bytes in memory
     // assuming 64 byte long L1 cache lines we can fit 10 keys
-    // minus the overhead of ArrayVec (TODO)
     keys: Vec<MortonKey>,
     skiplist: SkipList,
     // end of the first cacheline
     poss: Vec<Id>,
     values: Vec<Row>,
+}
+
+impl<Id, Row> Default for MortonTable<Id, Row>
+where
+    Id: SpatialKey2d + Send,
+    Row: TableRow + Send,
+{
+    fn default() -> Self {
+        Self {
+            skiplist: [0; SKIP_LEN],
+            values: Default::default(),
+            keys: Default::default(),
+            poss: Default::default(),
+        }
+    }
 }
 
 unsafe impl<Id, Row> Send for MortonTable<Id, Row>
@@ -87,7 +108,7 @@ where
 
     pub fn clear(&mut self) {
         self.keys.clear();
-        self.skiplist.clear();
+        self.skiplist = [Default::default(); SKIP_LEN];
         self.values.clear();
         self.poss.clear();
     }
@@ -130,18 +151,16 @@ where
             }
         }
 
-        self.skiplist.clear();
-
         let len = self.keys.len();
         let step = len / SKIP_LEN;
         if step == 0 {
             if let Some(key) = self.keys.last() {
-                self.skiplist.push(*key);
+                self.skiplist[0] = key.0;
             }
             return;
         }
-        for i in (0..len).step_by(step).skip(1).take(SKIP_LEN) {
-            self.skiplist.push(self.keys[i]);
+        for (i, k) in (0..len).step_by(step).skip(1).take(SKIP_LEN).enumerate() {
+            self.skiplist[i] = self.keys[k].0;
         }
     }
 
@@ -234,20 +253,24 @@ where
             return self.keys.binary_search(&key).ok();
         }
 
-        debug_assert!(!self.skiplist.is_empty());
-
-        let len = self.skiplist.len();
-        for i in 0..len {
-            if key <= self.skiplist[i] {
-                let begin = i * step;
-                let end = (1 + i) * step;
-                debug_assert!(begin < end);
+        unsafe {
+            let key = key.0 as i32;
+            let keys = _mm256_set_epi32(key, key, key, key, key, key, key, key);
+            let skiplist: __m256i = mem::transmute(self.skiplist);
+            let results = _mm256_cmpgt_epi32(keys, skiplist);
+            let index = _mm256_movemask_epi8(results);
+            let index = _popcnt32(index) / 4;
+            if index < 7 {
+                let index = index as usize;
+                let begin = index * step;
+                let end = (1 + index) * step;
                 return self.keys[begin..=end]
-                    .binary_search(&key)
+                    .binary_search(&MortonKey(key as u32))
                     .ok()
                     .map(|ind| ind + begin);
             }
-        }
+        };
+
         debug_assert!(self.keys.len() >= step + 1);
         let begin = self.keys.len() - step - 1;
         self.keys[begin..]

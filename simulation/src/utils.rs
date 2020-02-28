@@ -57,7 +57,7 @@ pub mod profiler {
             }
         }
 
-        fn save<'a>(v: &Vec<Record<'a>>) {
+        fn save<'a>(v: &[Record<'a>]) {
             use std::fs::File;
             use std::io::Write;
 

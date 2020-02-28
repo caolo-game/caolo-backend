@@ -57,9 +57,17 @@ fn get_by_id() {
 
     points.shuffle(&mut rng);
 
+    println!("{:?}", table);
+
     for p in points {
         let found = table.get_by_id(&p.0);
-        assert_eq!(found, Some(&p.1), "{:?}", p);
+        assert_eq!(
+            found,
+            Some(&p.1),
+            "{:?} {:?}",
+            p.0,
+            MortonKey::new(p.0.x as u16, p.0.y as u16)
+        );
     }
 }
 

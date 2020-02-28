@@ -254,17 +254,16 @@ where
         }
 
         let index = unsafe {
-            let key = key.0 as i32;
-            // the key 8 times
-            let keys = _mm256_set_epi32(key, key, key, key, key, key, key, key);
-            // load self.skiplist as a __m256i
+            let key: i32 = mem::transmute(key.0);
+            let keys8 = _mm256_set_epi32(key, key, key, key, key, key, key, key);
             let skiplist: __m256i = mem::transmute(self.skiplist);
-            // set every 32 bits to 0xFFFF if a < b else sets it to 0x0
-            let results = _mm256_cmpgt_epi32(keys, skiplist);
+            // set every 32 bits to 0xFFFF if a < b else sets it to 0x0000
+            let results = _mm256_cmpgt_epi32(keys8, skiplist);
             // create a mask from the most significant bit of each 8bit element
             let index = _mm256_movemask_epi8(results);
             // count the number of bits set to 1
-            // because the mask was created from 8 bit wide items this is 4 times the actual index
+            // because the mask was created from 8 bit wide items every key in skip list is counted
+            // 4 times
             let index = _popcnt32(index) / 4;
             index as usize
         };
@@ -276,9 +275,8 @@ where
                 .ok()
                 .map(|ind| ind + begin);
         }
-
-        debug_assert!(self.keys.len() >= step + 1);
-        let begin = self.keys.len() - step - 1;
+        debug_assert!(self.keys.len() >= step + 2);
+        let begin = self.keys.len() - step - 2;
         self.keys[begin..]
             .binary_search(&key)
             .ok()
@@ -362,8 +360,10 @@ where
     /// Return wether point is within the bounds of this node
     pub fn intersects(&self, point: &Id) -> bool {
         let [x, y] = point.as_array();
-        // at most 16 bits long non-negative integers
-        0 <= x && 0 <= y && (x & 0xffff) == x && (y & 0xffff) == y
+        // at most 15 bits long non-negative integers
+        // having the 16th bit set might create problems in find_key
+        const MASK: i32 = 0b0111111111111111;
+        (x & MASK) == x && (y & MASK) == y
     }
 }
 

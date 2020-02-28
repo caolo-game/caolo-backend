@@ -3,6 +3,7 @@ use crate::model::{
     geometry::Point,
     terrain::TileTerrainType,
 };
+use crate::profile;
 use crate::storage::views::View;
 use std::collections::{HashMap, HashSet};
 
@@ -41,6 +42,8 @@ pub fn find_path(
     mut max_iterations: u32,
     path: &mut Vec<Point>,
 ) -> Result<(), PathFindingError> {
+    profile!("find_path");
+
     let current = from;
     let end = to;
 
@@ -131,10 +134,9 @@ mod tests {
         let to = Point::new(5, 2);
 
         let positions = MortonTable::new();
-        let mut terrain = MortonTable::new();
-        for i in 0..=5 {
-            assert!(terrain.insert(Point::new(2, i), TerrainComponent(TileTerrainType::Wall)));
-        }
+        let terrain = MortonTable::from_iterator(
+            (0..=5).map(|i| (Point::new(2, i), TerrainComponent(TileTerrainType::Wall))),
+        );
 
         let mut path = vec![];
         find_path(
@@ -151,7 +153,7 @@ mod tests {
         for point in path.iter() {
             assert_eq!(point.hex_distance(current), 1);
             if point.x == 2 {
-                assert!(point.y.abs() > 5, "{:?}", point);
+                assert!(point.y > 5, "{:?}", point);
             }
             current = *point;
         }

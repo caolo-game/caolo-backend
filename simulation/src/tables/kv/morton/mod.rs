@@ -116,6 +116,20 @@ where
     }
 
     fn rebuild_skip_list(&mut self) {
+        #[cfg(debug_assertions)]
+        {
+            // assert that keys is sorted.
+            // at the time of writing is_sorted is still unstable
+            if self.keys.len() > 2 {
+                let mut it = self.keys.iter();
+                let mut current = it.next().unwrap();
+                for item in it {
+                    assert!(current <= item);
+                    current = item;
+                }
+            }
+        }
+
         self.skiplist.clear();
 
         let len = self.keys.len();
@@ -215,23 +229,27 @@ where
         let [x, y] = id.as_array();
         let key = MortonKey::new(x as u16, y as u16);
 
-        let len = self.skiplist.len();
-        if self.skiplist[0] > key {
-            return self.keys[0..len].binary_search(&key).ok();
+        let step = self.keys.len() / SKIP_LEN;
+        if step == 0 {
+            return self.keys.binary_search(&key).ok();
         }
 
-        let step = self.keys.len() / SKIP_LEN;
-        for i in 1..len {
-            if key < self.skiplist[i] {
+        debug_assert!(!self.skiplist.is_empty());
+
+        let len = self.skiplist.len();
+        for i in 0..len {
+            if key <= self.skiplist[i] {
                 let begin = i * step;
-                let end = 1 + i * step;
+                let end = (1 + i) * step;
+                debug_assert!(begin < end);
                 return self.keys[begin..=end]
                     .binary_search(&key)
                     .ok()
                     .map(|ind| ind + begin);
             }
         }
-        let begin = self.keys.len() - step;
+        debug_assert!(self.keys.len() >= step + 1);
+        let begin = self.keys.len() - step - 1;
         self.keys[begin..]
             .binary_search(&key)
             .ok()

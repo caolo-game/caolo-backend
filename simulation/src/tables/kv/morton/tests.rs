@@ -5,9 +5,9 @@ use test::Bencher;
 
 #[test]
 fn insertions() {
-    let mut tree = MortonTable::new();
+    let mut table = MortonTable::new();
 
-    let r = tree.insert(Point::new(16, 32), 123i32);
+    let r = table.insert(Point::new(16, 32), 123i32);
     assert!(r);
 }
 
@@ -15,19 +15,19 @@ fn insertions() {
 fn test_range_query_all() {
     let mut rng = rand::thread_rng();
 
-    let mut tree = MortonTable::new();
+    let mut table = MortonTable::new();
 
     for i in 0..256 {
         let p = Point {
             x: rng.gen_range(0, 128),
             y: rng.gen_range(0, 128),
         };
-        let inserted = tree.insert(p, i);
+        let inserted = table.insert(p, i);
         assert!(inserted);
     }
 
     let mut res = Vec::new();
-    tree.find_by_range(&Point::default(), 256, &mut res);
+    table.find_by_range(&Point::default(), 256, &mut res);
 
     assert_eq!(res.len(), 256);
 }
@@ -36,7 +36,7 @@ fn test_range_query_all() {
 fn get_by_id() {
     let mut rng = rand::thread_rng();
 
-    let mut tree = MortonTable::<Point, usize>::new();
+    let mut table = MortonTable::<Point, usize>::new();
 
     let mut points = HashMap::with_capacity(64);
 
@@ -49,7 +49,7 @@ fn get_by_id() {
     }
 
     for (p, e) in points.iter() {
-        let inserted = tree.insert(p.clone(), *e);
+        let inserted = table.insert(p.clone(), *e);
         assert!(inserted);
     }
 
@@ -58,7 +58,7 @@ fn get_by_id() {
     points.shuffle(&mut rng);
 
     for p in points {
-        let found = tree.get_by_id(&p.0);
+        let found = table.get_by_id(&p.0);
         assert_eq!(found, Some(&p.1), "{:?}", p);
     }
 }
@@ -67,14 +67,14 @@ fn get_by_id() {
 fn bench_contains_rand_at_2pow15(b: &mut Bencher) {
     let mut rng = rand::thread_rng();
 
-    let mut tree = MortonTable::new();
+    let mut table = MortonTable::new();
 
     for i in 0..(1 << 15) {
         let p = Point {
             x: rng.gen_range(0, 3900 * 2),
             y: rng.gen_range(0, 3900 * 2),
         };
-        let inserted = tree.insert(p, i);
+        let inserted = table.insert(p, i);
         assert!(inserted);
     }
 
@@ -83,7 +83,7 @@ fn bench_contains_rand_at_2pow15(b: &mut Bencher) {
             x: rng.gen_range(0, 3900 * 2),
             y: rng.gen_range(0, 3900 * 2),
         };
-        tree.contains_key(&p)
+        table.contains_key(&p)
     });
 }
 
@@ -91,14 +91,14 @@ fn bench_contains_rand_at_2pow15(b: &mut Bencher) {
 fn bench_range_query(b: &mut Bencher) {
     let mut rng = rand::thread_rng();
 
-    let mut tree = MortonTable::new();
+    let mut table = MortonTable::new();
 
     for i in 0..(1 << 15) {
         let p = Point {
             x: rng.gen_range(0, 3900 * 2),
             y: rng.gen_range(0, 3900 * 2),
         };
-        let inserted = tree.insert(p, i);
+        let inserted = table.insert(p, i);
         assert!(inserted);
     }
 
@@ -106,13 +106,13 @@ fn bench_range_query(b: &mut Bencher) {
     let radius = 512;
 
     b.iter(|| {
-        let tree = &tree;
+        let table = &table;
         res.clear();
         let p = Point {
             x: rng.gen_range(0, 3900 * 2),
             y: rng.gen_range(0, 3900 * 2),
         };
-        tree.find_by_range(&p, radius, &mut res);
+        table.find_by_range(&p, radius, &mut res);
         res.len()
     });
 }
@@ -121,26 +121,26 @@ fn bench_range_query(b: &mut Bencher) {
 fn bench_get_entities_in_range_sparse(b: &mut Bencher) {
     let mut rng = rand::thread_rng();
 
-    let mut tree = MortonTable::new();
+    let mut table = MortonTable::new();
 
     for _ in 0..(1 << 15) {
         let p = Point {
             x: rng.gen_range(0, 3900 * 2),
             y: rng.gen_range(0, 3900 * 2),
         };
-        let inserted = tree.insert(p, EntityComponent(EntityId(rng.gen())));
+        let inserted = table.insert(p, EntityComponent(EntityId(rng.gen())));
         assert!(inserted);
     }
 
     let radius = 512;
 
     b.iter(|| {
-        let tree = &tree;
+        let table = &table;
         let p = Point {
             x: rng.gen_range(0, 3900 * 2),
             y: rng.gen_range(0, 3900 * 2),
         };
-        tree.get_entities_in_range(&Circle { center: p, radius })
+        table.get_entities_in_range(&Circle { center: p, radius })
     });
 }
 
@@ -148,35 +148,35 @@ fn bench_get_entities_in_range_sparse(b: &mut Bencher) {
 fn bench_get_entities_in_range_dense(b: &mut Bencher) {
     let mut rng = rand::thread_rng();
 
-    let mut tree = MortonTable::new();
+    let mut table = MortonTable::new();
 
     for _ in 0..(1 << 15) {
         let p = Point {
             x: rng.gen_range(0, 200 * 2),
             y: rng.gen_range(0, 200 * 2),
         };
-        let inserted = tree.insert(p, EntityComponent(EntityId(rng.gen())));
+        let inserted = table.insert(p, EntityComponent(EntityId(rng.gen())));
         assert!(inserted);
     }
 
     let radius = 50;
 
     b.iter(|| {
-        let tree = &tree;
+        let table = &table;
         let p = Point {
             x: rng.gen_range(0, 200 * 2),
             y: rng.gen_range(0, 200 * 2),
         };
-        tree.get_entities_in_range(&Circle { center: p, radius })
+        table.get_entities_in_range(&Circle { center: p, radius })
     });
 }
 
 #[bench]
-fn make_morton_tree(b: &mut Bencher) {
+fn make_morton_table(b: &mut Bencher) {
     let mut rng = rand::thread_rng();
 
     b.iter(|| {
-        let tree = MortonTable::from_iterator((0..(1 << 15)).map(|_| {
+        let table = MortonTable::from_iterator((0..(1 << 15)).map(|_| {
             (
                 Point {
                     x: rng.gen_range(0, 3900 * 2),
@@ -185,15 +185,15 @@ fn make_morton_tree(b: &mut Bencher) {
                 rng.next_u32(),
             )
         }));
-        tree
+        table
     });
 }
 
 #[bench]
-fn rebuild_morton_tree(b: &mut Bencher) {
+fn rebuild_morton_table(b: &mut Bencher) {
     let mut rng = rand::thread_rng();
 
-    let mut tree = MortonTable::from_iterator((0..(1 << 15)).map(|_| {
+    let mut table = MortonTable::from_iterator((0..(1 << 15)).map(|_| {
         (
             Point {
                 x: rng.gen_range(0, 3900 * 2),
@@ -204,9 +204,9 @@ fn rebuild_morton_tree(b: &mut Bencher) {
     }));
 
     b.iter(|| {
-        tree.clear();
+        table.clear();
 
-        tree.extend((0..(1 << 15)).map(|_| {
+        table.extend((0..(1 << 15)).map(|_| {
             (
                 Point {
                     x: rng.gen_range(0, 3900 * 2),
@@ -223,7 +223,7 @@ fn bench_get_by_id_rand(b: &mut Bencher) {
     let mut rng = rand::thread_rng();
 
     let len = 1 << 16;
-    let tree = MortonTable::from_iterator((0..len).map(|_| {
+    let table = MortonTable::from_iterator((0..len).map(|_| {
         let pos = Point {
             x: rng.gen_range(0, 3900 * 2),
             y: rng.gen_range(0, 3900 * 2),
@@ -236,7 +236,7 @@ fn bench_get_by_id_rand(b: &mut Bencher) {
             x: rng.gen_range(0, 3900 * 2),
             y: rng.gen_range(0, 3900 * 2),
         };
-        tree.get_by_id(&pos)
+        table.get_by_id(&pos)
     });
 }
 
@@ -246,7 +246,7 @@ fn from_iterator_inserts_correctly() {
 
     let len = 1 << 12;
     let mut points = HashMap::with_capacity(len);
-    let tree = MortonTable::from_iterator((0..len).filter_map(|_| {
+    let table = MortonTable::from_iterator((0..len).filter_map(|_| {
         let pos = Point {
             x: rng.gen_range(0, 3900 * 2),
             y: rng.gen_range(0, 3900 * 2),
@@ -260,18 +260,18 @@ fn from_iterator_inserts_correctly() {
     }));
 
     for (pos, val) in points {
-        let v = *tree.get_by_id(&pos).expect("to find the value");
+        let v = *table.get_by_id(&pos).expect("to find the value");
         assert_eq!(val, v);
     }
 }
 
 #[bench]
-fn bench_get_by_id_in_tree(b: &mut Bencher) {
+fn bench_get_by_id_in_table(b: &mut Bencher) {
     let mut rng = rand::thread_rng();
 
     let len = 1 << 16;
     let mut points = Vec::with_capacity(len);
-    let tree = MortonTable::from_iterator((0..len).map(|_| {
+    let table = MortonTable::from_iterator((0..len).map(|_| {
         let pos = Point {
             x: rng.gen_range(0, 3900 * 2),
             y: rng.gen_range(0, 3900 * 2),
@@ -283,7 +283,7 @@ fn bench_get_by_id_in_tree(b: &mut Bencher) {
     b.iter(|| {
         let i = rng.gen_range(0, points.len());
         let pos = &points[i];
-        tree.get_by_id(pos)
+        table.get_by_id(pos)
     });
 }
 
@@ -291,28 +291,28 @@ fn bench_get_by_id_in_tree(b: &mut Bencher) {
 fn bench_get_entities_in_range_dense_in_hashmap(b: &mut Bencher) {
     let mut rng = rand::thread_rng();
 
-    let mut tree = std::collections::HashMap::new();
+    let mut table = std::collections::HashMap::new();
 
     for _ in 0..(1 << 15) {
         let p = Point {
             x: rng.gen_range(0, 200 * 2),
             y: rng.gen_range(0, 200 * 2),
         };
-        tree.insert(p, EntityComponent(EntityId(rng.gen())));
+        table.insert(p, EntityComponent(EntityId(rng.gen())));
     }
 
     let radius = 50;
 
     let mut v = Vec::with_capacity(512);
     b.iter(|| {
-        let tree = &tree;
+        let table = &table;
         let x = rng.gen_range(0, 200 * 2);
         let y = rng.gen_range(0, 200 * 2);
         v.clear();
         for x in x - radius..x + radius {
             for y in y - radius..y + radius {
                 let p = Point { x, y };
-                if let Some(val) = tree.get(&p) {
+                if let Some(val) = table.get(&p) {
                     v.push((p, val));
                 }
             }

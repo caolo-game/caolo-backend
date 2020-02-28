@@ -57,12 +57,34 @@ fn get_by_id() {
 
     points.shuffle(&mut rng);
 
-    println!("{:?}\n{:#?}", points, tree);
-
     for p in points {
         let found = tree.get_by_id(&p.0);
-        assert_eq!(found, Some(&p.1));
+        assert_eq!(found, Some(&p.1), "{:?}", p);
     }
+}
+
+#[bench]
+fn bench_contains_rand_at_2pow15(b: &mut Bencher) {
+    let mut rng = rand::thread_rng();
+
+    let mut tree = MortonTable::new();
+
+    for i in 0..(1 << 15) {
+        let p = Point {
+            x: rng.gen_range(0, 3900 * 2),
+            y: rng.gen_range(0, 3900 * 2),
+        };
+        let inserted = tree.insert(p, i);
+        assert!(inserted);
+    }
+
+    b.iter(|| {
+        let p = Point {
+            x: rng.gen_range(0, 3900 * 2),
+            y: rng.gen_range(0, 3900 * 2),
+        };
+        tree.contains_key(&p)
+    });
 }
 
 #[bench]

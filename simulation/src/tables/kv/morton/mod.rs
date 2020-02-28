@@ -11,6 +11,7 @@ mod tests;
 
 use super::*;
 use crate::model::{components::EntityComponent, geometry::Point};
+use arrayvec::ArrayVec;
 use morton_key::*;
 use rayon::prelude::*;
 use serde_derive::{Deserialize, Serialize};
@@ -18,13 +19,21 @@ use std::convert::TryInto;
 
 use crate::profile;
 
+const SKIP_LEN: usize = 9;
+type SkipList = ArrayVec<[MortonKey; SKIP_LEN]>;
+
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct MortonTable<Id, Row>
 where
     Id: SpatialKey2d,
     Row: TableRow,
 {
+    // keys is 24 bytes in memory
+    // assuming 64 byte long L1 cache lines we can fit 10 keys
+    // minus the overhead of ArrayVec (TODO)
     keys: Vec<MortonKey>,
+    skiplist: SkipList,
+    // end of the first cacheline
     poss: Vec<Id>,
     values: Vec<Row>,
 }
@@ -44,6 +53,7 @@ where
     pub fn new() -> Self {
         Self {
             values: vec![],
+            skiplist: Default::default(),
             keys: vec![],
             poss: vec![],
         }
@@ -51,6 +61,7 @@ where
 
     pub fn with_capacity(cap: usize) -> Self {
         Self {
+            skiplist: Default::default(),
             values: Vec::with_capacity(cap),
             keys: Vec::with_capacity(cap),
             poss: Vec::with_capacity(cap),
@@ -75,9 +86,10 @@ where
     }
 
     pub fn clear(&mut self) {
+        self.keys.clear();
+        self.skiplist.clear();
         self.values.clear();
         self.poss.clear();
-        self.keys.clear();
     }
 
     pub fn extend<It>(&mut self, it: It)
@@ -100,6 +112,23 @@ where
             self.poss.as_mut_slice(),
             self.values.as_mut_slice(),
         );
+        self.rebuild_skip_list();
+    }
+
+    fn rebuild_skip_list(&mut self) {
+        self.skiplist.clear();
+
+        let len = self.keys.len();
+        let step = len / SKIP_LEN;
+        if step == 0 {
+            if let Some(key) = self.keys.last() {
+                self.skiplist.push(*key);
+            }
+            return;
+        }
+        for i in (0..len).step_by(step).skip(1).take(SKIP_LEN) {
+            self.skiplist.push(self.keys[i]);
+        }
     }
 
     fn sort(keys: &mut [MortonKey], poss: &mut [Id], values: &mut [Row]) {
@@ -158,6 +187,7 @@ where
         self.keys.insert(ind, MortonKey::new(x, y));
         self.poss.insert(ind, id);
         self.values.insert(ind, row);
+        self.rebuild_skip_list();
         true
     }
 
@@ -168,14 +198,8 @@ where
         if !self.intersects(&id) {
             return None;
         }
-        let [x, y] = id.as_array();
-        let [x, y] = [x as u16, y as u16];
 
-        if let Ok(ind) = self.keys.binary_search(&MortonKey::new(x, y)) {
-            Some(&self.values[ind])
-        } else {
-            None
-        }
+        self.find_key(id).map(|ind| &self.values[ind])
     }
 
     pub fn contains_key(&self, id: &Id) -> bool {
@@ -184,10 +208,34 @@ where
         if !self.intersects(&id) {
             return false;
         }
-        let [x, y] = id.as_array();
-        let [x, y] = [x as u16, y as u16];
+        self.find_key(id).is_some()
+    }
 
-        self.keys.binary_search(&MortonKey::new(x, y)).is_ok()
+    fn find_key(&self, id: &Id) -> Option<usize> {
+        let [x, y] = id.as_array();
+        let key = MortonKey::new(x as u16, y as u16);
+
+        let len = self.skiplist.len();
+        if self.skiplist[0] > key {
+            return self.keys[0..len].binary_search(&key).ok();
+        }
+
+        let step = self.keys.len() / SKIP_LEN;
+        for i in 1..len {
+            if key < self.skiplist[i] {
+                let begin = i * step;
+                let end = 1 + i * step;
+                return self.keys[begin..=end]
+                    .binary_search(&key)
+                    .ok()
+                    .map(|ind| ind + begin);
+            }
+        }
+        let begin = self.keys.len() - step;
+        self.keys[begin..]
+            .binary_search(&key)
+            .ok()
+            .map(|ind| ind + begin)
     }
 
     /// For each id returns the first item with given id, if any
@@ -268,7 +316,7 @@ where
     pub fn intersects(&self, point: &Id) -> bool {
         let [x, y] = point.as_array();
         // at most 16 bits long non-negative integers
-        x >= 0 && y >= 0 && (x & 0xffff) == x && (y & 0xffff) == y
+        0 <= x && 0 <= y && (x & 0xffff) == x && (y & 0xffff) == y
     }
 }
 
@@ -282,19 +330,15 @@ where
 
     fn delete(&mut self, id: &Id) -> Option<Row> {
         profile!("delete");
-
-        let [x, y] = id.as_array();
-        let x = x.try_into().ok()?;
-        let y = y.try_into().ok()?;
-        let id = MortonKey::new(x, y);
-        match self.keys.binary_search(&id) {
-            Err(_) => None,
-            Ok(ind) => {
-                self.keys.remove(ind);
-                self.poss.remove(ind);
-                Some(self.values.remove(ind))
-            }
+        if !self.contains_key(id) {
+            return None;
         }
+
+        self.find_key(&id).map(|ind| {
+            self.keys.remove(ind);
+            self.poss.remove(ind);
+            self.values.remove(ind)
+        })
     }
 }
 

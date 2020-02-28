@@ -4,8 +4,8 @@
 //! This is a severe restriction on the keys that can be used, however dense queries and
 //! constructing from iterators is much faster than quadtrees.
 //!
+#![cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 
-#![cfg(all(any(target_arch = "x86", target_arch = "x86_64"),))]
 #[cfg(target_arch = "x86")]
 use std::arch::x86::*;
 #[cfg(target_arch = "x86_64")]
@@ -253,23 +253,29 @@ where
             return self.keys.binary_search(&key).ok();
         }
 
-        unsafe {
+        let index = unsafe {
             let key = key.0 as i32;
+            // the key 8 times
             let keys = _mm256_set_epi32(key, key, key, key, key, key, key, key);
+            // load self.skiplist as a __m256i
             let skiplist: __m256i = mem::transmute(self.skiplist);
+            // set every 32 bits to 0xFFFF if a < b else sets it to 0x0
             let results = _mm256_cmpgt_epi32(keys, skiplist);
+            // create a mask from the most significant bit of each 8bit element
             let index = _mm256_movemask_epi8(results);
+            // count the number of bits set to 1
+            // because the mask was created from 8 bit wide items this is 4 times the actual index
             let index = _popcnt32(index) / 4;
-            if index < 7 {
-                let index = index as usize;
-                let begin = index * step;
-                let end = (1 + index) * step;
-                return self.keys[begin..=end]
-                    .binary_search(&MortonKey(key as u32))
-                    .ok()
-                    .map(|ind| ind + begin);
-            }
+            index as usize
         };
+        if index < 7 {
+            let begin = index * step;
+            let end = begin + step;
+            return self.keys[begin..=end]
+                .binary_search(&key)
+                .ok()
+                .map(|ind| ind + begin);
+        }
 
         debug_assert!(self.keys.len() >= step + 1);
         let begin = self.keys.len() - step - 1;

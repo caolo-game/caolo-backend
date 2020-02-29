@@ -237,12 +237,12 @@ where
     /// This is the index of the second to first item in the `skiplist` that is greater than the `key`
     #[inline(always)]
     unsafe fn find_key_partition_sse2(&self, key: &MortonKey) -> usize {
-        let key: i32 = mem::transmute(key.0);
+        let key = key.0 as i32;
         let keys4 = _mm_set_epi32(key, key, key, key);
 
-        let [s0, s1, s2, s3, s4, s5, s6, s7] = self.skiplist;
-        let skiplist_a: __m128i = _mm_set_epi32(s0 as i32, s1 as i32, s2 as i32, s3 as i32);
-        let skiplist_b: __m128i = _mm_set_epi32(s4 as i32, s5 as i32, s6 as i32, s7 as i32);
+        let [s0, s1, s2, s3, s4, s5, s6, s7]: [i32; 8] = mem::transmute(self.skiplist);
+        let skiplist_a: __m128i = _mm_set_epi32(s0, s1, s2, s3);
+        let skiplist_b: __m128i = _mm_set_epi32(s4, s5, s6, s7);
 
         // set every 32 bits to 0xFFFF if key < skip else sets it to 0x0000
         let results_a = _mm_cmpgt_epi32(keys4, skiplist_a);

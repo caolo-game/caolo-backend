@@ -262,13 +262,9 @@ where
                 r#"
                 AVX: {}
                 SSE: {}
-                SSE2: {}
-                SSE3: {}
                 "#,
                 is_x86_feature_detected!("avx"),
                 is_x86_feature_detected!("sse"),
-                is_x86_feature_detected!("sse2"),
-                is_x86_feature_detected!("sse3"),
             );
             unimplemented!("find_key is not implemented for the current CPU")
         };
@@ -303,10 +299,6 @@ where
         index as usize
     }
 
-    #[cfg(all(
-        any(target_arch = "x86", target_arch = "x86_64"),
-        target_feature = "sse2"
-    ))]
     unsafe fn find_key_index_sse2(&self, key: &MortonKey) -> usize {
         let key: i32 = mem::transmute(key.0);
         let keys4 = _mm_set_epi32(key, key, key, key);
@@ -320,7 +312,7 @@ where
         let mask_a = _mm_movemask_epi8(results_a);
         let mask_b = _mm_movemask_epi8(results_b);
 
-        let index = _popcnt32(mask_a) / 4 + _popcnt32(mask_b) / 4;
+        let index = (_popcnt32(mask_a) + _popcnt32(mask_b)) / 4;
         index as usize
     }
 

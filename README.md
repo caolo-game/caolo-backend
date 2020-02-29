@@ -1,4 +1,4 @@
-[![CircleCI](https://circleci.com/gh/snorrwe/caolo-backend/tree/master.svg?style=svg)](https://circleci.com/gh/snorrwe/caolo-backend/tree/master)
+[![CircleCI](https://circleci.com/gh/caolo-game/caolo-backend/tree/master.svg?style=svg)](https://circleci.com/gh/caolo-game/caolo-backend/tree/master)
 
 ## Prerequisites
 

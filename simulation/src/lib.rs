@@ -168,12 +168,12 @@ impl<'a> storage::views::FromWorld<'a> for model::Time {
     }
 }
 
-pub fn init_inmemory_storage() -> World {
+pub fn init_inmemory_storage() -> Box<World> {
     profile!("init_inmemory_storage");
     debug!("Init Storage");
 
     let world = World::new();
 
     debug!("Init Storage done");
-    world
+    Box::new(world)
 }

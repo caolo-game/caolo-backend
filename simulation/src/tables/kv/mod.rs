@@ -1,4 +1,4 @@
-//! Key-Value storages
+//! Key-Value storages.
 //!
 mod btree;
 mod morton;

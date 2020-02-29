@@ -99,10 +99,11 @@ mod tests {
     }
 
     #[bench]
-    fn get_by_id_random(b: &mut Bencher) {
+    fn get_by_id_random_2_pow_16(b: &mut Bencher) {
+        const LEN: usize = 1 << 16;
         let mut rng = rand::thread_rng();
-        let mut table = BTreeTable::<EntityId, i32>::new();
-        for i in 0..1 << 15 {
+        let mut table = BTreeTable::<EntityId, _>::new();
+        for i in 0..LEN {
             let mut res = false;
             while !res {
                 let id = rng.gen_range(0, 1 << 25);

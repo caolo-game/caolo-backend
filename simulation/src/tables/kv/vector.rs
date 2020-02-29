@@ -195,8 +195,8 @@ mod tests {
     }
 
     #[bench]
-    fn get_by_id_random(b: &mut Bencher) {
-        const LEN: usize = 1 << 20;
+    fn get_by_id_random_2_pow_16(b: &mut Bencher) {
+        const LEN: usize = 1 << 16;
         let mut rng = rand::thread_rng();
         let mut table = VecTable::<EntityId, usize>::with_capacity(LEN);
         let mut ids = Vec::with_capacity(LEN);

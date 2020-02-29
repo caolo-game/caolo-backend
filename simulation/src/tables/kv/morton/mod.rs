@@ -232,7 +232,7 @@ where
             return None;
         }
 
-        self.find_key(id).map(|ind| &self.values[ind])
+        self.find_key(id).map(|ind| &self.values[ind]).ok()
     }
 
     pub fn contains_key(&self, id: &Id) -> bool {
@@ -241,16 +241,16 @@ where
         if !self.intersects(&id) {
             return false;
         }
-        self.find_key(id).is_some()
+        self.find_key(id).is_ok()
     }
 
-    fn find_key(&self, id: &Id) -> Option<usize> {
+    fn find_key(&self, id: &Id) -> Result<usize, usize> {
         let [x, y] = id.as_array();
         let key = MortonKey::new(x as u16, y as u16);
 
         let step = self.keys.len() / SKIP_LEN;
         if step == 0 {
-            return self.keys.binary_search(&key).ok();
+            return self.keys.binary_search(&key);
         }
 
         let index = if is_x86_feature_detected!("avx2") {
@@ -273,15 +273,15 @@ where
             let end = begin + step;
             return self.keys[begin..=end]
                 .binary_search(&key)
-                .ok()
+                .map_err(|ind| ind + begin)
                 .map(|ind| ind + begin);
         }
         debug_assert!(self.keys.len() >= step + 2);
         let begin = self.keys.len() - step - 2;
         self.keys[begin..]
             .binary_search(&key)
-            .ok()
             .map(|ind| ind + begin)
+            .map_err(|ind| ind + begin)
     }
 
     unsafe fn find_key_index_avx2(&self, key: &MortonKey) -> usize {
@@ -334,7 +334,7 @@ where
         let max = *center + Id::new(r, r);
 
         let [min, max] = self.morton_min_max(&min, &max);
-        let it = self.poss[min..=max]
+        let it = self.poss[min..max]
             .iter()
             .enumerate()
             .filter_map(|(i, id)| {
@@ -357,7 +357,7 @@ where
 
         let [min, max] = self.morton_min_max(&min, &max);
 
-        self.poss[min..=max]
+        self.poss[min..max]
             .iter()
             .filter(move |id| center.dist(&id) < radius)
             .count()
@@ -372,9 +372,7 @@ where
             if !self.intersects(&min) {
                 0
             } else {
-                let [minx, miny] = min.as_array();
-                let min = MortonKey::new(minx as u16, miny as u16);
-                self.keys.binary_search(&min).unwrap_or_else(|i| i)
+                self.find_key(&min).unwrap_or_else(|i| i)
             }
         };
         let max: usize = {
@@ -382,9 +380,7 @@ where
             if !self.intersects(&max) {
                 lim
             } else {
-                let [maxx, maxy] = max.as_array();
-                let max = MortonKey::new(maxx as u16, maxy as u16);
-                self.keys.binary_search(&max).unwrap_or_else(|i| i.min(lim))
+                self.find_key(&max).unwrap_or_else(|i| i)
             }
         };
         [min, max]
@@ -414,11 +410,13 @@ where
             return None;
         }
 
-        self.find_key(&id).map(|ind| {
-            self.keys.remove(ind);
-            self.poss.remove(ind);
-            self.values.remove(ind)
-        })
+        self.find_key(&id)
+            .map(|ind| {
+                self.keys.remove(ind);
+                self.poss.remove(ind);
+                self.values.remove(ind)
+            })
+            .ok()
     }
 }
 

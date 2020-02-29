@@ -71,7 +71,7 @@ nodes:
         child: 8
         "#;
 
-pub fn init_storage(n_fake_users: usize) -> World {
+pub fn init_storage(n_fake_users: usize) -> Box<World> {
     assert!(n_fake_users >= 1);
 
     let mut storage = caolo_sim::init_inmemory_storage();
@@ -210,8 +210,8 @@ fn uncontested_pos<T: caolo_sim::tables::TableRow + Send + Sync>(
     rng: &mut impl Rng,
 ) -> Point {
     loop {
-        let x = rng.gen_range(0, 50);
-        let y = rng.gen_range(0, 50);
+        let x = rng.gen_range(0, 100);
+        let y = rng.gen_range(0, 100);
 
         let pos = Point::new(x, y);
 

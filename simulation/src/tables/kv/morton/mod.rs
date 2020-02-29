@@ -1,6 +1,6 @@
 //! Linear Quadtree.
 //! # Contracts:
-//! - Key axis must be in the interval [0, 2^16]
+//! - Key axis must be in the interval [0, 2^16)
 //! This is a severe restriction on the keys that can be used, however dense queries and
 //! constructing from iterators is much faster than quadtrees.
 //!
@@ -225,8 +225,8 @@ where
                 .map_err(|ind| ind + begin)
                 .map(|ind| ind + begin);
         }
-        debug_assert!(self.keys.len() >= step + 2);
-        let begin = self.keys.len() - step - 2;
+        debug_assert!(self.keys.len() >= step + 3);
+        let begin = self.keys.len() - step - 2 - 1;
         self.keys[begin..]
             .binary_search(&key)
             .map(|ind| ind + begin)
@@ -240,8 +240,9 @@ where
         let key: i32 = mem::transmute(key.0);
         let keys4 = _mm_set_epi32(key, key, key, key);
 
-        let skiplist_a: __m128i = mem::transmute(&self.skiplist[0..4]);
-        let skiplist_b: __m128i = mem::transmute(&self.skiplist[4..8]);
+        let [s0, s1, s2, s3, s4, s5, s6, s7] = self.skiplist;
+        let skiplist_a: __m128i = _mm_set_epi32(s0 as i32, s1 as i32, s2 as i32, s3 as i32);
+        let skiplist_b: __m128i = _mm_set_epi32(s4 as i32, s5 as i32, s6 as i32, s7 as i32);
 
         // set every 32 bits to 0xFFFF if key < skip else sets it to 0x0000
         let results_a = _mm_cmpgt_epi32(keys4, skiplist_a);

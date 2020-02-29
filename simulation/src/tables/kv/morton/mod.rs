@@ -25,57 +25,55 @@ use std::convert::TryInto;
 
 use crate::profile;
 
-// We'll use 8 keys to be able to utilize avx2 compare instrincts
 const SKIP_LEN: usize = 8;
 type SkipList = [u32; SKIP_LEN];
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MortonTable<Id, Row>
+pub struct MortonTable<Pos, Row>
 where
-    Id: SpatialKey2d,
+    Pos: SpatialKey2d,
     Row: TableRow,
 {
-    // keys is 24 bytes in memory
-    // assuming 64 byte long L1 cache lines we can fit 10 keys
-    keys: Vec<MortonKey>,
     skiplist: SkipList,
-    // end of the first cacheline
-    poss: Vec<Id>,
+    // assuming 64 byte long L1 cache lines we can fit 10 keys
+    // keys is 24 bytes in memory
+    keys: Vec<MortonKey>,
+    poss: Vec<Pos>,
     values: Vec<Row>,
 }
 
-impl<Id, Row> Default for MortonTable<Id, Row>
+impl<Pos, Row> Default for MortonTable<Pos, Row>
 where
-    Id: SpatialKey2d + Send,
+    Pos: SpatialKey2d + Send,
     Row: TableRow + Send,
 {
     fn default() -> Self {
         Self {
             skiplist: [0; SKIP_LEN],
-            values: Default::default(),
             keys: Default::default(),
+            values: Default::default(),
             poss: Default::default(),
         }
     }
 }
 
-unsafe impl<Id, Row> Send for MortonTable<Id, Row>
+unsafe impl<Pos, Row> Send for MortonTable<Pos, Row>
 where
-    Id: SpatialKey2d + Send,
+    Pos: SpatialKey2d + Send,
     Row: TableRow + Send,
 {
 }
 
-impl<Id, Row> MortonTable<Id, Row>
+impl<Pos, Row> MortonTable<Pos, Row>
 where
-    Id: SpatialKey2d + Sync,
+    Pos: SpatialKey2d + Sync,
     Row: TableRow + Send + Sync,
 {
     pub fn new() -> Self {
         Self {
-            values: vec![],
             skiplist: Default::default(),
             keys: vec![],
+            values: vec![],
             poss: vec![],
         }
     }
@@ -89,7 +87,7 @@ where
         }
     }
 
-    pub fn iter<'a>(&'a self) -> impl Iterator<Item = (Id, &'a Row)> + 'a {
+    pub fn iter<'a>(&'a self) -> impl Iterator<Item = (Pos, &'a Row)> + 'a {
         let values = self.values.as_ptr();
         self.poss.iter().enumerate().map(move |(i, id)| {
             let val = unsafe { &*values.offset(i as isize) };
@@ -99,7 +97,7 @@ where
 
     pub fn from_iterator<It>(it: It) -> Self
     where
-        It: Iterator<Item = (Id, Row)>,
+        It: Iterator<Item = (Pos, Row)>,
     {
         let mut res = Self::new();
         res.extend(it);
@@ -115,7 +113,7 @@ where
 
     pub fn extend<It>(&mut self, it: It)
     where
-        It: Iterator<Item = (Id, Row)>,
+        It: Iterator<Item = (Pos, Row)>,
     {
         for (id, value) in it {
             let [x, y] = id.as_array();
@@ -128,7 +126,7 @@ where
             self.poss.push(id);
             self.values.push(value);
         }
-        Self::sort(
+        sort(
             self.keys.as_mut_slice(),
             self.poss.as_mut_slice(),
             self.values.as_mut_slice(),
@@ -164,49 +162,8 @@ where
         }
     }
 
-    fn sort(keys: &mut [MortonKey], poss: &mut [Id], values: &mut [Row]) {
-        debug_assert!(keys.len() == poss.len(), "{} {}", keys.len(), poss.len());
-        debug_assert!(
-            keys.len() == values.len(),
-            "{} {}",
-            keys.len(),
-            values.len()
-        );
-        if keys.len() < 2 {
-            return;
-        }
-        let pivot = Self::sort_partition(keys, poss, values);
-        let (klo, khi) = keys.split_at_mut(pivot);
-        let (plo, phi) = poss.split_at_mut(pivot);
-        let (vlo, vhi) = values.split_at_mut(pivot);
-        rayon::join(
-            || Self::sort(klo, plo, vlo),
-            || Self::sort(&mut khi[1..], &mut phi[1..], &mut vhi[1..]),
-        );
-    }
-
-    fn sort_partition(keys: &mut [MortonKey], poss: &mut [Id], values: &mut [Row]) -> usize {
-        debug_assert!(keys.len() > 0);
-
-        let lim = keys.len() - 1;
-        let mut i = 0;
-        let pivot = keys[lim];
-        for j in 0..lim {
-            if keys[j] < pivot {
-                keys.swap(i, j);
-                poss.swap(i, j);
-                values.swap(i, j);
-                i += 1;
-            }
-        }
-        keys.swap(i, lim);
-        poss.swap(i, lim);
-        values.swap(i, lim);
-        i
-    }
-
     /// May trigger reordering of items, if applicable prefer `extend` and insert many keys at once.
-    pub fn insert(&mut self, id: Id, row: Row) -> bool {
+    pub fn insert(&mut self, id: Pos, row: Row) -> bool {
         if !self.intersects(&id) {
             return false;
         }
@@ -225,7 +182,7 @@ where
     }
 
     /// Returns the first item with given id, if any
-    pub fn get_by_id<'a>(&'a self, id: &Id) -> Option<&'a Row> {
+    pub fn get_by_id<'a>(&'a self, id: &Pos) -> Option<&'a Row> {
         profile!("get_by_id");
 
         if !self.intersects(&id) {
@@ -235,7 +192,7 @@ where
         self.find_key(id).map(|ind| &self.values[ind]).ok()
     }
 
-    pub fn contains_key(&self, id: &Id) -> bool {
+    pub fn contains_key(&self, id: &Pos) -> bool {
         profile!("contains_key");
 
         if !self.intersects(&id) {
@@ -244,7 +201,9 @@ where
         self.find_key(id).is_ok()
     }
 
-    fn find_key(&self, id: &Id) -> Result<usize, usize> {
+    /// Find the position of `id` or the position where it needs to be inserted to keep the
+    /// container sorted
+    fn find_key(&self, id: &Pos) -> Result<usize, usize> {
         let [x, y] = id.as_array();
         let key = MortonKey::new(x as u16, y as u16);
 
@@ -253,20 +212,10 @@ where
             return self.keys.binary_search(&key);
         }
 
-        let index = if is_x86_feature_detected!("avx2") {
-            unsafe { self.find_key_index_avx2(&key) }
-        } else if is_x86_feature_detected!("sse2") {
-            unsafe { self.find_key_index_sse2(&key) }
+        let index = if is_x86_feature_detected!("sse2") {
+            unsafe { self.find_key_partition_sse2(&key) }
         } else {
-            println!(
-                r#"
-                AVX: {}
-                SSE: {}
-                "#,
-                is_x86_feature_detected!("avx"),
-                is_x86_feature_detected!("sse"),
-            );
-            unimplemented!("find_key is not implemented for the current CPU")
+            sse_panic()
         };
         if index < 7 {
             let begin = index * step;
@@ -284,40 +233,33 @@ where
             .map_err(|ind| ind + begin)
     }
 
-    unsafe fn find_key_index_avx2(&self, key: &MortonKey) -> usize {
-        let key: i32 = mem::transmute(key.0);
-        let keys8 = _mm256_set_epi32(key, key, key, key, key, key, key, key);
-        let skiplist: __m256i = mem::transmute(self.skiplist);
-        // set every 32 bits to 0xFFFF if a < b else sets it to 0x0000
-        let results = _mm256_cmpgt_epi32(keys8, skiplist);
-        // create a mask from the most significant bit of each 8bit element
-        let index = _mm256_movemask_epi8(results);
-        // count the number of bits set to 1
-        // because the mask was created from 8 bit wide items every key in skip list is counted
-        // 4 times
-        let index = _popcnt32(index) / 4;
-        index as usize
-    }
-
-    unsafe fn find_key_index_sse2(&self, key: &MortonKey) -> usize {
+    /// Find the index of the partition where `key` _might_ reside.
+    /// This is the index of the second to first item in the `skiplist` that is greater than the `key`
+    #[inline(always)]
+    unsafe fn find_key_partition_sse2(&self, key: &MortonKey) -> usize {
         let key: i32 = mem::transmute(key.0);
         let keys4 = _mm_set_epi32(key, key, key, key);
 
         let skiplist_a: __m128i = mem::transmute(&self.skiplist[0..4]);
         let skiplist_b: __m128i = mem::transmute(&self.skiplist[4..8]);
 
+        // set every 32 bits to 0xFFFF if key < skip else sets it to 0x0000
         let results_a = _mm_cmpgt_epi32(keys4, skiplist_a);
         let results_b = _mm_cmpgt_epi32(keys4, skiplist_b);
 
+        // create a mask from the most significant bit of each 8bit element
         let mask_a = _mm_movemask_epi8(results_a);
         let mask_b = _mm_movemask_epi8(results_b);
 
+        // count the number of bits set to 1
+        // because the mask was created from 8 bit wide items every key in skip list is counted
+        // 4 times
         let index = (_popcnt32(mask_a) + _popcnt32(mask_b)) / 4;
         index as usize
     }
 
     /// For each id returns the first item with given id, if any
-    pub fn get_by_ids<'a>(&'a self, ids: &[Id]) -> Vec<(Id, &'a Row)> {
+    pub fn get_by_ids<'a>(&'a self, ids: &[Pos]) -> Vec<(Pos, &'a Row)> {
         profile!("get_by_ids");
 
         ids.into_par_iter()
@@ -326,12 +268,12 @@ where
     }
 
     /// Find in AABB
-    pub fn find_by_range<'a>(&'a self, center: &Id, radius: u32, out: &mut Vec<(Id, &'a Row)>) {
+    pub fn find_by_range<'a>(&'a self, center: &Pos, radius: u32, out: &mut Vec<(Pos, &'a Row)>) {
         profile!("find_by_range");
 
         let r = radius as i32 / 2 + 1;
-        let min = *center + Id::new(-r, -r);
-        let max = *center + Id::new(r, r);
+        let min = *center + Pos::new(-r, -r);
+        let max = *center + Pos::new(r, r);
 
         let [min, max] = self.morton_min_max(&min, &max);
         let it = self.poss[min..max]
@@ -348,12 +290,12 @@ where
     }
 
     /// Count in AABB
-    pub fn count_in_range<'a>(&'a self, center: &Id, radius: u32) -> u32 {
+    pub fn count_in_range<'a>(&'a self, center: &Pos, radius: u32) -> u32 {
         profile!("count_in_range");
 
         let r = radius as i32 / 2 + 1;
-        let min = *center + Id::new(-r, -r);
-        let max = *center + Id::new(r, r);
+        let min = *center + Pos::new(-r, -r);
+        let max = *center + Pos::new(r, r);
 
         let [min, max] = self.morton_min_max(&min, &max);
 
@@ -367,7 +309,7 @@ where
 
     /// Turn AABB min-max to from-to indices
     /// Clamps `min` and `max` to intersect `self`
-    fn morton_min_max(&self, min: &Id, max: &Id) -> [usize; 2] {
+    fn morton_min_max(&self, min: &Pos, max: &Pos) -> [usize; 2] {
         let min: usize = {
             if !self.intersects(&min) {
                 0
@@ -387,7 +329,7 @@ where
     }
 
     /// Return wether point is within the bounds of this node
-    pub fn intersects(&self, point: &Id) -> bool {
+    pub fn intersects(&self, point: &Pos) -> bool {
         let [x, y] = point.as_array();
         // at most 15 bits long non-negative integers
         // having the 16th bit set might create problems in find_key
@@ -396,15 +338,15 @@ where
     }
 }
 
-impl<Id, Row> Table for MortonTable<Id, Row>
+impl<Pos, Row> Table for MortonTable<Pos, Row>
 where
-    Id: SpatialKey2d + Send + Sync,
+    Pos: SpatialKey2d + Send + Sync,
     Row: TableRow + Send + Sync,
 {
-    type Id = Id;
+    type Id = Pos;
     type Row = Row;
 
-    fn delete(&mut self, id: &Id) -> Option<Row> {
+    fn delete(&mut self, id: &Pos) -> Option<Row> {
         profile!("delete");
         if !self.contains_key(id) {
             return None;
@@ -437,4 +379,62 @@ impl PositionTable for MortonTable<Point, EntityComponent> {
 
         self.count_in_range(&vision.center, vision.radius * 3 / 2) as usize
     }
+}
+
+fn sort<Pos: Send, Row: Send>(keys: &mut [MortonKey], poss: &mut [Pos], values: &mut [Row]) {
+    debug_assert!(keys.len() == poss.len(), "{} {}", keys.len(), poss.len());
+    debug_assert!(
+        keys.len() == values.len(),
+        "{} {}",
+        keys.len(),
+        values.len()
+    );
+    if keys.len() < 2 {
+        return;
+    }
+    let pivot = sort_partition(keys, poss, values);
+    let (klo, khi) = keys.split_at_mut(pivot);
+    let (plo, phi) = poss.split_at_mut(pivot);
+    let (vlo, vhi) = values.split_at_mut(pivot);
+    rayon::join(
+        || sort(klo, plo, vlo),
+        || sort(&mut khi[1..], &mut phi[1..], &mut vhi[1..]),
+    );
+}
+
+fn sort_partition<Pos: Send, Row: Send>(
+    keys: &mut [MortonKey],
+    poss: &mut [Pos],
+    values: &mut [Row],
+) -> usize {
+    debug_assert!(keys.len() > 0);
+
+    let lim = keys.len() - 1;
+    let mut i = 0;
+    let pivot = keys[lim];
+    for j in 0..lim {
+        if keys[j] < pivot {
+            keys.swap(i, j);
+            poss.swap(i, j);
+            values.swap(i, j);
+            i += 1;
+        }
+    }
+    keys.swap(i, lim);
+    poss.swap(i, lim);
+    values.swap(i, lim);
+    i
+}
+
+#[inline(never)]
+fn sse_panic() -> usize {
+    println!(
+        r#"
+AVX: {}
+SSE: {}
+                "#,
+        is_x86_feature_detected!("avx"),
+        is_x86_feature_detected!("sse"),
+    );
+    unimplemented!("find_key is not implemented for the current CPU")
 }

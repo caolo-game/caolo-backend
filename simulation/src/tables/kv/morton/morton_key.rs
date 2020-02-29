@@ -24,10 +24,10 @@ impl MortonKey {
         (n ^ (n << 1)) & 0x55555555 // (4)
     }
 
-    #[allow(unused)]
     /// Calculate the original point of this hash key.
     /// In practice it is more beneficial to just store the original key if you need to access it
     /// later.
+    #[allow(unused)]
     pub fn as_point(&self) -> [u16; 2] {
         let x = Self::reconstruct(self.0) as u16;
         let y = Self::reconstruct(self.0 >> 1) as u16;

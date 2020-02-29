@@ -77,16 +77,16 @@ fn bench_contains_rand_at_2pow16(b: &mut Bencher) {
 
     let table = MortonTable::from_iterator((0..(1 << 16)).map(|i| {
         let p = Point {
-            x: rng.gen_range(0, 3900 * 2),
-            y: rng.gen_range(0, 3900 * 2),
+            x: rng.gen_range(0, 8000),
+            y: rng.gen_range(0, 8000),
         };
         (p, i)
     }));
 
     b.iter(|| {
         let p = Point {
-            x: rng.gen_range(0, 3900 * 2),
-            y: rng.gen_range(0, 3900 * 2),
+            x: rng.gen_range(0, 8000),
+            y: rng.gen_range(0, 8000),
         };
         table.contains_key(&p)
     });

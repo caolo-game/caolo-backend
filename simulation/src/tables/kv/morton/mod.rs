@@ -255,6 +255,8 @@ where
 
         let index = if is_x86_feature_detected!("avx2") {
             unsafe { self.find_key_index_avx2(&key) }
+        } else if is_x86_feature_detected!("sse2") {
+            unsafe { self.find_key_index_sse2(&key) }
         } else {
             println!(
                 r#"
@@ -298,6 +300,27 @@ where
         // because the mask was created from 8 bit wide items every key in skip list is counted
         // 4 times
         let index = _popcnt32(index) / 4;
+        index as usize
+    }
+
+    #[cfg(all(
+        any(target_arch = "x86", target_arch = "x86_64"),
+        target_feature = "sse2"
+    ))]
+    unsafe fn find_key_index_sse2(&self, key: &MortonKey) -> usize {
+        let key: i32 = mem::transmute(key.0);
+        let keys4 = _mm_set_epi32(key, key, key, key);
+
+        let skiplist_a: __m128i = mem::transmute(&self.skiplist[0..4]);
+        let skiplist_b: __m128i = mem::transmute(&self.skiplist[4..8]);
+
+        let results_a = _mm_cmpgt_epi32(keys4, skiplist_a);
+        let results_b = _mm_cmpgt_epi32(keys4, skiplist_b);
+
+        let mask_a = _mm_movemask_epi8(results_a);
+        let mask_b = _mm_movemask_epi8(results_b);
+
+        let index = _popcnt32(mask_a) / 4 + _popcnt32(mask_b) / 4;
         index as usize
     }
 

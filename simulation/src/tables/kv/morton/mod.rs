@@ -256,7 +256,19 @@ where
         let index = if is_x86_feature_detected!("avx2") {
             unsafe { self.find_key_index_avx2(&key) }
         } else {
-            unimplemented!()
+            println!(
+                r#"
+                AVX: {}
+                SSE: {}
+                SSE2: {}
+                SSE3: {}
+                "#,
+                is_x86_feature_detected!("avx"),
+                is_x86_feature_detected!("sse"),
+                is_x86_feature_detected!("sse2"),
+                is_x86_feature_detected!("sse3"),
+            );
+            unimplemented!("find_key is not implemented for the current CPU")
         };
         if index < 7 {
             let begin = index * step;

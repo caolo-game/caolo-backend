@@ -253,19 +253,10 @@ where
             return self.keys.binary_search(&key).ok();
         }
 
-        let index = unsafe {
-            let key: i32 = mem::transmute(key.0);
-            let keys8 = _mm256_set_epi32(key, key, key, key, key, key, key, key);
-            let skiplist: __m256i = mem::transmute(self.skiplist);
-            // set every 32 bits to 0xFFFF if a < b else sets it to 0x0000
-            let results = _mm256_cmpgt_epi32(keys8, skiplist);
-            // create a mask from the most significant bit of each 8bit element
-            let index = _mm256_movemask_epi8(results);
-            // count the number of bits set to 1
-            // because the mask was created from 8 bit wide items every key in skip list is counted
-            // 4 times
-            let index = _popcnt32(index) / 4;
-            index as usize
+        let index = if is_x86_feature_detected!("avx2") {
+            unsafe { self.find_key_index_avx2(&key) }
+        } else {
+            unimplemented!()
         };
         if index < 7 {
             let begin = index * step;
@@ -281,6 +272,21 @@ where
             .binary_search(&key)
             .ok()
             .map(|ind| ind + begin)
+    }
+
+    unsafe fn find_key_index_avx2(&self, key: &MortonKey) -> usize {
+        let key: i32 = mem::transmute(key.0);
+        let keys8 = _mm256_set_epi32(key, key, key, key, key, key, key, key);
+        let skiplist: __m256i = mem::transmute(self.skiplist);
+        // set every 32 bits to 0xFFFF if a < b else sets it to 0x0000
+        let results = _mm256_cmpgt_epi32(keys8, skiplist);
+        // create a mask from the most significant bit of each 8bit element
+        let index = _mm256_movemask_epi8(results);
+        // count the number of bits set to 1
+        // because the mask was created from 8 bit wide items every key in skip list is counted
+        // 4 times
+        let index = _popcnt32(index) / 4;
+        index as usize
     }
 
     /// For each id returns the first item with given id, if any

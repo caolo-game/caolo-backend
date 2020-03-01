@@ -126,16 +126,13 @@ fn bench_range_query(b: &mut Bencher) {
 fn bench_get_entities_in_range_sparse(b: &mut Bencher) {
     let mut rng = rand::thread_rng();
 
-    let mut table = MortonTable::new();
-
-    for _ in 0..(1 << 15) {
+    let table = MortonTable::from_iterator((0..1 << 12).map(|_| {
         let p = Point {
             x: rng.gen_range(0, 3900 * 2),
             y: rng.gen_range(0, 3900 * 2),
         };
-        let inserted = table.insert(p, EntityComponent(EntityId(rng.gen())));
-        assert!(inserted);
-    }
+        (p, EntityComponent(EntityId(rng.gen())))
+    }));
 
     let radius = 512;
 
@@ -151,18 +148,16 @@ fn bench_get_entities_in_range_sparse(b: &mut Bencher) {
 
 #[bench]
 fn bench_get_entities_in_range_dense(b: &mut Bencher) {
+    use crate::tables::traits::PositionTable;
     let mut rng = rand::thread_rng();
 
-    let mut table = MortonTable::new();
-
-    for _ in 0..(1 << 15) {
+    let table = MortonTable::from_iterator((0..1 << 12).map(|_| {
         let p = Point {
             x: rng.gen_range(0, 200 * 2),
             y: rng.gen_range(0, 200 * 2),
         };
-        let inserted = table.insert(p, EntityComponent(EntityId(rng.gen())));
-        assert!(inserted);
-    }
+        (p, EntityComponent(EntityId(rng.gen())))
+    }));
 
     let radius = 50;
 
@@ -198,15 +193,7 @@ fn make_morton_table(b: &mut Bencher) {
 fn rebuild_morton_table(b: &mut Bencher) {
     let mut rng = rand::thread_rng();
 
-    let mut table = MortonTable::from_iterator((0..(1 << 15)).map(|_| {
-        (
-            Point {
-                x: rng.gen_range(0, 3900 * 2),
-                y: rng.gen_range(0, 3900 * 2),
-            },
-            rng.next_u32(),
-        )
-    }));
+    let mut table = MortonTable::with_capacity(1 << 15);
 
     b.iter(|| {
         table.clear();

@@ -77,6 +77,6 @@ workflows:
   build_test:
     jobs:
       - test_worker
-      - benchmark_worker
+      - benchmark_worker:
           requires:
             - test_worker

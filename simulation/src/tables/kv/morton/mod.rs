@@ -21,9 +21,14 @@ use crate::model::{components::EntityComponent, geometry::Point};
 use morton_key::*;
 use rayon::prelude::*;
 use serde_derive::{Deserialize, Serialize};
-use std::convert::TryInto;
+use std::convert::{TryFrom, TryInto};
 
 use crate::profile;
+
+#[derive(Debug, Clone)]
+pub enum ExtendFailure<Id: SpatialKey2d> {
+    InvalidPosition(Id),
+}
 
 const SKIP_LEN: usize = 8;
 type SkipList = [u32; SKIP_LEN];
@@ -100,13 +105,13 @@ where
         })
     }
 
-    pub fn from_iterator<It>(it: It) -> Self
+    pub fn from_iterator<It>(it: It) -> Result<Self, ExtendFailure<Pos>>
     where
         It: Iterator<Item = (Pos, Row)>,
     {
         let mut res = Self::new();
-        res.extend(it);
-        res
+        res.extend(it)?;
+        Ok(res)
     }
 
     pub fn clear(&mut self) {
@@ -116,16 +121,17 @@ where
         self.poss.clear();
     }
 
-    pub fn extend<It>(&mut self, it: It)
+    /// Extend the map by the items provided. Panics on invalid items.
+    pub fn extend<It>(&mut self, it: It) -> Result<(), ExtendFailure<Pos>>
     where
         It: Iterator<Item = (Pos, Row)>,
     {
         for (id, value) in it {
+            if !self.intersects(&id) {
+                return Err(ExtendFailure::InvalidPosition(id));
+            }
             let [x, y] = id.as_array();
-            let [x, y] = [
-                x.try_into().expect("positive integer fitting into 16 bits"),
-                y.try_into().expect("positive integer fitting into 16 bits"),
-            ];
+            let [x, y] = [x as u16, y as u16];
             let key = MortonKey::new(x, y);
             self.keys.push(key);
             self.poss.push(id);
@@ -137,6 +143,7 @@ where
             self.values.as_mut_slice(),
         );
         self.rebuild_skip_list();
+        Ok(())
     }
 
     fn rebuild_skip_list(&mut self) {
@@ -219,16 +226,12 @@ where
         }
 
         let index = if is_x86_feature_detected!("sse2") {
-            unsafe { self.find_key_partition_sse2(&key) }
+            unsafe { find_key_partition_sse2(&self.skiplist, &key) }
         } else {
             sse_panic()
         };
         let (begin, end) = {
-            if index < 7 {
-                let begin = index * step;
-                let end = begin + step + 1;
-                (begin, end)
-            } else if index == 7 {
+            if index < 8 {
                 let begin = index * step;
                 let end = self.keys.len().min(begin + step + 1);
                 (begin, end)
@@ -245,36 +248,6 @@ where
             .map_err(|ind| ind + begin)
     }
 
-    /// Find the index of the partition where `key` _might_ reside.
-    /// This is the index of the second to first item in the `skiplist` that is greater than the `key`
-    #[inline(always)]
-    unsafe fn find_key_partition_sse2(&self, key: &MortonKey) -> usize {
-        let key = key.0 as i32;
-        let keys4 = _mm_set_epi32(key, key, key, key);
-
-        let [s0, s1, s2, s3, s4, s5, s6, s7]: [i32; 8] = mem::transmute(self.skiplist);
-        let skiplist_a: __m128i = _mm_set_epi32(s0, s1, s2, s3);
-        let skiplist_b: __m128i = _mm_set_epi32(s4, s5, s6, s7);
-
-        // set every 32 bits to 0xFFFF if key < skip else sets it to 0x0000
-        let results_a = _mm_cmpgt_epi32(keys4, skiplist_a);
-        let results_b = _mm_cmpgt_epi32(keys4, skiplist_b);
-
-        // create a mask from the most significant bit of each 8bit element
-        let mask_a = _mm_movemask_epi8(results_a);
-        let mask_b = _mm_movemask_epi8(results_b);
-
-        // count the number of bits set to 1
-        let index = _popcnt32(mask_a) + _popcnt32(mask_b);
-        // because the mask was created from 8 bit wide items every key in skip list is counted
-        // 4 times.
-        // We know that index is unsigned to we can optimize by using bitshifting instead
-        //   of division.
-        //   This resulted in a 1ns speedup on my Intel Code i7-8700 CPU.
-        let index = index >> 2;
-        index as usize
-    }
-
     /// For each id returns the first item with given id, if any
     pub fn get_by_ids<'a>(&'a self, ids: &[Pos]) -> Vec<(Pos, &'a Row)> {
         profile!("get_by_ids");
@@ -288,7 +261,8 @@ where
     pub fn find_by_range<'a>(&'a self, center: &Pos, radius: u32, out: &mut Vec<(Pos, &'a Row)>) {
         profile!("find_by_range");
 
-        let r = radius as i32 / 2 + 1;
+        let r = i32::try_from(radius).expect("radius to fit into 31 bits");
+        let r = (r >> 1) + 1;
         let min = *center + Pos::new(-r, -r);
         let max = *center + Pos::new(r, r);
 
@@ -441,6 +415,36 @@ fn sort_partition<Pos: Send, Row: Send>(
     poss.swap(i, lim);
     values.swap(i, lim);
     i
+}
+
+/// Find the index of the partition where `key` _might_ reside.
+/// This is the index of the second to first item in the `skiplist` that is greater than the `key`
+#[inline(always)]
+unsafe fn find_key_partition_sse2(skiplist: &[u32; SKIP_LEN], key: &MortonKey) -> usize {
+    let key = key.0 as i32;
+    let keys4 = _mm_set_epi32(key, key, key, key);
+
+    let [s0, s1, s2, s3, s4, s5, s6, s7]: [i32; SKIP_LEN] = mem::transmute(*skiplist);
+    let skiplist_a: __m128i = _mm_set_epi32(s0, s1, s2, s3);
+    let skiplist_b: __m128i = _mm_set_epi32(s4, s5, s6, s7);
+
+    // set every 32 bits to 0xFFFF if key < skip else sets it to 0x0000
+    let results_a = _mm_cmpgt_epi32(keys4, skiplist_a);
+    let results_b = _mm_cmpgt_epi32(keys4, skiplist_b);
+
+    // create a mask from the most significant bit of each 8bit element
+    let mask_a = _mm_movemask_epi8(results_a);
+    let mask_b = _mm_movemask_epi8(results_b);
+
+    // count the number of bits set to 1
+    let index = _popcnt32(mask_a) + _popcnt32(mask_b);
+    // because the mask was created from 8 bit wide items every key in skip list is counted
+    // 4 times.
+    // We know that index is unsigned to we can optimize by using bitshifting instead
+    //   of division.
+    //   This resulted in a 1ns speedup on my Intel Code i7-8700 CPU.
+    let index = index >> 2;
+    index as usize
 }
 
 #[inline(never)]

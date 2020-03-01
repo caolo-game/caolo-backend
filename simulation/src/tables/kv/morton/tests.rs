@@ -1,6 +1,6 @@
 use super::*;
 use rand::prelude::*;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use test::Bencher;
 
 #[test]
@@ -32,7 +32,7 @@ fn test_range_query_all() {
     assert_eq!(res.len(), 256);
 }
 #[test]
-fn get_by_id_bugged_() {
+fn regression_get_by_id_bug1() {
     let points = [
         Point { x: 3, y: 10 },
         Point { x: 5, y: 11 },
@@ -124,14 +124,14 @@ fn get_by_id() {
 
     let mut table = MortonTable::<Point, usize>::new();
 
-    let mut points = Vec::with_capacity(64);
+    let mut points = HashSet::with_capacity(64);
 
     for i in 0..64 {
         let p = Point {
             x: rng.gen_range(0, 128),
             y: rng.gen_range(0, 128),
         };
-        points.push((p, i));
+        points.insert((p, i));
     }
 
     for (p, e) in points.iter() {
@@ -139,7 +139,7 @@ fn get_by_id() {
         assert!(inserted);
     }
 
-    println!("{:?}", table);
+    println!("{:?}\n{:?}", table.skiplist, table.keys);
 
     for p in points {
         let found = table.get_by_id(&p.0);
@@ -158,7 +158,8 @@ fn bench_contains_rand_at_2pow16(b: &mut Bencher) {
             y: rng.gen_range(0, 8000),
         };
         (p, i)
-    }));
+    }))
+    .unwrap();
 
     b.iter(|| {
         let p = Point {
@@ -166,36 +167,6 @@ fn bench_contains_rand_at_2pow16(b: &mut Bencher) {
             y: rng.gen_range(0, 8000),
         };
         table.contains_key(&p)
-    });
-}
-
-#[bench]
-fn bench_range_query(b: &mut Bencher) {
-    let mut rng = rand::thread_rng();
-
-    let mut table = MortonTable::new();
-
-    for i in 0..(1 << 15) {
-        let p = Point {
-            x: rng.gen_range(0, 3900 * 2),
-            y: rng.gen_range(0, 3900 * 2),
-        };
-        let inserted = table.insert(p, i);
-        assert!(inserted);
-    }
-
-    let mut res = Vec::with_capacity(512);
-    let radius = 512;
-
-    b.iter(|| {
-        let table = &table;
-        res.clear();
-        let p = Point {
-            x: rng.gen_range(0, 3900 * 2),
-            y: rng.gen_range(0, 3900 * 2),
-        };
-        table.find_by_range(&p, radius, &mut res);
-        res.len()
     });
 }
 
@@ -209,7 +180,8 @@ fn bench_get_entities_in_range_sparse(b: &mut Bencher) {
             y: rng.gen_range(0, 3900 * 2),
         };
         (p, EntityComponent(EntityId(rng.gen())))
-    }));
+    }))
+    .unwrap();
 
     let radius = 512;
 
@@ -234,7 +206,8 @@ fn bench_get_entities_in_range_dense(b: &mut Bencher) {
             y: rng.gen_range(0, 200 * 2),
         };
         (p, EntityComponent(EntityId(rng.gen())))
-    }));
+    }))
+    .unwrap();
 
     let radius = 50;
 
@@ -261,7 +234,8 @@ fn make_morton_table(b: &mut Bencher) {
                 },
                 rng.next_u32(),
             )
-        }));
+        }))
+        .unwrap();
         table
     });
 }
@@ -275,15 +249,17 @@ fn rebuild_morton_table(b: &mut Bencher) {
     b.iter(|| {
         table.clear();
 
-        table.extend((0..(1 << 15)).map(|_| {
-            (
-                Point {
-                    x: rng.gen_range(0, 3900 * 2),
-                    y: rng.gen_range(0, 3900 * 2),
-                },
-                rng.next_u32(),
-            )
-        }));
+        table
+            .extend((0..(1 << 15)).map(|_| {
+                (
+                    Point {
+                        x: rng.gen_range(0, 3900 * 2),
+                        y: rng.gen_range(0, 3900 * 2),
+                    },
+                    rng.next_u32(),
+                )
+            }))
+            .unwrap();
     })
 }
 
@@ -298,7 +274,8 @@ fn bench_get_by_id_rand_2pow16(b: &mut Bencher) {
             y: rng.gen_range(0, 3900 * 2),
         };
         (pos, rng.next_u32())
-    }));
+    }))
+    .unwrap();
 
     b.iter(|| {
         let pos = Point {
@@ -326,7 +303,8 @@ fn from_iterator_inserts_correctly() {
         let val = rng.next_u32();
         points.insert(pos.clone(), val);
         Some((pos, val))
-    }));
+    }))
+    .unwrap();
 
     for (pos, val) in points {
         let v = *table.get_by_id(&pos).expect("to find the value");
@@ -347,7 +325,8 @@ fn bench_get_by_id_in_table_rand_2pow16(b: &mut Bencher) {
         };
         points.push(pos.clone());
         (pos, rng.next_u32())
-    }));
+    }))
+    .unwrap();
 
     b.iter(|| {
         let i = rng.gen_range(0, points.len());

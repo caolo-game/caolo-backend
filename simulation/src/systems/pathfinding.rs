@@ -136,7 +136,8 @@ mod tests {
         let positions = MortonTable::new();
         let terrain = MortonTable::from_iterator(
             (0..=5).map(|i| (Point::new(2, i), TerrainComponent(TileTerrainType::Wall))),
-        );
+        )
+        .unwrap();
 
         let mut path = vec![];
         find_path(

@@ -267,7 +267,10 @@ where
         // count the number of bits set to 1
         let index = _popcnt32(mask_a) + _popcnt32(mask_b);
         // because the mask was created from 8 bit wide items every key in skip list is counted
-        // 4 times
+        // 4 times.
+        // We know that index is unsigned to we can optimize by using bitshifting instead
+        //   of division.
+        //   This resulted in a 1ns speedup on my Intel Code i7-8700 CPU.
         let index = index >> 2;
         index as usize
     }

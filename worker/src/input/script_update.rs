@@ -1,4 +1,5 @@
 use super::parse_uuid;
+use crate::protos::scripts::UpdateEntityScript as UpdateEntityScriptMsg;
 use crate::protos::scripts::UpdateScript as UpdateScriptMsg;
 use caolo_sim::model::components::{EntityScript, OwnedEntity, ScriptComponent};
 use caolo_sim::prelude::*;
@@ -13,6 +14,7 @@ use log::{debug, error};
 pub enum UpdateProgramError {
     BadUserId,
     BadScriptId,
+    Unauthorized,
 }
 type UpdateResult = Result<(), UpdateProgramError>;
 
@@ -47,7 +49,6 @@ pub fn update_program(storage: &mut World, mut msg: UpdateScriptMsg) -> UpdateRe
     debug!("Inserting new program for user {} {:?}", user_id, script_id);
 
     let program = ScriptComponent(program);
-    let script_id = script_id;
     unsafe {
         storage
             .unsafe_view::<ScriptId, ScriptComponent>()
@@ -82,4 +83,41 @@ fn update_user_bot_scripts(
     for (_id, (_owner, entity_script)) in join {
         entity_script.script_id = script_id;
     }
+}
+
+pub fn update_entity_script(storage: &mut World, msg: UpdateEntityScriptMsg) -> UpdateResult {
+    let entity_id = EntityId(msg.entity_id);
+    let user_id = parse_uuid(&msg.user_id)
+        .map_err(|e| {
+            error!("Failed to parse user_id {:?}", e);
+            UpdateProgramError::BadUserId
+        })
+        .map(model::UserId)?;
+
+    let owned_entities_table: View<EntityId, OwnedEntity> = storage.view();
+
+    owned_entities_table
+        .get_by_id(&entity_id)
+        .ok_or_else(|| UpdateProgramError::Unauthorized)
+        .and_then(|owner| {
+            if owner.owner_id != user_id {
+                Err(UpdateProgramError::Unauthorized)
+            } else {
+                Ok(owner)
+            }
+        })?;
+
+    let mut scripts_table: UnsafeView<EntityId, EntityScript> = storage.unsafe_view();
+    let script_id = parse_uuid(&msg.script_id)
+        .map_err(|e| {
+            error!("Failed to parse script_id {:?}", e);
+            UpdateProgramError::BadScriptId
+        })
+        .map(model::ScriptId)?;
+    unsafe {
+        scripts_table
+            .as_mut()
+            .insert_or_update(entity_id, EntityScript { script_id });
+    }
+    Ok(())
 }

@@ -44,6 +44,14 @@ pub fn handle_messages(storage: &mut World, client: &redis::Client) {
                     })
                     .unwrap_or(());
             }
+            Some(InputMsg_oneof_msg::update_entity_script(update)) => {
+                script_update::update_entity_script(storage, update)
+                    .map_err(|e| {
+                        error!("Entity script update failed {:?}", e);
+                        // TODO: return error msg
+                    })
+                    .unwrap_or(());
+            }
         }
     }
     debug!("handling incoming messages done");

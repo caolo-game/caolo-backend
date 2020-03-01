@@ -151,7 +151,7 @@ where
 
         let len = self.keys.len();
         let step = len / SKIP_LEN;
-        if step == 0 {
+        if step < 1 {
             if let Some(key) = self.keys.last() {
                 self.skiplist[0] = key.0;
             }
@@ -224,9 +224,16 @@ where
                 .binary_search(&key)
                 .map_err(|ind| ind + begin)
                 .map(|ind| ind + begin);
+        } else if index == 7 {
+            let begin = index * step;
+            let end = self.keys.len().min(begin + step + 1);
+            return self.keys[begin..end]
+                .binary_search(&key)
+                .map_err(|ind| ind + begin)
+                .map(|ind| ind + begin);
         }
         debug_assert!(self.keys.len() >= step + 3);
-        let begin = self.keys.len() - step - 2 - 1;
+        let begin = self.keys.len() - step - 3;
         self.keys[begin..]
             .binary_search(&key)
             .map(|ind| ind + begin)

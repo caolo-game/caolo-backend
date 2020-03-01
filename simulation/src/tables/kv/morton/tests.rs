@@ -31,6 +31,92 @@ fn test_range_query_all() {
 
     assert_eq!(res.len(), 256);
 }
+#[test]
+fn get_by_id_bugged_() {
+    let points = [
+        Point { x: 3, y: 10 },
+        Point { x: 5, y: 11 },
+        Point { x: 63, y: 5 },
+        Point { x: 50, y: 8 },
+        Point { x: 63, y: 9 },
+        Point { x: 39, y: 25 },
+        Point { x: 53, y: 27 },
+        Point { x: 14, y: 37 },
+        Point { x: 0, y: 46 },
+        Point { x: 1, y: 61 },
+        Point { x: 30, y: 53 },
+        Point { x: 36, y: 39 },
+        Point { x: 46, y: 32 },
+        Point { x: 58, y: 38 },
+        Point { x: 38, y: 59 },
+        Point { x: 54, y: 49 },
+        Point { x: 82, y: 4 },
+        Point { x: 84, y: 14 },
+        Point { x: 74, y: 20 },
+        Point { x: 77, y: 30 },
+        Point { x: 83, y: 23 },
+        Point { x: 112, y: 11 },
+        Point { x: 99, y: 18 },
+        Point { x: 115, y: 29 },
+        Point { x: 70, y: 37 },
+        Point { x: 64, y: 40 },
+        Point { x: 82, y: 32 },
+        Point { x: 86, y: 36 },
+        Point { x: 70, y: 53 },
+        Point { x: 99, y: 35 },
+        Point { x: 97, y: 43 },
+        Point { x: 108, y: 42 },
+        Point { x: 107, y: 62 },
+        Point { x: 122, y: 63 },
+        Point { x: 17, y: 67 },
+        Point { x: 29, y: 66 },
+        Point { x: 10, y: 89 },
+        Point { x: 31, y: 94 },
+        Point { x: 42, y: 75 },
+        Point { x: 49, y: 64 },
+        Point { x: 62, y: 66 },
+        Point { x: 33, y: 90 },
+        Point { x: 59, y: 82 },
+        Point { x: 60, y: 85 },
+        Point { x: 53, y: 93 },
+        Point { x: 16, y: 105 },
+        Point { x: 55, y: 109 },
+        Point { x: 38, y: 121 },
+        Point { x: 41, y: 127 },
+        Point { x: 73, y: 70 },
+        Point { x: 75, y: 70 }, // this is the ficked fucked fuckery
+        Point { x: 65, y: 78 },
+        Point { x: 76, y: 73 },
+        Point { x: 95, y: 65 },
+        Point { x: 92, y: 69 },
+        Point { x: 87, y: 75 },
+        Point { x: 117, y: 69 },
+        Point { x: 98, y: 84 },
+        Point { x: 120, y: 83 },
+        Point { x: 88, y: 97 },
+        Point { x: 99, y: 118 },
+        Point { x: 110, y: 126 },
+        Point { x: 126, y: 122 },
+    ];
+    let points: Vec<(_, _)> = points
+        .iter()
+        .cloned()
+        .enumerate()
+        .map(|(i, p)| (p, i))
+        .collect();
+
+    let mut table = MortonTable::<Point, usize>::new();
+    for (p, e) in points.iter() {
+        let inserted = table.insert(p.clone(), *e);
+        assert!(inserted);
+    }
+
+    for p in points {
+        let found = table.get_by_id(&p.0);
+        let key = MortonKey::new(p.0.x as u16, p.0.y as u16);
+        assert_eq!(found, Some(&p.1), "{:?} {:?}", p.0, key);
+    }
+}
 
 #[test]
 fn get_by_id() {
@@ -38,14 +124,14 @@ fn get_by_id() {
 
     let mut table = MortonTable::<Point, usize>::new();
 
-    let mut points = HashMap::with_capacity(64);
+    let mut points = Vec::with_capacity(64);
 
     for i in 0..64 {
         let p = Point {
             x: rng.gen_range(0, 128),
             y: rng.gen_range(0, 128),
         };
-        points.insert(p, i);
+        points.push((p, i));
     }
 
     for (p, e) in points.iter() {
@@ -53,21 +139,12 @@ fn get_by_id() {
         assert!(inserted);
     }
 
-    let mut points: Vec<_> = points.into_iter().collect();
-
-    points.shuffle(&mut rng);
-
     println!("{:?}", table);
 
     for p in points {
         let found = table.get_by_id(&p.0);
-        assert_eq!(
-            found,
-            Some(&p.1),
-            "{:?} {:?}",
-            p.0,
-            MortonKey::new(p.0.x as u16, p.0.y as u16)
-        );
+        let key = MortonKey::new(p.0.x as u16, p.0.y as u16);
+        assert_eq!(found, Some(&p.1), "{:?} {:?}", p.0, key);
     }
 }
 

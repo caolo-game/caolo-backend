@@ -36,7 +36,8 @@ jobs:
             - target/debug/build
             - target/debug/deps
           key: v4-cargo-cache-{{ arch }}-{{ checksum "Cargo.lock" }}
-  bench_worker:
+
+  benchmark_worker:
     docker:
       - image: rust:1.40.0
 
@@ -59,18 +60,8 @@ jobs:
             curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v3.11.3/protoc-3.11.3-linux-x86_64.zip
             unzip -o  protoc-3.11.3-linux-x86_64.zip -d /usr/local bin/protoc
       - run:
-          name: Check
-          command: cargo check
-      - run:
           name: Bench
           command: cargo bench --all-features
-      - save_cache:
-          paths:
-            - /usr/local/cargo/registry
-            - target/debug/.fingerprint
-            - target/debug/build
-            - target/debug/deps
-          key: v4-cargo-cache-{{ arch }}-{{ checksum "Cargo.lock" }}
 
 workflows:
   version: 2

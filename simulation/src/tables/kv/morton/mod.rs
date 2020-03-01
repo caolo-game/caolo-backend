@@ -35,6 +35,8 @@ where
     Row: TableRow,
 {
     skiplist: SkipList,
+    skipstep: u32,
+    // ---- 9 * 4 bytes so far
     // assuming 64 byte long L1 cache lines we can fit 10 keys
     // keys is 24 bytes in memory
     keys: Vec<MortonKey>,
@@ -50,6 +52,7 @@ where
     fn default() -> Self {
         Self {
             skiplist: [0; SKIP_LEN],
+            skipstep: 0,
             keys: Default::default(),
             values: Default::default(),
             poss: Default::default(),
@@ -72,6 +75,7 @@ where
     pub fn new() -> Self {
         Self {
             skiplist: Default::default(),
+            skipstep: 0,
             keys: vec![],
             values: vec![],
             poss: vec![],
@@ -81,6 +85,7 @@ where
     pub fn with_capacity(cap: usize) -> Self {
         Self {
             skiplist: Default::default(),
+            skipstep: 0,
             values: Vec::with_capacity(cap),
             keys: Vec::with_capacity(cap),
             poss: Vec::with_capacity(cap),
@@ -151,6 +156,7 @@ where
 
         let len = self.keys.len();
         let step = len / SKIP_LEN;
+        self.skipstep = step as u32;
         if step < 1 {
             if let Some(key) = self.keys.last() {
                 self.skiplist[0] = key.0;
@@ -207,7 +213,7 @@ where
         let [x, y] = id.as_array();
         let key = MortonKey::new(x as u16, y as u16);
 
-        let step = self.keys.len() / SKIP_LEN;
+        let step = self.skipstep as usize;
         if step == 0 {
             return self.keys.binary_search(&key);
         }
@@ -217,24 +223,23 @@ where
         } else {
             sse_panic()
         };
-        if index < 7 {
-            let begin = index * step;
-            let end = begin + step;
-            return self.keys[begin..=end]
-                .binary_search(&key)
-                .map_err(|ind| ind + begin)
-                .map(|ind| ind + begin);
-        } else if index == 7 {
-            let begin = index * step;
-            let end = self.keys.len().min(begin + step + 1);
-            return self.keys[begin..end]
-                .binary_search(&key)
-                .map_err(|ind| ind + begin)
-                .map(|ind| ind + begin);
-        }
-        debug_assert!(self.keys.len() >= step + 3);
-        let begin = self.keys.len() - step - 3;
-        self.keys[begin..]
+        let (begin, end) = {
+            if index < 7 {
+                let begin = index * step;
+                let end = begin + step + 1;
+                (begin, end)
+            } else if index == 7 {
+                let begin = index * step;
+                let end = self.keys.len().min(begin + step + 1);
+                (begin, end)
+            } else {
+                debug_assert!(self.keys.len() >= step + 3);
+                let end = self.keys.len();
+                let begin = end - step - 3;
+                (begin, end)
+            }
+        };
+        self.keys[begin..end]
             .binary_search(&key)
             .map(|ind| ind + begin)
             .map_err(|ind| ind + begin)
@@ -260,9 +265,10 @@ where
         let mask_b = _mm_movemask_epi8(results_b);
 
         // count the number of bits set to 1
+        let index = _popcnt32(mask_a) + _popcnt32(mask_b);
         // because the mask was created from 8 bit wide items every key in skip list is counted
         // 4 times
-        let index = (_popcnt32(mask_a) + _popcnt32(mask_b)) / 4;
+        let index = index >> 2;
         index as usize
     }
 

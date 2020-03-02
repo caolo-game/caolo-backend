@@ -13,7 +13,7 @@ pub const MAX_STR_LEN: usize = 128;
 
 pub trait ObjectProperties: std::fmt::Debug {
     fn write_debug(&self, output: &mut String) {
-        write!(output, "{:?}", self).unwrap();
+        write!(output, "[object {:?}]", self).unwrap();
     }
 }
 
@@ -150,11 +150,7 @@ impl<
 {
 }
 
-impl<T: std::fmt::Debug> ObjectProperties for T {
-    fn write_debug(&self, output: &mut String) {
-        write!(output, "{:?}", self).unwrap();
-    }
-}
+impl<T: std::fmt::Debug> ObjectProperties for T {}
 
 impl<T: Sized + Clone + Copy + AutoByteEncodeProperties + std::fmt::Debug> ByteEncodeProperties
     for T

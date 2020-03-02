@@ -6,7 +6,68 @@ use log::debug;
 use rand::Rng;
 
 const PROGRAM: &str = r#"
-{"nodes":{"0":{"node":{"ScalarInt":{"value":0}},"child":1},"1":{"node":{"Call":{"function":"make_operation_result"}},"child":2},"2":{"node":{"Call":{"function":"find_closest_resource_by_range"}},"child":3},"3":{"node":{"Equals":null},"child":4},"4":{"node":{"JumpIfTrue":{"nodeid":6}},"child":5},"5":{"node":{"Exit":null},"child":6},"6":{"node":{"Call":{"function":"approach_entity"}},"child":null},"-1":{"node":{"Start":null},"child":0}}}
+{
+  "nodes": {
+    "0": {
+      "node": {
+        "ScalarInt": {
+          "value": 0
+        }
+      },
+      "child": 1
+    },
+    "1": {
+      "node": {
+        "Call": {
+          "function": "make_operation_result"
+        }
+      },
+      "child": 3
+    },
+    "2": {
+      "node": {
+        "Call": {
+          "function": "find_closest_resource_by_range"
+        }
+      },
+      "child": 0
+    },
+    "3": {
+      "node": {
+        "Equals": null
+      },
+      "child": 4
+    },
+    "4": {
+      "node": {
+        "JumpIfTrue": {
+          "nodeid": 6
+        }
+      },
+      "child": 5
+    },
+    "5": {
+      "node": {
+        "Exit": null
+      },
+      "child": 6
+    },
+    "6": {
+      "node": {
+        "Call": {
+          "function": "approach_entity"
+        }
+      },
+      "child": null
+    },
+    "-1": {
+      "node": {
+        "Start": null
+      },
+      "child": 2
+    }
+  }
+}
         "#;
 
 pub fn init_storage(n_fake_users: usize) -> Box<World> {

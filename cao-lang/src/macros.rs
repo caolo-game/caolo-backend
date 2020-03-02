@@ -27,13 +27,13 @@ pub mod vm {
             (Scalar::Pointer(a), Scalar::Pointer(b)) => {
                 let a = load_ptr!(&a, $from);
                 let b = load_ptr!(&b, $from);
-                if a.size != b.size {
+                if a.size != b.size || a.index.is_none() || b.index.is_none() {
                     $return_on_diff_type
                 } else {
                     let size = a.size as usize;
-                    let ind = a.index as usize;
+                    let ind = a.index.unwrap() as usize;
                     let a = &$from.memory[ind..ind + size];
-                    let ind = b.index as usize;
+                    let ind = b.index.unwrap() as usize;
                     let b = &$from.memory[ind..ind + size];
 
                     a.iter().zip(b.iter()).all(|(a, b)| a $cmp b)

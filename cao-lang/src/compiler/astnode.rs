@@ -54,7 +54,7 @@ impl InstructionNode {
             Sub => Instruction::Sub,
             Mul => Instruction::Mul,
             Div => Instruction::Div,
-            Exit => Instruction::Div,
+            Exit => Instruction::Exit,
             CopyLast => Instruction::CopyLast,
             Less => Instruction::Less,
             LessOrEq => Instruction::LessOrEq,

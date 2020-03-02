@@ -6,69 +6,7 @@ use log::debug;
 use rand::Rng;
 
 const PROGRAM: &str = r#"
-name: "default"
-nodes:
-    8:
-        node:
-            Call:
-                function: console_log
-    9:
-        node:
-            Equals: null
-        child: 6
-    10:
-        node:
-            StringLiteral:
-                value: "No moverino :("
-        child: 11
-    11:
-        node:
-            Call:
-                function: console_log
-    12:
-        node:
-            Start: null
-        child: 0
-    0:
-      node:
-          ScalarInt:
-            value: 25
-      child: 1
-    1:
-      node:
-        ScalarInt:
-            value: 25
-      child: 2
-    2:
-      node:
-        Call:
-            function: make_point
-      child: 3
-    3:
-        node:
-            Call:
-                function: move_bot_to_position
-        child: 5
-    4:
-        node:
-            Call:
-                function: make_operation_result
-        child: 9
-    5:
-        node:
-            ScalarInt:
-                value: 0
-        child: 4
-    6:
-        node:
-            JumpIfTrue:
-                nodeid: 7
-        child: 10
-    7:
-        node:
-            StringLiteral:
-                value: "Moving :)"
-        child: 8
+{"nodes":{"0":{"node":{"ScalarInt":{"value":0}},"child":1},"1":{"node":{"Call":{"function":"make_operation_result"}},"child":2},"2":{"node":{"Call":{"function":"find_closest_resource_by_range"}},"child":3},"3":{"node":{"Equals":null},"child":4},"4":{"node":{"JumpIfTrue":{"nodeid":6}},"child":5},"5":{"node":{"Exit":null},"child":6},"6":{"node":{"Call":{"function":"approach_entity"}},"child":null},"-1":{"node":{"Start":null},"child":0}}}
         "#;
 
 pub fn init_storage(n_fake_users: usize) -> Box<World> {
@@ -78,7 +16,7 @@ pub fn init_storage(n_fake_users: usize) -> Box<World> {
 
     let script_id = ScriptId::default();
     let script: CompilationUnit =
-        serde_yaml::from_str(PROGRAM).expect("deserialize example program");
+        serde_json::from_str(PROGRAM).expect("deserialize example program");
     debug!("compiling default program");
     let compiled = Compiler::compile(script).expect("failed to compile example program");
     debug!("compilation done");

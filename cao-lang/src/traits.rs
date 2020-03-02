@@ -5,14 +5,21 @@ use crate::{
 };
 use std::any::type_name;
 use std::convert::TryFrom;
+use std::fmt::Write;
 use std::marker::PhantomData;
 use std::mem;
 
 pub const MAX_STR_LEN: usize = 128;
 
+pub trait ObjectProperties: std::fmt::Debug {
+    fn write_debug(&self, output: &mut String) {
+        write!(output, "{:?}", self).unwrap();
+    }
+}
+
 pub type ExecutionResult = Result<Object, ExecutionError>;
 
-pub trait ByteEncodeProperties: Sized {
+pub trait ByteEncodeProperties: Sized + ObjectProperties {
     const BYTELEN: usize = mem::size_of::<Self>();
 
     fn displayname() -> &'static str {
@@ -143,7 +150,15 @@ impl<
 {
 }
 
-impl<T: Sized + Clone + Copy + AutoByteEncodeProperties> ByteEncodeProperties for T {
+impl<T: std::fmt::Debug> ObjectProperties for T {
+    fn write_debug(&self, output: &mut String) {
+        write!(output, "{:?}", self).unwrap();
+    }
+}
+
+impl<T: Sized + Clone + Copy + AutoByteEncodeProperties + std::fmt::Debug> ByteEncodeProperties
+    for T
+{
     fn encode(self) -> Vec<u8> {
         let size: usize = Self::BYTELEN;
 

@@ -4,26 +4,61 @@ use crate::prelude::*;
 use crate::scalar::Scalar;
 use crate::VarName;
 use crate::{binary_compare, pop_stack};
-use log::{debug, error};
+use log::Level::Debug;
+use log::{debug, error, log_enabled, warn};
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
-#[derive(Debug, Clone, Copy, Default)]
+type ConvertFn<Aux> = unsafe fn(&Object, &VM<Aux>) -> Box<dyn ObjectProperties>;
+
+#[derive(Debug, Clone, Copy)]
+pub enum ConvertError {
+    /// Null object was passed to convert
+    NullPtr,
+    BadType,
+}
+
+#[derive(Debug, Clone, Copy)]
 pub struct Object {
-    /// index of the Object's data in the VM memory
-    pub index: u32,
+    /// nullable index of the Object's data in the VM memory
+    pub index: Option<TPointer>,
     /// size of the data in the VM memory
     pub size: u32,
 }
 
+impl Default for Object {
+    fn default() -> Self {
+        Self::null()
+    }
+}
+
+impl Object {
+    pub fn null() -> Self {
+        Self {
+            index: None,
+            size: 0,
+        }
+    }
+
+    pub fn as_inner<'a, Aux>(
+        &self,
+        vm: &'a VM<Aux>,
+    ) -> Result<Box<dyn ObjectProperties>, ConvertError> {
+        self.index
+            .ok_or_else(|| ConvertError::NullPtr)
+            .map(|index| unsafe { vm.converters[&index](self, vm) })
+    }
+}
+
 /// Cao-Lang bytecode interpreter.
 /// Aux is an auxiliary data structure passed to custom functions.
-#[derive(Debug)]
 pub struct VM<Aux = ()> {
     memory: Vec<u8>,
     stack: Vec<Scalar>,
     callables: HashMap<String, FunctionObject<Aux>>,
     objects: HashMap<TPointer, Object>,
+    /// Functions to convert Objects to dyn ObjectProperties
+    converters: HashMap<TPointer, ConvertFn<Aux>>,
     variables: HashMap<VarName, Scalar>,
     auxiliary_data: Aux,
     max_iter: i32,
@@ -33,6 +68,7 @@ pub struct VM<Aux = ()> {
 impl<Aux> VM<Aux> {
     pub fn new(auxiliary_data: Aux) -> Self {
         Self {
+            converters: HashMap::with_capacity(128),
             auxiliary_data,
             memory: Vec::with_capacity(512),
             callables: HashMap::with_capacity(128),
@@ -89,13 +125,24 @@ impl<Aux> VM<Aux> {
             );
             return None;
         }
-        let data = &self.memory;
-        let head = object.index as usize;
-        let tail = (head + size as usize).min(data.len());
-        T::decode(&data[head..tail])
+        match object.index {
+            Some(index) => {
+                let data = &self.memory;
+                let head = index as usize;
+                let tail = (head + size as usize).min(data.len());
+                T::decode(&data[head..tail])
+            }
+            None => {
+                warn!("Dereferencing null pointer");
+                None
+            }
+        }
     }
 
-    pub fn set_value<T: ByteEncodeProperties>(&mut self, val: T) -> Result<Object, ExecutionError> {
+    pub fn set_value<T: ByteEncodeProperties + 'static>(
+        &mut self,
+        val: T,
+    ) -> Result<Object, ExecutionError> {
         let result = self.memory.len();
         let bytes = val.encode();
 
@@ -104,13 +151,18 @@ impl<Aux> VM<Aux> {
         }
 
         let object = Object {
-            index: result as u32,
+            index: Some(result as i32),
             size: T::BYTELEN as u32,
         };
-
         self.memory.extend(bytes.iter());
 
         self.objects.insert(result as TPointer, object);
+        self.converters
+            .insert(result as TPointer, |o: &Object, vm: &VM<Aux>| {
+                let res: T = vm.get_value(o.index.unwrap()).unwrap();
+                Box::new(res)
+            });
+
         debug!(
             "Set value {:?} {:?} {}",
             object,
@@ -284,14 +336,30 @@ impl<Aux> VM<Aux> {
                     let literal = Self::read_str(&mut ptr, &program.bytecode)
                         .ok_or(ExecutionError::InvalidArgument)?;
                     let obj = self.set_value(literal)?;
-                    self.stack.push(Scalar::Pointer(obj.index as i32));
+                    self.stack.push(Scalar::Pointer(obj.index.unwrap() as i32));
                 }
                 Instruction::Call => self.execute_call(&mut ptr, &program.bytecode)?,
             }
             if self.memory.len() > self.memory_limit {
                 return Err(ExecutionError::OutOfMemory);
             }
-            debug!("Stack {:?}", self.stack);
+            if log_enabled!(Debug) {
+                debug!("Stack len: {}", self.stack.len());
+                let mut s = String::with_capacity(512);
+                for (i, item) in self.stack.iter().enumerate() {
+                    match item {
+                        Scalar::Pointer(p) => {
+                            let obj = &self.objects[p];
+                            let val = unsafe { self.converters[p](obj, self) };
+                            s.clear();
+                            val.write_debug(&mut s);
+                            debug!("Stack #{} : {}", i, s);
+                        }
+                        _ => debug!("Stack #{} : {:?}", i, item),
+                    }
+                }
+                debug!("End stack");
+            }
         }
 
         Err(ExecutionError::UnexpectedEndOfInput)
@@ -324,7 +392,9 @@ impl<Aux> VM<Aux> {
         debug!("Function call returned value: {:?}", res);
 
         if res.size > 0 {
-            self.stack.push(Scalar::Pointer(res.index as i32));
+            if let Some(index) = res.index {
+                self.stack.push(Scalar::Pointer(index as i32));
+            }
         }
 
         self.callables.insert(fun_name, fun);

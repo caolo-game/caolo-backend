@@ -43,8 +43,8 @@ pub fn find_closest_resource_by_range(
         Some((_pos, entity)) => {
             // move out of the result to free the storage borrow
             let id = entity.0;
-            let id = vm.set_value(id.0)?;
-            let id = Scalar::Pointer(id.index as i32);
+            let id = vm.set_value(id)?;
+            let id = Scalar::Pointer(id.index.unwrap() as i32);
             vm.stack_push(id)?;
             vm.set_value(OperationResult::Ok)
         }

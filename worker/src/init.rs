@@ -112,7 +112,7 @@ pub fn init_storage(n_fake_users: usize) -> Box<World> {
         }
     }
 
-    for _ in 0..(n_fake_users - 1).max(1) {
+    for _ in 0..(n_fake_users / 3).max(1) {
         let id = storage.insert_entity();
         let storage = &mut storage;
         unsafe {

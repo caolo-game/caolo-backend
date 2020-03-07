@@ -41,11 +41,12 @@ pub fn init_storage(n_fake_users: usize) -> Pin<Box<World>> {
     }
 
     for _ in 0..n_fake_users {
-        let id = storage.insert_entity();
         let storage = &mut storage;
+        let botid = storage.insert_entity();
+        let spawnid = storage.insert_entity();
         unsafe {
-            init_bot(id, script_id, &mut rng, FromWorldMut::new(storage));
-            init_spawn(id, &mut rng, FromWorldMut::new(storage));
+            init_bot(botid, script_id, &mut rng, FromWorldMut::new(storage));
+            init_spawn(spawnid, &mut rng, FromWorldMut::new(storage));
         }
     }
 

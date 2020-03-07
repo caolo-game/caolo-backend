@@ -1,11 +1,12 @@
 use crate::protos::world::Bot as BotMsg;
 use crate::protos::world::LogEntry as LogMsg;
 use crate::protos::world::{Resource as ResourceMsg, Resource_ResourceType};
+use crate::protos::world::{Structure as StructureMsg, StructureSpawn as StructureSpawnMsg};
 use crate::protos::world::{Tile as TileMsg, Tile_TerrainType};
 use caolo_sim::model::{
     components::{
         Bot, EnergyComponent, LogEntry, OwnedEntity, PositionComponent, Resource,
-        ResourceComponent, TerrainComponent,
+        ResourceComponent, SpawnComponent, Structure, TerrainComponent,
     },
     geometry::point::Point,
     indices::EntityTime,
@@ -90,6 +91,39 @@ pub fn build_resources<'a>(
                 msg.set_energyMax(energy.energy_max as u32);
                 msg
             }
+        },
+    )
+}
+
+pub fn build_structures<'a>(
+    (structure_table, spawn_table, position_table, owner_table): (
+        View<'a, EntityId, Structure>,
+        View<'a, EntityId, SpawnComponent>,
+        View<'a, EntityId, PositionComponent>,
+        View<'a, EntityId, OwnedEntity>,
+    ),
+) -> impl Iterator<Item = StructureMsg> + 'a {
+    let spawns = JoinIterator::new(
+        spawn_table.reborrow().iter(),
+        structure_table.reborrow().iter(),
+    );
+    JoinIterator::new(spawns, position_table.reborrow().iter()).map(
+        move |(id, ((spawn, _structure), pos))| {
+            let mut msg = StructureMsg::new();
+            msg.set_id(id.0);
+            msg.mut_position().set_q(pos.0.x);
+            msg.mut_position().set_r(pos.0.y);
+            msg.mut_owner().clear();
+            if let Some(owner) = owner_table.get_by_id(&id) {
+                *msg.mut_owner() = owner.owner_id.0.as_bytes().to_vec();
+            }
+            let mut payload = StructureSpawnMsg::new();
+            payload.set_time_to_spawn(spawn.time_to_spawn as i32);
+            if let Some(spawning) = spawn.spawning {
+                payload.set_spawning(spawning.0);
+            }
+            msg.set_spawn(payload);
+            msg
         },
     )
 }

@@ -4,73 +4,9 @@ use caolo_sim::storage::views::{FromWorldMut, UnsafeView};
 use caolo_sim::World;
 use log::debug;
 use rand::Rng;
+use std::pin::Pin;
 
-const PROGRAM: &str = r#"
-{
-  "nodes": {
-    "0": {
-      "node": {
-        "ScalarInt": {
-          "value": 0
-        }
-      },
-      "child": 1
-    },
-    "1": {
-      "node": {
-        "Call": {
-          "function": "make_operation_result"
-        }
-      },
-      "child": 3
-    },
-    "2": {
-      "node": {
-        "Call": {
-          "function": "find_closest_resource_by_range"
-        }
-      },
-      "child": 0
-    },
-    "3": {
-      "node": {
-        "Equals": null
-      },
-      "child": 4
-    },
-    "4": {
-      "node": {
-        "JumpIfTrue": {
-          "nodeid": 6
-        }
-      },
-      "child": 5
-    },
-    "5": {
-      "node": {
-        "Exit": null
-      },
-      "child": 6
-    },
-    "6": {
-      "node": {
-        "Call": {
-          "function": "approach_entity"
-        }
-      },
-      "child": null
-    },
-    "-1": {
-      "node": {
-        "Start": null
-      },
-      "child": 2
-    }
-  }
-}
-        "#;
-
-pub fn init_storage(n_fake_users: usize) -> Box<World> {
+pub fn init_storage(n_fake_users: usize) -> Pin<Box<World>> {
     assert!(n_fake_users >= 1);
 
     let mut storage = caolo_sim::init_inmemory_storage();
@@ -109,6 +45,7 @@ pub fn init_storage(n_fake_users: usize) -> Box<World> {
         let storage = &mut storage;
         unsafe {
             init_bot(id, script_id, &mut rng, FromWorldMut::new(storage));
+            init_spawn(id, &mut rng, FromWorldMut::new(storage));
         }
     }
 
@@ -153,6 +90,42 @@ unsafe fn init_bot(
     carry_component
         .as_mut()
         .insert_or_update(id, Default::default());
+    owners.as_mut().insert_or_update(
+        id,
+        components::OwnedEntity {
+            owner_id: Default::default(),
+        },
+    );
+
+    let pos = uncontested_pos(&*entities_by_pos, rng);
+
+    positions
+        .as_mut()
+        .insert_or_update(id, components::PositionComponent(pos));
+    entities_by_pos
+        .as_mut()
+        .insert(pos, components::EntityComponent(id));
+}
+
+type InitSpawnMuts = (
+    UnsafeView<EntityId, components::OwnedEntity>,
+    UnsafeView<EntityId, components::SpawnComponent>,
+    UnsafeView<EntityId, components::Structure>,
+    UnsafeView<EntityId, components::PositionComponent>,
+    UnsafeView<Point, components::EntityComponent>,
+);
+
+unsafe fn init_spawn(
+    id: EntityId,
+    rng: &mut impl Rng,
+    (mut owners, mut spawns, mut structures, mut positions, mut entities_by_pos): InitSpawnMuts,
+) {
+    structures
+        .as_mut()
+        .insert_or_update(id, components::Structure {});
+    spawns
+        .as_mut()
+        .insert_or_update(id, components::SpawnComponent::default());
     owners.as_mut().insert_or_update(
         id,
         components::OwnedEntity {
@@ -219,3 +192,67 @@ fn uncontested_pos<T: caolo_sim::tables::TableRow + Send + Sync>(
         }
     }
 }
+
+const PROGRAM: &str = r#"
+{
+  "nodes": {
+    "0": {
+      "node": {
+        "ScalarInt": {
+          "value": 0
+        }
+      },
+      "child": 1
+    },
+    "1": {
+      "node": {
+        "Call": {
+          "function": "make_operation_result"
+        }
+      },
+      "child": 3
+    },
+    "2": {
+      "node": {
+        "Call": {
+          "function": "find_closest_resource_by_range"
+        }
+      },
+      "child": 0
+    },
+    "3": {
+      "node": {
+        "Equals": null
+      },
+      "child": 4
+    },
+    "4": {
+      "node": {
+        "JumpIfTrue": {
+          "nodeid": 6
+        }
+      },
+      "child": 5
+    },
+    "5": {
+      "node": {
+        "Exit": null
+      },
+      "child": 6
+    },
+    "6": {
+      "node": {
+        "Call": {
+          "function": "approach_entity"
+        }
+      },
+      "child": null
+    },
+    "-1": {
+      "node": {
+        "Start": null
+      },
+      "child": 2
+    }
+  }
+}"#;

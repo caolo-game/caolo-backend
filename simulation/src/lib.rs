@@ -16,6 +16,7 @@ mod utils;
 
 use chrono::{DateTime, Duration, Utc};
 use serde_derive::Serialize;
+use std::pin::Pin;
 use storage::views::{UnsafeView, View};
 use systems::execute_world_update;
 use systems::intent_system::execute_intents;
@@ -168,12 +169,13 @@ impl<'a> storage::views::FromWorld<'a> for model::Time {
     }
 }
 
-pub fn init_inmemory_storage() -> Box<World> {
+pub fn init_inmemory_storage() -> Pin<Box<World>> {
     profile!("init_inmemory_storage");
     debug!("Init Storage");
 
     let world = World::new();
+    let world = Box::pin(world);
 
     debug!("Init Storage done");
-    Box::new(world)
+    world
 }

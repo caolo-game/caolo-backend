@@ -1,20 +1,18 @@
-use super::*;
-use crate::model::{self, components, structures::BotDescription, OperationResult, UserId};
+use crate::model::{self, components, EntityId, OperationResult, UserId};
 use crate::World;
 
 #[derive(Debug, Clone)]
 pub struct SpawnIntent {
-    pub id: EntityId,
-    pub bot: BotDescription,
+    pub spawn_id: EntityId,
     pub owner_id: Option<UserId>,
 }
 
 pub fn check_spawn_intent(
-    intent: &model::structures::SpawnIntent,
+    intent: &SpawnIntent,
     userid: Option<model::UserId>,
     storage: &World,
 ) -> OperationResult {
-    let id = intent.id;
+    let id = intent.spawn_id;
 
     if let Some(userid) = userid {
         match storage

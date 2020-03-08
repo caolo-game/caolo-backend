@@ -12,29 +12,29 @@ pub use self::mine_intent::*;
 pub use self::move_intent::*;
 pub use self::spawn_intent::*;
 
-use crate::model::EntityId;
+macro_rules! intents {
+    ($($name: ident: $type: ty),*) =>{
+        #[derive(Debug, Clone, Default)]
+        pub struct Intents {
+            $(pub $name: Vec<$type>),*
+        }
+        impl Intents {
+            pub fn merge(&mut self, other: Intents) -> &mut Self {
+                $(self.$name.extend_from_slice(&other.$name));* ;
+                self
+            }
 
-#[derive(Debug, Clone, Default)]
-pub struct Intents {
-    pub move_intents: Vec<MoveIntent>,
-    pub spawn_intents: Vec<SpawnIntent>,
-    pub mine_intents: Vec<MineIntent>,
-    pub dropoff_intents: Vec<DropoffIntent>,
-    pub log_intents: Vec<LogIntent>,
+            pub fn new() -> Self {
+                Self::default()
+            }
+        }
+    };
 }
 
-impl Intents {
-    pub fn merge(&mut self, other: Intents) -> &mut Self {
-        self.move_intents.extend_from_slice(&other.move_intents);
-        self.spawn_intents.extend_from_slice(&other.spawn_intents);
-        self.mine_intents.extend_from_slice(&other.mine_intents);
-        self.dropoff_intents
-            .extend_from_slice(&other.dropoff_intents);
-        self.log_intents.extend_from_slice(&other.log_intents);
-        self
-    }
-
-    pub fn new() -> Self {
-        Self::default()
-    }
-}
+intents!(
+    move_intents: MoveIntent,
+    spawn_intents: SpawnIntent,
+    mine_intents: MineIntent,
+    dropoff_intents: DropoffIntent,
+    log_intents: LogIntent
+);

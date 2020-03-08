@@ -12,6 +12,12 @@ pub use self::mine_intent::*;
 pub use self::move_intent::*;
 pub use self::spawn_intent::*;
 
+impl Intents {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
 macro_rules! intents {
     ($($name: ident: $type: ty),*) =>{
         #[derive(Debug, Clone, Default)]
@@ -22,10 +28,6 @@ macro_rules! intents {
             pub fn merge(&mut self, other: Intents) -> &mut Self {
                 $(self.$name.extend_from_slice(&other.$name));* ;
                 self
-            }
-
-            pub fn new() -> Self {
-                Self::default()
             }
         }
     };

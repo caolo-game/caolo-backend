@@ -42,11 +42,18 @@ pub fn init_storage(n_fake_users: usize) -> Pin<Box<World>> {
 
     for _ in 0..n_fake_users {
         let storage = &mut storage;
-        let botid = storage.insert_entity();
         let spawnid = storage.insert_entity();
         unsafe {
-            init_bot(botid, script_id, &mut rng, FromWorldMut::new(storage));
             init_spawn(spawnid, &mut rng, FromWorldMut::new(storage));
+            let spawn_pos = storage
+                .view::<EntityId, components::PositionComponent>()
+                .get_by_id(&spawnid)
+                .expect("spawn should have position")
+                .0;
+            for _ in 0..3 {
+                let botid = storage.insert_entity();
+                init_bot(botid, script_id, spawn_pos, FromWorldMut::new(storage));
+            }
         }
     }
 
@@ -74,7 +81,7 @@ type InitBotMuts = (
 unsafe fn init_bot(
     id: EntityId,
     script_id: model::ScriptId,
-    rng: &mut impl Rng,
+    pos: Point,
     (
         mut entity_scripts,
         mut bots,
@@ -97,8 +104,6 @@ unsafe fn init_bot(
             owner_id: Default::default(),
         },
     );
-
-    let pos = uncontested_pos(&*entities_by_pos, rng);
 
     positions
         .as_mut()

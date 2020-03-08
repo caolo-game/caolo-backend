@@ -2,7 +2,6 @@ pub mod components;
 pub mod geometry;
 pub mod indices;
 pub mod pathfinding;
-pub mod structures;
 pub mod terrain;
 
 pub use self::indices::*;

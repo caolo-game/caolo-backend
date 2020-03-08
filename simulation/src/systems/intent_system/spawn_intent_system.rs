@@ -25,12 +25,9 @@ impl<'a> IntentExecutionSystem<'a> for SpawnSystem {
         intents: &[Self::Intent],
     ) {
         for intent in intents {
-            debug!(
-                "Spawning bot {:?} from structure {:?}",
-                intent.bot, intent.id
-            );
+            debug!("Spawning bot from structure {:?}", intent.spawn_id);
 
-            let mut spawn = match spawn_table.get_by_id(&intent.id).cloned() {
+            let mut spawn = match spawn_table.get_by_id(&intent.spawn_id).cloned() {
                 Some(x) => x,
                 None => {
                     error!("structure does not have spawn component");
@@ -43,7 +40,7 @@ impl<'a> IntentExecutionSystem<'a> for SpawnSystem {
                 continue;
             }
 
-            let energy = match entity_table.get_by_id(&intent.id) {
+            let energy = match entity_table.get_by_id(&intent.spawn_id) {
                 Some(x) => x,
                 None => {
                     error!("structure does not have energy");
@@ -70,7 +67,9 @@ impl<'a> IntentExecutionSystem<'a> for SpawnSystem {
                 spawn.time_to_spawn = 5;
                 spawn.spawning = Some(bot_id);
 
-                spawn_table.as_mut().insert_or_update(intent.id, spawn);
+                spawn_table
+                    .as_mut()
+                    .insert_or_update(intent.spawn_id, spawn);
             }
         }
     }

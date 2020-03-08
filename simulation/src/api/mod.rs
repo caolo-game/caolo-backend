@@ -163,7 +163,7 @@ pub fn make_import() -> Schema {
                 desc: subprogram_description!(
                     spawn,
                     "Spawn a new bot from given configuration.",
-                    [model::structures::SpawnIntent],
+                    [],
                     [OperationResult]
                 ),
                 fo: FunctionObject::new(FunctionWrapper::new(spawn)),

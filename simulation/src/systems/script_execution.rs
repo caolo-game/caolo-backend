@@ -28,7 +28,7 @@ fn execute_scripts_parallel(intents: Arc<Mutex<Intents>>, storage: &World) {
                 move |_| match execute_single_script(entityid, script.script_id, storage) {
                     Ok(ints) => {
                         let mut intents = intents.lock().unwrap();
-                        intents.merge(ints);
+                        intents.merge(&ints);
                     }
                     Err(e) => {
                         error!(

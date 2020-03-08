@@ -18,6 +18,7 @@ impl Intents {
     }
 }
 
+/// Implements the SOA style intents container
 macro_rules! intents {
     ($($name: ident: $type: ty),*) =>{
         #[derive(Debug, Clone, Default)]
@@ -25,7 +26,7 @@ macro_rules! intents {
             $(pub $name: Vec<$type>),*
         }
         impl Intents {
-            pub fn merge(&mut self, other: Intents) -> &mut Self {
+            pub fn merge(&mut self, other: &Intents) -> &mut Self {
                 $(self.$name.extend_from_slice(&other.$name));* ;
                 self
             }

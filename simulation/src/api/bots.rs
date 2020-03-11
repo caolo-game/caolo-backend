@@ -33,20 +33,20 @@ pub fn unload(
 
     let aux = vm.get_aux();
     let storage = aux.storage();
-    let entityid = aux.entityid();
-    let userid = aux.userid().expect("userid to be set");
+    let entity_id = aux.entity_id;
+    let user_id = aux.user_id.expect("user_id to be set");
 
     let dropoff_intent = DropoffIntent {
-        bot: entityid,
+        bot: entity_id,
         amount,
         ty,
         structure,
     };
 
-    let checkresult = check_dropoff_intent(&dropoff_intent, userid, FromWorld::new(storage));
+    let checkresult = check_dropoff_intent(&dropoff_intent, user_id, FromWorld::new(storage));
     if let OperationResult::Ok = checkresult {
         vm.get_aux_mut()
-            .intents_mut()
+            .intents
             .dropoff_intents
             .push(dropoff_intent);
     }
@@ -55,22 +55,22 @@ pub fn unload(
 
 pub fn mine_resource(
     vm: &mut VM<ScriptExecutionData>,
-    entityid: TPointer,
+    entity_id: TPointer,
 ) -> Result<Object, ExecutionError> {
     profile!("mine_resource");
 
-    let entityid: EntityId = vm.get_value(entityid).ok_or_else(|| {
+    let entity_id: EntityId = vm.get_value(entity_id).ok_or_else(|| {
         warn!("approach_entity called without a target");
         ExecutionError::InvalidArgument
     })?;
 
     let aux = vm.get_aux();
     let storage = aux.storage();
-    let userid = aux.userid().expect("userid to be set");
+    let user_id = aux.user_id.expect("user_id to be set");
 
     if storage
         .view::<EntityId, ResourceComponent>()
-        .get_by_id(&entityid)
+        .get_by_id(&entity_id)
         .is_none()
     {
         warn!("mine_resource called on an entity that is not a resource");
@@ -78,13 +78,13 @@ pub fn mine_resource(
     }
 
     let intent = MineIntent {
-        bot: aux.entityid(),
-        resource: entityid,
+        bot: aux.entity_id,
+        resource: entity_id,
     };
 
-    let checkresult = check_mine_intent(&intent, userid, FromWorld::new(storage));
+    let checkresult = check_mine_intent(&intent, user_id, FromWorld::new(storage));
     if let OperationResult::Ok = checkresult {
-        vm.get_aux_mut().intents_mut().mine_intents.push(intent);
+        vm.get_aux_mut().intents.mine_intents.push(intent);
     }
 
     vm.set_value(checkresult)
@@ -102,9 +102,9 @@ pub fn approach_entity(
     })?;
 
     let aux = vm.get_aux();
-    let entity = aux.entityid();
+    let entity = aux.entity_id;
     let storage = aux.storage();
-    let userid = aux.userid().expect("userid to be set");
+    let user_id = aux.user_id.expect("user_id to be set");
 
     let targetpos = match storage
         .view::<EntityId, components::PositionComponent>()
@@ -118,9 +118,9 @@ pub fn approach_entity(
         }
     };
 
-    let checkresult = match move_to_pos(entity, targetpos.0, userid, storage) {
+    let checkresult = match move_to_pos(entity, targetpos.0, user_id, storage) {
         Ok(intent) => {
-            vm.get_aux_mut().intents_mut().move_intents.push(intent);
+            vm.get_aux_mut().intents.move_intents.push(intent);
             OperationResult::Ok
         }
         Err(e) => e,
@@ -135,18 +135,18 @@ pub fn move_bot_to_position(
     profile!("move_bot_to_position");
 
     let aux = vm.get_aux();
-    let entity = aux.entityid();
+    let entity = aux.entity_id;
     let storage = aux.storage();
-    let userid = aux.userid().expect("userid to be set");
+    let user_id = aux.user_id.expect("user_id to be set");
 
     let point: Point = vm.get_value(point).ok_or_else(|| {
         warn!("move_bot called without a point");
         ExecutionError::InvalidArgument
     })?;
 
-    let checkresult = match move_to_pos(entity, point, userid, storage) {
+    let checkresult = match move_to_pos(entity, point, user_id, storage) {
         Ok(intent) => {
-            vm.get_aux_mut().intents_mut().move_intents.push(intent);
+            vm.get_aux_mut().intents.move_intents.push(intent);
             OperationResult::Ok
         }
         Err(e) => e,
@@ -157,7 +157,7 @@ pub fn move_bot_to_position(
 fn move_to_pos(
     bot: EntityId,
     to: Point,
-    userid: UserId,
+    user_id: UserId,
     storage: &World,
 ) -> Result<MoveIntent, OperationResult> {
     let botpos = storage
@@ -185,7 +185,7 @@ fn move_to_pos(
             return Err(OperationResult::InvalidTarget);
         }
     };
-    let checkresult = check_move_intent(&intent, userid, FromWorld::new(storage));
+    let checkresult = check_move_intent(&intent, user_id, FromWorld::new(storage));
     if let OperationResult::Ok = checkresult {
         Ok(intent)
     } else {

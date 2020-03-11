@@ -43,8 +43,8 @@ fn execute_scripts_parallel(intents: Arc<Mutex<Intents>>, storage: &World) {
 }
 
 pub fn execute_single_script<'a>(
-    entityid: EntityId,
-    scriptid: ScriptId,
+    entity_id: EntityId,
+    script_id: ScriptId,
     storage: &'a World,
 ) -> ExecutionResult {
     profile!("execute_single_script");
@@ -52,17 +52,17 @@ pub fn execute_single_script<'a>(
     let program = storage
         .view::<ScriptId, ScriptComponent>()
         .reborrow()
-        .get_by_id(&scriptid)
+        .get_by_id(&script_id)
         .ok_or_else(|| {
-            error!("Script by ID {:?} does not exist", scriptid);
+            error!("Script by ID {:?} does not exist", script_id);
             "not found"
         })?;
 
     let data = ScriptExecutionData {
         intents: Intents::new(),
         storage: storage as *const _,
-        entityid,
-        current_user: Some(Default::default()), // None, // TODO
+        entity_id,
+        user_id: Some(Default::default()), // None, // TODO
     };
     let mut vm = VM::new(data);
     crate::api::make_import().execute_imports(&mut vm);
@@ -70,7 +70,7 @@ pub fn execute_single_script<'a>(
     vm.run(&program.0).map_err(|e| {
         warn!(
             "Error while executing script {:?} of entity {:?}\n{:?}",
-            scriptid, entityid, e
+            script_id, entity_id, e
         );
         "runtime error"
     })?;
@@ -79,26 +79,15 @@ pub fn execute_single_script<'a>(
 }
 
 pub struct ScriptExecutionData {
-    intents: Intents,
     storage: *const World,
-    entityid: EntityId,
-    current_user: Option<UserId>,
+
+    pub intents: Intents,
+    pub entity_id: EntityId,
+    pub user_id: Option<UserId>,
 }
 
 impl ScriptExecutionData {
-    pub fn entityid(&self) -> EntityId {
-        self.entityid
-    }
-
     pub fn storage(&self) -> &World {
         unsafe { &*self.storage }
-    }
-
-    pub fn intents_mut(&mut self) -> &mut Intents {
-        &mut self.intents
-    }
-
-    pub fn userid(&self) -> Option<UserId> {
-        self.current_user
     }
 }

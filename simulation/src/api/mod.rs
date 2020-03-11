@@ -8,7 +8,6 @@ mod spawns;
 pub use self::bots::*;
 pub use self::resources::*;
 pub use self::spawns::*;
-use crate::model;
 use crate::model::geometry::point::Point;
 use crate::model::{components, EntityId, OperationResult};
 use crate::systems::script_execution::ScriptExecutionData;
@@ -42,16 +41,16 @@ pub fn console_log(
         debug!("console_log called with invalid message");
         ExecutionError::InvalidArgument
     })?;
-    let entityid = vm.get_aux().entityid();
+    let entity_id = vm.get_aux().entity_id;
     let time = vm.get_aux().storage().time();
 
-    let payload = format!("{:?} says {}", entityid, message);
+    let payload = format!("{:?} says {}", entity_id, message);
     debug!("{}", payload);
     vm.get_aux_mut()
-        .intents_mut()
+        .intents
         .log_intents
         .push(crate::intents::LogIntent {
-            entity: entityid,
+            entity: entity_id,
             payload,
             time,
         });
@@ -63,15 +62,15 @@ pub fn log_scalar(
     vm: &mut VM<ScriptExecutionData>,
     value: Scalar,
 ) -> Result<Object, ExecutionError> {
-    let entityid = vm.get_aux().entityid();
+    let entity_id = vm.get_aux().entity_id;
     let time = vm.get_aux().storage().time();
-    let payload = format!("{:?} says {:?}", entityid, value);
+    let payload = format!("{:?} says {:?}", entity_id, value);
     debug!("{}", payload);
     vm.get_aux_mut()
-        .intents_mut()
+        .intents
         .log_intents
         .push(crate::intents::LogIntent {
-            entity: entityid,
+            entity: entity_id,
             payload,
             time,
         });

@@ -11,17 +11,17 @@ pub fn find_closest_resource_by_range(
 ) -> Result<Object, ExecutionError> {
     profile!("find_closest_resource_by_range");
 
-    let entityid = vm.get_aux().entityid();
+    let entity_id = vm.get_aux().entity_id;
     let storage = vm.get_aux().storage();
 
     let position = match storage
         .view::<EntityId, PositionComponent>()
         .reborrow()
-        .get_by_id(&entityid)
+        .get_by_id(&entity_id)
     {
         Some(p) => p,
         None => {
-            debug!("{:?} has no PositionComponent", entityid);
+            debug!("{:?} has no PositionComponent", entity_id);
             return vm.set_value((OperationResult::InvalidInput,));
         }
     };
@@ -34,7 +34,7 @@ pub fn find_closest_resource_by_range(
 
     let resources = storage.view::<EntityId, ResourceComponent>();
 
-    candidates.retain(|(_pos, entityid)| resources.get_by_id(&entityid.0).is_some());
+    candidates.retain(|(_pos, entity_id)| resources.get_by_id(&entity_id.0).is_some());
     match candidates
         .iter()
         .min_by_key(|(pos, _)| pos.hex_distance(position.0))

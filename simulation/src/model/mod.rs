@@ -22,10 +22,9 @@ impl SpatialKey2d for Point {
     }
 
     fn get_axis(&self, axis: u8) -> i32 {
-        match axis {
+        match axis & 1 {
             0 => self.x,
-            1 => self.y,
-            _ => unreachable!(),
+            _ => self.y,
         }
     }
 

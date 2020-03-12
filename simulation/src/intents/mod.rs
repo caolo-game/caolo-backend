@@ -1,4 +1,4 @@
-//! Actions, world updates the clients _intented_ to be executed.
+//! Actions, world updates the clients _intend_ to execute.
 //!
 mod dropoff_intent;
 mod log_intent;

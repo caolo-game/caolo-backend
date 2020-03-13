@@ -15,8 +15,6 @@
 make
 ```
 
-Then open the client in your browser by visiting [http://localhost:3000](http://localhost:3000)
-
 ## Building and running
 
 - Running the worker

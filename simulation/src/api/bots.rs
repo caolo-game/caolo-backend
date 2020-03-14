@@ -1,11 +1,11 @@
 use super::*;
 use crate::{
     intents::{
-        check_dropoff_intent, check_mine_intent, check_move_intent, DropoffIntent, MineIntent,
-        MoveIntent,
+        check_dropoff_intent, check_mine_intent, check_move_intent, CachePathIntent, DropoffIntent,
+        MineIntent, MoveIntent, PopPathCacheIntent,
     },
     model::{
-        components::{self, Resource, ResourceComponent},
+        components::{self, PathCacheComponent, Resource, ResourceComponent, PATH_CACHE_LEN},
         geometry::point::Point,
         EntityId, OperationResult, UserId,
     },
@@ -15,6 +15,8 @@ use crate::{
     World,
 };
 use std::convert::TryFrom;
+
+const MAX_PATHFINDING_ITER: usize = 200;
 
 pub fn unload(
     vm: &mut VM<ScriptExecutionData>,
@@ -119,8 +121,16 @@ pub fn approach_entity(
     };
 
     let checkresult = match move_to_pos(entity, targetpos.0, user_id, storage) {
-        Ok(intent) => {
-            vm.get_aux_mut().intents.move_intents.push(intent);
+        Ok((move_intent, pop_cache_intent, update_cache_intent)) => {
+            let intents = &mut vm.get_aux_mut().intents;
+            intents.move_intents.push(move_intent);
+            if let Some(pop_cache_intent) = pop_cache_intent {
+                intents.pop_path_cache_intents.push(pop_cache_intent);
+            }
+            if let Some(update_cache_intent) = update_cache_intent {
+                intents.update_path_cache_intents.push(update_cache_intent);
+            }
+
             OperationResult::Ok
         }
         Err(e) => e,
@@ -145,8 +155,15 @@ pub fn move_bot_to_position(
     })?;
 
     let checkresult = match move_to_pos(entity, point, user_id, storage) {
-        Ok(intent) => {
-            vm.get_aux_mut().intents.move_intents.push(intent);
+        Ok((move_intent, pop_cache_intent, update_cache_intent)) => {
+            let intents = &mut vm.get_aux_mut().intents;
+            intents.move_intents.push(move_intent);
+            if let Some(pop_cache_intent) = pop_cache_intent {
+                intents.pop_path_cache_intents.push(pop_cache_intent);
+            }
+            if let Some(update_cache_intent) = update_cache_intent {
+                intents.update_path_cache_intents.push(update_cache_intent);
+            }
             OperationResult::Ok
         }
         Err(e) => e,
@@ -159,7 +176,33 @@ fn move_to_pos(
     to: Point,
     user_id: UserId,
     storage: &World,
-) -> Result<MoveIntent, OperationResult> {
+) -> Result<
+    (
+        MoveIntent,
+        Option<PopPathCacheIntent>,
+        Option<CachePathIntent>,
+    ),
+    OperationResult,
+> {
+    // attempt to use the cached path
+    // which requires non-empty cache with a valid next step
+    if let Some(cache) = storage
+        .view::<EntityId, PathCacheComponent>()
+        .reborrow()
+        .get_by_id(&bot)
+    {
+        if let Some(position) = cache.0.last().cloned() {
+            let intent = MoveIntent { bot, position };
+            if let OperationResult::Ok =
+                check_move_intent(&intent, user_id, FromWorld::new(storage))
+            {
+                debug!("Bot {:?} path cache hit", bot);
+                return Ok((intent, Some(PopPathCacheIntent { bot }), None));
+            }
+        }
+    }
+    debug!("Bot {:?} path cache miss", bot);
+
     let botpos = storage
         .view::<EntityId, components::PositionComponent>()
         .reborrow()
@@ -168,13 +211,18 @@ fn move_to_pos(
             warn!("entity {:?} does not have position component!", bot);
             OperationResult::InvalidInput
         })?;
-    let mut path = Vec::with_capacity(1000);
-    if let Err(e) = pathfinding::find_path(botpos.0, to, FromWorld::new(storage), 1000, &mut path) {
+    let mut path = Vec::with_capacity(MAX_PATHFINDING_ITER);
+    if let Err(e) = pathfinding::find_path(
+        botpos.0,
+        to,
+        FromWorld::new(storage),
+        MAX_PATHFINDING_ITER as u32,
+        &mut path,
+    ) {
         debug!("pathfinding failed {:?}", e);
         return Err(OperationResult::InvalidTarget);
     }
 
-    // TODO: cache path
     let intent = match path.pop() {
         Some(position) => MoveIntent {
             bot,
@@ -187,7 +235,23 @@ fn move_to_pos(
     };
     let checkresult = check_move_intent(&intent, user_id, FromWorld::new(storage));
     if let OperationResult::Ok = checkresult {
-        Ok(intent)
+        let len = path.len();
+        let skip = if len > PATH_CACHE_LEN {
+            len - PATH_CACHE_LEN
+        } else {
+            0
+        };
+
+        Ok((
+            intent,
+            None,
+            Some(CachePathIntent {
+                bot,
+                cache: PathCacheComponent(
+                    path.into_iter().skip(skip).take(PATH_CACHE_LEN).collect(),
+                ),
+            }),
+        ))
     } else {
         Err(checkresult)
     }

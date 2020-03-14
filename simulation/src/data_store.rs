@@ -28,6 +28,7 @@ storage!(
     key EntityId, table EntityScript = entityscript,
     key EntityId, table SpawnComponent = entityspawn,
     key EntityId, table OwnedEntity = entityowner,
+    key EntityId, table PathCacheComponent = entitypathcache,
 
     key EntityTime, table LogEntry = timelog,
 

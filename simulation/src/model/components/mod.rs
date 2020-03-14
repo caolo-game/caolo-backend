@@ -4,6 +4,7 @@ pub use resources::*;
 use super::terrain::TileTerrainType;
 use super::{geometry::Point, EntityId, ScriptId, UserId};
 use crate::tables::{BTreeTable, Component, MortonTable, SpatialKey2d, TableId, VecTable};
+use arrayvec::ArrayVec;
 use serde_derive::{Deserialize, Serialize};
 
 /// For tables that store entity ids as values
@@ -139,5 +140,12 @@ impl<Id: TableId> Component<Id> for ScriptComponent {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct UserComponent;
 impl<Id: TableId> Component<Id> for UserComponent {
+    type Table = BTreeTable<Id, Self>;
+}
+
+pub const PATH_CACHE_LEN: usize = 64;
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct PathCacheComponent(pub ArrayVec<[Point; PATH_CACHE_LEN]>);
+impl<Id: TableId> Component<Id> for PathCacheComponent {
     type Table = BTreeTable<Id, Self>;
 }

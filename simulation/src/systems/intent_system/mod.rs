@@ -2,12 +2,14 @@ mod dropoff_intent_system;
 mod log_intent_system;
 mod mine_intent_system;
 mod move_intent_system;
+mod path_cache_intent_system;
 mod spawn_intent_system;
 
 use self::dropoff_intent_system::DropoffSystem;
 use self::log_intent_system::LogSystem;
 use self::mine_intent_system::MineSystem;
 use self::move_intent_system::MoveSystem;
+use self::path_cache_intent_system::{PopPathCacheSystem, UpdatePathCacheSystem};
 use self::spawn_intent_system::SpawnSystem;
 use crate::intents::{Intents, MoveIntent};
 use crate::profile;
@@ -62,6 +64,21 @@ pub fn execute_intents(mut intents: Intents, storage: &mut World) {
         FromWorldMut::new(storage as &mut _),
         FromWorld::new(storage as &_),
         intents.log_intents.as_slice(),
+    );
+
+    // first update the cache, then pop
+    let mut path_cache_sys = UpdatePathCacheSystem;
+    path_cache_sys.execute(
+        FromWorldMut::new(storage as &mut _),
+        FromWorld::new(storage as &_),
+        intents.update_path_cache_intents.as_slice(),
+    );
+
+    let mut path_cache_sys = PopPathCacheSystem;
+    path_cache_sys.execute(
+        FromWorldMut::new(storage as &mut _),
+        FromWorld::new(storage as &_),
+        intents.pop_path_cache_intents.as_slice(),
     );
 }
 

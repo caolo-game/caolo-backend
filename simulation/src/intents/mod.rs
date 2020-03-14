@@ -5,12 +5,14 @@ mod log_intent;
 mod mine_intent;
 mod move_intent;
 mod spawn_intent;
+mod pathcache_intent;
 
 pub use self::dropoff_intent::*;
 pub use self::log_intent::*;
 pub use self::mine_intent::*;
 pub use self::move_intent::*;
 pub use self::spawn_intent::*;
+pub use self::pathcache_intent::*;
 
 impl Intents {
     pub fn new() -> Self {
@@ -20,7 +22,7 @@ impl Intents {
 
 /// Implements the SOA style intents container
 macro_rules! intents {
-    ($($name: ident: $type: ty),*) =>{
+    ($($name: ident: $type: ty),+,) =>{
         #[derive(Debug, Clone, Default)]
         pub struct Intents {
             $(pub $name: Vec<$type>),*
@@ -39,5 +41,7 @@ intents!(
     spawn_intents: SpawnIntent,
     mine_intents: MineIntent,
     dropoff_intents: DropoffIntent,
-    log_intents: LogIntent
+    log_intents: LogIntent,
+    update_path_cache_intents: CachePathIntent,
+    pop_path_cache_intents: PopPathCacheIntent,
 );

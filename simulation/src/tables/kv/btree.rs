@@ -36,6 +36,10 @@ where
         self.data.get(id)
     }
 
+    pub fn get_by_id_mut<'a>(&'a mut self, id: &Id) -> Option<&'a mut Row> {
+        self.data.get_mut(id)
+    }
+
     pub fn get_by_ids<'a>(&'a self, ids: &[Id]) -> Vec<(Id, &'a Row)> {
         self.data
             .iter()

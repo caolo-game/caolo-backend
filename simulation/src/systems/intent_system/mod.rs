@@ -77,18 +77,17 @@ fn pre_process_move_intents(move_intents: &mut Vec<MoveIntent>) {
         // 0 and 1 long vectors do not have duplicates
         return;
     }
-    // sort move intents by their positions
-    move_intents.par_sort_unstable_by_key(|int| int.position);
+    move_intents.par_sort_unstable_by_key(|intent| intent.position);
     let len = move_intents.len();
     let mut last_pos = len - 1;
     // move in reverse order as we want to remove invalid intents as we move
-    for i in (0..len - 2).rev() {
+    for index in (0..len - 2).rev() {
         let a = &move_intents[last_pos];
-        let b = &move_intents[i];
+        let b = &move_intents[index];
         if a.position == b.position {
             debug!("Duplicated position in move intent, removing {:?}", a);
             move_intents.remove(last_pos);
         }
-        last_pos = i;
+        last_pos = index;
     }
 }

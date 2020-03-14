@@ -1,6 +1,8 @@
 use serde_derive::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, Hash, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize, Default)]
+#[derive(
+    Debug, Clone, Copy, Hash, Eq, PartialEq, PartialOrd, Ord, Serialize, Deserialize, Default,
+)]
 pub struct MortonKey(pub u32);
 
 impl MortonKey {

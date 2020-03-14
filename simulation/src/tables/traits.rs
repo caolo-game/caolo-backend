@@ -25,7 +25,6 @@ pub trait SpatialKey2d: TableId + Add<Output = Self> {
     }
 }
 
-
 /// TableIds may be used as indices of tables
 pub trait TableId:
     'static + Ord + PartialOrd + Eq + PartialEq + Copy + Default + Send + std::fmt::Debug + Serialize

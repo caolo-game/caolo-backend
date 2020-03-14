@@ -36,6 +36,8 @@ macro_rules! storage {
                     }
                 }
             }
+
+            unsafe impl Send for Storage {}
         }
     };
 

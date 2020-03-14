@@ -36,6 +36,9 @@ use std::ops::Deref;
 #[derive(Clone, Copy)]
 pub struct View<'a, Id: TableId, C: Component<Id>>(&'a C::Table);
 
+unsafe impl<'a, Id: TableId, C: Component<Id>> Send for View<'a, Id, C> {}
+unsafe impl<'a, Id: TableId, C: Component<Id>> Sync for View<'a, Id, C> {}
+
 impl<'a, Id: TableId, C: Component<Id>> View<'a, Id, C> {
     pub fn reborrow(self) -> &'a C::Table {
         self.0
@@ -67,6 +70,9 @@ pub trait FromWorldMut {
 /// Do not store UnsafeViews for longer than the function scope, that's just asking for trouble.
 ///
 pub struct UnsafeView<Id: TableId, C: Component<Id>>(*mut C::Table);
+
+unsafe impl<Id: TableId, C: Component<Id>> Send for UnsafeView<Id, C> {}
+unsafe impl<Id: TableId, C: Component<Id>> Sync for UnsafeView<Id, C> {}
 
 impl<Id: TableId, C: Component<Id>> UnsafeView<Id, C> {
     pub unsafe fn as_mut(&mut self) -> &mut C::Table {
@@ -116,6 +122,9 @@ pub struct DeleteEntityView {
     storage: *mut World,
 }
 
+unsafe impl Send for DeleteEntityView {}
+unsafe impl Sync for DeleteEntityView {}
+
 impl DeleteEntityView {
     pub unsafe fn delete_entity(&mut self, id: &EntityId) {
         let storage = &mut (*self.storage).store as &mut dyn Epic<EntityId>;
@@ -134,6 +143,9 @@ impl FromWorldMut for DeleteEntityView {
 pub struct InsertEntityView {
     storage: *mut World,
 }
+
+unsafe impl Send for InsertEntityView {}
+unsafe impl Sync for InsertEntityView {}
 
 impl FromWorldMut for InsertEntityView {
     fn new(w: &mut World) -> Self {

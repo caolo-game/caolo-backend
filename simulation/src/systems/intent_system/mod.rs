@@ -33,41 +33,52 @@ pub fn execute_intents(mut intents: Intents, storage: &mut World) {
 
     let intents = &intents;
 
-    let mut move_sys = MoveSystem;
-    execute(&mut move_sys, storage, intents);
+    rayon::scope(move |s| {
+        let move_sys = executor(MoveSystem, storage);
+        let mine_sys = executor(MineSystem, storage);
+        let dropoff_sys = executor(DropoffSystem, storage);
+        s.spawn(move |_| {
+            move_sys(intents);
+            mine_sys(intents);
+            dropoff_sys(intents);
+        });
 
-    let mut mine_sys = MineSystem;
-    execute(&mut mine_sys, storage, intents);
+        let spawn_sys = executor(SpawnSystem, storage);
+        s.spawn(move |_| {
+            spawn_sys(intents);
+        });
 
-    let mut dropoff_sys = DropoffSystem;
-    execute(&mut dropoff_sys, storage, intents);
+        let log_sys = executor(LogSystem, storage);
+        s.spawn(move |_| {
+            log_sys(intents);
+        });
 
-    let mut spawn_sys = SpawnSystem;
-    execute(&mut spawn_sys, storage, intents);
-
-    let mut log_sys = LogSystem;
-    execute(&mut log_sys, storage, intents);
-
-    // first update the cache, then pop
-    let mut path_cache_sys = UpdatePathCacheSystem;
-    execute(&mut path_cache_sys, storage, intents);
-
-    let mut path_cache_sys = PopPathCacheSystem;
-    execute(&mut path_cache_sys, storage, intents);
+        let update_cache_sys = executor(UpdatePathCacheSystem, storage);
+        let pop_path_cache_sys = executor(PopPathCacheSystem, storage);
+        s.spawn(move |_| {
+            update_cache_sys(intents);
+            pop_path_cache_sys(intents);
+        });
+    });
 }
 
-#[inline]
-fn execute<'a, T, Sys>(sys: &mut Sys, storage: &'a mut World, intents: &'a Intents)
+fn executor<'a, 'b, T, Sys>(
+    mut sys: Sys,
+    storage: *mut World,
+) -> impl FnOnce(&'b Intents) -> () + 'a
 where
+    'b: 'a,
     T: 'a,
     &'a Intents: Into<&'a [T]>,
-    Sys: IntentExecutionSystem<'a, Intent = T>,
+    Sys: IntentExecutionSystem<'a, Intent = T> + 'a,
 {
-    sys.execute(
-        FromWorldMut::new(storage),
-        FromWorld::new(storage as &_),
-        intents.into(),
-    );
+    let storage = unsafe { &mut *storage };
+    let mutable = Sys::Mut::new(storage);
+    let immutable = Sys::Const::new(storage);
+
+    move |intents| {
+        sys.execute(mutable, immutable, intents.into());
+    }
 }
 
 /// Remove duplicate positions.

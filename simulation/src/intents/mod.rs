@@ -4,15 +4,15 @@ mod dropoff_intent;
 mod log_intent;
 mod mine_intent;
 mod move_intent;
-mod spawn_intent;
 mod pathcache_intent;
+mod spawn_intent;
 
 pub use self::dropoff_intent::*;
 pub use self::log_intent::*;
 pub use self::mine_intent::*;
 pub use self::move_intent::*;
-pub use self::spawn_intent::*;
 pub use self::pathcache_intent::*;
+pub use self::spawn_intent::*;
 
 impl Intents {
     pub fn new() -> Self {
@@ -33,6 +33,13 @@ macro_rules! intents {
                 self
             }
         }
+        $(
+            impl<'a> Into<&'a [$type]> for &'a Intents {
+                fn into(self) -> &'a [$type] {
+                    self.$name.as_slice()
+                }
+            }
+        )*
     };
 }
 

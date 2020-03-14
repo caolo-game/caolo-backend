@@ -31,54 +31,42 @@ pub fn execute_intents(mut intents: Intents, storage: &mut World) {
 
     pre_process_move_intents(&mut intents.move_intents);
 
+    let intents = &intents;
+
     let mut move_sys = MoveSystem;
-    move_sys.execute(
-        FromWorldMut::new(storage as &mut _),
-        FromWorld::new(storage as &_),
-        intents.move_intents.as_slice(),
-    );
+    execute(&mut move_sys, storage, intents);
 
     let mut mine_sys = MineSystem;
-    mine_sys.execute(
-        FromWorldMut::new(storage as &mut _),
-        FromWorld::new(storage as &_),
-        intents.mine_intents.as_slice(),
-    );
+    execute(&mut mine_sys, storage, intents);
 
     let mut dropoff_sys = DropoffSystem;
-    dropoff_sys.execute(
-        FromWorldMut::new(storage as &mut _),
-        FromWorld::new(storage as &_),
-        intents.dropoff_intents.as_slice(),
-    );
+    execute(&mut dropoff_sys, storage, intents);
 
     let mut spawn_sys = SpawnSystem;
-    spawn_sys.execute(
-        FromWorldMut::new(storage as &mut _),
-        FromWorld::new(storage as &_),
-        intents.spawn_intents.as_slice(),
-    );
+    execute(&mut spawn_sys, storage, intents);
 
     let mut log_sys = LogSystem;
-    log_sys.execute(
-        FromWorldMut::new(storage as &mut _),
-        FromWorld::new(storage as &_),
-        intents.log_intents.as_slice(),
-    );
+    execute(&mut log_sys, storage, intents);
 
     // first update the cache, then pop
     let mut path_cache_sys = UpdatePathCacheSystem;
-    path_cache_sys.execute(
-        FromWorldMut::new(storage as &mut _),
-        FromWorld::new(storage as &_),
-        intents.update_path_cache_intents.as_slice(),
-    );
+    execute(&mut path_cache_sys, storage, intents);
 
     let mut path_cache_sys = PopPathCacheSystem;
-    path_cache_sys.execute(
-        FromWorldMut::new(storage as &mut _),
+    execute(&mut path_cache_sys, storage, intents);
+}
+
+#[inline]
+fn execute<'a, T, Sys>(sys: &mut Sys, storage: &'a mut World, intents: &'a Intents)
+where
+    T: 'a,
+    &'a Intents: Into<&'a [T]>,
+    Sys: IntentExecutionSystem<'a, Intent = T>,
+{
+    sys.execute(
+        FromWorldMut::new(storage),
         FromWorld::new(storage as &_),
-        intents.pop_path_cache_intents.as_slice(),
+        intents.into(),
     );
 }
 

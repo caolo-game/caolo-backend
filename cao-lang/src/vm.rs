@@ -139,6 +139,7 @@ impl<Aux> VM<Aux> {
         }
     }
 
+    /// Save `val` in memory and push a pointer to the object onto the stack
     pub fn set_value<T: ByteEncodeProperties + 'static>(
         &mut self,
         val: T,
@@ -162,6 +163,8 @@ impl<Aux> VM<Aux> {
                 let res: T = vm.get_value(o.index.unwrap()).unwrap();
                 Box::new(res)
             });
+
+        self.stack_push(Scalar::Pointer(result as TPointer))?;
 
         debug!(
             "Set value {:?} {:?} {}",
@@ -374,31 +377,28 @@ impl<Aux> VM<Aux> {
             .callables
             .remove(fun_name.as_str())
             .ok_or_else(|| ExecutionError::FunctionNotFound(fun_name.as_str().to_owned()))?;
-
-        let n_inputs = fun.num_params();
-        let mut inputs = Vec::with_capacity(n_inputs as usize);
-        for _ in 0..n_inputs {
-            let arg = self.stack.pop().ok_or_else(|| {
-                error!("Missing argument to function call {:?}", fun_name);
-                ExecutionError::MissingArgument
-            })?;
-            inputs.push(arg)
-        }
-        debug!("Calling function {} with inputs: {:?}", fun_name, inputs);
-        let res = fun.call(self, &inputs).map_err(|e| {
-            error!("Calling function {:?} failed with {:?}", fun_name, e);
-            e
-        })?;
-        debug!("Function call returned value: {:?}", res);
-
-        if res.size > 0 {
-            if let Some(index) = res.index {
-                self.stack.push(Scalar::Pointer(index as i32));
+        let res = (|| {
+            let n_inputs = fun.num_params();
+            let mut inputs = Vec::with_capacity(n_inputs as usize);
+            for _ in 0..n_inputs {
+                let arg = self.stack.pop().ok_or_else(|| {
+                    error!("Missing argument to function call {:?}", fun_name);
+                    ExecutionError::MissingArgument
+                })?;
+                inputs.push(arg)
             }
-        }
+            debug!("Calling function {} with inputs: {:?}", fun_name, inputs);
+            fun.call(self, &inputs).map_err(|e| {
+                error!("Calling function {:?} failed with {:?}", fun_name, e);
+                e
+            })?;
+            debug!("Function call returned");
 
+            Ok(())
+        })();
+        // clean up
         self.callables.insert(fun_name, fun);
-        Ok(())
+        res
     }
 
     fn load_ptr_from_stack(&self) -> Option<i32> {
@@ -505,14 +505,15 @@ mod tests {
             let res = a as f32 * b % 13.;
             let res = res as i32;
 
-            vm.set_value(res)
+            vm.set_value(res)?;
+            Ok(())
         };
 
         vm.register_function("foo", FunctionWrapper::new(foo));
         vm.register_function(
             "bar",
             FunctionWrapper::new(|_vm: &mut VM, _a: i32| {
-                Err::<Object, _>(ExecutionError::Unimplemented)
+                Err::<(), _>(ExecutionError::Unimplemented)
             }),
         );
 

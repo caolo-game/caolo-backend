@@ -1,14 +1,13 @@
 use super::*;
 use crate::model::components::{EntityComponent, PositionComponent, ResourceComponent};
 use crate::profile;
-use cao_lang::prelude::Scalar;
 
 pub const MAX_SEARCH_RADIUS: u32 = 256;
 
 pub fn find_closest_resource_by_range(
     vm: &mut VM<ScriptExecutionData>,
     _: (),
-) -> Result<Object, ExecutionError> {
+) -> Result<(), ExecutionError> {
     profile!("find_closest_resource_by_range");
 
     let entity_id = vm.get_aux().entity_id;
@@ -22,7 +21,8 @@ pub fn find_closest_resource_by_range(
         Some(p) => p,
         None => {
             debug!("{:?} has no PositionComponent", entity_id);
-            return vm.set_value((OperationResult::InvalidInput,));
+             vm.set_value(OperationResult::InvalidInput)?;
+             return Ok(())
         }
     };
 
@@ -39,14 +39,14 @@ pub fn find_closest_resource_by_range(
         .iter()
         .min_by_key(|(pos, _)| pos.hex_distance(position.0))
     {
-        None => vm.set_value((OperationResult::OperationFailed,)),
+        None => {
+            vm.set_value(OperationResult::OperationFailed)?;
+        }
         Some((_pos, entity)) => {
             // move out of the result to free the storage borrow
-            let id = entity.0;
-            let id = vm.set_value(id)?;
-            let id = Scalar::Pointer(id.index.unwrap() as i32);
-            vm.stack_push(id)?;
-            vm.set_value(OperationResult::Ok)
+            vm.set_value(entity.0)?;
+            vm.set_value(OperationResult::Ok)?;
         }
     }
+    Ok(())
 }

@@ -21,7 +21,7 @@ const MAX_PATHFINDING_ITER: usize = 200;
 pub fn unload(
     vm: &mut VM<ScriptExecutionData>,
     (amount, ty, structure): (i32, Resource, TPointer),
-) -> Result<Object, ExecutionError> {
+) -> Result<(), ExecutionError> {
     profile!("unload");
 
     let amount = TryFrom::try_from(amount).map_err(|e| {
@@ -52,13 +52,14 @@ pub fn unload(
             .dropoff_intents
             .push(dropoff_intent);
     }
-    vm.set_value(checkresult)
+    vm.set_value(checkresult)?;
+    Ok(())
 }
 
 pub fn mine_resource(
     vm: &mut VM<ScriptExecutionData>,
     entity_id: TPointer,
-) -> Result<Object, ExecutionError> {
+) -> Result<(), ExecutionError> {
     profile!("mine_resource");
 
     let entity_id: EntityId = vm.get_value(entity_id).ok_or_else(|| {
@@ -70,10 +71,9 @@ pub fn mine_resource(
     let storage = aux.storage();
     let user_id = aux.user_id.expect("user_id to be set");
 
-    if storage
+    if !storage
         .view::<EntityId, ResourceComponent>()
-        .get_by_id(&entity_id)
-        .is_none()
+        .contains(&entity_id)
     {
         warn!("mine_resource called on an entity that is not a resource");
         return Err(ExecutionError::InvalidArgument);
@@ -89,13 +89,14 @@ pub fn mine_resource(
         vm.get_aux_mut().intents.mine_intents.push(intent);
     }
 
-    vm.set_value(checkresult)
+    vm.set_value(checkresult)?;
+    Ok(())
 }
 
 pub fn approach_entity(
     vm: &mut VM<ScriptExecutionData>,
     target: TPointer,
-) -> Result<Object, ExecutionError> {
+) -> Result<(), ExecutionError> {
     profile!("approach_entity");
 
     let target: EntityId = vm.get_value(target).ok_or_else(|| {
@@ -116,7 +117,8 @@ pub fn approach_entity(
         Some(x) => x,
         None => {
             warn!("entity {:?} does not have position component!", target);
-            return vm.set_value(OperationResult::InvalidInput);
+            vm.set_value(OperationResult::InvalidInput)?;
+            return Ok(());
         }
     };
 
@@ -135,13 +137,14 @@ pub fn approach_entity(
         }
         Err(e) => e,
     };
-    vm.set_value(checkresult)
+    vm.set_value(checkresult)?;
+    Ok(())
 }
 
 pub fn move_bot_to_position(
     vm: &mut VM<ScriptExecutionData>,
     point: TPointer,
-) -> Result<Object, ExecutionError> {
+) -> Result<(), ExecutionError> {
     profile!("move_bot_to_position");
 
     let aux = vm.get_aux();
@@ -168,7 +171,8 @@ pub fn move_bot_to_position(
         }
         Err(e) => e,
     };
-    vm.set_value(checkresult)
+    vm.set_value(checkresult)?;
+    Ok(())
 }
 
 fn move_to_pos(

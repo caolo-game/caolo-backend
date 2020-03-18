@@ -20,23 +20,25 @@ use std::convert::TryFrom;
 pub fn make_operation_result(
     vm: &mut VM<ScriptExecutionData>,
     op: i32,
-) -> Result<Object, ExecutionError> {
+) -> Result<(), ExecutionError> {
     let op = OperationResult::try_from(op).map_err(|_| ExecutionError::InvalidArgument)?;
-    vm.set_value(op)
+    vm.set_value(op)?;
+    Ok(())
 }
 
 pub fn make_point(
     vm: &mut VM<ScriptExecutionData>,
     (x, y): (i32, i32),
-) -> Result<Object, ExecutionError> {
+) -> Result<(), ExecutionError> {
     let point = Point::new(x, y);
-    vm.set_value(point)
+    vm.set_value(point)?;
+    Ok(())
 }
 
 pub fn console_log(
     vm: &mut VM<ScriptExecutionData>,
     message: TPointer,
-) -> Result<Object, ExecutionError> {
+) -> Result<(), ExecutionError> {
     let message: String = vm.get_value(message).ok_or_else(|| {
         debug!("console_log called with invalid message");
         ExecutionError::InvalidArgument
@@ -55,13 +57,13 @@ pub fn console_log(
             time,
         });
 
-    Ok(Default::default())
+    Ok(())
 }
 
 pub fn log_scalar(
     vm: &mut VM<ScriptExecutionData>,
     value: Scalar,
-) -> Result<Object, ExecutionError> {
+) -> Result<(), ExecutionError> {
     let entity_id = vm.get_aux().entity_id;
     let time = vm.get_aux().storage().time();
     let payload = format!("{:?} says {:?}", entity_id, value);
@@ -74,7 +76,7 @@ pub fn log_scalar(
             payload,
             time,
         });
-    Ok(Default::default())
+    Ok(())
 }
 
 /// Holds data about a function

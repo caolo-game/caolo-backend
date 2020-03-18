@@ -48,7 +48,7 @@ where
             .collect()
     }
 
-    pub fn contains_id(&self, id: &Id) -> bool {
+    pub fn contains(&self, id: &Id) -> bool {
         self.data.get(id).is_some()
     }
 
@@ -132,7 +132,7 @@ mod tests {
         let mut table = BTreeTable::<EntityId, usize>::new();
         for i in 0..LEN {
             let mut id = Default::default();
-            while table.contains_id(&id) {
+            while table.contains(&id) {
                 id = EntityId(rng.gen_range(
                     0,
                     u32::try_from(LEN * 6 / 5).expect("max len to fit into u32"),

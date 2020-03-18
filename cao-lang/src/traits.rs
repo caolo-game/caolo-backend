@@ -1,8 +1,4 @@
-use crate::{
-    scalar::Scalar,
-    vm::{Object, VM},
-    ExecutionError,
-};
+use crate::{scalar::Scalar, vm::VM, ExecutionError};
 use std::any::type_name;
 use std::convert::TryFrom;
 use std::fmt::Write;
@@ -17,7 +13,7 @@ pub trait ObjectProperties: std::fmt::Debug {
     }
 }
 
-pub type ExecutionResult = Result<Object, ExecutionError>;
+pub type ExecutionResult = Result<(), ExecutionError>;
 
 pub trait ByteEncodeProperties: Sized + ObjectProperties {
     const BYTELEN: usize = mem::size_of::<Self>();

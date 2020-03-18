@@ -32,8 +32,8 @@ fn execute_scripts_parallel(intents: Arc<Mutex<Intents>>, storage: &World) {
                     }
                     Err(e) => {
                         error!(
-                            "Execution failure of script {:?} of entity {:?} {:?}",
-                            entityid, script, e
+                            "Execution failure of script {:?} of entity {:?}: {:?}",
+                            script.script_id, entityid, e
                         );
                     }
                 },

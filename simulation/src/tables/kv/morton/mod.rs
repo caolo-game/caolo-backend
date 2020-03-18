@@ -25,6 +25,10 @@ use std::convert::{TryFrom, TryInto};
 
 use crate::profile;
 
+// at most 15 bits long non-negative integers
+// having the 16th bit set might create problems in find_key
+const POS_MASK: i32 = 0b0111111111111111;
+
 #[derive(Debug, Clone)]
 pub enum ExtendFailure<Id: SpatialKey2d> {
     InvalidPosition(Id),
@@ -322,10 +326,12 @@ where
     /// Return wether point is within the bounds of this node
     pub fn intersects(&self, point: &Pos) -> bool {
         let [x, y] = point.as_array();
-        // at most 15 bits long non-negative integers
-        // having the 16th bit set might create problems in find_key
-        const MASK: i32 = 0b0111111111111111;
-        (x & MASK) == x && (y & MASK) == y
+        (x & POS_MASK) == x && (y & POS_MASK) == y
+    }
+
+    /// Return [min, max) of the bounds of this table
+    pub fn bounds(&self) -> (Pos, Pos) {
+        (Pos::new(0, 0), Pos::new(POS_MASK + 1, POS_MASK + 1))
     }
 }
 

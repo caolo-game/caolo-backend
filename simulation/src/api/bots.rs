@@ -5,7 +5,7 @@ use crate::{
         MineIntent, MoveIntent, PopPathCacheIntent,
     },
     model::{
-        components::{self, PathCacheComponent, Resource, ResourceComponent, PATH_CACHE_LEN},
+        components::{self, PathCacheComponent, Resource, PATH_CACHE_LEN},
         geometry::point::Point,
         EntityId, OperationResult, UserId,
     },
@@ -70,14 +70,6 @@ pub fn mine_resource(
     let aux = vm.get_aux();
     let storage = aux.storage();
     let user_id = aux.user_id.expect("user_id to be set");
-
-    if !storage
-        .view::<EntityId, ResourceComponent>()
-        .contains(&entity_id)
-    {
-        debug!("mine_resource called on an entity that is not a resource");
-        return Err(ExecutionError::InvalidArgument);
-    }
 
     let intent = MineIntent {
         bot: aux.entity_id,

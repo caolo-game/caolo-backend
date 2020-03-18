@@ -29,39 +29,44 @@ impl<'a> IntentExecutionSystem<'a> for MineSystem {
             match resource_table.get_by_id(&intent.resource) {
                 None => warn!("Resource not found"),
                 Some(ResourceComponent(Resource::Energy)) => {
-                    let mut energy = match energy_table.get_by_id(&intent.resource) {
-                        Some(energy) => {
-                            if energy.energy == 0 {
+                    let mut resource_energy = match energy_table.get_by_id(&intent.resource) {
+                        Some(resource_energy) => {
+                            if resource_energy.energy == 0 {
                                 debug!("Mineral is empty!");
                                 continue;
                             }
-                            energy.clone()
+                            resource_energy.clone()
                         }
                         None => {
-                            warn!("Mineral has no energy component!");
+                            error!("MineIntent resource has no energy component!");
                             continue;
                         }
                     };
                     let mut carry = match carry_table.get_by_id(&intent.bot).cloned() {
                         Some(x) => x,
                         None => {
-                            warn!("MineIntent bot has no carry component");
+                            error!("MineIntent bot has no carry component");
                             continue;
                         }
                     };
-                    let mined = energy.energy.min(MINE_AMOUNT); // Max amount that can be mined
+                    let mined = resource_energy.energy.min(MINE_AMOUNT); // Max amount that can be mined
                     let mined = (carry.carry_max - carry.carry).min(mined); // Max amount the bot can carry
 
                     carry.carry += mined;
-                    energy.energy -= mined;
+                    resource_energy.energy -= mined;
 
                     unsafe {
-                        carry_table.as_mut().insert_or_update(intent.bot, carry);
+                        debug!(
+                            "Mine succeeded new bot carry {:?} new resource energy {:?}",
+                            carry, resource_energy
+                        );
+                        carry_table
+                            .as_mut()
+                            .insert_or_update(intent.bot, carry);
                         energy_table
                             .as_mut()
-                            .insert_or_update(intent.resource, energy);
+                            .insert_or_update(intent.resource, resource_energy);
                     }
-                    debug!("Mine succeeded");
                 }
             }
         }

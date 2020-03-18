@@ -95,9 +95,13 @@ unsafe fn init_bot(
         .as_mut()
         .insert_or_update(id, components::EntityScript { script_id });
     bots.as_mut().insert_or_update(id, components::Bot {});
-    carry_component
-        .as_mut()
-        .insert_or_update(id, Default::default());
+    carry_component.as_mut().insert_or_update(
+        id,
+        components::CarryComponent {
+            carry: 0,
+            carry_max: 50,
+        },
+    );
     owners.as_mut().insert_or_update(
         id,
         components::OwnedEntity {
@@ -248,8 +252,28 @@ const PROGRAM: &str = r#"
     },
     "6": {
       "node": {
+        "CopyLast": null
+      },
+      "child": 7
+    },
+    "7": {
+      "node": {
         "Call": {
           "function": "approach_entity"
+        }
+      },
+      "child": 8
+    },
+    "8": {
+      "node": {
+        "Pop": null
+      },
+      "child": 9
+    },
+    "9": {
+      "node": {
+        "Call": {
+          "function": "mine_resource"
         }
       },
       "child": null

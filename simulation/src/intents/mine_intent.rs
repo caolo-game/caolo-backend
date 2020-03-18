@@ -10,49 +10,63 @@ pub struct MineIntent {
 pub fn check_mine_intent(
     intent: &MineIntent,
     userid: UserId,
-    (bots, owner_ids, positions, resources, energy): (
+    (bots_table, owner_ids_table, positions_table, resources_table, energy_table, carry_table): (
         View<EntityId, components::Bot>,
         View<EntityId, components::OwnedEntity>,
         View<EntityId, components::PositionComponent>,
         View<EntityId, components::ResourceComponent>,
         View<EntityId, components::EnergyComponent>,
+        View<EntityId, components::CarryComponent>,
     ),
 ) -> OperationResult {
-    let id = intent.bot;
-    match bots.get_by_id(&id) {
+    let bot = intent.bot;
+    match bots_table.get_by_id(&bot) {
         Some(_) => {
-            let owner_id = owner_ids.get_by_id(&id);
-            if owner_id.map(|id| id.owner_id != userid).unwrap_or(true) {
+            let owner_id = owner_ids_table.get_by_id(&bot);
+            if owner_id.map(|bot| bot.owner_id != userid).unwrap_or(true) {
                 return OperationResult::NotOwner;
             }
         }
         None => return OperationResult::InvalidInput,
     };
 
-    let botpos = match positions.get_by_id(&id) {
+    let botpos = match positions_table.get_by_id(&bot) {
         Some(pos) => pos,
         None => {
-            debug!("Bot has no position");
+            warn!("Bot has no position");
             return OperationResult::InvalidInput;
         }
     };
 
     let target = intent.resource;
-    let mineralpos = match positions.get_by_id(&target) {
+    let mineralpos = match positions_table.get_by_id(&target) {
         Some(pos) => pos,
         None => {
-            debug!("Mineral has no position");
+            warn!("{:?} has no position", target);
             return OperationResult::InvalidInput;
         }
     };
+
+    match carry_table.get_by_id(&bot) {
+        Some(carry) => {
+            if carry.carry >= carry.carry_max {
+                debug!("{:?} is full", bot);
+                return OperationResult::Full;
+            }
+        }
+        None => {
+            warn!("{:?} has no carry component", bot);
+            return OperationResult::InvalidInput;
+        }
+    }
 
     if botpos.0.hex_distance(mineralpos.0) > 1 {
         return OperationResult::NotInRange;
     }
 
-    match resources.get_by_id(&target) {
+    match resources_table.get_by_id(&target) {
         Some(components::ResourceComponent(components::Resource::Energy)) => {
-            match energy.get_by_id(&target) {
+            match energy_table.get_by_id(&target) {
                 Some(energy) => {
                     if energy.energy > 0 {
                         OperationResult::Ok
@@ -61,13 +75,13 @@ pub fn check_mine_intent(
                     }
                 }
                 None => {
-                    debug!("Mineral has no energy component!");
+                    warn!("Mineral has no energy component!");
                     OperationResult::InvalidInput
                 }
             }
         }
         None => {
-            debug!("Target is not a resource!");
+            warn!("{:?} is not a resource!", target);
             OperationResult::InvalidInput
         }
     }

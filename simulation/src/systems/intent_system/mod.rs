@@ -34,19 +34,21 @@ pub fn execute_intents(mut intents: Intents, storage: &mut World) {
     let intents = &intents;
 
     rayon::scope(move |s| {
-        let move_sys = executor(MoveSystem, storage);
-        let mine_sys = executor(MineSystem, storage);
-        let dropoff_sys = executor(DropoffSystem, storage);
-        s.spawn(move |_| {
-            move_sys(intents);
-            mine_sys(intents);
-            dropoff_sys(intents);
-        });
+        // we can update systems in parallel that do not use the same tables
 
-        let spawn_sys = executor(SpawnSystem, storage);
-        s.spawn(move |_| {
-            spawn_sys(intents);
-        });
+        {
+            let move_sys = executor(MoveSystem, storage);
+            let mine_sys = executor(MineSystem, storage);
+            let dropoff_sys = executor(DropoffSystem, storage);
+            let spawn_sys = executor(SpawnSystem, storage);
+
+            s.spawn(move |_| {
+                move_sys(intents);
+                mine_sys(intents);
+                dropoff_sys(intents);
+                spawn_sys(intents);
+            });
+        }
 
         let log_sys = executor(LogSystem, storage);
         s.spawn(move |_| {
@@ -81,24 +83,81 @@ where
     }
 }
 
-/// Remove duplicate positions.
-/// Replaces duplicate positions with log intents
+/// Remove duplicate positions and entities.
 fn pre_process_move_intents(move_intents: &mut Vec<MoveIntent>) {
-    if move_intents.len() < 2 {
-        // 0 and 1 long vectors do not have duplicates
-        return;
+    macro_rules! dedupe {
+        ($field: ident, $intents: ident) => {
+            let len = $intents.len();
+            if len < 2 {
+                // 0 and 1 long vectors do not have duplicates
+                return;
+            }
+            $intents.par_sort_unstable_by_key(|intent| intent.$field);
+            // move in reverse order because we want to remove invalid intents as we move, which would be a
+            // lot more expensive the other way around
+            for current in (0..=len - 2).rev() {
+                let last = current + 1;
+                let a = &$intents[last];
+                let b = &$intents[current];
+                if a.$field == b.$field {
+                    debug!(
+                        concat!(
+                            "Duplicated",
+                            stringify!($field),
+                            "in move intents, removing {:?}"
+                        ),
+                        a
+                    );
+                    $intents.remove(last);
+                }
+            }
+        };
     }
-    move_intents.par_sort_unstable_by_key(|intent| intent.position);
-    let len = move_intents.len();
-    let mut last_pos = len - 1;
-    // move in reverse order as we want to remove invalid intents as we move
-    for index in (0..len - 2).rev() {
-        let a = &move_intents[last_pos];
-        let b = &move_intents[index];
-        if a.position == b.position {
-            debug!("Duplicated position in move intent, removing {:?}", a);
-            move_intents.remove(last_pos);
-        }
-        last_pos = index;
+
+    dedupe!(position, move_intents);
+    dedupe!(bot, move_intents);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::model::geometry::Point;
+
+    #[test]
+    fn pre_process_move_intents_removes_last_dupe() {
+        let mut intents = vec![
+            MoveIntent {
+                bot: Default::default(),
+                position: Point::new(42, 69),
+            },
+            MoveIntent {
+                bot: Default::default(),
+                position: Point::new(42, 69),
+            },
+        ];
+
+        pre_process_move_intents(&mut intents);
+        assert_eq!(intents.len(), 1);
+    }
+
+    #[test]
+    fn pre_process_move_intents_removes_dupe_entities() {
+        let mut intents = vec![
+            MoveIntent {
+                bot: Default::default(),
+                position: Point::new(42, 42),
+            },
+            MoveIntent {
+                bot: Default::default(),
+                position: Point::new(42, 69),
+            },
+            MoveIntent {
+                bot: Default::default(),
+                position: Point::new(69, 69),
+            },
+        ];
+
+        pre_process_move_intents(&mut intents);
+        assert_eq!(intents.len(), 1);
     }
 }

@@ -21,8 +21,8 @@ pub fn find_closest_resource_by_range(
         Some(p) => p,
         None => {
             debug!("{:?} has no PositionComponent", entity_id);
-             vm.set_value(OperationResult::InvalidInput)?;
-             return Ok(())
+            vm.set_value(OperationResult::InvalidInput)?;
+            return Ok(());
         }
     };
 
@@ -43,8 +43,8 @@ pub fn find_closest_resource_by_range(
             vm.set_value(OperationResult::OperationFailed)?;
         }
         Some((_pos, entity)) => {
-            // move out of the result to free the storage borrow
-            vm.set_value(entity.0)?;
+            let id = entity.0; // move out of the result to free the storage borrow
+            vm.set_value(id)?;
             vm.set_value(OperationResult::Ok)?;
         }
     }

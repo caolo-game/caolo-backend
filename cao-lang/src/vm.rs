@@ -55,7 +55,7 @@ impl Object {
 pub struct VM<Aux = ()> {
     memory: Vec<u8>,
     stack: Vec<Scalar>,
-    callables: HashMap<String, FunctionObject<Aux>>,
+    callables: HashMap<String, Procedure<Aux>>,
     objects: HashMap<TPointer, Object>,
     /// Functions to convert Objects to dyn ObjectProperties
     converters: HashMap<TPointer, ConvertFn<Aux>>,
@@ -107,10 +107,10 @@ impl<Aux> VM<Aux> {
 
     pub fn register_function<C: Callable<Aux> + 'static>(&mut self, name: &str, f: C) {
         self.callables
-            .insert(name.to_owned(), FunctionObject::new(f));
+            .insert(name.to_owned(), Procedure::new(f));
     }
 
-    pub fn register_function_obj(&mut self, name: &str, f: FunctionObject<Aux>) {
+    pub fn register_function_obj(&mut self, name: &str, f: Procedure<Aux>) {
         self.callables.insert(name.to_owned(), f);
     }
 
@@ -376,7 +376,7 @@ impl<Aux> VM<Aux> {
         let mut fun = self
             .callables
             .remove(fun_name.as_str())
-            .ok_or_else(|| ExecutionError::FunctionNotFound(fun_name.as_str().to_owned()))?;
+            .ok_or_else(|| ExecutionError::ProcedureNotFound(fun_name.as_str().to_owned()))?;
         let res = (|| {
             let n_inputs = fun.num_params();
             let mut inputs = Vec::with_capacity(n_inputs as usize);
@@ -431,7 +431,7 @@ impl<Aux> VM<Aux> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::traits::FunctionWrapper;
+    use crate::procedures::FunctionWrapper;
 
     #[test]
     fn test_encode() {

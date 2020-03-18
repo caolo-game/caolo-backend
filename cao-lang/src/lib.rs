@@ -48,6 +48,7 @@ pub mod compiler;
 pub mod instruction;
 mod macros;
 pub mod prelude;
+pub mod procedures;
 pub mod scalar;
 pub mod traits;
 pub mod vm;
@@ -92,21 +93,6 @@ impl Index<i32> for Label {
             _ => unreachable!("Label index must be 0 or 1"),
         }
     }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ExecutionError {
-    UnexpectedEndOfInput,
-    ExitCode(i32),
-    InvalidLabel,
-    InvalidInstruction,
-    InvalidArgument,
-    FunctionNotFound(String),
-    Unimplemented,
-    OutOfMemory,
-    MissingArgument,
-    Timeout,
-    TaskFailure(String),
 }
 
 pub type VarName = ArrayString<[u8; 64]>;

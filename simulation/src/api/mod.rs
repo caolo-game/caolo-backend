@@ -82,7 +82,7 @@ pub fn log_scalar(
 /// Holds data about a function
 pub struct FunctionRow {
     pub desc: SubProgram<'static>,
-    pub fo: FunctionObject<ScriptExecutionData>,
+    pub fo: Procedure<ScriptExecutionData>,
 }
 
 impl std::fmt::Debug for FunctionRow {
@@ -118,11 +118,11 @@ pub fn make_import() -> Schema {
         imports: vec![
             FunctionRow {
                 desc: subprogram_description!(console_log, "Log a string", [String], []),
-                fo: FunctionObject::new(FunctionWrapper::new(console_log)),
+                fo: Procedure::new(FunctionWrapper::new(console_log)),
             },
             FunctionRow {
                 desc: subprogram_description!(log_scalar, "Log a scalar value", [Scalar], []),
-                fo: FunctionObject::new(FunctionWrapper::new(log_scalar)),
+                fo: Procedure::new(FunctionWrapper::new(log_scalar)),
             },
             FunctionRow {
                 desc: subprogram_description!(
@@ -131,7 +131,7 @@ pub fn make_import() -> Schema {
                     [EntityId],
                     [OperationResult]
                 ),
-                fo: FunctionObject::new(FunctionWrapper::new(bots::mine_resource)),
+                fo: Procedure::new(FunctionWrapper::new(bots::mine_resource)),
             },
             FunctionRow {
                 desc: subprogram_description!(
@@ -140,7 +140,7 @@ pub fn make_import() -> Schema {
                     [EntityId],
                     [OperationResult]
                 ),
-                fo: FunctionObject::new(FunctionWrapper::new(bots::approach_entity)),
+                fo: Procedure::new(FunctionWrapper::new(bots::approach_entity)),
             },
             FunctionRow {
                 desc: subprogram_description!(
@@ -149,7 +149,7 @@ pub fn make_import() -> Schema {
                     [Point],
                     [OperationResult]
                 ),
-                fo: FunctionObject::new(FunctionWrapper::new(bots::move_bot_to_position)),
+                fo: Procedure::new(FunctionWrapper::new(bots::move_bot_to_position)),
             },
             FunctionRow {
                 desc: subprogram_description!(
@@ -158,7 +158,7 @@ pub fn make_import() -> Schema {
                     [i32, i32],
                     [Point]
                 ),
-                fo: FunctionObject::new(FunctionWrapper::new(make_point)),
+                fo: Procedure::new(FunctionWrapper::new(make_point)),
             },
             FunctionRow {
                 desc: subprogram_description!(
@@ -167,7 +167,7 @@ pub fn make_import() -> Schema {
                     [],
                     [OperationResult]
                 ),
-                fo: FunctionObject::new(FunctionWrapper::new(spawn)),
+                fo: Procedure::new(FunctionWrapper::new(spawn)),
             },
             FunctionRow {
                 desc: subprogram_description!(
@@ -176,7 +176,7 @@ pub fn make_import() -> Schema {
                     [],
                     [OperationResult, EntityId]
                 ),
-                fo: FunctionObject::new(FunctionWrapper::new(find_closest_resource_by_range)),
+                fo: Procedure::new(FunctionWrapper::new(find_closest_resource_by_range)),
             },
             FunctionRow {
                 desc: subprogram_description!(
@@ -185,7 +185,7 @@ pub fn make_import() -> Schema {
                     [i32],
                     [OperationResult]
                 ),
-                fo: FunctionObject::new(FunctionWrapper::new(make_operation_result)),
+                fo: Procedure::new(FunctionWrapper::new(make_operation_result)),
             },
             FunctionRow {
                 desc: subprogram_description!(
@@ -194,7 +194,7 @@ pub fn make_import() -> Schema {
                     [u16, components::Resource, EntityId],
                     [OperationResult]
                 ),
-                fo: FunctionObject::new(FunctionWrapper::new(bots::unload)),
+                fo: Procedure::new(FunctionWrapper::new(bots::unload)),
             },
         ],
     }

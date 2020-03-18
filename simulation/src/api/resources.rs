@@ -4,6 +4,7 @@ use crate::profile;
 
 pub const MAX_SEARCH_RADIUS: u32 = 256;
 
+/// Return OperationResult and an EntityId if the Operation succeeded
 pub fn find_closest_resource_by_range(
     vm: &mut VM<ScriptExecutionData>,
     _: (),

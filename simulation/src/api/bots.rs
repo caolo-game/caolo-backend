@@ -63,7 +63,7 @@ pub fn mine_resource(
     profile!("mine_resource");
 
     let entity_id: EntityId = vm.get_value(entity_id).ok_or_else(|| {
-        warn!("approach_entity called without a target");
+        debug!("mine_resource called without a target");
         ExecutionError::InvalidArgument
     })?;
 
@@ -75,7 +75,7 @@ pub fn mine_resource(
         .view::<EntityId, ResourceComponent>()
         .contains(&entity_id)
     {
-        warn!("mine_resource called on an entity that is not a resource");
+        debug!("mine_resource called on an entity that is not a resource");
         return Err(ExecutionError::InvalidArgument);
     }
 
@@ -85,11 +85,10 @@ pub fn mine_resource(
     };
 
     let checkresult = check_mine_intent(&intent, user_id, FromWorld::new(storage));
+    vm.set_value(checkresult)?;
     if let OperationResult::Ok = checkresult {
         vm.get_aux_mut().intents.mine_intents.push(intent);
     }
-
-    vm.set_value(checkresult)?;
     Ok(())
 }
 

@@ -25,7 +25,7 @@ pub fn unload(
     profile!("unload");
 
     let amount = TryFrom::try_from(amount).map_err(|e| {
-        debug!("unload called with invalid amount: {}", e);
+        warn!("unload called with invalid amount: {}", e);
         ExecutionError::InvalidArgument
     })?;
     let structure: EntityId = vm.get_value(structure).ok_or_else(|| {
@@ -63,7 +63,7 @@ pub fn mine_resource(
     profile!("mine_resource");
 
     let entity_id: EntityId = vm.get_value(entity_id).ok_or_else(|| {
-        debug!("mine_resource called without a target");
+        warn!("mine_resource called without a target");
         ExecutionError::InvalidArgument
     })?;
 

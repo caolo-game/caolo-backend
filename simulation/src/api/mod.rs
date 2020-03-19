@@ -2,12 +2,9 @@
 //!
 //! Methods that may fail return an OperationResult
 //!
-mod bots;
-mod resources;
-mod spawns;
-pub use self::bots::*;
-pub use self::resources::*;
-pub use self::spawns::*;
+pub mod bots;
+pub mod resources;
+pub mod structures;
 use crate::model::geometry::point::Point;
 use crate::model::{components, EntityId, OperationResult};
 use crate::systems::script_execution::ScriptExecutionData;
@@ -60,10 +57,7 @@ pub fn console_log(
     Ok(())
 }
 
-pub fn log_scalar(
-    vm: &mut VM<ScriptExecutionData>,
-    value: Scalar,
-) -> Result<(), ExecutionError> {
+pub fn log_scalar(vm: &mut VM<ScriptExecutionData>, value: Scalar) -> Result<(), ExecutionError> {
     let entity_id = vm.get_aux().entity_id;
     let time = vm.get_aux().storage().time();
     let payload = format!("{:?} says {:?}", entity_id, value);
@@ -162,21 +156,12 @@ pub fn make_import() -> Schema {
             },
             FunctionRow {
                 desc: subprogram_description!(
-                    spawn,
-                    "Spawn a new bot from given configuration.",
-                    [],
-                    [OperationResult]
-                ),
-                fo: Procedure::new(FunctionWrapper::new(spawn)),
-            },
-            FunctionRow {
-                desc: subprogram_description!(
                     find_closest_resource_by_range,
                     "Find the resource closest to the current entity",
                     [],
                     [OperationResult, EntityId]
                 ),
-                fo: Procedure::new(FunctionWrapper::new(find_closest_resource_by_range)),
+                fo: Procedure::new(FunctionWrapper::new(resources::find_closest_resource_by_range)),
             },
             FunctionRow {
                 desc: subprogram_description!(

@@ -9,12 +9,12 @@ pub struct SpawnIntent {
 
 pub fn check_spawn_intent(
     intent: &SpawnIntent,
-    userid: Option<model::UserId>,
+    user_id: Option<model::UserId>,
     storage: &World,
 ) -> OperationResult {
     let id = intent.spawn_id;
 
-    if let Some(userid) = userid {
+    if let Some(user_id) = user_id {
         match storage
             .view::<EntityId, components::Structure>()
             .get_by_id(&id)
@@ -24,7 +24,7 @@ pub fn check_spawn_intent(
                     .view::<EntityId, components::OwnedEntity>()
                     .reborrow()
                     .get_by_id(&id);
-                if owner_id.map(|id| id.owner_id != userid).unwrap_or(true) {
+                if owner_id.map(|id| id.owner_id != user_id).unwrap_or(true) {
                     return OperationResult::NotOwner;
                 }
             }

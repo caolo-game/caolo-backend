@@ -229,25 +229,20 @@ fn move_to_pos(
         }
     };
     let checkresult = check_move_intent(&intent, user_id, FromWorld::new(storage));
-    if let OperationResult::Ok = checkresult {
-        let len = path.len();
-        let skip = if len > PATH_CACHE_LEN {
-            len - PATH_CACHE_LEN
-        } else {
-            0
-        };
+    match checkresult {
+        OperationResult::Ok => {
+            // skip >= 0
+            let skip = path.len().max(PATH_CACHE_LEN) - PATH_CACHE_LEN;
 
-        Ok((
-            intent,
-            None,
-            Some(CachePathIntent {
+            let cache_intent = CachePathIntent {
                 bot,
                 cache: PathCacheComponent(
                     path.into_iter().skip(skip).take(PATH_CACHE_LEN).collect(),
                 ),
-            }),
-        ))
-    } else {
-        Err(checkresult)
+            };
+
+            Ok((intent, None, Some(cache_intent)))
+        }
+        _ => Err(checkresult),
     }
 }

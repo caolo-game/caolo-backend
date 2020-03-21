@@ -126,12 +126,13 @@ fn get_by_id() {
 
     let mut points = HashSet::with_capacity(64);
 
-    for i in 0..64 {
+    for _ in 0..64 {
         let p = Point {
             x: rng.gen_range(0, 128),
             y: rng.gen_range(0, 128),
         };
-        points.insert((p, i));
+        let i = 1000 * p.x + p.y;
+        points.insert((p, i as usize));
     }
 
     for (p, e) in points.iter() {

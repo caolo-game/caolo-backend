@@ -13,28 +13,18 @@
 //! const PROGRAM: &str = r#"{
 //!     "nodes": {
 //!         "0": {
-//!             "node": {
-//!                 "Start": null
-//!             },
-//!             "children": [
-//!                 1
-//!             ]
+//!             "Start": null,
+//!             "child": 1
 //!         },
 //!         "1": {
-//!             "node": {
-//!                 "ScalarInt": {
-//!                     "value": 42
-//!                 }
+//!             "ScalarInt": {
+//!                 "value": 42
 //!             },
-//!             "children": [
-//!                 2
-//!             ]
+//!             "child": 2
 //!         },
 //!         "2": {
-//!             "node": {
-//!                 "Call": {
-//!                     "function": "log_scalar"
-//!                 }
+//!             "Call": {
+//!                 "function": "log_scalar"
 //!             }
 //!         }
 //!     }

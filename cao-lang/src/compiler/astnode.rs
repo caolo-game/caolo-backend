@@ -4,6 +4,7 @@ use crate::VarName;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AstNode {
+    #[serde(flatten)]
     pub node: InstructionNode,
     pub child: Option<NodeId>,
 }

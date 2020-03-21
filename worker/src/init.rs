@@ -207,82 +207,61 @@ const PROGRAM: &str = r#"
 {
   "nodes": {
     "0": {
-      "node": {
-        "ScalarInt": {
-          "value": 0
-        }
+      "ScalarInt": {
+        "value": 0
       },
       "child": 1
     },
     "1": {
-      "node": {
-        "Call": {
-          "function": "make_operation_result"
-        }
+      "Call": {
+        "function": "make_operation_result"
       },
       "child": 3
     },
     "2": {
-      "node": {
-        "Call": {
-          "function": "find_closest_resource_by_range"
-        }
+      "Call": {
+        "function": "find_closest_resource_by_range"
       },
       "child": 0
     },
     "3": {
-      "node": {
-        "Equals": null
-      },
+      "Equals": null,
       "child": 4
     },
     "4": {
-      "node": {
-        "JumpIfTrue": {
-          "nodeid": 6
-        }
+      "JumpIfTrue": {
+        "nodeid": 6
       },
       "child": 5
     },
     "5": {
-      "node": {
-        "Exit": null
-      },
+      "Exit": null,
       "child": 6
     },
     "6": {
-      "node": {
-        "CopyLast": null
-      },
+      "CopyLast": null,
       "child": 7
     },
     "7": {
-      "node": {
-        "Call": {
-          "function": "approach_entity"
-        }
+      "Call": {
+        "function": "approach_entity"
       },
       "child": 8
     },
     "8": {
-      "node": {
-        "Pop": null
-      },
+      "Pop": null,
       "child": 9
     },
     "9": {
-      "node": {
-        "Call": {
-          "function": "mine_resource"
-        }
+      "Call": {
+        "function": "mine_resource"
       },
       "child": null
     },
     "-1": {
-      "node": {
-        "Start": null
-      },
+      "Start": null,
       "child": 2
     }
   }
-}"#;
+}
+"#;

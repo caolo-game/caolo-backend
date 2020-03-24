@@ -100,79 +100,59 @@ impl TryFrom<u8> for Instruction {
 
 pub fn get_instruction_descriptions() -> Vec<SubProgram<'static>> {
     vec![
+        subprogram_description!(Add, "Add two scalars", [Scalar, Scalar], [Scalar]),
+        subprogram_description!(Sub, "Subtract two scalars", [Scalar, Scalar], [Scalar]),
+        subprogram_description!(Mul, "Multiply two scalars", [Scalar, Scalar], [Scalar]),
+        subprogram_description!(Div, "Divide two scalars", [Scalar, Scalar], [Scalar]),
+        subprogram_description!(Start, "Start of the program", [], []),
+        subprogram_description!(Pass, "Do nothing", [], []),
+        subprogram_description!(ScalarInt, "Make an integer", [], [Scalar]),
+        subprogram_description!(ScalarFloat, "Make a real number", [], [Scalar]),
+        subprogram_description!(StringLiteral, "Make a text", [], [Scalar]),
         subprogram_description!(
-            Instruction::Add,
-            "Add two scalars",
-            [Scalar, Scalar],
-            [Scalar]
-        ),
-        subprogram_description!(
-            Instruction::Sub,
-            "Subtract two scalars",
-            [Scalar, Scalar],
-            [Scalar]
-        ),
-        subprogram_description!(
-            Instruction::Mul,
-            "Multiply two scalars",
-            [Scalar, Scalar],
-            [Scalar]
-        ),
-        subprogram_description!(
-            Instruction::Div,
-            "Divide two scalars",
-            [Scalar, Scalar],
-            [Scalar]
-        ),
-        subprogram_description!(Instruction::Start, "Start of the program", [], []),
-        subprogram_description!(Instruction::Pass, "Do nothing", [], []),
-        subprogram_description!(Instruction::ScalarInt, "Make an integer", [], [Scalar]),
-        subprogram_description!(Instruction::ScalarFloat, "Make a real number", [], [Scalar]),
-        subprogram_description!(Instruction::StringLiteral, "Make a text", [], [Scalar]),
-        subprogram_description!(
-            Instruction::JumpIfTrue,
+            JumpIfTrue,
             "Jump to the input node if the last value is true else do nothing.",
             [Scalar],
             []
         ),
         subprogram_description!(
-            Instruction::Equals,
+            Equals,
             "Return 1 if the inputs are equal, 0 otherwise",
             [Scalar, Scalar],
             [Scalar]
         ),
         subprogram_description!(
-            Instruction::NotEquals,
+            NotEquals,
             "Return 0 if the inputs are equal, 1 otherwise",
             [Scalar, Scalar],
             [Scalar]
         ),
         subprogram_description!(
-            Instruction::Less,
+            Less,
             "Return 1 if the first input is less than the second, 0 otherwise",
             [Scalar, Scalar],
             [Scalar]
         ),
         subprogram_description!(
-            Instruction::LessOrEq,
+            LessOrEq,
             "Return 1 if the first input is less than or equal to the second, 0 otherwise",
             [Scalar, Scalar],
             [Scalar]
         ),
         subprogram_description!(
-            Instruction::Pop,
+            Pop,
             "Pops the top elements on the stack and discards it",
             [Scalar],
             []
         ),
         subprogram_description!(
-            Instruction::SetVar,
+            SetVar,
             "Sets the value of a variable",
             [VarName, TPointer],
             []
         ),
         subprogram_description!(
-            Instruction::ReadVar,
+            ReadVar,
             "Read the value of a variable",
             [VarName],
             [TPointer]

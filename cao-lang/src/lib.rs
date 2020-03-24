@@ -114,7 +114,7 @@ impl<'a> std::fmt::Debug for SubProgram<'a> {
 
 #[macro_export]
 macro_rules! subprogram_description {
-    ($name: path, $description: expr, [$($inputs: ty),*], [$($outputs: ty),*]) => {
+    ($name: ident, $description: expr, [$($inputs: ty),*], [$($outputs: ty),*]) => {
         SubProgram {
             name: stringify!($name),
             description: $description,

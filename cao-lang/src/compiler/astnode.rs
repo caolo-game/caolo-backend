@@ -47,31 +47,30 @@ pub enum InstructionNode {
 
 impl InstructionNode {
     pub fn instruction(&self) -> Instruction {
-        use InstructionNode::*;
         match self {
-            Start => Instruction::Start,
-            Pass => Instruction::Pass,
-            Add => Instruction::Add,
-            Sub => Instruction::Sub,
-            Mul => Instruction::Mul,
-            Div => Instruction::Div,
-            Exit => Instruction::Exit,
-            CopyLast => Instruction::CopyLast,
-            Less => Instruction::Less,
-            LessOrEq => Instruction::LessOrEq,
-            Equals => Instruction::Equals,
-            NotEquals => Instruction::NotEquals,
-            Pop => Instruction::Pop,
-            ScalarInt(_) => Instruction::ScalarInt,
-            ScalarFloat(_) => Instruction::ScalarFloat,
-            ScalarArray(_) => Instruction::ScalarArray,
-            ScalarLabel(_) => Instruction::ScalarLabel,
-            Call(_) => Instruction::Call,
-            JumpIfTrue(_) => Instruction::JumpIfTrue,
-            Jump(_) => Instruction::Jump,
-            StringLiteral(_) => Instruction::StringLiteral,
-            SetVar(_) => Instruction::SetVar,
-            ReadVar(_) => Instruction::ReadVar,
+            InstructionNode::Start => Instruction::Start,
+            InstructionNode::Pass => Instruction::Pass,
+            InstructionNode::Add => Instruction::Add,
+            InstructionNode::Sub => Instruction::Sub,
+            InstructionNode::Mul => Instruction::Mul,
+            InstructionNode::Div => Instruction::Div,
+            InstructionNode::Exit => Instruction::Exit,
+            InstructionNode::CopyLast => Instruction::CopyLast,
+            InstructionNode::Less => Instruction::Less,
+            InstructionNode::LessOrEq => Instruction::LessOrEq,
+            InstructionNode::Equals => Instruction::Equals,
+            InstructionNode::NotEquals => Instruction::NotEquals,
+            InstructionNode::Pop => Instruction::Pop,
+            InstructionNode::ScalarInt(_) => Instruction::ScalarInt,
+            InstructionNode::ScalarFloat(_) => Instruction::ScalarFloat,
+            InstructionNode::ScalarArray(_) => Instruction::ScalarArray,
+            InstructionNode::ScalarLabel(_) => Instruction::ScalarLabel,
+            InstructionNode::Call(_) => Instruction::Call,
+            InstructionNode::JumpIfTrue(_) => Instruction::JumpIfTrue,
+            InstructionNode::Jump(_) => Instruction::Jump,
+            InstructionNode::StringLiteral(_) => Instruction::StringLiteral,
+            InstructionNode::SetVar(_) => Instruction::SetVar,
+            InstructionNode::ReadVar(_) => Instruction::ReadVar,
         }
     }
 
@@ -79,11 +78,30 @@ impl InstructionNode {
     // here
     #[allow(unused)]
     fn _instruction_to_node(instr: Instruction) {
-        use Instruction::*;
         match instr {
-            SetVar | ReadVar | Pop | Less | LessOrEq | Equals | NotEquals | Exit
-            | StringLiteral | Start | JumpIfTrue | Jump | CopyLast | Call | Sub | Mul | Div
-            | ScalarArray | ScalarLabel | ScalarFloat | ScalarInt | Add | Pass => {}
+            Instruction::SetVar
+            | Instruction::ReadVar
+            | Instruction::Pop
+            | Instruction::Less
+            | Instruction::LessOrEq
+            | Instruction::Equals
+            | Instruction::NotEquals
+            | Instruction::Exit
+            | Instruction::StringLiteral
+            | Instruction::Start
+            | Instruction::JumpIfTrue
+            | Instruction::Jump
+            | Instruction::CopyLast
+            | Instruction::Call
+            | Instruction::Sub
+            | Instruction::Mul
+            | Instruction::Div
+            | Instruction::ScalarArray
+            | Instruction::ScalarLabel
+            | Instruction::ScalarFloat
+            | Instruction::ScalarInt
+            | Instruction::Add
+            | Instruction::Pass => {}
         };
     }
 }

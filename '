@@ -175,7 +175,7 @@ fn bench_contains_rand_at_2pow16(b: &mut Bencher) {
 fn bench_contains_rand_at_2pow16_cold_cache(b: &mut Bencher) {
     let mut rng = rand::thread_rng();
 
-    let mut table = MortonTable::from_iterator((0..(1 << 16)).map(|i| {
+    let table = MortonTable::from_iterator((0..(1 << 16)).map(|i| {
         let p = Point {
             x: rng.gen_range(0, 8000),
             y: rng.gen_range(0, 8000),
@@ -185,16 +185,9 @@ fn bench_contains_rand_at_2pow16_cold_cache(b: &mut Bencher) {
     .unwrap();
 
     b.iter(|| {
-        #[cfg(target_arch = "x86")]
-        use std::arch::x86::_mm_clflush;
-        #[cfg(target_arch = "x86_64")]
-        use std::arch::x86_64::_mm_clflush;
         unsafe {
-            // flush `table` from all cpu caches
-            let r = table.keys.as_mut_ptr() as  *mut u8;
-            _mm_clflush(r);
-            let r = &mut table as *mut _ as *mut u8;
-            _mm_clflush(r);
+            let reg = table.keys.as_ptr() as usize;
+            asm!("CLFLUSH %edx" :: :"{edx}"(reg));
         }
         let p = Point {
             x: rng.gen_range(0, 8000),

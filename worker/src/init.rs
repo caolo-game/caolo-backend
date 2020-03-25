@@ -207,61 +207,94 @@ const PROGRAM: &str = r#"
 {
   "nodes": {
     "0": {
-      "ScalarInt": {
-        "value": 0
+      "node": {
+        "ScalarInt": {
+          "value": 0
+        }
       },
       "child": 1
     },
     "1": {
-      "Call": {
-        "function": "make_operation_result"
+      "node": {
+        "Call": {
+          "function": "make_operation_result"
+        }
       },
       "child": 3
     },
     "2": {
-      "Call": {
-        "function": "find_closest_resource_by_range"
+      "node": {
+        "Call": {
+          "function": "find_closest_resource_by_range"
+        }
       },
       "child": 0
     },
     "3": {
-      "Equals": null,
+      "node": {
+        "Equals": null
+      },
       "child": 4
     },
     "4": {
-      "JumpIfTrue": {
-        "nodeid": 6
+      "node": {
+        "JumpIfTrue": {
+          "nodeid": 6
+        }
       },
       "child": 5
     },
     "5": {
-      "Exit": null,
+      "node": {
+        "Exit": null
+      },
       "child": 6
     },
     "6": {
-      "CopyLast": null,
+      "node": {
+        "CopyLast": null
+      },
       "child": 7
     },
     "7": {
-      "Call": {
-        "function": "approach_entity"
+      "node": {
+        "Call": {
+          "function": "approach_entity"
+        }
       },
       "child": 8
     },
     "8": {
-      "Pop": null,
+      "node": {
+        "Pop": null
+      },
       "child": 9
     },
     "9": {
-      "Call": {
-        "function": "mine_resource"
+      "node": {
+        "Call": {
+          "function": "mine_resource"
+        }
       },
       "child": null
     },
     "-1": {
-      "Start": null,
+      "node": {
+        "Start": null
+      },
       "child": 2
     }
   }
 }
 "#;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn can_init_the_game() {
+        // smoke test: can the game be even initialized?
+        init_storage(5);
+    }
+}

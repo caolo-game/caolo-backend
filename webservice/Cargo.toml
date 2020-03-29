@@ -14,6 +14,6 @@ name = "caolo_web_lib"
 crate-type = ["cdylib"]
 
 [dependencies]
-cao-lang = { path = "../cao-lang", version = "0.1"}
+cao-lang = { git = "https://github.com/caolo-game/cao-lang.git" }
 serde_json = "*"
 pyo3 = { version="0.8", features=["extension-module"] }

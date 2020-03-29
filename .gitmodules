@@ -1,6 +1,3 @@
 [submodule "protos"]
 	path = protos
 	url = https://github.com/caolo-game/cao-protos.git
-[submodule "cao-lang"]
-	path = cao-lang
-	url = https://github.com/caolo-game/cao-lang.git

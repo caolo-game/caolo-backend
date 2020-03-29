@@ -12,7 +12,7 @@ profile = ["lazy_static"]
 log_tables = []
 
 [dependencies]
-cao-lang = { path = "../cao-lang" }
+cao-lang = { git = "https://github.com/caolo-game/cao-lang.git" }
 cao_storage_derive = { path = "../cao-storage-derive" }
 
 log = "0.4"

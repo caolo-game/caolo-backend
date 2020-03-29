@@ -8,7 +8,6 @@
 !worker
 !web-client
 !rust-toolchain
-!cao-lang
 !webservice
 !protos
 !cao-storage-derive

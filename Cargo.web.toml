@@ -1,6 +1,5 @@
 [workspace]
 
 members = [
-    "cao-lang",
     "webservice"
 ]

@@ -15,7 +15,7 @@ pub fn init_storage(n_fake_users: usize) -> Pin<Box<World>> {
     let script: CompilationUnit =
         serde_json::from_str(PROGRAM).expect("deserialize example program");
     debug!("compiling default program");
-    let compiled = Compiler::compile(script).expect("failed to compile example program");
+    let compiled = compile(script).expect("failed to compile example program");
     debug!("compilation done");
     unsafe {
         storage

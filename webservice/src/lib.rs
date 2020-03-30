@@ -5,7 +5,7 @@ use pyo3::wrap_pyfunction;
 use std::collections::HashMap;
 
 use cao_lang::instruction::get_instruction_descriptions;
-use cao_lang::prelude::{CompilationUnit, Compiler};
+use cao_lang::prelude::{compile as _compile, CompilationUnit};
 
 #[pyfunction]
 /// Compile a graph
@@ -17,9 +17,8 @@ fn compile(py: Python, cu: String) -> PyResult<&PyDict> {
             e
         ))
     })?;
-    let program = Compiler::compile(cu).map_err(|e| {
-        PyErr::new::<exceptions::ValueError, _>(format!("Failed to compile {:?}", e))
-    })?;
+    let program = _compile(cu)
+        .map_err(|e| PyErr::new::<exceptions::ValueError, _>(format!("Failed to compile {}", e)))?;
     let result = PyDict::new(py);
     result.set_item("bytecode", program.bytecode).map_err(|e| {
         PyErr::new::<exceptions::ValueError, _>(format!(

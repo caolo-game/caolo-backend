@@ -1,4 +1,3 @@
-#![feature(asm)]
 #![feature(test)]
 extern crate test;
 

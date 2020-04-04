@@ -5,13 +5,16 @@ test:
 	# TODO test webservice
 
 start: buildworker buildweb
-	docker-compose up -d && docker-compose logs -f
+	docker-compose up -d 
+	docker-compose logs -f --tail=100
 
 startworker:
 	docker-compose up --scale web=0 -d
+	docker-compose logs -f --tail=100
 
 startweb:
 	docker-compose up --scale worker=0 -d
+	docker-compose logs -f --tail=100
 
 buildworker:
 	docker build -t frenetiq/caolo-worker:latest -f dockerfile.worker .

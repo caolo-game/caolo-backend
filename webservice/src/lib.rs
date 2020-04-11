@@ -4,7 +4,7 @@ use pyo3::types::{PyDict, PyList};
 use pyo3::wrap_pyfunction;
 use std::collections::HashMap;
 
-use cao_lang::instruction::get_instruction_descriptions;
+use cao_lang::compiler::description::get_instruction_descriptions;
 use cao_lang::prelude::{compile as _compile, CompilationUnit};
 
 #[pyfunction]

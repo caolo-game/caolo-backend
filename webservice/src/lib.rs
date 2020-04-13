@@ -53,8 +53,16 @@ fn get_basic_schema(py: Python) -> PyResult<&PyList> {
             let d = PyDict::new(py);
             d.set_item("name", desc.name).unwrap();
             d.set_item("description", desc.description).unwrap();
-            d.set_item("output", desc.output).unwrap();
-            d.set_item("input", desc.input).unwrap();
+            d.set_item(
+                "output",
+                desc.output.iter().map(|s| s.to_owned()).collect::<Vec<_>>(),
+            )
+            .unwrap();
+            d.set_item(
+                "input",
+                desc.input.iter().map(|s| s.to_owned()).collect::<Vec<_>>(),
+            )
+            .unwrap();
             d
         })
         .collect::<Vec<_>>();

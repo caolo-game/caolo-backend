@@ -97,6 +97,7 @@ struct SchemaFunctionDTO<'a> {
     description: &'a str,
     input: Vec<&'a str>,
     output: Vec<&'a str>,
+    params: Vec<&'a str>,
 }
 
 fn send_schema(client: &redis::Client) -> Result<(), Box<dyn std::error::Error>> {
@@ -114,6 +115,7 @@ fn send_schema(client: &redis::Client) -> Result<(), Box<dyn std::error::Error>>
                 input: import.input.to_vec(),
                 description: import.description,
                 output: import.output.to_vec(),
+                params: import.params.to_vec(),
             }
         })
         .collect::<Vec<_>>();

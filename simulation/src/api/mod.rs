@@ -111,11 +111,11 @@ pub fn make_import() -> Schema {
     Schema {
         imports: vec![
             FunctionRow {
-                desc: subprogram_description!(console_log, "Log a string", [String], []),
+                desc: subprogram_description!(console_log, "Log a string", [String], [], []),
                 fo: Procedure::new(FunctionWrapper::new(console_log)),
             },
             FunctionRow {
-                desc: subprogram_description!(log_scalar, "Log a scalar value", [Scalar], []),
+                desc: subprogram_description!(log_scalar, "Log a scalar value", [Scalar], [], []),
                 fo: Procedure::new(FunctionWrapper::new(log_scalar)),
             },
             FunctionRow {
@@ -123,7 +123,8 @@ pub fn make_import() -> Schema {
                     mine_resource,
                     "Move the bot to the given Point",
                     [EntityId],
-                    [OperationResult]
+                    [OperationResult],
+                    []
                 ),
                 fo: Procedure::new(FunctionWrapper::new(bots::mine_resource)),
             },
@@ -132,7 +133,8 @@ pub fn make_import() -> Schema {
                     approach_entity,
                     "Move the bot to the given Entity",
                     [EntityId],
-                    [OperationResult]
+                    [OperationResult],
+                    []
                 ),
                 fo: Procedure::new(FunctionWrapper::new(bots::approach_entity)),
             },
@@ -141,7 +143,8 @@ pub fn make_import() -> Schema {
                     move_bot_to_position,
                     "Move the bot to the given Point",
                     [Point],
-                    [OperationResult]
+                    [OperationResult],
+                    []
                 ),
                 fo: Procedure::new(FunctionWrapper::new(bots::move_bot_to_position)),
             },
@@ -150,7 +153,8 @@ pub fn make_import() -> Schema {
                     make_point,
                     "Create a point from x and y coordinates",
                     [i32, i32],
-                    [Point]
+                    [Point],
+                    []
                 ),
                 fo: Procedure::new(FunctionWrapper::new(make_point)),
             },
@@ -159,16 +163,20 @@ pub fn make_import() -> Schema {
                     find_closest_resource_by_range,
                     "Find the resource closest to the current entity",
                     [],
-                    [OperationResult, EntityId]
+                    [OperationResult, EntityId],
+                    []
                 ),
-                fo: Procedure::new(FunctionWrapper::new(resources::find_closest_resource_by_range)),
+                fo: Procedure::new(FunctionWrapper::new(
+                    resources::find_closest_resource_by_range,
+                )),
             },
             FunctionRow {
                 desc: subprogram_description!(
                     make_operation_result,
                     "Produces an OperationResult",
                     [i32],
-                    [OperationResult]
+                    [OperationResult],
+                    []
                 ),
                 fo: Procedure::new(FunctionWrapper::new(make_operation_result)),
             },
@@ -177,7 +185,8 @@ pub fn make_import() -> Schema {
                     unload,
                     "Unload resources",
                     [u16, components::Resource, EntityId],
-                    [OperationResult]
+                    [OperationResult],
+                    []
                 ),
                 fo: Procedure::new(FunctionWrapper::new(bots::unload)),
             },

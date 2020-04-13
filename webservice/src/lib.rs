@@ -63,6 +63,11 @@ fn get_basic_schema(py: Python) -> PyResult<&PyList> {
                 desc.input.iter().map(|s| s.to_owned()).collect::<Vec<_>>(),
             )
             .unwrap();
+            d.set_item(
+                "params",
+                desc.params.iter().map(|s| s.to_owned()).collect::<Vec<_>>(),
+            )
+            .unwrap();
             d
         })
         .collect::<Vec<_>>();

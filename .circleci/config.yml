@@ -28,7 +28,7 @@ jobs:
           command: cargo check
       - run:
           name: Test
-          command: cargo test --all-features
+          command: cargo test --all-features --benches
       - save_cache:
           paths:
             - /usr/local/cargo/registry

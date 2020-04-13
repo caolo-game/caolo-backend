@@ -1,7 +1,6 @@
 use super::*;
 use rand::prelude::*;
 use std::collections::{HashMap, HashSet};
-use test::Bencher;
 
 #[test]
 fn insertions() {
@@ -149,175 +148,21 @@ fn get_by_id() {
     }
 }
 
-#[bench]
-fn bench_contains_rand_at_2pow16(b: &mut Bencher) {
+
+#[test]
+fn morton_key_reconstruction_rand() {
     let mut rng = rand::thread_rng();
 
-    let table = MortonTable::from_iterator((0..(1 << 16)).map(|i| {
-        let p = Point {
-            x: rng.gen_range(0, 8000),
-            y: rng.gen_range(0, 8000),
-        };
-        (p, i)
-    }))
-    .unwrap();
+    for _ in 0..(1 << 12) {
+        let x = rng.gen_range(0, 2000);
+        let y = rng.gen_range(0, 2000);
 
-    b.iter(|| {
-        let p = Point {
-            x: rng.gen_range(0, 8000),
-            y: rng.gen_range(0, 8000),
-        };
-        table.contains_key(&p)
-    });
-}
+        let morton = MortonKey::new(x, y);
 
-#[bench]
-fn bench_contains_rand_at_2pow16_cold_cache(b: &mut Bencher) {
-    let mut rng = rand::thread_rng();
+        let res = morton.as_point();
 
-    let mut table = MortonTable::from_iterator((0..(1 << 16)).map(|i| {
-        let p = Point {
-            x: rng.gen_range(0, 8000),
-            y: rng.gen_range(0, 8000),
-        };
-        (p, i)
-    }))
-    .unwrap();
-
-    b.iter(|| {
-        #[cfg(target_arch = "x86")]
-        use std::arch::x86::_mm_clflush;
-        #[cfg(target_arch = "x86_64")]
-        use std::arch::x86_64::_mm_clflush;
-        unsafe {
-            // flush `table` from all cpu caches
-            let r = table.keys.as_mut_ptr() as  *mut u8;
-            _mm_clflush(r);
-            let r = &mut table as *mut _ as *mut u8;
-            _mm_clflush(r);
-        }
-        let p = Point {
-            x: rng.gen_range(0, 8000),
-            y: rng.gen_range(0, 8000),
-        };
-        table.contains_key(&p)
-    });
-}
-
-#[bench]
-fn bench_get_entities_in_range_sparse(b: &mut Bencher) {
-    let mut rng = rand::thread_rng();
-
-    let table = MortonTable::from_iterator((0..1 << 12).map(|_| {
-        let p = Point {
-            x: rng.gen_range(0, 3900 * 2),
-            y: rng.gen_range(0, 3900 * 2),
-        };
-        (p, EntityComponent(EntityId(rng.gen())))
-    }))
-    .unwrap();
-
-    let radius = 512;
-
-    b.iter(|| {
-        let table = &table;
-        let p = Point {
-            x: rng.gen_range(0, 3900 * 2),
-            y: rng.gen_range(0, 3900 * 2),
-        };
-        table.get_entities_in_range(&Circle { center: p, radius })
-    });
-}
-
-#[bench]
-fn bench_get_entities_in_range_dense(b: &mut Bencher) {
-    use crate::tables::traits::PositionTable;
-    let mut rng = rand::thread_rng();
-
-    let table = MortonTable::from_iterator((0..1 << 12).map(|_| {
-        let p = Point {
-            x: rng.gen_range(0, 200 * 2),
-            y: rng.gen_range(0, 200 * 2),
-        };
-        (p, EntityComponent(EntityId(rng.gen())))
-    }))
-    .unwrap();
-
-    let radius = 50;
-
-    b.iter(|| {
-        let table = &table;
-        let p = Point {
-            x: rng.gen_range(0, 200 * 2),
-            y: rng.gen_range(0, 200 * 2),
-        };
-        table.get_entities_in_range(&Circle { center: p, radius })
-    });
-}
-
-#[bench]
-fn make_morton_table(b: &mut Bencher) {
-    let mut rng = rand::thread_rng();
-
-    b.iter(|| {
-        let table = MortonTable::from_iterator((0..(1 << 15)).map(|_| {
-            (
-                Point {
-                    x: rng.gen_range(0, 3900 * 2),
-                    y: rng.gen_range(0, 3900 * 2),
-                },
-                rng.next_u32(),
-            )
-        }))
-        .unwrap();
-        table
-    });
-}
-
-#[bench]
-fn rebuild_morton_table(b: &mut Bencher) {
-    let mut rng = rand::thread_rng();
-
-    let mut table = MortonTable::with_capacity(1 << 15);
-
-    b.iter(|| {
-        table.clear();
-
-        table
-            .extend((0..(1 << 15)).map(|_| {
-                (
-                    Point {
-                        x: rng.gen_range(0, 3900 * 2),
-                        y: rng.gen_range(0, 3900 * 2),
-                    },
-                    rng.next_u32(),
-                )
-            }))
-            .unwrap();
-    })
-}
-
-#[bench]
-fn bench_get_by_id_rand_2pow16(b: &mut Bencher) {
-    let mut rng = rand::thread_rng();
-
-    let len = 1 << 16;
-    let table = MortonTable::from_iterator((0..len).map(|_| {
-        let pos = Point {
-            x: rng.gen_range(0, 3900 * 2),
-            y: rng.gen_range(0, 3900 * 2),
-        };
-        (pos, rng.next_u32())
-    }))
-    .unwrap();
-
-    b.iter(|| {
-        let pos = Point {
-            x: rng.gen_range(0, 3900 * 2),
-            y: rng.gen_range(0, 3900 * 2),
-        };
-        table.get_by_id(&pos)
-    });
+        assert_eq!([x, y], res);
+    }
 }
 
 #[test]
@@ -344,99 +189,4 @@ fn from_iterator_inserts_correctly() {
         let v = *table.get_by_id(&pos).expect("to find the value");
         assert_eq!(val, v);
     }
-}
-
-#[bench]
-fn bench_get_by_id_in_table_rand_2pow16(b: &mut Bencher) {
-    let mut rng = rand::thread_rng();
-
-    let len = 1 << 16;
-    let mut points = Vec::with_capacity(len);
-    let table = MortonTable::from_iterator((0..len).map(|_| {
-        let pos = Point {
-            x: rng.gen_range(0, 3900 * 2),
-            y: rng.gen_range(0, 3900 * 2),
-        };
-        points.push(pos.clone());
-        (pos, rng.next_u32())
-    }))
-    .unwrap();
-
-    b.iter(|| {
-        let i = rng.gen_range(0, points.len());
-        let pos = &points[i];
-        table.get_by_id(pos)
-    });
-}
-
-#[bench]
-fn bench_get_entities_in_range_dense_in_hashmap(b: &mut Bencher) {
-    let mut rng = rand::thread_rng();
-
-    let mut table = std::collections::HashMap::new();
-
-    for _ in 0..(1 << 15) {
-        let p = Point {
-            x: rng.gen_range(0, 200 * 2),
-            y: rng.gen_range(0, 200 * 2),
-        };
-        table.insert(p, EntityComponent(EntityId(rng.gen())));
-    }
-
-    let radius = 50;
-
-    let mut v = Vec::with_capacity(512);
-    b.iter(|| {
-        let table = &table;
-        let x = rng.gen_range(0, 200 * 2);
-        let y = rng.gen_range(0, 200 * 2);
-        v.clear();
-        for x in x - radius..x + radius {
-            for y in y - radius..y + radius {
-                let p = Point { x, y };
-                if let Some(val) = table.get(&p) {
-                    v.push((p, val));
-                }
-            }
-        }
-        v.len()
-    });
-}
-
-#[test]
-fn morton_key_reconstruction_rand() {
-    let mut rng = rand::thread_rng();
-
-    for _ in 0..(1 << 12) {
-        let x = rng.gen_range(0, 2000);
-        let y = rng.gen_range(0, 2000);
-
-        let morton = MortonKey::new(x, y);
-
-        let res = morton.as_point();
-
-        assert_eq!([x, y], res);
-    }
-}
-
-#[bench]
-fn bench_random_insert(b: &mut Bencher) {
-    let mut rng = rand::thread_rng();
-    let mut table = MortonTable::<Point, usize>::new();
-
-    for _ in 0..10_000 {
-        let x = rng.gen_range(0, 29000);
-        let y = rng.gen_range(0, 29000);
-        let p = Point::new(x, y);
-
-        table.insert(p, 420);
-    }
-
-    b.iter(|| {
-        let x = rng.gen_range(0, 29000);
-        let y = rng.gen_range(0, 29000);
-        let p = Point::new(x, y);
-
-        table.insert(p, 420)
-    })
 }

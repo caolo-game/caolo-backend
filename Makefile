@@ -40,3 +40,9 @@ migrate:
 
 protopy:
 	protoc -Iprotos --python_out=webservice/build/ protos/*.proto 
+
+bench:
+	cargo bench --bench simulation_benchmarks -- --baseline master
+
+bench-save-baseline:
+	cargo bench --bench simulation_benchmarks -- --save-baseline master

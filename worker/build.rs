@@ -1,3 +1,4 @@
+use protoc_rust::Codegen;
 use protoc_rust::Customize;
 use std::fs::OpenOptions;
 use std::io::Write;
@@ -9,16 +10,16 @@ const PROTOS: &'static [&'static str] = &[
 ];
 
 fn main() {
-    protoc_rust::run(protoc_rust::Args {
-        out_dir: "src/protos",
-        input: PROTOS,
-        includes: &["../protos"],
-        customize: Customize {
+    Codegen::new()
+        .include("../protos")
+        .out_dir("src/protos")
+        .inputs(PROTOS)
+        .customize(Customize {
             serde_derive: Some(true),
             ..Default::default()
-        },
-    })
-    .expect("protoc");
+        })
+        .run()
+        .expect("protoc");
 
     let mut module_file = OpenOptions::new()
         .write(true)

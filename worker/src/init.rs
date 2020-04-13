@@ -208,25 +208,19 @@ const PROGRAM: &str = r#"
   "nodes": {
     "0": {
       "node": {
-        "ScalarInt": {
-          "value": 0
-        }
+        "ScalarInt": 0
       },
       "child": 1
     },
     "1": {
       "node": {
-        "Call": {
-          "function": "make_operation_result"
-        }
+        "Call": "make_operation_result"
       },
       "child": 3
     },
     "2": {
       "node": {
-        "Call": {
-          "function": "find_closest_resource_by_range"
-        }
+        "Call": "find_closest_resource_by_range"
       },
       "child": 0
     },
@@ -238,9 +232,7 @@ const PROGRAM: &str = r#"
     },
     "4": {
       "node": {
-        "JumpIfTrue": {
-          "nodeid": 6
-        }
+        "JumpIfTrue": 6
       },
       "child": 5
     },
@@ -258,9 +250,7 @@ const PROGRAM: &str = r#"
     },
     "7": {
       "node": {
-        "Call": {
-          "function": "approach_entity"
-        }
+        "Call": "approach_entity"
       },
       "child": 8
     },
@@ -272,9 +262,7 @@ const PROGRAM: &str = r#"
     },
     "9": {
       "node": {
-        "Call": {
-          "function": "mine_resource"
-        }
+        "Call": "mine_resource"
       },
       "child": null
     },

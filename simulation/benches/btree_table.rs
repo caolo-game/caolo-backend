@@ -5,7 +5,7 @@ use rand::Rng;
 use std::convert::TryFrom;
 
 fn insert_at_random(c: &mut Criterion) {
-    c.bench_function("insert_at_random", |b| {
+    c.bench_function("btree_table insert_at_random", |b| {
         let mut rng = rand::thread_rng();
         let mut table = BTreeTable::<EntityId, i32>::new();
         b.iter(|| {
@@ -19,7 +19,7 @@ fn insert_at_random(c: &mut Criterion) {
 }
 
 fn get_by_id_random_2_pow_16(c: &mut Criterion) {
-    c.bench_function("get_by_id_random_2_pow_16", |b| {
+    c.bench_function("btree_table get_by_id_random_2_pow_16", |b| {
         const LEN: usize = 1 << 16;
         let mut rng = rand::thread_rng();
         let mut table = BTreeTable::<EntityId, _>::new();
@@ -41,7 +41,7 @@ fn get_by_id_random_2_pow_16(c: &mut Criterion) {
 }
 
 fn update_all_iter_2pow14_sparse(c: &mut Criterion) {
-    c.bench_function("update_all_iter_2pow14_sparse", |b| {
+    c.bench_function("btree_table update_all_iter_2pow14_sparse", |b| {
         // The Id domain is 1.2 * LEN
 
         const LEN: usize = 1 << 14;
@@ -67,7 +67,7 @@ fn update_all_iter_2pow14_sparse(c: &mut Criterion) {
 }
 
 fn update_all_iter_2pow14_dense(c: &mut Criterion) {
-    c.bench_function("update_all_iter_2pow14_dense", |b| {
+    c.bench_function("btree_table update_all_iter_2pow14_dense", |b| {
         // The whole table is filled
 
         const LEN: usize = 1 << 14;

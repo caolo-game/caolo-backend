@@ -7,7 +7,7 @@ use rand::Rng;
 use rand::RngCore;
 
 fn contains_rand(c: &mut Criterion) {
-    let mut group = c.benchmark_group("contains_rand");
+    let mut group = c.benchmark_group("morton table contains_rand");
     for size in 8..16 {
         let size = 1 << size;
         group.bench_with_input(BenchmarkId::from_parameter(size), &size, move |b, &size| {
@@ -35,7 +35,7 @@ fn contains_rand(c: &mut Criterion) {
 }
 
 fn get_entities_in_range_sparse(c: &mut Criterion) {
-    let mut group = c.benchmark_group("get_entities_in_range sparse");
+    let mut group = c.benchmark_group("morton table get_entities_in_range sparse");
     for size in 8..16 {
         let size = 1 << size;
         group.bench_with_input(BenchmarkId::from_parameter(size), &size, |b, &size| {
@@ -65,7 +65,7 @@ fn get_entities_in_range_sparse(c: &mut Criterion) {
 }
 
 fn get_entities_in_range_dense(c: &mut Criterion) {
-    let mut group = c.benchmark_group("get_entities_in_range dense");
+    let mut group = c.benchmark_group("morton table get_entities_in_range dense");
     for size in 8..16 {
         let size = 1 << size;
         group.bench_with_input(BenchmarkId::from_parameter(size), &size, |b, &size| {
@@ -95,7 +95,7 @@ fn get_entities_in_range_dense(c: &mut Criterion) {
 }
 
 fn make_morton_table(c: &mut Criterion) {
-    let mut group = c.benchmark_group("make_morton_table");
+    let mut group = c.benchmark_group("morton table make_morton_table");
     for size in 8..16 {
         let size = 1 << size;
         group.bench_with_input(BenchmarkId::from_parameter(size), &size, |b, &size| {
@@ -120,7 +120,7 @@ fn make_morton_table(c: &mut Criterion) {
 }
 
 fn rebuild_morton_table(c: &mut Criterion) {
-    let mut group = c.benchmark_group("rebuild_morton_table");
+    let mut group = c.benchmark_group("morton table rebuild_morton_table");
     for size in 8..16 {
         let size = 1 << size;
 
@@ -150,7 +150,7 @@ fn rebuild_morton_table(c: &mut Criterion) {
 }
 
 fn get_by_id_rand(c: &mut Criterion) {
-    let mut group = c.benchmark_group("get_by_id random");
+    let mut group = c.benchmark_group("morton table get_by_id random");
     for size in 8..16 {
         let size = 1 << size;
         group.bench_with_input(BenchmarkId::from_parameter(size), &size, |b, &len| {
@@ -178,7 +178,7 @@ fn get_by_id_rand(c: &mut Criterion) {
 }
 
 fn get_by_id_in_table_rand(c: &mut Criterion) {
-    let mut group = c.benchmark_group("get_by_id, all queried elements are in the table");
+    let mut group = c.benchmark_group("morton table get_by_id, all queried elements are in the table");
     for size in 8..16 {
         let size = 1 << size;
         group.bench_with_input(BenchmarkId::from_parameter(size), &size, |b, &len| {
@@ -206,7 +206,7 @@ fn get_by_id_in_table_rand(c: &mut Criterion) {
 }
 
 fn random_insert(c: &mut Criterion) {
-    let mut group = c.benchmark_group("random_insert");
+    let mut group = c.benchmark_group("morton table random_insert");
     for size in 8..16 {
         let size = 1 << size;
         group.bench_with_input(BenchmarkId::from_parameter(size), &size, |b, &size| {

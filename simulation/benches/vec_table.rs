@@ -6,7 +6,7 @@ use rand::Rng;
 use std::convert::TryFrom;
 
 fn insert_at_random(c: &mut Criterion) {
-    c.bench_function("insert_at_random", |b| {
+    c.bench_function("vec_table insert_at_random", |b| {
         let mut rng = rand::thread_rng();
         let mut table = VecTable::<EntityId, i32>::new();
         b.iter(|| {
@@ -20,7 +20,7 @@ fn insert_at_random(c: &mut Criterion) {
 }
 
 fn insert_at_random_w_reserve(c: &mut Criterion) {
-    c.bench_function("insert_at_random_w_reserve", |b| {
+    c.bench_function("vec_table insert_at_random_w_reserve", |b| {
         let mut rng = rand::thread_rng();
         let mut table = VecTable::<EntityId, i32>::with_capacity(1 << 20);
         b.iter(|| {
@@ -34,7 +34,7 @@ fn insert_at_random_w_reserve(c: &mut Criterion) {
 }
 
 fn update_all_iter_2pow14_sparse(c: &mut Criterion) {
-    c.bench_function("update_all_iter_2pow14_sparse", |b| {
+    c.bench_function("vec_table update_all_iter_2pow14_sparse", |b| {
         // The Id domain is 1.2 * LEN
 
         const LEN: usize = 1 << 14;
@@ -60,7 +60,7 @@ fn update_all_iter_2pow14_sparse(c: &mut Criterion) {
 }
 
 fn update_all_iter_2pow14_dense(c: &mut Criterion) {
-    c.bench_function("update_all_iter_2pow14_dense", |b| {
+    c.bench_function("vec_table update_all_iter_2pow14_dense", |b| {
         // The whole table is filled
 
         const LEN: usize = 1 << 14;
@@ -79,7 +79,7 @@ fn update_all_iter_2pow14_dense(c: &mut Criterion) {
 }
 
 fn get_by_id_random_2_pow_16(c: &mut Criterion) {
-    c.bench_function("get_by_id_random_2_pow_16", |b| {
+    c.bench_function("vec_table get_by_id_random_2_pow_16", |b| {
         const LEN: usize = 1 << 16;
         let mut rng = rand::thread_rng();
         let mut table = VecTable::<EntityId, usize>::with_capacity(LEN);
@@ -105,7 +105,7 @@ fn get_by_id_random_2_pow_16(c: &mut Criterion) {
 }
 
 fn override_update_random(c: &mut Criterion) {
-    c.bench_function("override_update_random", |b| {
+    c.bench_function("vec_table override_update_random", |b| {
         const LEN: usize = 1 << 20;
         let mut rng = rand::thread_rng();
         let mut table = VecTable::<EntityId, usize>::with_capacity(LEN);
@@ -131,7 +131,7 @@ fn override_update_random(c: &mut Criterion) {
 }
 
 fn delete_by_id_random(c: &mut Criterion) {
-    c.bench_function("delete_by_id_random", |b| {
+    c.bench_function("vec_table delete_by_id_random", |b| {
         let mut rng = rand::thread_rng();
         let mut table = VecTable::<EntityId, i32>::new();
         let mut ids = Vec::with_capacity(1 << 15);

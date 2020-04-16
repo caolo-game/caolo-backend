@@ -12,16 +12,18 @@ pub struct MoveIntent {
     pub position: Point,
 }
 
+type CheckInput<'a> = (
+    View<'a, EntityId, components::OwnedEntity>,
+    View<'a, EntityId, PositionComponent>,
+    View<'a, EntityId, components::Bot>,
+    View<'a, Point, components::TerrainComponent>,
+    View<'a, Point, EntityComponent>,
+);
+
 pub fn check_move_intent(
     intent: &MoveIntent,
     userid: model::UserId,
-    (owner_ids, positions, bots, terrain, entity_positions): (
-        View<EntityId, components::OwnedEntity>,
-        View<EntityId, PositionComponent>,
-        View<EntityId, components::Bot>,
-        View<Point, components::TerrainComponent>,
-        View<Point, EntityComponent>,
-    ),
+    (owner_ids, positions, bots, terrain, entity_positions): CheckInput,
 ) -> OperationResult {
     let id = intent.bot;
     match bots.get_by_id(&id) {
@@ -51,12 +53,11 @@ pub fn check_move_intent(
         return OperationResult::InvalidInput;
     }
 
-    match terrain.get_by_id(&intent.position) {
-        Some(components::TerrainComponent(terrain::TileTerrainType::Wall)) => {
-            debug!("Position is occupied by terrain");
-            return OperationResult::InvalidInput;
-        }
-        _ => {}
+    if let Some(components::TerrainComponent(terrain::TileTerrainType::Wall)) =
+        terrain.get_by_id(&intent.position)
+    {
+        debug!("Position is occupied by terrain");
+        return OperationResult::InvalidInput;
     }
     if let Some(entity) = entity_positions.get_by_id(&intent.position) {
         debug!("Position is occupied by another entity {:?}", entity);

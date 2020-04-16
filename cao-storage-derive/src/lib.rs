@@ -20,30 +20,27 @@ fn impl_storage(input: DeriveInput) -> TokenStream {
 
     let mut groups_by_id = HashMap::new();
     'a: for attr in input.attrs {
-        match attr.style {
-            AttrStyle::Outer => {
-                match attr.path.segments.first() {
-                    None => continue 'a,
-                    Some(segment) => {
-                        if format!("{}", segment.ident) != "cao_storage" {
-                            continue 'a;
-                        }
+        if let AttrStyle::Outer = attr.style {
+            match attr.path.segments.first() {
+                None => continue 'a,
+                Some(segment) => {
+                    if format!("{}", segment.ident) != "cao_storage" {
+                        continue 'a;
                     }
                 }
-                let group = match attr.tokens.into_iter().next().expect("group") {
-                    TokenTree::Group(group) => group,
-                    _ => panic!("expected a group"),
-                };
-                let mut tokens = group.stream().into_iter();
-                let key = tokens.next().expect("key name");
-                tokens.next().expect("delimeter");
-                groups_by_id
-                    .entry(format!("{}", key))
-                    .or_insert_with(|| (key, Vec::new()))
-                    .1
-                    .push(tokens.next().expect("field name"));
             }
-            _ => {}
+            let group = match attr.tokens.into_iter().next().expect("group") {
+                TokenTree::Group(group) => group,
+                _ => panic!("expected a group"),
+            };
+            let mut tokens = group.stream().into_iter();
+            let key = tokens.next().expect("key name");
+            tokens.next().expect("delimeter");
+            groups_by_id
+                .entry(format!("{}", key))
+                .or_insert_with(|| (key, Vec::new()))
+                .1
+                .push(tokens.next().expect("field name"));
         }
     }
 

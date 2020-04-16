@@ -148,7 +148,6 @@ fn get_by_id() {
     }
 }
 
-
 #[test]
 fn morton_key_reconstruction_rand() {
     let mut rng = rand::thread_rng();

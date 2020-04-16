@@ -75,6 +75,9 @@ unsafe impl<Id: TableId, C: Component<Id>> Send for UnsafeView<Id, C> {}
 unsafe impl<Id: TableId, C: Component<Id>> Sync for UnsafeView<Id, C> {}
 
 impl<Id: TableId, C: Component<Id>> UnsafeView<Id, C> {
+    /// # Safety
+    /// This function should only be called if the pointed to Storage is in memory and no other
+    /// threads have access to it at this time!
     pub unsafe fn as_mut(&mut self) -> &mut C::Table {
         &mut *self.0
     }
@@ -126,6 +129,9 @@ unsafe impl Send for DeleteEntityView {}
 unsafe impl Sync for DeleteEntityView {}
 
 impl DeleteEntityView {
+    /// # Safety
+    /// This function should only be called if the pointed to Storage is in memory and no other
+    /// threads have access to it at this time!
     pub unsafe fn delete_entity(&mut self, id: &EntityId) {
         let storage = &mut (*self.storage).store as &mut dyn Epic<EntityId>;
         storage.delete(id);
@@ -156,6 +162,9 @@ impl FromWorldMut for InsertEntityView {
 }
 
 impl InsertEntityView {
+    /// # Safety
+    /// This function should only be called if the pointed to Storage is in memory and no other
+    /// threads have access to it at this time!
     pub unsafe fn insert_entity(&mut self) -> EntityId {
         let storage = &mut *self.storage;
         storage.insert_entity()

@@ -42,7 +42,7 @@ impl TryFrom<Scalar> for EntityId {
                 if i < 0 {
                     return Err(s);
                 }
-                return Ok(EntityId(i as u32));
+                Ok(EntityId(i as u32))
             }
             _ => Err(s),
         }

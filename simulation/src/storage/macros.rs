@@ -26,6 +26,7 @@ macro_rules! storage {
 
             impl Storage {
                 #[allow(unused)]
+                #[allow(clippy::too_many_arguments)]
                 pub fn new(
                     $(
                         $name: <$row as crate::tables::Component<$id>>::Table

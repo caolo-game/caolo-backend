@@ -8,13 +8,15 @@ use crate::storage::views::{InsertEntityView, UnsafeView, View};
 
 pub struct SpawnSystem;
 
+type Mut = (
+    UnsafeView<EntityId, SpawnBotComponent>,
+    UnsafeView<EntityId, SpawnComponent>,
+    UnsafeView<EntityId, OwnedEntity>,
+    InsertEntityView,
+);
+
 impl<'a> IntentExecutionSystem<'a> for SpawnSystem {
-    type Mut = (
-        UnsafeView<EntityId, SpawnBotComponent>,
-        UnsafeView<EntityId, SpawnComponent>,
-        UnsafeView<EntityId, OwnedEntity>,
-        InsertEntityView,
-    );
+    type Mut = Mut;
     type Const = (View<'a, EntityId, EnergyComponent>,);
     type Intent = SpawnIntent;
 
@@ -61,7 +63,7 @@ impl<'a> IntentExecutionSystem<'a> for SpawnSystem {
                 if let Some(owner_id) = intent.owner_id {
                     owner_table
                         .as_mut()
-                        .insert_or_update(bot_id, OwnedEntity { owner_id: owner_id });
+                        .insert_or_update(bot_id, OwnedEntity { owner_id });
                 }
 
                 spawn.time_to_spawn = 5;

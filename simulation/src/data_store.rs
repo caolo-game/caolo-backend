@@ -55,7 +55,7 @@ impl<Id: TableId, C: Component<Id>> storage::HasTable<Id, C> for World
 where
     Storage: storage::HasTable<Id, C>,
 {
-    fn view<'a>(&'a self) -> View<'a, Id, C> {
+    fn view(&self) -> View<Id, C> {
         self.store.view()
     }
 
@@ -77,6 +77,12 @@ pub fn init_inmemory_storage() -> Pin<Box<World>> {
 
 unsafe impl Send for World {}
 
+impl Default for World {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl World {
     pub fn new() -> Self {
         let store = Storage::default();
@@ -89,7 +95,7 @@ impl World {
         }
     }
 
-    pub fn view<'a, Id: TableId, C: Component<Id>>(&'a self) -> View<'a, Id, C>
+    pub fn view<Id: TableId, C: Component<Id>>(&self) -> View<Id, C>
     where
         Storage: storage::HasTable<Id, C>,
     {

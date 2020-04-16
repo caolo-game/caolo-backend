@@ -178,7 +178,8 @@ fn get_by_id_rand(c: &mut Criterion) {
 }
 
 fn get_by_id_in_table_rand(c: &mut Criterion) {
-    let mut group = c.benchmark_group("morton table get_by_id, all queried elements are in the table");
+    let mut group =
+        c.benchmark_group("morton table get_by_id, all queried elements are in the table");
     for size in 8..16 {
         let size = 1 << size;
         group.bench_with_input(BenchmarkId::from_parameter(size), &size, |b, &len| {

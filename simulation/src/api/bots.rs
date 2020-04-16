@@ -219,10 +219,7 @@ fn move_to_pos(
     }
 
     let intent = match path.pop() {
-        Some(position) => MoveIntent {
-            bot,
-            position: position,
-        },
+        Some(position) => MoveIntent { bot, position },
         None => {
             debug!("Entity {:?} is trying to move to its own position", bot);
             return Err(OperationResult::InvalidTarget);

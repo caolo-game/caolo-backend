@@ -47,38 +47,42 @@ where
         let mut row2 = self.t2.next();
 
         while let (Some(r1), Some(r2)) = (row1.as_ref(), row2.as_ref()) {
-            if r1.0 == r2.0 {
-                // found a match
-                return row1.and_then(|(id, r1)| row2.map(|(_, r2)| (id, (r1, r2))));
-            } else if r1.0 < r2.0 {
-                #[cfg(debug_assertions)]
-                let _is_less_than_last = {
-                    let id = r1.0;
-                    move |row| is_less_than_last(id, row)
-                };
+            match r1.0.cmp(&r2.0) {
+                std::cmp::Ordering::Equal => {
+                    // found a match
+                    return row1.and_then(|(id, r1)| row2.map(|(_, r2)| (id, (r1, r2))));
+                }
+                std::cmp::Ordering::Less => {
+                    #[cfg(debug_assertions)]
+                    let _is_less_than_last = {
+                        let id = r1.0;
+                        move |row| is_less_than_last(id, row)
+                    };
 
-                row1 = self.t1.next();
+                    row1 = self.t1.next();
 
-                #[cfg(debug_assertions)]
-                debug_assert!(
-                    _is_less_than_last(row1.as_ref()),
-                    "Items of Iterator 1 were not ordered!"
-                );
-            } else {
-                // r2.0 < r1.0
-                #[cfg(debug_assertions)]
-                let _is_less_than_last = {
-                    let id = r2.0;
-                    move |row| is_less_than_last(id, row)
-                };
+                    #[cfg(debug_assertions)]
+                    debug_assert!(
+                        _is_less_than_last(row1.as_ref()),
+                        "Items of Iterator 1 were not ordered!"
+                    );
+                }
+                std::cmp::Ordering::Greater => {
+                    // r2.0 < r1.0
+                    #[cfg(debug_assertions)]
+                    let _is_less_than_last = {
+                        let id = r2.0;
+                        move |row| is_less_than_last(id, row)
+                    };
 
-                row2 = self.t2.next();
+                    row2 = self.t2.next();
 
-                #[cfg(debug_assertions)]
-                debug_assert!(
-                    _is_less_than_last(row2.as_ref()),
-                    "Items of Iterator 2 were not ordered!"
-                );
+                    #[cfg(debug_assertions)]
+                    debug_assert!(
+                        _is_less_than_last(row2.as_ref()),
+                        "Items of Iterator 2 were not ordered!"
+                    );
+                }
             }
         }
         None

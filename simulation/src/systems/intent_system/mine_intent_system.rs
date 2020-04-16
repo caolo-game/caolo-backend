@@ -35,7 +35,7 @@ impl<'a> IntentExecutionSystem<'a> for MineSystem {
                                 debug!("Mineral is empty!");
                                 continue;
                             }
-                            resource_energy.clone()
+                            *resource_energy
                         }
                         None => {
                             error!("MineIntent resource has no energy component!");
@@ -60,9 +60,7 @@ impl<'a> IntentExecutionSystem<'a> for MineSystem {
                             "Mine succeeded new bot carry {:?} new resource energy {:?}",
                             carry, resource_energy
                         );
-                        carry_table
-                            .as_mut()
-                            .insert_or_update(intent.bot, carry);
+                        carry_table.as_mut().insert_or_update(intent.bot, carry);
                         energy_table
                             .as_mut()
                             .insert_or_update(intent.resource, resource_energy);

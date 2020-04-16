@@ -156,7 +156,9 @@ fn main() {
         tick(&mut storage);
         send_world(&storage, &client).expect("Sending world");
         let t = Instant::now() - start;
-        let sleep_duration = tick_freq.checked_sub(t).unwrap_or(Duration::from_millis(0));
+        let sleep_duration = tick_freq
+            .checked_sub(t)
+            .unwrap_or_else(|| Duration::from_millis(0));
         thread::sleep(sleep_duration);
     }
 }

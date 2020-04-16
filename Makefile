@@ -1,6 +1,8 @@
 .DEFAULT_GOAL := start
 
 test:
+	cargo check
+	cargo clippy
 	cargo test
 	# TODO test webservice
 

@@ -42,10 +42,10 @@ fn execute_scripts_parallel(intents: Arc<Mutex<Intents>>, storage: &World) {
     });
 }
 
-pub fn execute_single_script<'a>(
+pub fn execute_single_script(
     entity_id: EntityId,
     script_id: ScriptId,
-    storage: &'a World,
+    storage: &World,
 ) -> ExecutionResult {
     profile!("execute_single_script");
 

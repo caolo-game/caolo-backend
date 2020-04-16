@@ -16,12 +16,14 @@ use caolo_sim::model::{
 use caolo_sim::storage::views::View;
 use caolo_sim::tables::JoinIterator;
 
+type BotInput<'a> = (
+    View<'a, EntityId, Bot>,
+    View<'a, EntityId, PositionComponent>,
+    View<'a, EntityId, OwnedEntity>,
+);
+
 pub fn build_bots<'a>(
-    (bots, positions, owned_entities): (
-        View<'a, EntityId, Bot>,
-        View<'a, EntityId, PositionComponent>,
-        View<'a, EntityId, OwnedEntity>,
-    ),
+    (bots, positions, owned_entities): BotInput<'a>,
 ) -> impl Iterator<Item = BotMsg> + 'a {
     let bots = bots.reborrow().iter();
     let positions = positions.reborrow().iter();
@@ -67,12 +69,14 @@ pub fn build_terrain<'a>(
     })
 }
 
+type ResourceInput<'a> = (
+    View<'a, EntityId, ResourceComponent>,
+    View<'a, EntityId, PositionComponent>,
+    View<'a, EntityId, EnergyComponent>,
+);
+
 pub fn build_resources<'a>(
-    (resource_table, position_table, energy_table): (
-        View<'a, EntityId, ResourceComponent>,
-        View<'a, EntityId, PositionComponent>,
-        View<'a, EntityId, EnergyComponent>,
-    ),
+    (resource_table, position_table, energy_table): ResourceInput<'a>,
 ) -> impl Iterator<Item = ResourceMsg> + 'a {
     let join = JoinIterator::new(
         resource_table.reborrow().iter(),
@@ -95,13 +99,15 @@ pub fn build_resources<'a>(
     )
 }
 
+type StructuresInput<'a> = (
+    View<'a, EntityId, Structure>,
+    View<'a, EntityId, SpawnComponent>,
+    View<'a, EntityId, PositionComponent>,
+    View<'a, EntityId, OwnedEntity>,
+);
+
 pub fn build_structures<'a>(
-    (structure_table, spawn_table, position_table, owner_table): (
-        View<'a, EntityId, Structure>,
-        View<'a, EntityId, SpawnComponent>,
-        View<'a, EntityId, PositionComponent>,
-        View<'a, EntityId, OwnedEntity>,
-    ),
+    (structure_table, spawn_table, position_table, owner_table): StructuresInput<'a>,
 ) -> impl Iterator<Item = StructureMsg> + 'a {
     let spawns = JoinIterator::new(
         spawn_table.reborrow().iter(),

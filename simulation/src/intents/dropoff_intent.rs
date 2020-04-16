@@ -15,6 +15,14 @@ pub struct DropoffIntent {
     pub ty: Resource,
 }
 
+type CheckInput<'a> = (
+    View<'a, EntityId, Bot>,
+    View<'a, EntityId, OwnedEntity>,
+    View<'a, EntityId, PositionComponent>,
+    View<'a, EntityId, CarryComponent>,
+    View<'a, EntityId, EnergyComponent>,
+);
+
 /// A valid dropoff intent has the following characteristics:
 /// - the bot is owned by the user
 /// - the bot is carrying resource of type `ty`
@@ -23,13 +31,7 @@ pub struct DropoffIntent {
 pub fn check_dropoff_intent(
     intent: &DropoffIntent,
     userid: model::UserId,
-    (bots, owners, positions, carry, energy): (
-        View<EntityId, Bot>,
-        View<EntityId, OwnedEntity>,
-        View<EntityId, PositionComponent>,
-        View<EntityId, CarryComponent>,
-        View<EntityId, EnergyComponent>,
-    ),
+    (bots, owners, positions, carry, energy): CheckInput,
 ) -> OperationResult {
     let id = intent.bot;
     match bots.get_by_id(&id) {

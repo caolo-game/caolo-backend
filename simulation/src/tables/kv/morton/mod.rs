@@ -104,7 +104,7 @@ where
     pub fn iter<'a>(&'a self) -> impl Iterator<Item = (Pos, &'a Row)> + 'a {
         let values = self.values.as_ptr();
         self.poss.iter().enumerate().map(move |(i, id)| {
-            let val = unsafe { &*values.offset(i as isize) };
+            let val = unsafe { &*values.add(i) };
             (*id, val)
         })
     }
@@ -404,7 +404,7 @@ fn sort_partition<Pos: Send, Row: Send>(
     poss: &mut [Pos],
     values: &mut [Row],
 ) -> usize {
-    debug_assert!(keys.len() > 0);
+    debug_assert!(!keys.is_empty());
 
     let lim = keys.len() - 1;
     let mut i = 0;

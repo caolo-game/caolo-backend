@@ -3,7 +3,7 @@ use protoc_rust::Customize;
 use std::fs::OpenOptions;
 use std::io::Write;
 
-const PROTOS: &'static [&'static str] = &[
+const PROTOS: &[&str] = &[
     "../protos/scripts.proto",
     "../protos/input_messages.proto",
     "../protos/world.proto",
@@ -30,7 +30,7 @@ fn main() {
 
     for path in PROTOS
         .iter()
-        .filter_map(|path| path.split("/").last().and_then(|x| x.split(".").next()))
+        .filter_map(|path| path.split('/').last().and_then(|x| x.split('.').next()))
     {
         writeln!(module_file, "pub mod {};", path).expect("write module file");
     }

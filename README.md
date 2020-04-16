@@ -9,6 +9,13 @@
 - [Docker](https://www.docker.com/) (Optional)
 - [PostgeSQL](https://www.postgresql.org/) (for the webservice)
 
+## Setting up
+
+```
+git submodule init
+git submodule update
+```
+
 ## Running via [Docker](https://www.docker.com/)
 
 ```

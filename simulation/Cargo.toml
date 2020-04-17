@@ -16,7 +16,7 @@ cao-lang = { git = "https://github.com/caolo-game/cao-lang.git" }
 cao_storage_derive = { path = "../cao-storage-derive" }
 
 log = "0.4"
-rand = "0.7"
+rand = { version= "0.7", features=["small_rng"] }
 chrono = { version= "0.4", features=["serde"] }
 uuid = { version="0.7", features=["serde"] }
 rayon = "1"

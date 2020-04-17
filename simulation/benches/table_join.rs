@@ -1,8 +1,12 @@
 use caolo_sim::model::EntityId;
 use caolo_sim::tables::*;
 use criterion::{black_box, criterion_group, Criterion};
-use rand::Rng;
+use rand::{rngs::SmallRng, Rng, SeedableRng};
 use serde_derive::{Deserialize, Serialize};
+
+fn get_rand() -> impl rand::Rng {
+    SmallRng::seed_from_u64(0xdeadbeef)
+}
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 struct LargeComponent {
@@ -15,7 +19,7 @@ struct LargeComponent {
 }
 
 fn random_vec_table(len: usize, domain: u32) -> VecTable<EntityId, LargeComponent> {
-    let mut rng = rand::thread_rng();
+    let mut rng = get_rand();
     let mut table = VecTable::with_capacity(domain as usize);
     for _ in 0..len {
         let mut res = false;
@@ -28,7 +32,7 @@ fn random_vec_table(len: usize, domain: u32) -> VecTable<EntityId, LargeComponen
 }
 
 fn random_bt_table(len: usize, domain: u32) -> BTreeTable<EntityId, LargeComponent> {
-    let mut rng = rand::thread_rng();
+    let mut rng = get_rand();
     let mut table = BTreeTable::new();
     for _ in 0..len {
         let mut res = false;

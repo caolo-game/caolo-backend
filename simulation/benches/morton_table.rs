@@ -3,15 +3,19 @@ use caolo_sim::model::geometry::{Circle, Point};
 use caolo_sim::model::EntityId;
 use caolo_sim::tables::{MortonTable, PositionTable};
 use criterion::{criterion_group, BenchmarkId, Criterion};
-use rand::Rng;
 use rand::RngCore;
+use rand::{rngs::SmallRng, Rng, SeedableRng};
+
+fn get_rand() -> impl rand::Rng {
+    SmallRng::seed_from_u64(0xdeadbeef)
+}
 
 fn contains_rand(c: &mut Criterion) {
     let mut group = c.benchmark_group("morton table contains_rand");
     for size in 8..16 {
         let size = 1 << size;
         group.bench_with_input(BenchmarkId::from_parameter(size), &size, move |b, &size| {
-            let mut rng = rand::thread_rng();
+            let mut rng = get_rand();
 
             let table = MortonTable::from_iterator((0..size).map(|i| {
                 let p = Point {
@@ -39,7 +43,7 @@ fn get_entities_in_range_sparse(c: &mut Criterion) {
     for size in 8..16 {
         let size = 1 << size;
         group.bench_with_input(BenchmarkId::from_parameter(size), &size, |b, &size| {
-            let mut rng = rand::thread_rng();
+            let mut rng = get_rand();
 
             let table = MortonTable::from_iterator((0..size).map(|_| {
                 let p = Point {
@@ -69,7 +73,7 @@ fn get_entities_in_range_dense(c: &mut Criterion) {
     for size in 8..16 {
         let size = 1 << size;
         group.bench_with_input(BenchmarkId::from_parameter(size), &size, |b, &size| {
-            let mut rng = rand::thread_rng();
+            let mut rng = get_rand();
 
             let table = MortonTable::from_iterator((0..size).map(|_| {
                 let p = Point {
@@ -99,7 +103,7 @@ fn make_morton_table(c: &mut Criterion) {
     for size in 8..16 {
         let size = 1 << size;
         group.bench_with_input(BenchmarkId::from_parameter(size), &size, |b, &size| {
-            let mut rng = rand::thread_rng();
+            let mut rng = get_rand();
 
             b.iter(|| {
                 let table = MortonTable::from_iterator((0..size).map(|_| {
@@ -125,7 +129,7 @@ fn rebuild_morton_table(c: &mut Criterion) {
         let size = 1 << size;
 
         group.bench_with_input(BenchmarkId::from_parameter(size), &size, |b, &size| {
-            let mut rng = rand::thread_rng();
+            let mut rng = get_rand();
 
             let mut table = MortonTable::with_capacity(size);
 
@@ -154,7 +158,7 @@ fn get_by_id_rand(c: &mut Criterion) {
     for size in 8..16 {
         let size = 1 << size;
         group.bench_with_input(BenchmarkId::from_parameter(size), &size, |b, &len| {
-            let mut rng = rand::thread_rng();
+            let mut rng = get_rand();
 
             let table = MortonTable::from_iterator((0..len).map(|_| {
                 let pos = Point {
@@ -183,7 +187,7 @@ fn get_by_id_in_table_rand(c: &mut Criterion) {
     for size in 8..16 {
         let size = 1 << size;
         group.bench_with_input(BenchmarkId::from_parameter(size), &size, |b, &len| {
-            let mut rng = rand::thread_rng();
+            let mut rng = get_rand();
 
             let mut points = Vec::with_capacity(len);
             let table = MortonTable::from_iterator((0..len).map(|_| {
@@ -211,7 +215,7 @@ fn random_insert(c: &mut Criterion) {
     for size in 8..16 {
         let size = 1 << size;
         group.bench_with_input(BenchmarkId::from_parameter(size), &size, |b, &size| {
-            let mut rng = rand::thread_rng();
+            let mut rng = get_rand();
             let mut table = MortonTable::<Point, usize>::new();
 
             for _ in 0..size {

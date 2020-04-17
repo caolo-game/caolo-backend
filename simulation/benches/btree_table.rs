@@ -1,12 +1,16 @@
 use caolo_sim::model::EntityId;
 use caolo_sim::tables::BTreeTable;
 use criterion::{black_box, criterion_group, Criterion};
-use rand::Rng;
+use rand::{rngs::SmallRng, Rng, SeedableRng};
 use std::convert::TryFrom;
+
+fn get_rand() -> impl rand::Rng {
+    SmallRng::seed_from_u64(0xdeadbeef)
+}
 
 fn insert_at_random(c: &mut Criterion) {
     c.bench_function("btree_table insert_at_random", |b| {
-        let mut rng = rand::thread_rng();
+        let mut rng = get_rand();
         let mut table = BTreeTable::<EntityId, i32>::new();
         b.iter(|| {
             let id = rng.gen_range(0, 1 << 20);
@@ -21,7 +25,7 @@ fn insert_at_random(c: &mut Criterion) {
 fn get_by_id_random_2_pow_16(c: &mut Criterion) {
     c.bench_function("btree_table get_by_id_random_2_pow_16", |b| {
         const LEN: usize = 1 << 16;
-        let mut rng = rand::thread_rng();
+        let mut rng = get_rand();
         let mut table = BTreeTable::<EntityId, _>::new();
         for i in 0..LEN {
             let mut res = false;
@@ -45,7 +49,7 @@ fn update_all_iter_2pow14_sparse(c: &mut Criterion) {
         // The Id domain is 1.2 * LEN
 
         const LEN: usize = 1 << 14;
-        let mut rng = rand::thread_rng();
+        let mut rng = get_rand();
         let mut table = BTreeTable::<EntityId, usize>::new();
         for i in 0..LEN {
             let mut id = Default::default();

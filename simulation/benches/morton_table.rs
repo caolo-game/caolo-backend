@@ -244,5 +244,4 @@ criterion_group!(
     rebuild_morton_table,
     get_by_id_in_table_rand,
     get_by_id_rand,
-    rebuild_morton_table,
 );

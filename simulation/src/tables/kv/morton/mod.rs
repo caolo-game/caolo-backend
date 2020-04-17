@@ -404,55 +404,56 @@ fn sort<Pos: Send, Row: Send>(keys: &mut [MortonKey], positions: &mut [Pos], val
     );
 }
 
-fn sort_partition<Pos: Send, Row: Send>(
+/// Assumes that all 3 slices are equal in size.
+/// Assumes that the slices are not empty
+fn sort_partition<Pos, Row>(
     keys: &mut [MortonKey],
     positions: &mut [Pos],
     values: &mut [Row],
 ) -> usize {
     debug_assert!(!keys.is_empty());
 
+    macro_rules! swap {
+        ($i: expr, $j: expr) => {
+            keys.swap($i, $j);
+            positions.swap($i, $j);
+            values.swap($i, $j);
+        };
+    };
+
     let len = keys.len();
     let lim = len - 1;
 
     let (pivot, pivot_ind) = {
+        use std::mem::swap;
         // choose the median of the first, middle and last elements as the pivot
-        let first = keys[0];
-        let last = keys[lim];
 
-        let mut ind = len / 2;
-        let mut median = keys[ind];
+        let mut first = 0;
+        let mut last = lim;
+        let mut median = len / 2;
 
-        if median < first {
-            median = first;
-            ind = 0;
+        if keys[last] < keys[median] {
+            swap(&mut median, &mut last);
         }
-        if last < median {
-            median = last;
-            ind = lim;
+        if keys[last] < keys[first] {
+            swap(&mut last, &mut first);
         }
-        if median < first {
-            median = first;
-            ind = 0
+        if keys[median] < keys[first] {
+            swap(&mut median, &mut first);
         }
-        (median, ind)
+        (keys[median], median)
     };
 
-    keys.swap(pivot_ind, lim);
-    positions.swap(pivot_ind, lim);
-    values.swap(pivot_ind, lim);
+    swap!(pivot_ind, lim);
 
     let mut i = 0; // index of the last item <= pivot
     for j in 0..lim {
         if keys[j] < pivot {
-            keys.swap(i, j);
-            positions.swap(i, j);
-            values.swap(i, j);
+            swap!(i, j);
             i += 1;
         }
     }
-    keys.swap(i, lim);
-    positions.swap(i, lim);
-    values.swap(i, lim);
+    swap!(i, lim);
     i
 }
 

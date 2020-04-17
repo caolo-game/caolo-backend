@@ -266,7 +266,6 @@ where
         profile!("find_by_range");
 
         let r = i32::try_from(radius).expect("radius to fit into 31 bits");
-        let r = (r >> 1) + 1;
         let min = *center + Pos::new(-r, -r);
         let max = *center + Pos::new(r, r);
 
@@ -288,7 +287,7 @@ where
     pub fn count_in_range<'a>(&'a self, center: &Pos, radius: u32) -> u32 {
         profile!("count_in_range");
 
-        let r = radius as i32 / 2 + 1;
+        let r = i32::try_from(radius).expect("radius to fit into 31 bits");
         let min = *center + Pos::new(-r, -r);
         let max = *center + Pos::new(r, r);
 

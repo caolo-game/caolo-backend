@@ -26,7 +26,12 @@ fn test_range_query_all() {
     }
 
     let mut res = Vec::new();
-    table.find_by_range(&Point::default(), 256, &mut res);
+    let center = Point::new(64, 64);
+    table.find_by_range(
+        &center,
+        Point::new(0, 0).hex_distance(center) as u32,
+        &mut res,
+    );
 
     assert_eq!(res.len(), 256);
 }

@@ -49,7 +49,7 @@ where
     // assuming 64 byte long L1 cache lines we can fit 10 keys
     // keys is 24 bytes in memory
     keys: Vec<MortonKey>,
-    poss: Vec<Pos>,
+    positions: Vec<Pos>,
     values: Vec<Row>,
 }
 
@@ -64,7 +64,7 @@ where
             skipstep: 0,
             keys: Default::default(),
             values: Default::default(),
-            poss: Default::default(),
+            positions: Default::default(),
         }
     }
 }
@@ -87,7 +87,7 @@ where
             skipstep: 0,
             keys: vec![],
             values: vec![],
-            poss: vec![],
+            positions: vec![],
         }
     }
 
@@ -97,13 +97,13 @@ where
             skipstep: 0,
             values: Vec::with_capacity(cap),
             keys: Vec::with_capacity(cap),
-            poss: Vec::with_capacity(cap),
+            positions: Vec::with_capacity(cap),
         }
     }
 
     pub fn iter<'a>(&'a self) -> impl Iterator<Item = (Pos, &'a Row)> + 'a {
         let values = self.values.as_ptr();
-        self.poss.iter().enumerate().map(move |(i, id)| {
+        self.positions.iter().enumerate().map(move |(i, id)| {
             let val = unsafe { &*values.add(i) };
             (*id, val)
         })
@@ -122,7 +122,7 @@ where
         self.keys.clear();
         self.skiplist = [Default::default(); SKIP_LEN];
         self.values.clear();
-        self.poss.clear();
+        self.positions.clear();
     }
 
     /// Extend the map by the items provided. Panics on invalid items.
@@ -138,12 +138,12 @@ where
             let [x, y] = [x as u16, y as u16];
             let key = MortonKey::new(x, y);
             self.keys.push(key);
-            self.poss.push(id);
+            self.positions.push(id);
             self.values.push(value);
         }
         sort(
             self.keys.as_mut_slice(),
-            self.poss.as_mut_slice(),
+            self.positions.as_mut_slice(),
             self.values.as_mut_slice(),
         );
         self.rebuild_skip_list();
@@ -192,7 +192,7 @@ where
             .binary_search(&MortonKey::new(x, y))
             .unwrap_or_else(|i| i);
         self.keys.insert(ind, MortonKey::new(x, y));
-        self.poss.insert(ind, id);
+        self.positions.insert(ind, id);
         self.values.insert(ind, row);
         self.rebuild_skip_list();
         true
@@ -271,7 +271,7 @@ where
         let max = *center + Pos::new(r, r);
 
         let [min, max] = self.morton_min_max(&min, &max);
-        let it = self.poss[min..max]
+        let it = self.positions[min..max]
             .iter()
             .enumerate()
             .filter_map(|(i, id)| {
@@ -294,7 +294,7 @@ where
 
         let [min, max] = self.morton_min_max(&min, &max);
 
-        self.poss[min..max]
+        self.positions[min..max]
             .iter()
             .filter(move |id| center.dist(&id) < radius)
             .count()
@@ -352,7 +352,7 @@ where
         self.find_key(&id)
             .map(|ind| {
                 self.keys.remove(ind);
-                self.poss.remove(ind);
+                self.positions.remove(ind);
                 self.values.remove(ind)
             })
             .ok()
@@ -378,8 +378,13 @@ impl PositionTable for MortonTable<Point, EntityComponent> {
     }
 }
 
-fn sort<Pos: Send, Row: Send>(keys: &mut [MortonKey], poss: &mut [Pos], values: &mut [Row]) {
-    debug_assert!(keys.len() == poss.len(), "{} {}", keys.len(), poss.len());
+fn sort<Pos: Send, Row: Send>(keys: &mut [MortonKey], positions: &mut [Pos], values: &mut [Row]) {
+    debug_assert!(
+        keys.len() == positions.len(),
+        "{} {}",
+        keys.len(),
+        positions.len()
+    );
     debug_assert!(
         keys.len() == values.len(),
         "{} {}",
@@ -389,9 +394,9 @@ fn sort<Pos: Send, Row: Send>(keys: &mut [MortonKey], poss: &mut [Pos], values: 
     if keys.len() < 2 {
         return;
     }
-    let pivot = sort_partition(keys, poss, values);
+    let pivot = sort_partition(keys, positions, values);
     let (klo, khi) = keys.split_at_mut(pivot);
-    let (plo, phi) = poss.split_at_mut(pivot);
+    let (plo, phi) = positions.split_at_mut(pivot);
     let (vlo, vhi) = values.split_at_mut(pivot);
     rayon::join(
         || sort(klo, plo, vlo),
@@ -401,24 +406,52 @@ fn sort<Pos: Send, Row: Send>(keys: &mut [MortonKey], poss: &mut [Pos], values: 
 
 fn sort_partition<Pos: Send, Row: Send>(
     keys: &mut [MortonKey],
-    poss: &mut [Pos],
+    positions: &mut [Pos],
     values: &mut [Row],
 ) -> usize {
     debug_assert!(!keys.is_empty());
 
-    let lim = keys.len() - 1;
-    let mut i = 0;
-    let pivot = keys[lim];
+    let len = keys.len();
+    let lim = len - 1;
+
+    let (pivot, pivot_ind) = {
+        // choose the median of the first, middle and last elements as the pivot
+        let first = keys[0];
+        let last = keys[lim];
+
+        let mut ind = len / 2;
+        let mut median = keys[ind];
+
+        if median < first {
+            median = first;
+            ind = 0;
+        }
+        if last < median {
+            median = last;
+            ind = lim;
+        }
+        if median < first {
+            median = first;
+            ind = 0
+        }
+        (median, ind)
+    };
+
+    keys.swap(pivot_ind, lim);
+    positions.swap(pivot_ind, lim);
+    values.swap(pivot_ind, lim);
+
+    let mut i = 0; // index of the last item <= pivot
     for j in 0..lim {
         if keys[j] < pivot {
             keys.swap(i, j);
-            poss.swap(i, j);
+            positions.swap(i, j);
             values.swap(i, j);
             i += 1;
         }
     }
     keys.swap(i, lim);
-    poss.swap(i, lim);
+    positions.swap(i, lim);
     values.swap(i, lim);
     i
 }

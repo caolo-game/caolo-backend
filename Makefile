@@ -3,7 +3,7 @@
 test:
 	cargo check
 	cargo clippy
-	cargo test
+	cargo test --benches
 	# TODO test webservice
 
 start: buildworker buildweb

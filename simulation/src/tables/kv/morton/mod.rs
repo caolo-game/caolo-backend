@@ -12,12 +12,15 @@ use std::arch::x86::*;
 use std::arch::x86_64::*;
 use std::mem;
 
+mod litmax_bigmin;
 mod morton_key;
+mod sorting;
 #[cfg(test)]
 mod tests;
 
 use super::*;
 use crate::model::{components::EntityComponent, geometry::Point};
+use litmax_bigmin::litmax_bigmin;
 use morton_key::*;
 use rayon::prelude::*;
 use serde_derive::{Deserialize, Serialize};
@@ -141,7 +144,7 @@ where
             self.positions.push(id);
             self.values.push(value);
         }
-        sort(
+        sorting::sort(
             self.keys.as_mut_slice(),
             self.positions.as_mut_slice(),
             self.values.as_mut_slice(),
@@ -224,6 +227,12 @@ where
         let [x, y] = id.as_array();
         let key = MortonKey::new(x as u16, y as u16);
 
+        self.find_key_morton(&key)
+    }
+
+    /// Find the position of `key` or the position where it needs to be inserted to keep the
+    /// container sorted
+    fn find_key_morton(&self, key: &MortonKey) -> Result<usize, usize> {
         let step = self.skipstep as usize;
         if step == 0 {
             return self.keys.binary_search(&key);
@@ -261,26 +270,75 @@ where
             .collect()
     }
 
-    /// Find in AABB
+    /// Find in Circle
     pub fn find_by_range<'a>(&'a self, center: &Pos, radius: u32, out: &mut Vec<(Pos, &'a Row)>) {
-        profile!("find_by_range");
-
+        debug_assert!(
+            radius & 0xefff == radius,
+            "Radius must fit into 31 bits!; {} != {}",
+            radius,
+            radius & 0xefff
+        );
         let r = i32::try_from(radius).expect("radius to fit into 31 bits");
-        let min = *center + Pos::new(-r, -r);
-        let max = *center + Pos::new(r, r);
 
-        let [min, max] = self.morton_min_max(&min, &max);
-        let it = self.positions[min..max]
-            .iter()
-            .enumerate()
-            .filter_map(|(i, id)| {
-                if center.dist(&id) < radius {
-                    Some((*id, &self.values[i + min]))
-                } else {
-                    None
-                }
+        let [x, y] = center.as_array();
+        let min = MortonKey::new((x - r).max(0) as u16, (y - r).max(0) as u16);
+        let max = MortonKey::new((x + r) as u16, (y + r) as u16);
+
+        self.find_in_range_impl(center, radius, min, max, out);
+    }
+
+    fn find_in_range_impl<'a>(
+        &'a self,
+        center: &Pos,
+        radius: u32,
+        min: MortonKey,
+        max: MortonKey,
+        out: &mut Vec<(Pos, &'a Row)>,
+    ) {
+        let (imin, pmin) = self
+            .find_key_morton(&min)
+            .map(|i| (i, self.positions[i].as_array()))
+            .unwrap_or_else(|i| {
+                let [x, y] = min.as_point();
+                (i, [x as i32, y as i32])
             });
-        out.extend(it)
+
+        let (imax, pmax) = self
+            .find_key_morton(&max)
+            // add 1 to include this node in the range query as otherwise an element might be
+            // missed
+            .map(|i| (i + 1, self.positions[i].as_array()))
+            .unwrap_or_else(|i| {
+                let [x, y] = max.as_point();
+                (i, [x as i32, y as i32])
+            });
+
+        if imax < imin {
+            return;
+        }
+
+        // The original paper counts the garbage items and splits above a threshold.
+        // Instead let's speculate if we need a split or if it more beneficial to just scan the
+        // range
+        // The number I picked is more or less arbitrary, it is a power of two and I ran the basic
+        // benchmarks to probe a few numbers.
+        if imax - imin > 32 {
+            let [x, y] = pmin;
+            let pmin = [x as u32, y as u32];
+            let [x, y] = pmax;
+            let pmax = [x as u32, y as u32];
+            let [litmax, bigmin] = litmax_bigmin(min.0, pmin, max.0, pmax);
+            // split and recurse
+            self.find_in_range_impl(center, radius, min, litmax, out);
+            self.find_in_range_impl(center, radius, bigmin, max, out);
+            return;
+        }
+
+        for (i, id) in self.positions[imin..imax].iter().enumerate() {
+            if center.dist(&id) < radius {
+                out.push((*id, &self.values[i + imin]));
+            }
+        }
     }
 
     /// Count in AABB
@@ -375,85 +433,6 @@ impl PositionTable for MortonTable<Point, EntityComponent> {
 
         self.count_in_range(&vision.center, vision.radius * 3 / 2) as usize
     }
-}
-
-fn sort<Pos: Send, Row: Send>(keys: &mut [MortonKey], positions: &mut [Pos], values: &mut [Row]) {
-    debug_assert!(
-        keys.len() == positions.len(),
-        "{} {}",
-        keys.len(),
-        positions.len()
-    );
-    debug_assert!(
-        keys.len() == values.len(),
-        "{} {}",
-        keys.len(),
-        values.len()
-    );
-    if keys.len() < 2 {
-        return;
-    }
-    let pivot = sort_partition(keys, positions, values);
-    let (klo, khi) = keys.split_at_mut(pivot);
-    let (plo, phi) = positions.split_at_mut(pivot);
-    let (vlo, vhi) = values.split_at_mut(pivot);
-    rayon::join(
-        || sort(klo, plo, vlo),
-        || sort(&mut khi[1..], &mut phi[1..], &mut vhi[1..]),
-    );
-}
-
-/// Assumes that all 3 slices are equal in size.
-/// Assumes that the slices are not empty
-fn sort_partition<Pos, Row>(
-    keys: &mut [MortonKey],
-    positions: &mut [Pos],
-    values: &mut [Row],
-) -> usize {
-    debug_assert!(!keys.is_empty());
-
-    macro_rules! swap {
-        ($i: expr, $j: expr) => {
-            keys.swap($i, $j);
-            positions.swap($i, $j);
-            values.swap($i, $j);
-        };
-    };
-
-    let len = keys.len();
-    let lim = len - 1;
-
-    let (pivot, pivot_ind) = {
-        use std::mem::swap;
-        // choose the median of the first, middle and last elements as the pivot
-
-        let mut first = 0;
-        let mut last = lim;
-        let mut median = len / 2;
-
-        if keys[last] < keys[median] {
-            swap(&mut median, &mut last);
-        }
-        if keys[last] < keys[first] {
-            swap(&mut last, &mut first);
-        }
-        if keys[median] < keys[first] {
-            swap(&mut median, &mut first);
-        }
-        (keys[median], median)
-    };
-
-    swap!(pivot_ind, lim);
-
-    let mut i = 0; // index of the last item <= pivot
-    for j in 0..lim {
-        if keys[j] < pivot {
-            swap!(i, j);
-            i += 1;
-        }
-    }
-    swap!(i, lim);
-    i
 }
 
 /// Find the index of the partition where `key` _might_ reside.

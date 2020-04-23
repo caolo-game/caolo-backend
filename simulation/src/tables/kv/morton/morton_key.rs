@@ -10,6 +10,10 @@ impl MortonKey {
         Self(Self::morton2(x as u32, y as u32))
     }
 
+    pub fn new_u32(x: u32, y: u32) -> Self {
+        Self(Self::morton2(x, y))
+    }
+
     fn morton2(x: u32, y: u32) -> u32 {
         Self::partition(x) + (Self::partition(y) << 1)
     }

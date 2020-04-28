@@ -1,12 +1,6 @@
-FROM python:3.8 AS build
+FROM rust:latest AS build
 
-ENV PATH /root/.cargo/bin:$PATH
-
-# install rust
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > install_rust.sh
-RUN sh ./install_rust.sh -y
-RUN cargo --version
-RUN pip install maturin
+EXPOSE 8000
 
 # install protoc
 WORKDIR /usr/protocinstall
@@ -16,37 +10,19 @@ RUN unzip -o $PROTOC_ZIP -d /usr/local bin/protoc
 
 WORKDIR /web
 
+COPY ./rust-toolchain ./rust-toolchain
+# cache the toolchain
+RUN cargo --version
+
 COPY ./Cargo.web.toml ./Cargo.toml
 COPY ./Cargo.lock ./Cargo.lock
-COPY ./rust-toolchain ./rust-toolchain
-COPY ./webservice/Cargo.toml ./webservice/Cargo.toml
-COPY ./webservice/src/ ./webservice/src
-COPY ./webservice/pyproject.toml ./webservice/pyproject.toml
-
-WORKDIR /web/webservice
-RUN mkdir build
-RUN maturin build --release -o build --no-sdist
-RUN ls -al build
-
-WORKDIR /web
 COPY ./protos/ ./protos/
-RUN protoc -Iprotos --python_out=webservice/build/ protos/*.proto 
+COPY ./web/ ./web/
 
+RUN cargo install --path web --root . --no-default-features
 
-# --------------
+# ---------- Copy the built binary to a scratch container, to minimize the image size ----------
 
-FROM python:3.8-slim
-RUN apt-get update
-RUN apt-get install build-essential -y
-COPY ./webservice/requirements.txt ./requirements.txt
-RUN pip install -r requirements.txt
-
+FROM ubuntu:20.04
 WORKDIR /web
-COPY --from=build /web/webservice/build/ ./build/
-RUN pip install build/caolo_web-0.1.0-cp38-cp38-manylinux1_x86_64.whl
-
-# Copy the non-packaged scripts
-COPY ./webservice/*.py ./
-COPY ./webservice/build/ ./build
-COPY ./webservice/migrations/ ./migrations
-COPY ./webservice/caolo_web/ ./caolo_web
+COPY --from=build /web/bin/cao_web /caolo

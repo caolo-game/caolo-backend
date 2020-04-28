@@ -3,11 +3,9 @@
 !Cargo.web.toml
 !Cargo.worker.toml
 !Cargo.lock
-!api
 !simulation
 !worker
-!web-client
 !rust-toolchain
-!webservice
+!web
 !protos
 !cao-storage-derive

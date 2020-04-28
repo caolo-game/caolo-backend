@@ -1,19 +1,23 @@
-version: '3'
+version: "3.7"
 services:
   web:
     image: frenetiq/caolo-web
     env_file: docker.env
     environment:
-      FLASK_RUN_HOST: 0.0.0.0
+      HOST: 0.0.0.0
     ports:
-      - "5000:5000"
+      - "8000:8000"
     depends_on:
       - redis
       - postgres
-
     entrypoint:
-      - python
-      - app.py
+      - /caolo
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000"]
+      timeout: 10s
+      retries: 3
+      start_period: 5s
 
   worker:
     image: frenetiq/caolo-worker

@@ -212,7 +212,7 @@ fn get_by_id_in_table_rand(c: &mut Criterion) {
 
 fn random_insert(c: &mut Criterion) {
     let mut group = c.benchmark_group("morton table random_insert");
-    for size in 8..16 {
+    for size in 8..14 {
         let size = 1 << size;
         group.bench_with_input(BenchmarkId::from_parameter(size), &size, |b, &size| {
             let mut rng = get_rand();

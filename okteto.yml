@@ -1,0 +1,8 @@
+name: caolo-backend
+image: frenetiq/caolo-web:latest
+securityContext:
+  capabilities:
+    add:
+    - SYS_PTRACE 
+forward:
+  - 8000:8080

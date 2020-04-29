@@ -48,3 +48,8 @@ bench:
 
 bench-save-baseline:
 	cargo bench --bench simulation_benchmarks -- --save-baseline master
+
+deploy-okteto:
+	okteto build -t frenetiq/caolo-web -f dockerfile.web .
+	okteto build -t frenetiq/caolo-worker -f dockerfile.worker .
+	kubectl apply -f ./manifests

@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: caolo-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: caolo-worker
+  template:
+    metadata:
+      labels:
+        app: caolo-worker
+    spec:
+      containers:
+        - name: caolo-worker
+          image: frenetiq/caolo-worker:latest
+          command:
+            - "/caolo"
+          env:
+            - name: N_ACTORS
+              value: "666"
+            - name: RUST_LOG
+              value: info,caolo_worker=debug
+            - name: TARGET_TICK_FREQUENCY_MS
+              value: "2000"
+            - name: REDIS_URL
+              value: redis://cache:6379
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: caolo-worker
+  annotations:
+    dev.okteto.com/auto-ingress: "true"
+spec:
+  type: ClusterIP
+  ports:
+    - name: "caolo-worker"
+      port: 8080
+  selector:
+    app: caolo-worker

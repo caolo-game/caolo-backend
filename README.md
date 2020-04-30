@@ -8,7 +8,7 @@
 - [Redis](https://redis.io/)
 - [Protoc](https://developers.google.com/protocol-buffers/docs/downloads.html)
 - [PostgeSQL](https://www.postgresql.org/)
-- [diesel-cli](cargo install diesel_cli --no-default-features --features "postgres")
+- diesel-cli `cargo install diesel_cli --no-default-features --features "postgres"`
 
 - [Docker](https://www.docker.com/) (Optional)
 - [minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/) (Optional)

@@ -68,6 +68,8 @@ async fn main() -> std::io::Result<()> {
     Done in %D ms"#,
             ))
             .service(handler::index_page)
+            .service(handler::myself)
+            .service(handler::schema)
     })
     .bind(&bind)?
     .run()

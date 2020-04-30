@@ -6,6 +6,7 @@
 - [Redis](https://redis.io/)
 - [Protoc](https://developers.google.com/protocol-buffers/docs/downloads.html)
 - [PostgeSQL](https://www.postgresql.org/)
+- [diesel-cli](cargo install diesel_cli --no-default-features --features "postgres")
 - [Docker](https://www.docker.com/) (Optional)
 - [minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/) (Optional)
 - [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) (Optional)
@@ -15,12 +16,7 @@
 ```
 git submodule init
 git submodule update
-```
-
-## Running via [Docker](https://www.docker.com/)
-
-```
-make
+diesel database setup
 ```
 
 ## Building and running
@@ -28,26 +24,22 @@ make
 - Running the worker
 
   ```
-  cargo run
+  cargo run --bin caolo-worker
+  ```
+
+- Running the web service
+
+  ```
+  cargo run --bin caolo-web
   ```
 
 - Running the test suite
 
   ```
   cargo test
+  cargo test --benches # do a test-run on the benchmarks
   cargo bench  # run benchmarks
   cargo clippy # linter
-  ```
-
-- Running the web service
-  ```
-  make protopy
-  cd webservice
-  pip install -r requirements.txt
-  maturin develop
-  # create database called `caolo`
-  python manage.py db upgrade
-  python app.py
   ```
 
 ## Adding a proto

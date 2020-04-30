@@ -1,11 +1,11 @@
 [package]
-name = "cao_web"
+name = "caolo-web"
 version = "0.1.0"
 authors = ["Daniel Kiss <littlesnorrboy@gmail.com>"]
 edition = "2018"
 
 [[bin]]
-name = "cao_web"
+name = "caolo-web"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

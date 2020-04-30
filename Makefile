@@ -4,7 +4,6 @@ test:
 	cargo check
 	cargo clippy
 	cargo test --benches
-	# TODO test webservice
 
 start: buildworker buildweb
 	docker-compose up -d 
@@ -36,12 +35,6 @@ pushall: pushworker pushweb
 
 deploy: buildall pushall
 	git push heroku master
-
-migrate:
-	docker-compose exec web python manage.py db upgrade
-
-protopy:
-	protoc -Iprotos --python_out=webservice/build/ protos/*.proto 
 
 bench:
 	cargo bench --bench simulation_benchmarks -- --baseline master

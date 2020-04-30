@@ -41,10 +41,6 @@ diesel database setup
   node lib/index.js
   ```
 
-## Adding a proto
-
-- Add to `worker/build.rs`
-
 ## Deployment
 
 ### Deploying to [Heroku](https://heroku.com)

@@ -16,7 +16,8 @@ spec:
         - name: caolo-web
           image: frenetiq/caolo-web:latest
           command:
-            - "/caolo"
+            - node
+            - lib/index.js
           env:
             - name: HOST
               value: "0.0.0.0"

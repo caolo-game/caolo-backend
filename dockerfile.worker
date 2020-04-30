@@ -12,12 +12,8 @@ COPY ./rust-toolchain ./rust-toolchain
 # cache the toolchain
 RUN cargo --version
 
-COPY ./Cargo.worker.toml ./Cargo.toml
-COPY ./Cargo.lock ./Cargo.lock
 COPY ./protos/ ./protos/
-COPY ./simulation/ ./simulation/
-COPY ./worker/ ./worker/
-COPY ./cao-storage-derive/ ./cao-storage-derive/
+COPY ./worker/ ./worker
 
 RUN cargo install --path worker --root . --no-default-features --features="with-serde"
 

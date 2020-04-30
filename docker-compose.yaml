@@ -11,7 +11,8 @@ services:
       - redis
       - postgres
     entrypoint:
-      - /caolo
+      - node
+      - lib/index.js
 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000"]

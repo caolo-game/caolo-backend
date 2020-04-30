@@ -1,6 +1,9 @@
-FROM rust:latest AS build
+FROM node:latest AS build
 
-EXPOSE 8000
+# install rust
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | bash -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
 
 # install protoc
 WORKDIR /usr/protocinstall
@@ -8,21 +11,25 @@ ENV PROTOC_ZIP=protoc-3.11.3-linux-x86_64.zip
 RUN curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v3.11.3/$PROTOC_ZIP
 RUN unzip -o $PROTOC_ZIP -d /usr/local bin/protoc
 
+# install neon-cli
+
+RUN npm install -g neon-cli
+
 WORKDIR /web
 
 COPY ./rust-toolchain ./rust-toolchain
 # cache the toolchain
 RUN cargo --version
 
-COPY ./Cargo.web.toml ./Cargo.toml
-COPY ./Cargo.lock ./Cargo.lock
 COPY ./protos/ ./protos/
-COPY ./web/ ./web/
+COPY ./web/ ./web
 
-RUN cargo install --path web --root . --no-default-features
+WORKDIR /web/web
+RUN neon build --release
 
 # ---------- Copy the built binary to a scratch container, to minimize the image size ----------
 
-FROM ubuntu:20.04
-WORKDIR /web
-COPY --from=build /web/bin/cao_web /caolo
+FROM node:latest
+
+WORKDIR /caolo
+COPY --from=build /web/web/ ./

@@ -12,11 +12,11 @@ start: worker web
 
 startworker:
 	docker-compose up --scale web=0 -d
-	docker-compose logs -f --tail=100
+	docker-compose logs -f --tail=100 worker
 
 startweb:
 	docker-compose up --scale worker=0 -d
-	docker-compose logs -f --tail=100
+	docker-compose logs -f --tail=100 web
 
 worker:
 	docker build -t frenetiq/caolo-worker:latest -f dockerfile.worker .

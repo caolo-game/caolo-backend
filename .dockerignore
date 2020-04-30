@@ -1,11 +1,5 @@
 *
-!Cargo.toml
-!Cargo.web.toml
-!Cargo.worker.toml
-!Cargo.lock
-!simulation
 !worker
 !rust-toolchain
 !web
 !protos
-!cao-storage-derive

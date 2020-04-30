@@ -1,11 +1,12 @@
 .DEFAULT_GOAL := start
+.PHONY: web worker
 
 test:
 	cargo check
 	cargo clippy
 	cargo test --benches
 
-start: buildworker buildweb
+start: worker web
 	docker-compose up -d 
 	docker-compose logs -f --tail=100
 
@@ -17,30 +18,24 @@ startweb:
 	docker-compose up --scale worker=0 -d
 	docker-compose logs -f --tail=100
 
-buildworker:
+worker:
 	docker build -t frenetiq/caolo-worker:latest -f dockerfile.worker .
 
 pushworker:
 	docker push frenetiq/caolo-worker:latest
 
-buildweb:
+web:
 	docker build -t frenetiq/caolo-web:latest -f dockerfile.web .
 
 pushweb:
 	docker push frenetiq/caolo-web:latest
 
-buildall: buildweb buildworker
+buildall: web worker
 
 pushall: pushworker pushweb
 
 deploy: buildall pushall
 	git push heroku master
-
-bench:
-	cargo bench --bench simulation_benchmarks -- --baseline master
-
-bench-save-baseline:
-	cargo bench --bench simulation_benchmarks -- --save-baseline master
 
 deploy-okteto:
 	okteto build -t frenetiq/caolo-web -f dockerfile.web .

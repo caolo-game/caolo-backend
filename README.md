@@ -1,5 +1,3 @@
-[![CircleCI](https://circleci.com/gh/caolo-game/caolo-backend/tree/master.svg?style=svg)](https://circleci.com/gh/caolo-game/caolo-backend/tree/master)
-
 ## Prerequisites
 
 - [Cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html)

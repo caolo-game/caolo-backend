@@ -1,3 +1,5 @@
+# Note: expects the context to be the repository root
+#
 FROM node:latest AS build
 
 # install rust
@@ -29,7 +31,7 @@ COPY ./protos/ ./protos/
 COPY ./web/ ./web
 
 WORKDIR /web/web
-RUN neon build --release
+RUN yarn
 
 # ---------- Copy the built binary to a scratch container, to minimize the image size ----------
 
@@ -38,3 +40,5 @@ FROM node:latest
 WORKDIR /caolo
 COPY --from=build /web/web/ ./
 COPY --from=build  /root/.cargo/bin/diesel ./
+COPY ./migrations/ ./migrations/
+COPY ./diesel.toml ./

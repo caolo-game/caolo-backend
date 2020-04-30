@@ -4,11 +4,16 @@
   "description": "",
   "main": "lib/index.js",
   "author": "Daniel Kiss <littlesnorrboy@gmail.com>",
-  "license": "Apache-2",
+  "license": "Apache-2.0",
   "dependencies": {
+    "@koa/router": "^8.0.8",
+    "koa": "^2.11.0",
+    "koa-bodyparser": "^4.3.0",
+    "koa-logger": "^3.2.1",
     "neon-cli": "^0.4.0"
   },
   "scripts": {
-    "install": "neon build"
+    "install": "neon build --release",
+    "start": "node lib"
   }
 }

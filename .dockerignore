@@ -3,6 +3,8 @@
 !rust-toolchain
 !web
 !protos
+!migrations
+!diesel.toml
 **/target
 **/*~
 **/index.node

@@ -37,8 +37,8 @@ diesel database setup
 
   ```
   cd web
-  neon build --release
-  node lib/index.js
+  yarn
+  yarn start
   ```
 
 ## Deployment

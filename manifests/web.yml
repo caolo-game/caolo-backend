@@ -34,7 +34,7 @@ metadata:
   annotations:
     dev.okteto.com/auto-ingress: "true"
 spec:
-  type: ClusterIP
+  type: NodePort
   ports:
     - name: "caolo-web"
       port: 8080

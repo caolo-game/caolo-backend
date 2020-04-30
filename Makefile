@@ -44,5 +44,3 @@ deploy-okteto:
 
 deploy: buildall pushall
 	kubectl apply -f ./manifests
-	
-

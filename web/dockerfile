@@ -11,6 +11,10 @@ ENV PROTOC_ZIP=protoc-3.11.3-linux-x86_64.zip
 RUN curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v3.11.3/$PROTOC_ZIP
 RUN unzip -o $PROTOC_ZIP -d /usr/local bin/protoc
 
+# install diesel-cli
+
+RUN cargo install diesel_cli --no-default-features --features "postgres"
+
 # install neon-cli
 
 RUN npm install -g neon-cli
@@ -33,3 +37,4 @@ FROM node:latest
 
 WORKDIR /caolo
 COPY --from=build /web/web/ ./
+COPY --from=build  /root/.cargo/bin/diesel ./

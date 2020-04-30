@@ -1,0 +1,11 @@
+*
+!worker
+!rust-toolchain
+!web
+!protos
+**/target
+**/*~
+**/index.node
+**/artifacts.json
+**/node_modules
+**/.DS_Store

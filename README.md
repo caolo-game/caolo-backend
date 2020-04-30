@@ -1,16 +1,20 @@
 ## Prerequisites
 
+### Native builds:
+
 - [Cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html)
 - [NodeJs](https://nodejs.org/en/)
-- neon_cli `npm install -g neon-cli`
 - [Redis](https://redis.io/)
 - [Protoc](https://developers.google.com/protocol-buffers/docs/downloads.html)
 - [PostgeSQL](https://www.postgresql.org/)
+- neon_cli `npm install -g neon-cli`
 - diesel-cli `cargo install diesel_cli --no-default-features --features "postgres"`
 
-- [Docker](https://www.docker.com/) (Optional)
-- [minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/) (Optional)
-- [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) (Optional)
+### Docker builds:
+
+- [Docker](https://www.docker.com/)
+- [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
+- [minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/) (Optional, for local deployments)
 
 ## Setting up
 
@@ -25,22 +29,16 @@ diesel database setup
 - Running the worker
 
   ```
-  cargo run --bin caolo-worker
+  cd worker
+  cargo run
   ```
 
 - Running the web service
 
   ```
-  cargo run --bin caolo-web
-  ```
-
-- Running the test suite
-
-  ```
-  cargo test
-  cargo test --benches # do a test-run on the benchmarks
-  cargo bench  # run benchmarks
-  cargo clippy # linter
+  cd web
+  neon build --release
+  node lib/index.js
   ```
 
 ## Adding a proto
@@ -51,9 +49,12 @@ diesel database setup
 
 ### Deploying to [Heroku](https://heroku.com)
 
-Create a new project. Setup the repository. Then `make deploy`
+`make deploy-heroku`
 
-### Starting a Kubernetes cluster locally:
+### Deploying to [Okteto](https://okteto.com/)
 
-- Start minikube `minikube start`
-- `kubectl apply -f manifests`
+`make deploy-okteto`
+
+### Deploying via kubectl:
+
+`make deploy`

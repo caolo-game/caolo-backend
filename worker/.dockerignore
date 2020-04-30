@@ -1,1 +1,5 @@
-target/**/*
+*
+!worker
+!rust-toolchain
+!web
+!protos

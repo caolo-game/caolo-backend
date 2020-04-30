@@ -1,3 +1,11 @@
-var addon = require('../native');
+var addon = require("../native");
 
-console.log(addon.hello());
+let cu = {
+  nodes: {
+    0: { node: { Start: null } },
+  },
+};
+
+const res = addon.compile(cu);
+
+console.log(JSON.stringify(res, null, 4));

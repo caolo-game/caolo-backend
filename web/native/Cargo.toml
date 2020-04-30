@@ -11,8 +11,20 @@ exclude = ["artifacts.json", "index.node"]
 name = "web"
 crate-type = ["cdylib"]
 
+[features]
+default = ["dotenv", "with-serde"]
+dotenv = ["dep-dotenv"]
+with-serde = [] # for protobuf
+
 [build-dependencies]
-neon-build = "0.4.0"
+neon-build = "0.3"
+protoc-rust = "2"
 
 [dependencies]
-neon = "0.4.0"
+cao-lang = { git = "https://github.com/caolo-game/cao-lang.git", features=[] }
+neon = "0.3"
+neon-serde = "0.3"
+protobuf = { version="2", features=["with-serde"] }
+dep-dotenv = { version="0.14", optional=true, package="dotenv" }
+serde = "1"
+serde_derive = "1"

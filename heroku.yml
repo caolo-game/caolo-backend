@@ -2,8 +2,8 @@ setup:
   config:
     GOOGLE_OAUTH_CLIENT_ID: googleid
     GOOGLE_OAUTH_CLIENT_SECRET: googlesecret
-    N_ACTORS: 666
     RUST_LOG: info,caolo_worker=debug
+    N_ACTORS: 420
     TARGET_TICK_FREQUENCY_MS: 2000
   addons:
     - plan: heroku-postgresql
@@ -18,7 +18,7 @@ build:
 
 release:
   command:
-    - diesel migration run
+    - ./release.sh
   image: web
 
 run:

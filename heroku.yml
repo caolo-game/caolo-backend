@@ -12,7 +12,9 @@ build:
 
 release:
   command:
-    - cd /caolo && diesel migration run
+    - ls -al
+    - diesel --version
+    - diesel migration run
   image: web
 
 run:

@@ -47,10 +47,6 @@ diesel database setup
 
 `make deploy-heroku`
 
-### Deploying to [Okteto](https://okteto.com/)
-
-`make deploy-okteto`
-
 ### Deploying via kubectl:
 
 `make deploy`

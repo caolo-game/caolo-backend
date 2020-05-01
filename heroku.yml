@@ -12,9 +12,11 @@ build:
 
 release:
   command:
-    - python manage.py db upgrade
+    - diesel
+    - migration
+    - run
   image: web
 
 run:
-  web: /caolo
+  web: node lib
   worker: /caolo

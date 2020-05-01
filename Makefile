@@ -37,10 +37,5 @@ pushall: pushworker pushweb
 deploy-heroku: buildall pushall
 	git push heroku master
 
-deploy-okteto:
-	okteto build -t frenetiq/caolo-web -f web/dockerfile .
-	okteto build -t frenetiq/caolo-worker -f worker/dockerfile .
-	kubectl apply -f ./manifests
-
 deploy: buildall pushall
 	kubectl apply -f ./manifests

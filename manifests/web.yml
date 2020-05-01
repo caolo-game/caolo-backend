@@ -25,6 +25,15 @@ spec:
               value: "8080"
             - name: RUST_LOG
               value: info,web=debug
+            - name: DATABASE_URL
+              value: postgres://postgres:verysecurepw@database:5432
+          lifecycle:
+            postStart:
+              exec:
+                command:
+                  - diesel
+                  - migration
+                  - run
 
 ---
 apiVersion: v1
@@ -34,7 +43,7 @@ metadata:
   annotations:
     dev.okteto.com/auto-ingress: "true"
 spec:
-  type: NodePort
+  type: ClusterIP
   ports:
     - name: "caolo-web"
       port: 8080

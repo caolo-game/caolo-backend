@@ -31,9 +31,7 @@ spec:
             postStart:
               exec:
                 command:
-                  - diesel
-                  - migration
-                  - run
+                  - ./release.sh
 
 ---
 apiVersion: v1

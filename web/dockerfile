@@ -42,3 +42,6 @@ COPY --from=build /web/web/ ./
 COPY --from=build  /root/.cargo/bin/diesel ./
 COPY ./migrations/ ./migrations/
 COPY ./diesel.toml ./
+
+RUN /caolo/diesel --version
+RUN ls -al

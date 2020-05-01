@@ -12,11 +12,11 @@ build:
 
 release:
   command:
-    - diesel
+    - /caolo/diesel
     - migration
     - run
   image: web
 
 run:
-  web: node lib
+  web: node /caolo/lib
   worker: /caolo

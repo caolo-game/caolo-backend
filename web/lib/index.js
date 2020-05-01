@@ -9,8 +9,11 @@ addon.init();
 const compile = (compilationUnit) => {
   return new Promise((resolve, reject) => {
     addon.compile(compilationUnit, (err, res) => {
-      if (err) reject(err);
-      else resolve(res);
+      if (err) {
+        reject(err);
+      } else {
+        resolve(res);
+      }
     });
   });
 };

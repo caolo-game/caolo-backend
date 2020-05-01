@@ -5,6 +5,7 @@
 !protos
 !migrations
 !diesel.toml
+!release.sh
 **/target
 **/*~
 **/index.node

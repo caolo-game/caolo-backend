@@ -2,6 +2,8 @@
 
 set -e
 
+cd /caolo
+
 ls -al
 diesel --version
 diesel database setup

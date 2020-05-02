@@ -1,11 +1,4 @@
-# Note: expects the context to be the repository root
-#
-FROM node:latest AS build
-
-# install rust
-
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | bash -s -- -y
-ENV PATH="/root/.cargo/bin:${PATH}"
+FROM rust:latest AS build
 
 # install protoc
 WORKDIR /usr/protocinstall
@@ -13,41 +6,24 @@ ENV PROTOC_ZIP=protoc-3.11.3-linux-x86_64.zip
 RUN curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v3.11.3/$PROTOC_ZIP
 RUN unzip -o $PROTOC_ZIP -d /usr/local bin/protoc
 
-# install diesel-cli
-
-RUN cargo install diesel_cli --no-default-features --features "postgres"
-
-# install neon-cli
-
-RUN npm install -g neon-cli
-
-WORKDIR /web
+WORKDIR /caolo
 
 COPY ./rust-toolchain ./rust-toolchain
 # cache the toolchain
 RUN cargo --version
 
-# cache the native code
 COPY ./protos/ ./protos/
-COPY ./web/native/ ./web/native
-COPY ./web/package.json ./web/
-WORKDIR /web/web
-RUN neon build --release
+COPY ./web/ ./web
 
-WORKDIR /web/web
-COPY ./web/ ./
-RUN yarn install --production
+WORKDIR /caolo/web
+RUN cargo check
+RUN cargo install --path . --root . --no-default-features --features="with-serde"
+RUN cargo install diesel_cli --root . --no-default-features --features="postgres"
 
 # ---------- Copy the built binary to a scratch container, to minimize the image size ----------
 
-FROM node:latest
-
+FROM ubuntu:20.04
 WORKDIR /caolo
-COPY --from=build /web/web/ ./
-COPY --from=build  /root/.cargo/bin/diesel ./
 COPY ./migrations/ ./migrations/
-COPY ./diesel.toml ./
-COPY ./web/release.sh ./
-
-RUN /caolo/diesel --version
-RUN ls -al
+COPY ./release.sh ./
+COPY --from=build /caolo/web/bin/ ./

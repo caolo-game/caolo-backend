@@ -12,6 +12,7 @@ use log::{debug, error, info};
 use serde_derive::Serialize;
 use std::thread;
 use std::time::{Duration, Instant};
+use protobuf::{CodedOutputStream, Message};
 
 fn init() {
     #[cfg(feature = "dotenv")]
@@ -75,8 +76,11 @@ fn send_world(storage: &World, client: &redis::Client) -> Result<(), Box<dyn std
 
     debug!("sending {} structures", world.get_structures().len());
 
-    // Python can not read the serialized bytes so I'll fall back to JSON
-    let payload = serde_json::to_string(&world)?;
+    world.compute_size();
+
+    let mut payload = Vec::with_capacity(1024);
+    let mut stream = CodedOutputStream::vec(&mut payload);
+    world.write_to_with_cached_sizes(&mut stream)?;
 
     debug!("sending {} bytes", payload.len());
 

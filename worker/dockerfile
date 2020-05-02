@@ -6,7 +6,7 @@ ENV PROTOC_ZIP=protoc-3.11.3-linux-x86_64.zip
 RUN curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v3.11.3/$PROTOC_ZIP
 RUN unzip -o $PROTOC_ZIP -d /usr/local bin/protoc
 
-WORKDIR /worker
+WORKDIR /caolo
 
 COPY ./rust-toolchain ./rust-toolchain
 # cache the toolchain
@@ -15,10 +15,12 @@ RUN cargo --version
 COPY ./protos/ ./protos/
 COPY ./worker/ ./worker
 
-RUN cargo install --path worker --root . --no-default-features --features="with-serde"
+WORKDIR /caolo/worker
+RUN cargo check
+RUN cargo install --path . --root . --no-default-features --features="with-serde"
 
 # ---------- Copy the built binary to a scratch container, to minimize the image size ----------
 
 FROM ubuntu:20.04
-WORKDIR /worker
-COPY --from=build /worker/bin/caolo-worker /caolo
+WORKDIR /caolo
+COPY --from=build /caolo/worker/bin/caolo-worker ./caolo-worker

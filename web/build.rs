@@ -3,11 +3,9 @@ use protoc_rust::Customize;
 use std::fs::{read_dir, OpenOptions};
 use std::io::Write;
 
-const PROTOPATH: &str = "../../protos";
+const PROTOPATH: &str = "../protos";
 
 fn main() {
-    neon_build::setup(); // must be called in build.rs
-
     let entries = read_dir(PROTOPATH);
     let protos = entries
         .expect("read protopath")

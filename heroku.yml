@@ -22,5 +22,5 @@ release:
   image: web
 
 run:
-  web: node /caolo/lib
-  worker: /caolo
+  web: ./caolo-web
+  worker: ./caolo-worker

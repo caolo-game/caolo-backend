@@ -1,0 +1,43 @@
+version: "3.7"
+services:
+  web:
+    image: frenetiq/caolo-web
+    env_file: docker.env
+    environment:
+      HOST: 0.0.0.0
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+      - postgres
+    entrypoint:
+      - node
+      - lib/index.js
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000"]
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+  worker:
+    image: frenetiq/caolo-worker
+    env_file: docker.env
+    depends_on:
+      - redis
+      - postgres
+    entrypoint:
+      - /caolo
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+
+  postgres:
+    image: postgres:11.1
+    environment:
+      POSTGRES_PASSWORD: admin
+      POSTGRES_USER: postgres
+    ports:
+      - "5432:5432"

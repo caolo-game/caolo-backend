@@ -10,17 +10,17 @@ fn main() {
 
     let entries = read_dir(PROTOPATH);
     let protos = entries
-        .unwrap()
+        .expect("read protopath")
         .into_iter()
         .filter_map(|p| p.ok())
         .filter(|p| {
-            let meta = p.metadata().unwrap();
+            let meta = p.metadata().expect("read metadata");
             meta.is_file()
                 && p.path()
                     .file_name()
-                    .unwrap()
+                    .expect("read file name")
                     .to_str()
-                    .unwrap()
+                    .expect("convert fname to str")
                     .contains(".proto")
         })
         .collect::<Vec<_>>();
@@ -36,11 +36,11 @@ fn main() {
         let file_name = path.file_name();
         let module_name = file_name
             .to_str()
-            .unwrap()
+            .expect("convert fname to str")
             .rsplitn(2, ".proto")
             .skip(1)
             .next()
-            .unwrap();
+            .expect("split next");
         writeln!(module_file, "pub mod {};", module_name).expect("write module file");
     }
 

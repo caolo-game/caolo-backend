@@ -27,11 +27,16 @@ COPY ./rust-toolchain ./rust-toolchain
 # cache the toolchain
 RUN cargo --version
 
+# cache the native code
 COPY ./protos/ ./protos/
-COPY ./web/ ./web
+COPY ./web/native/ ./web/native
+COPY ./web/package.json ./web/
+WORKDIR /web/web
+RUN neon build --release
 
 WORKDIR /web/web
-RUN yarn
+COPY ./web/ ./
+RUN yarn install --production
 
 # ---------- Copy the built binary to a scratch container, to minimize the image size ----------
 

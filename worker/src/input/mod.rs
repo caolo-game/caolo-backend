@@ -11,6 +11,8 @@ use uuid::{self, Uuid};
 pub fn handle_messages(storage: &mut World, client: &redis::Client) {
     debug!("handling incoming messages");
     let mut connection = client.get_connection().expect("Get redis conn");
+
+    // log errors, but otherwise ignore them, so the loop may continue, retrying later
     'a: while let Ok(Some(message)) = connection
         .rpop::<_, Option<Vec<u8>>>("INPUTS")
         .map_err(|e| {

@@ -32,6 +32,11 @@ router.post("/compile", async (ctx) => {
   }
 });
 
+router.get("/", async (ctx) => {
+  // health check
+  ctx.res.statusCode = 204;
+});
+
 app
   .use(logger())
   .use(bodyParser())

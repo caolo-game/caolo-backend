@@ -8,15 +8,15 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - redis
+      - cache
       - postgres
     entrypoint:
       - node
       - lib/index.js
 
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000"]
-      timeout: 10s
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      timeout: 1s
       retries: 3
       start_period: 5s
 
@@ -24,13 +24,13 @@ services:
     image: frenetiq/caolo-worker
     env_file: docker.env
     depends_on:
-      - redis
+      - cache
       - postgres
     entrypoint:
       - /caolo
 
-  redis:
-    image: redis:latest
+  cache:
+    image: eqalpha/keydb:latest
     ports:
       - "6379:6379"
 

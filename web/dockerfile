@@ -12,18 +12,21 @@ COPY ./rust-toolchain ./rust-toolchain
 # cache the toolchain
 RUN cargo --version
 
+WORKDIR /caolo/web
+RUN cargo install diesel_cli --root . --no-default-features --features="postgres"
+
+WORKDIR /caolo
 COPY ./protos/ ./protos/
 COPY ./web/ ./web
 
 WORKDIR /caolo/web
 RUN cargo check
 RUN cargo install --path . --root . --no-default-features --features="with-serde"
-RUN cargo install diesel_cli --root . --no-default-features --features="postgres"
 
 # ---------- Copy the built binary to a scratch container, to minimize the image size ----------
 
 FROM ubuntu:20.04
 WORKDIR /caolo
 COPY ./migrations/ ./migrations/
-COPY ./release.sh ./
+COPY ./web/release.sh ./
 COPY --from=build /caolo/web/bin/ ./

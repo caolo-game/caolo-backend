@@ -23,4 +23,5 @@ RUN cargo install --path . --root . --no-default-features --features="with-serde
 
 FROM ubuntu:20.04
 WORKDIR /caolo
+RUN apt-get install perf flamegraph -y
 COPY --from=build /caolo/worker/bin/caolo-worker ./caolo-worker

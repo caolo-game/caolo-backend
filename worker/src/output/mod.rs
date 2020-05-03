@@ -57,15 +57,19 @@ pub fn build_logs<'a>(v: View<'a, EntityTime, LogEntry>) -> impl Iterator<Item =
 pub fn build_terrain<'a>(
     v: View<'a, Point, TerrainComponent>,
 ) -> impl Iterator<Item = TileMsg> + 'a {
-    v.reborrow().iter().filter_map(|(pos, tile)| match tile.0 {
-        TileTerrainType::Empty => None,
-        TileTerrainType::Wall => {
-            let mut msg = TileMsg::new();
-            msg.mut_position().set_q(pos.x);
-            msg.mut_position().set_r(pos.y);
-            msg.set_ty(Tile_TerrainType::WALL);
-            Some(msg)
+    v.reborrow().iter().map(|(pos, tile)| {
+        let mut msg = TileMsg::new();
+        msg.mut_position().set_q(pos.x);
+        msg.mut_position().set_r(pos.y);
+        match tile.0 {
+            TileTerrainType::Plain => {
+                msg.set_ty(Tile_TerrainType::PLAIN);
+            }
+            TileTerrainType::Wall => {
+                msg.set_ty(Tile_TerrainType::WALL);
+            }
         }
+        msg
     })
 }
 

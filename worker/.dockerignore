@@ -1,5 +1,4 @@
 *
-!worker
-!rust-toolchain
-!web
-!protos
+!src/
+!Cargo.toml
+!Cargo.lock

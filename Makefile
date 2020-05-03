@@ -39,3 +39,4 @@ deploy-heroku: buildall pushall
 
 deploy: buildall pushall
 	kubectl apply -f ./manifests
+

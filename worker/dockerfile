@@ -14,6 +14,7 @@ RUN cargo --version
 
 COPY ./protos/ ./protos/
 COPY ./worker/ ./worker
+COPY ./Cargo.lock ./worker/Cargo.lock
 
 WORKDIR /caolo/worker
 RUN cargo check
@@ -23,5 +24,4 @@ RUN cargo install --path . --root . --no-default-features --features="with-serde
 
 FROM ubuntu:20.04
 WORKDIR /caolo
-RUN apt-get install perf flamegraph -y
 COPY --from=build /caolo/worker/bin/caolo-worker ./caolo-worker

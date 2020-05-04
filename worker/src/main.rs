@@ -9,10 +9,10 @@ mod protos;
 
 use caolo_sim::prelude::*;
 use log::{debug, error, info};
+use protobuf::Message;
 use serde_derive::Serialize;
 use std::thread;
 use std::time::{Duration, Instant};
-use protobuf::{CodedOutputStream, Message};
 
 fn init() {
     #[cfg(feature = "dotenv")]
@@ -76,11 +76,7 @@ fn send_world(storage: &World, client: &redis::Client) -> Result<(), Box<dyn std
 
     debug!("sending {} structures", world.get_structures().len());
 
-    world.compute_size();
-
-    let mut payload = Vec::with_capacity(1024);
-    let mut stream = CodedOutputStream::vec(&mut payload);
-    world.write_to_with_cached_sizes(&mut stream)?;
+    let payload = world.write_to_bytes()?;
 
     debug!("sending {} bytes", payload.len());
 

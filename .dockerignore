@@ -6,6 +6,7 @@
 !migrations
 !diesel.toml
 !release.sh
+!Cargo.lock
 **/target
 **/*~
 **/index.node

@@ -1,6 +1,7 @@
 use cao_lang::prelude::*;
-use caolo_sim::model::{self, components, geometry::Point, terrain, EntityId, ScriptId};
-use caolo_sim::storage::views::{FromWorldMut, UnsafeView};
+use caolo_sim::map_generation::generate_terrain;
+use caolo_sim::model::{self, components, geometry::Point, EntityId, ScriptId};
+use caolo_sim::storage::views::{FromWorld, FromWorldMut, UnsafeView, View};
 use caolo_sim::World;
 use log::debug;
 use rand::Rng;
@@ -26,25 +27,25 @@ pub fn init_storage(n_fake_users: usize) -> Pin<Box<World>> {
 
     let mut rng = rand::thread_rng();
 
-    for _ in 0..200 {
-        let pos = uncontested_pos(
-            &*storage.view::<Point, components::TerrainComponent>(),
-            &mut rng,
-        );
-        unsafe {
-            let mut terrain = storage.unsafe_view::<Point, components::TerrainComponent>();
-            terrain.as_mut().insert(
-                pos,
-                components::TerrainComponent(terrain::TileTerrainType::Wall),
-            );
-        }
-    }
+    let width = std::env::var("CAO_MAP_WIDTH")
+        .map(|w| w.parse().expect("expected map width to be an integer"))
+        .unwrap_or(250);
+
+    let bounds = (Point::new(0, 0), Point::new(width, width));
+
+    generate_terrain(bounds.0, bounds.1, FromWorldMut::new(&mut *storage), None).unwrap();
 
     for _ in 0..n_fake_users {
         let storage = &mut storage;
         let spawnid = storage.insert_entity();
         unsafe {
-            init_spawn(spawnid, &mut rng, FromWorldMut::new(storage));
+            init_spawn(
+                bounds,
+                spawnid,
+                &mut rng,
+                FromWorldMut::new(storage),
+                FromWorld::new(storage),
+            );
             let spawn_pos = storage
                 .view::<EntityId, components::PositionComponent>()
                 .get_by_id(&spawnid)
@@ -61,7 +62,13 @@ pub fn init_storage(n_fake_users: usize) -> Pin<Box<World>> {
         let id = storage.insert_entity();
         let storage = &mut storage;
         unsafe {
-            init_resource(id, &mut rng, FromWorldMut::new(storage));
+            init_resource(
+                bounds,
+                id,
+                &mut rng,
+                FromWorldMut::new(storage),
+                FromWorld::new(storage),
+            );
         }
     }
 
@@ -124,11 +131,14 @@ type InitSpawnMuts = (
     UnsafeView<EntityId, components::PositionComponent>,
     UnsafeView<Point, components::EntityComponent>,
 );
+type InitSpawnConst<'a> = (View<'a, Point, components::TerrainComponent>,);
 
 unsafe fn init_spawn(
+    bounds: (Point, Point),
     id: EntityId,
     rng: &mut impl Rng,
     (mut owners, mut spawns, mut structures, mut positions, mut entities_by_pos): InitSpawnMuts,
+    (terrain,): InitSpawnConst,
 ) {
     structures
         .as_mut()
@@ -143,7 +153,7 @@ unsafe fn init_spawn(
         },
     );
 
-    let pos = uncontested_pos(&*entities_by_pos, rng);
+    let pos = uncontested_pos(bounds, &*entities_by_pos, &*terrain, rng);
 
     positions
         .as_mut()
@@ -160,10 +170,14 @@ type InitResourceMuts = (
     UnsafeView<Point, components::EntityComponent>,
 );
 
+type InitResourceConst<'a> = (View<'a, Point, components::TerrainComponent>,);
+
 unsafe fn init_resource(
+    bounds: (Point, Point),
     id: EntityId,
     rng: &mut impl Rng,
-    (mut positions_table, mut resources_table, mut energy_table, mut entities_by_pos): InitResourceMuts,
+    (mut positions_table, mut resources_table, mut energy_table, mut entities_by_pos, ): InitResourceMuts,
+    (terrain,): InitResourceConst,
 ) {
     resources_table.as_mut().insert_or_update(
         id,
@@ -177,7 +191,7 @@ unsafe fn init_resource(
         },
     );
 
-    let pos = uncontested_pos(&*entities_by_pos, rng);
+    let pos = uncontested_pos(bounds, &*entities_by_pos, &*terrain, rng);
 
     positions_table
         .as_mut()
@@ -188,17 +202,21 @@ unsafe fn init_resource(
 }
 
 fn uncontested_pos<T: caolo_sim::tables::TableRow + Send + Sync>(
+    (from, to): (Point, Point),
     positions_table: &caolo_sim::tables::MortonTable<Point, T>,
+    terrain_table: &caolo_sim::tables::MortonTable<Point, components::TerrainComponent>,
     rng: &mut impl Rng,
 ) -> Point {
     loop {
-        let x = rng.gen_range(0, 100);
-        let y = rng.gen_range(0, 100);
+        let x = rng.gen_range(from.x, to.x);
+        let y = rng.gen_range(from.y, to.y);
 
         let pos = Point::new(x, y);
 
-        if !positions_table.contains_key(&pos) {
-            return pos;
+        if let Some(components::TerrainComponent(terrain)) = terrain_table.get_by_id(&pos) {
+            if terrain.is_walkable() && !positions_table.contains_key(&pos) {
+                return pos;
+            }
         }
     }
 }

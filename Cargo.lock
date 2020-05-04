@@ -517,18 +517,19 @@ dependencies = [
 [[package]]
 name = "cao-lang"
 version = "0.4.0"
-source = "git+https://github.com/caolo-game/cao-lang.git#4d3fa2937c8e660eacb759d2d15a4ac962dd1e51"
+source = "git+https://github.com/caolo-game/cao-lang.git#799e6bcf5942a02da2e5cd14ae0b4062d3c051b7"
 dependencies = [
  "arrayvec",
  "log 0.4.8",
  "serde",
  "serde_derive",
+ "thiserror",
 ]
 
 [[package]]
 name = "cao_storage_derive"
 version = "0.1.0"
-source = "git+https://github.com/caolo-game/cao-sim.git#b7ed5bf741c5a8b0ae45f3d090b550d47343dc7e"
+source = "git+https://github.com/caolo-game/cao-sim.git#a5c6227126c529bc89cf4b0629e5156ae4f2bd92"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -538,7 +539,7 @@ dependencies = [
 [[package]]
 name = "caolo-sim"
 version = "0.1.0"
-source = "git+https://github.com/caolo-game/cao-sim.git#b7ed5bf741c5a8b0ae45f3d090b550d47343dc7e"
+source = "git+https://github.com/caolo-game/cao-sim.git#a5c6227126c529bc89cf4b0629e5156ae4f2bd92"
 dependencies = [
  "arrayvec",
  "cao-lang",
@@ -549,6 +550,7 @@ dependencies = [
  "rayon",
  "serde",
  "serde_derive",
+ "thiserror",
  "uuid",
 ]
 
@@ -1542,18 +1544,18 @@ checksum = "d4fd5641d01c8f18a23da7b6fe29298ff4b55afcccdf78973b24cf3175fee32e"
 
 [[package]]
 name = "pin-project"
-version = "0.4.9"
+version = "0.4.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6f6a7f5eee6292c559c793430c55c00aea9d3b3d1905e855806ca4d7253426a2"
+checksum = "36e3dcd42688c05a66f841d22c5d8390d9a5d4c9aaf57b9285eae4900a080063"
 dependencies = [
  "pin-project-internal",
 ]
 
 [[package]]
 name = "pin-project-internal"
-version = "0.4.9"
+version = "0.4.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8988430ce790d8682672117bc06dda364c0be32d3abd738234f19f3240bad99a"
+checksum = "f4d7346ac577ff1296e06a418e7618e22655bae834d4970cb6e39d6da8119969"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2097,6 +2099,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bb6bfa289a4d7c5766392812c0a1f4c1ba45afa1ad47803c11e1f407d846d75f"
 dependencies = [
  "winapi-util",
+]
+
+[[package]]
+name = "thiserror"
+version = "1.0.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d12a1dae4add0f0d568eebc7bf142f145ba1aa2544cafb195c76f0f409091b60"
+dependencies = [
+ "thiserror-impl",
+]
+
+[[package]]
+name = "thiserror-impl"
+version = "1.0.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3f34e0c1caaa462fd840ec6b768946ea1e7842620d94fe29d5b847138f521269"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

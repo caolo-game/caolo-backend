@@ -529,7 +529,7 @@ dependencies = [
 [[package]]
 name = "cao_storage_derive"
 version = "0.1.0"
-source = "git+https://github.com/caolo-game/cao-sim.git#a5c6227126c529bc89cf4b0629e5156ae4f2bd92"
+source = "git+https://github.com/caolo-game/cao-sim.git#d342e397db334f9adaf6201520a93663f3e40a58"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -539,7 +539,7 @@ dependencies = [
 [[package]]
 name = "caolo-sim"
 version = "0.1.0"
-source = "git+https://github.com/caolo-game/cao-sim.git#a5c6227126c529bc89cf4b0629e5156ae4f2bd92"
+source = "git+https://github.com/caolo-game/cao-sim.git#d342e397db334f9adaf6201520a93663f3e40a58"
 dependencies = [
  "arrayvec",
  "cao-lang",

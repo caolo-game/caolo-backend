@@ -6,7 +6,7 @@ use actix_web::web::{self, HttpRequest};
 use actix_web::{get, Responder};
 use actix_web_actors::ws;
 use failure::Fail;
-use log::{debug, error};
+use log::{debug, error, warn};
 use protobuf::{parse_from_bytes, ProtobufError};
 use redis::Commands;
 use redis::RedisError;
@@ -40,9 +40,10 @@ impl WorldStream {
     }
 
     fn start_stream(&self, ctx: &mut <Self as Actor>::Context) {
-        ctx.run_interval(Duration::from_millis(50), |act, ctx| {
+        ctx.run_interval(Duration::from_millis(1000), |act, ctx| {
             // check client heartbeats
-            if Instant::now().duration_since(act.hb) > Duration::from_secs(10) {
+            let now = Instant::now();
+            if now.duration_since(act.hb) > Duration::from_secs(10) {
                 // heartbeat timed out
                 log::debug!("Websocket Client heartbeat failed, disconnecting!");
 
@@ -52,7 +53,6 @@ impl WorldStream {
                 // don't try to send a ping
                 return;
             }
-
             ctx.ping(b"");
         });
         ctx.run_interval(Duration::from_millis(500), |act, ctx| {
@@ -88,9 +88,18 @@ impl Actor for WorldStream {
 
 impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WorldStream {
     fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
-        if let Ok(ws::Message::Ping(msg)) = msg {
-            self.hb = Instant::now();
-            ctx.pong(&msg);
+        match msg {
+            Ok(ws::Message::Pong(_)) => {
+                self.hb = Instant::now();
+            }
+            Ok(ws::Message::Ping(msg)) => {
+                self.hb = Instant::now();
+                ctx.pong(&msg);
+            }
+            Err(e) => {
+                warn!("WorldStream handler failed {:?}", e);
+            }
+            _ => {}
         }
     }
 }

@@ -1,6 +1,6 @@
 use cao_lang::prelude::*;
-use caolo_sim::map_generation::generate_terrain;
-use caolo_sim::model::{self, components, geometry::Point, EntityId, ScriptId};
+use caolo_sim::map_generation::generate_room;
+use caolo_sim::model::{self, components, geometry::{Point, aabb_over_circle}, EntityId, ScriptId};
 use caolo_sim::storage::views::{FromWorld, FromWorldMut, UnsafeView, View};
 use caolo_sim::World;
 use log::debug;
@@ -31,9 +31,12 @@ pub fn init_storage(n_fake_users: usize) -> Pin<Box<World>> {
         .map(|w| w.parse().expect("expected map width to be an integer"))
         .unwrap_or(250);
 
-    let bounds = (Point::new(0, 0), Point::new(width, width));
+    let center = Point::new(width / 2, width / 2);
+    let radius = width as u32 / 2;
 
-    generate_terrain(bounds.0, bounds.1, FromWorldMut::new(&mut *storage), None).unwrap();
+    generate_room(center, radius, FromWorldMut::new(&mut *storage), None).unwrap();
+
+    let bounds = aabb_over_circle(center, radius);
 
     for _ in 0..n_fake_users {
         let storage = &mut storage;

@@ -3,6 +3,8 @@
 #[macro_use]
 extern crate serde_derive;
 
+mod config;
+mod google_auth;
 mod handler;
 mod model;
 mod protos;
@@ -11,19 +13,13 @@ mod world;
 use actix_cors::Cors;
 use actix_identity::{CookieIdentityPolicy, IdentityService};
 use actix_web::{http, middleware, App, HttpServer};
+pub use config::*;
 use r2d2_redis::{r2d2, RedisConnectionManager};
 use sqlx::postgres::PgPool;
 use std::env;
 
 #[cfg(feature = "web-dotenv")]
 use dotenv::dotenv;
-
-#[derive(Clone)]
-pub struct Config {
-    pub allowed_origins: Vec<String>,
-    pub redis_url: String,
-    pub db_url: String,
-}
 
 pub type RedisPool = r2d2::Pool<RedisConnectionManager>;
 
@@ -45,22 +41,18 @@ async fn main() -> std::io::Result<()> {
 
     env_logger::init();
 
-    let host = env::var("HOST").unwrap_or_else(|_| "localhost".to_owned());
-    let port = env::var("PORT").unwrap_or_else(|_| "8000".to_owned());
+    let conf = Config::read().unwrap();
 
-    let bind = format!("{}:{}", host, port);
-
-    let conf = Config {
-        allowed_origins: vec!["http://localhost:3000".to_owned()],
-        redis_url: env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379/0".to_owned()),
-        db_url: env::var("DATABASE_URL")
-            .unwrap_or_else(|_| "postgres://localhost:5432/caolo".to_owned()),
-    };
+    let bind = format!("{}:{}", conf.host, conf.port);
 
     let cache_manager = RedisConnectionManager::new(conf.redis_url.as_str()).unwrap();
     let cache_pool: RedisPool = r2d2::Pool::builder().build(cache_manager).unwrap();
 
-    let db_pool = PgPool::builder().max_size(8).build(&conf.db_url).await.unwrap();
+    let db_pool = PgPool::builder()
+        .max_size(8)
+        .build(&conf.db_url)
+        .await
+        .unwrap();
 
     HttpServer::new(move || {
         let conf = conf.clone();
@@ -93,6 +85,8 @@ async fn main() -> std::io::Result<()> {
             .service(handler::myself)
             .service(handler::schema)
             .service(handler::compile)
+            .service(handler::login)
+            .service(handler::login_redirect)
             .service(world::world_stream)
     })
     .bind(&bind)?

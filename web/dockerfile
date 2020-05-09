@@ -15,6 +15,7 @@ RUN cargo --version
 WORKDIR /caolo/web
 RUN cargo install diesel_cli --root . --no-default-features --features="postgres"
 
+
 WORKDIR /caolo
 COPY ./protos/ ./protos/
 COPY ./web/ ./web

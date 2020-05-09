@@ -728,6 +728,7 @@ dependencies = [
  "protobuf",
  "protoc-rust",
  "r2d2_redis",
+ "rand 0.7.3",
  "redis",
  "reqwest",
  "serde",

@@ -15,7 +15,6 @@ RUN cargo --version
 WORKDIR /caolo/web
 RUN cargo install diesel_cli --root . --no-default-features --features="postgres"
 
-
 WORKDIR /caolo
 COPY ./protos/ ./protos/
 COPY ./web/ ./web
@@ -28,6 +27,9 @@ RUN cargo install --path . --root . --no-default-features --features="with-serde
 
 FROM ubuntu:20.04
 WORKDIR /caolo
+RUN apt-get update
+RUN apt-get install curl -y
+
 COPY ./migrations/ ./migrations/
 COPY ./web/release.sh ./
 COPY --from=build /caolo/web/bin/ ./

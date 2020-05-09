@@ -16,7 +16,6 @@ use actix_web::{http, middleware, App, HttpServer};
 pub use config::*;
 use r2d2_redis::{r2d2, RedisConnectionManager};
 use sqlx::postgres::PgPool;
-use std::env;
 
 #[cfg(feature = "web-dotenv")]
 use dotenv::dotenv;
@@ -64,6 +63,7 @@ async fn main() -> std::io::Result<()> {
             .data(cache_pool)
             .data(db_pool)
             .wrap(IdentityService::new(
+                    // TODO
                 CookieIdentityPolicy::new(&[123; 32])
                     .name("authorization")
                     .secure(true),

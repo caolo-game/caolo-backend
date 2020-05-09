@@ -1,6 +1,10 @@
 use cao_lang::prelude::*;
 use caolo_sim::map_generation::generate_room;
-use caolo_sim::model::{self, components, geometry::{Point, aabb_over_circle}, EntityId, ScriptId};
+use caolo_sim::model::{
+    self, components,
+    geometry::{aabb_over_circle, Point},
+    EntityId, ScriptId,
+};
 use caolo_sim::storage::views::{FromWorld, FromWorldMut, UnsafeView, View};
 use caolo_sim::World;
 use log::debug;

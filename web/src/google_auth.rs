@@ -9,7 +9,9 @@ pub fn oauth_client(config: &Config) -> BasicClient {
         ClientId::new(config.google_id.clone()),
         Some(ClientSecret::new(config.google_secret.clone())),
         AuthUrl::new(Url::parse("https://accounts.google.com/o/oauth2/v2/auth").unwrap()),
-        Some(TokenUrl::new(Url::parse("https://oauth2.googleapis.com/token").unwrap())),
+        Some(TokenUrl::new(
+            Url::parse("https://oauth2.googleapis.com/token").unwrap(),
+        )),
     )
     .add_scope(Scope::new("email".to_owned()))
     .set_redirect_url(RedirectUrl::new(

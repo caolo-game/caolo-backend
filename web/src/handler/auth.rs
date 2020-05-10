@@ -15,9 +15,19 @@ use std::sync::Arc;
 use thiserror::Error;
 use uuid::Uuid;
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct LoginMetadata {
+    pub redirect: Option<String>,
+    pub csrf_token: CsrfToken,
+}
+
 #[derive(Deserialize, Debug)]
-// TODO: remove debug
 pub struct LoginQuery {
+    pub redirect: Option<String>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct LoginRedirectQuery {
     pub state: String,
     pub code: String,
     pub scope: String,
@@ -66,7 +76,7 @@ impl ResponseError for LoginError {
 
 #[get("/login/google/redirect")]
 pub async fn login_redirect(
-    query: web::Query<LoginQuery>,
+    query: web::Query<LoginRedirectQuery>,
     identity: Identity,
     config: web::Data<Config>,
     cache: web::Data<RedisPool>,
@@ -76,11 +86,11 @@ pub async fn login_redirect(
 
     let identity = identity.identity().ok_or_else(|| LoginError::IdNotFoud)?;
 
-    let csrf_token: CsrfToken = get_csrf_token(cache.into_inner(), identity.clone()).await?;
-    if csrf_token.secret() != &query.state {
+    let meta: LoginMetadata = get_csrf_token(cache.into_inner(), identity.clone()).await?;
+    if meta.csrf_token.secret() != &query.state {
         error!(
             "Got invalid csrf_token expected: {:?}, found: {:?}",
-            csrf_token, query.state
+            meta.csrf_token, query.state
         );
         return Err(LoginError::CsrfTokenMisMatch);
     }
@@ -171,11 +181,22 @@ pub async fn login_redirect(
     .await
     .map_err(LoginError::DbError)?;
 
-    let response = HttpResponse::Ok().body("boi");
+    let response = meta
+        .redirect
+        .map(|redirect| {
+            HttpResponse::Found()
+                .set_header("Location", redirect)
+                .finish()
+        })
+        .unwrap_or_else(|| HttpResponse::Ok().finish());
+
     Ok(response)
 }
 
-async fn get_csrf_token(cache: Arc<RedisPool>, identity: String) -> Result<CsrfToken, LoginError> {
+async fn get_csrf_token(
+    cache: Arc<RedisPool>,
+    identity: String,
+) -> Result<LoginMetadata, LoginError> {
     let mut conn = cache.get().map_err(LoginError::CachePoolError)?;
     web::block(move || {
         redis::pipe()
@@ -242,6 +263,7 @@ async fn register_user(
 
 #[get("/login/google")]
 pub async fn login(
+    query: web::Query<LoginQuery>,
     config: web::Data<Config>,
     id: Identity,
     cache: web::Data<RedisPool>,
@@ -260,11 +282,16 @@ pub async fn login(
         .get()
         .map_err(actix_web::error::ErrorInternalServerError)?;
 
-    let csrf_token = serde_json::to_string(&csrf_token).unwrap();
+    let meta = LoginMetadata {
+        csrf_token,
+        redirect: query.into_inner().redirect,
+    };
+
+    let meta = serde_json::to_string(&meta).unwrap();
     id.remember(randid.clone());
     web::block(move || {
         redis::pipe()
-            .set_ex(&randid, csrf_token, 60)
+            .set_ex(&randid, meta, 60)
             .query(conn.deref_mut())
     })
     .await

@@ -9,8 +9,8 @@ mod protos;
 
 use caolo_sim::prelude::*;
 use log::{debug, error, info};
-use protobuf::Message;
-use serde_derive::Serialize;
+use protobuf::{Message, RepeatedField};
+use protos::schema::{Function as SchemaFunctionDTO, Schema as SchemaMessage};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -91,40 +91,53 @@ fn send_world(storage: &World, client: &redis::Client) -> Result<(), Box<dyn std
     Ok(())
 }
 
-#[derive(Debug, Serialize)]
-struct SchemaFunctionDTO<'a> {
-    name: &'a str,
-    description: &'a str,
-    input: Vec<&'a str>,
-    output: Vec<&'a str>,
-    params: Vec<&'a str>,
-}
-
 fn send_schema(client: &redis::Client) -> Result<(), Box<dyn std::error::Error>> {
     debug!("Sending schema");
     let mut con = client.get_connection()?;
 
     let schema = caolo_sim::api::make_import();
-    let schema = schema
+    let imports = schema
         .imports()
         .iter()
         .map(|import| {
             let import = &import.desc;
-            SchemaFunctionDTO {
-                name: import.name,
-                input: import.input.to_vec(),
-                description: import.description,
-                output: import.output.to_vec(),
-                params: import.params.to_vec(),
-            }
+            let mut fun = SchemaFunctionDTO::new();
+            fun.set_name(import.name.to_owned());
+            fun.set_description(import.description.to_owned());
+            fun.set_input(RepeatedField::from_ref(
+                import
+                    .input
+                    .iter()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<_>>(),
+            ));
+            fun.set_params(RepeatedField::from_ref(
+                import
+                    .params
+                    .iter()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<_>>(),
+            ));
+            fun.set_output(RepeatedField::from_ref(
+                import
+                    .output
+                    .iter()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<_>>(),
+            ));
+            fun
         })
         .collect::<Vec<_>>();
-    let js = serde_json::to_string(&schema)?;
+
+    let mut schema = SchemaMessage::new();
+    schema.set_functions(RepeatedField::from_vec(imports));
+
+    let payload = schema.write_to_bytes()?;
 
     redis::pipe()
         .cmd("SET")
         .arg("SCHEMA")
-        .arg(js)
+        .arg(payload)
         .query(&mut con)?;
 
     debug!("Sending schema done");

@@ -1,3 +1,4 @@
+use crate::model::User;
 use crate::protos::world::WorldState;
 use crate::RedisPool;
 use actix::prelude::*;
@@ -13,12 +14,13 @@ use redis::RedisError;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 struct WorldStream {
     pub hb: Instant,
     pub last_sent: Instant,
     pub pool: Arc<RedisPool>,
     pub buffer: Vec<u8>,
+    pub user: Option<User>,
 }
 
 #[derive(Debug, Fail)]
@@ -30,8 +32,9 @@ enum ReadError {
 }
 
 impl WorldStream {
-    pub fn new(pool: Arc<RedisPool>) -> Self {
+    pub fn new(user: Option<User>, pool: Arc<RedisPool>) -> Self {
         Self {
+            user,
             pool,
             hb: Instant::now(),
             last_sent: Instant::now(),
@@ -106,10 +109,11 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WorldStream {
 
 #[get("/world")]
 pub async fn world_stream(
+    user: Option<User>,
     req: HttpRequest,
     pool: web::Data<RedisPool>,
     stream: web::Payload,
 ) -> impl Responder {
     let pool = pool.into_inner();
-    ws::start(WorldStream::new(pool), &req, stream)
+    ws::start(WorldStream::new(user, pool), &req, stream)
 }

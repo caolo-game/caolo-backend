@@ -36,7 +36,7 @@ services:
   postgres:
     image: postgres:11.1
     environment:
-      POSTGRES_PASSWORD: admin
       POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
     ports:
       - "5432:5432"

@@ -21,7 +21,7 @@ CREATE TRIGGER user_account_updated AFTER UPDATE ON user_account
 
 CREATE TABLE user_credential (
     user_id UUID PRIMARY KEY REFERENCES user_account(id),
-    token VARCHAR NULL,
+    token VARCHAR NOT NULL,
     created TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
     updated TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );

@@ -150,9 +150,11 @@ pub async fn login_redirect(
         Some(x) => {
             sqlx::query!(
                 "
-                UPDATE user_credential
+                INSERT INTO user_credential (user_id, token)
+                VALUES ($1, $2)
+                ON CONFLICT (user_id) DO
+                UPDATE 
                 SET token = $2
-                WHERE user_id = $1
                 ",
                 user_id,
                 identity
@@ -272,7 +274,7 @@ pub async fn login(
     let mut randid = vec![0; 128];
     rng.fill_bytes(&mut randid);
 
-    let randid = randid.into_iter().map(|c| c as char).collect::<String>();
+    let randid = base64::encode(&randid);
     let client = oauth_client(&*config);
 
     let (auth_url, csrf_token) = client.authorize_url(CsrfToken::new_random);

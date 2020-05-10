@@ -45,3 +45,4 @@ sqlx = { version="0.3", features=["postgres", "chrono", "uuid", "json"] }
 thiserror = "1"
 url = "1.7"
 rand = "0.7"
+base64 = "0.12"

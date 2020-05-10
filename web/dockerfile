@@ -6,6 +6,10 @@ ENV PROTOC_ZIP=protoc-3.11.3-linux-x86_64.zip
 RUN curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v3.11.3/$PROTOC_ZIP
 RUN unzip -o $PROTOC_ZIP -d /usr/local bin/protoc
 
+RUN apt-get update
+RUN apt-get install sudo postgresql postgresql-contrib -y
+RUN service postgresql start
+
 WORKDIR /caolo
 
 COPY ./rust-toolchain ./rust-toolchain
@@ -15,13 +19,16 @@ RUN cargo --version
 WORKDIR /caolo/web
 RUN cargo install diesel_cli --root . --no-default-features --features="postgres"
 
+ENV DATABASE_URL=postgres://postgres:postgres@localhost:5432/caolo
+
 WORKDIR /caolo
+COPY ./web/build.sh ./
+COPY ./migrations/ ./migrations/
 COPY ./protos/ ./protos/
-COPY ./web/ ./web
+COPY ./web/ ./web/
 
 WORKDIR /caolo/web
-RUN cargo check
-RUN cargo install --path . --root . --no-default-features --features="with-serde"
+RUN bash ./build.sh
 
 # ---------- Copy the built binary to a scratch container, to minimize the image size ----------
 

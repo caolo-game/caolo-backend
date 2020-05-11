@@ -10,7 +10,6 @@ use actix_web::{error, get, post, Responder};
 use cao_lang::compiler::{self, CompilationUnit};
 use protobuf::parse_from_bytes;
 use redis::Commands;
-use thiserror::Error;
 
 #[get("/")]
 pub async fn index_page() -> impl Responder {
@@ -22,8 +21,6 @@ pub async fn myself(user: Option<User>) -> Result<HttpResponse, HttpResponse> {
     user.map(|user: User| HttpResponse::Ok().json(user))
         .ok_or_else(|| HttpResponse::NotFound().finish())
 }
-#[derive(Debug, Error)]
-pub enum LoginError {}
 
 #[get("/schema")]
 pub async fn schema(cache: web::Data<RedisPool>) -> Result<HttpResponse, error::Error> {

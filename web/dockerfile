@@ -35,7 +35,7 @@ RUN bash ./build.sh
 FROM ubuntu:20.04
 WORKDIR /caolo
 RUN apt-get update
-RUN apt-get install curl -y
+RUN apt-get install curl libpq-dev -y
 
 COPY ./migrations/ ./migrations/
 COPY ./web/release.sh ./

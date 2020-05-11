@@ -8,6 +8,6 @@ cd /caolo
 
 ls -al
 ./diesel --version
-./diesel database setup
+./diesel migration run
 
 echo "Release command finished"

@@ -35,10 +35,30 @@ pub fn init_storage(n_fake_users: usize) -> Pin<Box<World>> {
         .map(|w| w.parse().expect("expected map width to be an integer"))
         .unwrap_or(250);
 
-    let center = Point::new(width / 2, width / 2);
+    let center = Point::new(width, width);
     let radius = width as u32 / 2;
-
+    debug!("generating map center at {:?}", center);
     generate_room(center, radius, FromWorldMut::new(&mut *storage), None).unwrap();
+    for neighbour in center.hex_neighbours().iter() {
+        let offset = *neighbour - center;
+        let movement = offset * radius as i32;
+        let pos = center + movement;
+        debug!(
+            "generating map of neighbour {:?} at pos: {:?}, moved by: {:?}",
+            offset, pos, movement,
+        );
+        generate_room(pos, radius, FromWorldMut::new(&mut *storage), None).unwrap();
+    }
+    debug!("deduping terrain");
+
+    unsafe {
+        storage
+            .unsafe_view::<Point, components::TerrainComponent>()
+            .as_mut()
+            .dedupe();
+    }
+
+    debug!("map generation done");
 
     let bounds = aabb_over_circle(center, radius);
 

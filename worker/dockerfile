@@ -26,4 +26,4 @@ FROM ubuntu:20.04
 WORKDIR /caolo
 COPY --from=build /caolo/worker/bin/caolo-worker ./caolo-worker
 
-ENTRYPOINT ["./caolo-web"]
+ENTRYPOINT ["./caolo-worker"]

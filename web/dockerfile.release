@@ -19,4 +19,4 @@ COPY ./migrations/ ./migrations/
 COPY ./web/release.sh ./
 COPY --from=build /caolo/web/bin/ ./
 
-ENTRYPOINT ["./diesel", "migrations", "run"]
+ENTRYPOINT ["./release.sh"]

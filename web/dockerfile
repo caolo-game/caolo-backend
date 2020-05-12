@@ -40,3 +40,5 @@ RUN apt-get install curl libpq-dev -y
 COPY ./migrations/ ./migrations/
 COPY ./web/release.sh ./
 COPY --from=build /caolo/web/bin/ ./
+
+ENTRYPOINT ["./caolo-web"]

@@ -30,12 +30,20 @@ web:
 pushweb:
 	docker push frenetiq/caolo-web:latest
 
+release:
+	docker build -t frenetiq/caolo-release:latest -f web/dockerfile.release .
+
 buildall: web worker
 
 pushall: pushworker pushweb
 
-deploy-heroku: buildall pushall
-	git push heroku master
+deploy-heroku: buildall release
+	docker tag frenetiq/caolo-web:latest registry.heroku.com/$(app)/web
+	docker tag frenetiq/caolo-worker:latest registry.heroku.com/$(app)/worker
+	docker tag frenetiq/caolo-release:latest registry.heroku.com/$(app)/release
+	docker push registry.heroku.com/$(app)/web
+	docker push registry.heroku.com/$(app)/release
+	heroku container:release web worker release
 
 deploy: buildall pushall
 	kubectl apply -f ./manifests

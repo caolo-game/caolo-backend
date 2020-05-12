@@ -45,7 +45,7 @@ diesel database setup
 
 ### Deploying to [Heroku](https://heroku.com)
 
-`make deploy-heroku`
+`make deploy-heroku app=<your heroku app name>`
 
 ### Deploying via kubectl:
 

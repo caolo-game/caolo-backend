@@ -25,3 +25,5 @@ RUN cargo install --path . --root . --no-default-features --features="with-serde
 FROM ubuntu:20.04
 WORKDIR /caolo
 COPY --from=build /caolo/worker/bin/caolo-worker ./caolo-worker
+
+ENTRYPOINT ["./caolo-web"]

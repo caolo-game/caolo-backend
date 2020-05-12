@@ -24,7 +24,9 @@ impl Config {
         let host = env::var("HOST").unwrap_or_else(|_| "localhost".to_owned());
         let port = env::var("PORT").unwrap_or_else(|_| "8000".to_owned());
         let config = Config {
-            allowed_origins: vec!["http://localhost:3000".to_owned()],
+            allowed_origins: env::var("ALLOWED_ORIGINS")
+                .map(|origins| origins.split(";").map(|s|s.to_owned()).collect())
+                .unwrap_or_else(|_| vec!["http://localhost:3000".to_owned()]),
             redis_url: env::var("REDIS_URL")
                 .unwrap_or_else(|_| "redis://localhost:6379/0".to_owned()),
             db_url: env::var("DATABASE_URL")

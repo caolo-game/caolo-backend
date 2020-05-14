@@ -35,7 +35,7 @@ pub fn init_storage(n_fake_users: usize) -> Pin<Box<World>> {
         .map(|w| w.parse().expect("expected map width to be an integer"))
         .unwrap_or(64);
 
-    let center = Point::new(width, width);
+    let center = Point::new(width * 2, width * 2);
     let radius = width as u32 / 2;
     debug!("generating map center at {:?}", center);
     generate_room(center, radius, FromWorldMut::new(&mut *storage), None).unwrap();
@@ -68,7 +68,7 @@ pub fn init_storage(n_fake_users: usize) -> Pin<Box<World>> {
 
     debug!("map generation done");
 
-    let bounds = aabb_over_circle(center, radius);
+    let bounds = aabb_over_circle(center, radius*2);
 
     for _ in 0..n_fake_users {
         let storage = &mut storage;
@@ -242,7 +242,8 @@ fn uncontested_pos<T: caolo_sim::tables::TableRow + Send + Sync>(
     terrain_table: &caolo_sim::tables::MortonTable<Point, components::TerrainComponent>,
     rng: &mut impl Rng,
 ) -> Point {
-    loop {
+    const TRIES: usize = 10_000;
+    for _ in 0..TRIES {
         let x = rng.gen_range(from.x, to.x);
         let y = rng.gen_range(from.y, to.y);
 
@@ -254,6 +255,10 @@ fn uncontested_pos<T: caolo_sim::tables::TableRow + Send + Sync>(
             }
         }
     }
+    panic!(
+        "Failed to find an uncontested_pos in {:?} {:?} in {} iterations",
+        from, to, TRIES
+    );
 }
 
 const PROGRAM: &str = r#"

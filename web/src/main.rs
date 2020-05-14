@@ -85,6 +85,7 @@ async fn main() -> std::io::Result<()> {
             .service(handler::myself)
             .service(handler::schema)
             .service(handler::compile)
+            .service(handler::terrain)
             .service(handler::login)
             .service(handler::login_redirect)
             .service(world::world_stream)

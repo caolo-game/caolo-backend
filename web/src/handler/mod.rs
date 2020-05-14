@@ -3,7 +3,7 @@ mod auth;
 pub use auth::*;
 
 use crate::model::User;
-use crate::protos::schema::Schema;
+use crate::protos::{schema::Schema, world::WorldTerrain};
 use crate::RedisPool;
 use actix_web::web::{self, HttpResponse, Json};
 use actix_web::{error, get, post, Responder};
@@ -35,6 +35,21 @@ pub async fn schema(cache: web::Data<RedisPool>) -> Result<HttpResponse, error::
             parse_from_bytes(schema.as_slice()).map_err(actix_web::error::ErrorInternalServerError)
         })
         .map(|schema: Schema| HttpResponse::Ok().json(schema))
+}
+
+#[get("/terrain")]
+pub async fn terrain(cache: web::Data<RedisPool>) -> Result<HttpResponse, error::Error> {
+    let mut conn = cache
+        .into_inner()
+        .get()
+        .map_err(actix_web::error::ErrorInternalServerError)?;
+
+    conn.get("WORLD_TERRAIN")
+        .map_err(actix_web::error::ErrorInternalServerError)
+        .and_then(|terrain: Vec<u8>| {
+            parse_from_bytes(terrain.as_slice()).map_err(actix_web::error::ErrorInternalServerError)
+        })
+        .map(|terrain: WorldTerrain| HttpResponse::Ok().json(terrain))
 }
 
 #[post("/compile")]

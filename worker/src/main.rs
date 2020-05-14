@@ -58,12 +58,6 @@ fn send_world(storage: &World, client: &redis::Client) -> Result<(), Box<dyn std
 
     debug!("sending {} logs", world.get_logs().len());
 
-    for tile in output::build_terrain(FromWorld::new(storage)) {
-        world.mut_terrain().push(tile);
-    }
-
-    debug!("sending {} terrain", world.get_terrain().len());
-
     for resource in output::build_resources(FromWorld::new(storage)) {
         world.mut_resources().push(resource);
     }
@@ -88,6 +82,30 @@ fn send_world(storage: &World, client: &redis::Client) -> Result<(), Box<dyn std
         .query(&mut con)?;
 
     debug!("Sending world state done");
+    Ok(())
+}
+
+fn send_terrain(storage: &World, client: &redis::Client) -> Result<(), Box<dyn std::error::Error>> {
+    use protos::world::WorldTerrain;
+
+    let mut world = WorldTerrain::new();
+
+    for tile in output::build_terrain(FromWorld::new(storage)) {
+        world.mut_tiles().push(tile);
+    }
+
+    debug!("sending {} terrain", world.get_tiles().len());
+    let payload = world.write_to_bytes()?;
+    debug!("sending {} bytes", payload.len());
+
+    let mut con = client.get_connection()?;
+    redis::pipe()
+        .cmd("SET")
+        .arg("WORLD_TERRAIN")
+        .arg(payload)
+        .query(&mut con)?;
+
+    debug!("sending terrain done");
     Ok(())
 }
 
@@ -156,6 +174,8 @@ fn main() {
 
     let mut storage = init::init_storage(n_actors);
     let client = redis::Client::open(redis_url.as_str()).expect("Redis client");
+
+    send_terrain(&*storage.as_ref(), &client).expect("Send terrain");
 
     let tick_freq = std::env::var("TARGET_TICK_FREQUENCY_MS")
         .map(|i| i.parse::<u64>().unwrap())

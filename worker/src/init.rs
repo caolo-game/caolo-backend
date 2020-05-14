@@ -33,13 +33,17 @@ pub fn init_storage(n_fake_users: usize) -> Pin<Box<World>> {
 
     let width = std::env::var("CAO_MAP_WIDTH")
         .map(|w| w.parse().expect("expected map width to be an integer"))
-        .unwrap_or(250);
+        .unwrap_or(64);
 
     let center = Point::new(width, width);
     let radius = width as u32 / 2;
     debug!("generating map center at {:?}", center);
     generate_room(center, radius, FromWorldMut::new(&mut *storage), None).unwrap();
-    for neighbour in center.hex_neighbours().iter() {
+    debug!(
+        "#0: world mass: {}",
+        storage.view::<Point, components::TerrainComponent>().len()
+    );
+    for (i, neighbour) in center.hex_neighbours().iter().enumerate() {
         let offset = *neighbour - center;
         let movement = offset * radius as i32;
         let pos = center + movement;
@@ -48,14 +52,18 @@ pub fn init_storage(n_fake_users: usize) -> Pin<Box<World>> {
             offset, pos, movement,
         );
         generate_room(pos, radius, FromWorldMut::new(&mut *storage), None).unwrap();
-    }
-    debug!("deduping terrain");
-
-    unsafe {
-        storage
-            .unsafe_view::<Point, components::TerrainComponent>()
-            .as_mut()
-            .dedupe();
+        debug!(
+            "#{}: world mass: {}",
+            i + 1,
+            storage.view::<Point, components::TerrainComponent>().len()
+        );
+        debug!("deduping terrain");
+        unsafe {
+            storage
+                .unsafe_view::<Point, components::TerrainComponent>()
+                .as_mut()
+                .dedupe();
+        }
     }
 
     debug!("map generation done");

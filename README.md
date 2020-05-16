@@ -3,11 +3,9 @@
 ### Native builds:
 
 - [Cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html)
-- [NodeJs](https://nodejs.org/en/)
 - [Redis](https://redis.io/)
 - [Protoc](https://developers.google.com/protocol-buffers/docs/downloads.html)
 - [PostgeSQL](https://www.postgresql.org/)
-- neon_cli `npm install -g neon-cli`
 - diesel-cli `cargo install diesel_cli --no-default-features --features "postgres"`
 
 ### Docker builds:
@@ -29,16 +27,13 @@ diesel database setup
 - Running the worker
 
   ```
-  cd worker
-  cargo run
+  cargo run --bin caolo-worker
   ```
 
 - Running the web service
 
   ```
-  cd web
-  yarn
-  yarn start
+  cargo run --bin caolo-web
   ```
 
 ## Deployment

@@ -17,13 +17,16 @@ COPY ./worker/ ./worker
 COPY ./Cargo.lock ./worker/Cargo.lock
 
 WORKDIR /caolo/worker
-RUN cargo check
 RUN cargo install --path . --root . --no-default-features --features="with-serde"
 
 # ---------- Copy the built binary to a scratch container, to minimize the image size ----------
 
 FROM ubuntu:20.04
 WORKDIR /caolo
+
+RUN apt-get update -y
+RUN apt-get install libssl-dev -y
+
 COPY --from=build /caolo/worker/bin/caolo-worker ./caolo-worker
 
 ENTRYPOINT ["./caolo-worker"]

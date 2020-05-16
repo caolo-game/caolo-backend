@@ -8,10 +8,9 @@ use caolo_sim::model::{
         Bot, EnergyComponent, LogEntry, OwnedEntity, PositionComponent, Resource,
         ResourceComponent, SpawnComponent, Structure, TerrainComponent,
     },
-    geometry::point::Point,
     indices::EntityTime,
     terrain::TileTerrainType,
-    EntityId,
+    EntityId, WorldPosition,
 };
 use caolo_sim::storage::views::View;
 use caolo_sim::tables::JoinIterator;
@@ -30,8 +29,8 @@ pub fn build_bots<'a>(
     JoinIterator::new(bots, positions).map(move |(id, (_bot, pos))| {
         let mut msg = BotMsg::default();
         msg.set_id(id.0);
-        msg.mut_position().set_q(pos.0.x);
-        msg.mut_position().set_r(pos.0.y);
+        let msg_pos = msg.mut_position();
+        init_world_pos(msg_pos, pos.0);
         msg.mut_owner().clear();
         if let Some(owner) = owned_entities.get_by_id(&id) {
             *msg.mut_owner() = owner.owner_id.0.as_bytes().to_vec();
@@ -55,13 +54,16 @@ pub fn build_logs<'a>(v: View<'a, EntityTime, LogEntry>) -> impl Iterator<Item =
 }
 
 pub fn build_terrain<'a>(
-    v: View<'a, Point, TerrainComponent>,
+    v: View<'a, WorldPosition, TerrainComponent>,
 ) -> impl Iterator<Item = TileMsg> + 'a {
     v.reborrow().iter().map(|(pos, tile)| {
         let mut msg = TileMsg::new();
-        msg.mut_position().set_q(pos.x);
-        msg.mut_position().set_r(pos.y);
+        let msg_pos = msg.mut_position();
+        init_world_pos(msg_pos, pos);
         match tile.0 {
+            TileTerrainType::Bridge => {
+                msg.set_ty(Tile_TerrainType::BRIDGE);
+            }
             TileTerrainType::Plain => {
                 msg.set_ty(Tile_TerrainType::PLAIN);
             }
@@ -92,8 +94,8 @@ pub fn build_resources<'a>(
             Resource::Energy => {
                 let mut msg = ResourceMsg::new();
                 msg.set_id(id.0);
-                msg.mut_position().set_q(pos.0.x);
-                msg.mut_position().set_r(pos.0.y);
+                let msg_pos = msg.mut_position();
+                init_world_pos(msg_pos, pos.0);
                 msg.set_ty(Resource_ResourceType::ENERGY);
                 msg.set_energy(energy.energy as u32);
                 msg.set_energyMax(energy.energy_max as u32);
@@ -121,8 +123,8 @@ pub fn build_structures<'a>(
         move |(id, ((spawn, _structure), pos))| {
             let mut msg = StructureMsg::new();
             msg.set_id(id.0);
-            msg.mut_position().set_q(pos.0.x);
-            msg.mut_position().set_r(pos.0.y);
+            let msg_pos = msg.mut_position();
+            init_world_pos(msg_pos, pos.0);
             msg.mut_owner().clear();
             if let Some(owner) = owner_table.get_by_id(&id) {
                 *msg.mut_owner() = owner.owner_id.0.as_bytes().to_vec();
@@ -136,4 +138,11 @@ pub fn build_structures<'a>(
             msg
         },
     )
+}
+
+fn init_world_pos(msg_pos: &mut crate::protos::world::WorldPosition, pos: WorldPosition) {
+    msg_pos.mut_room().set_q(pos.room.q);
+    msg_pos.mut_room().set_r(pos.room.r);
+    msg_pos.mut_pos().set_q(pos.pos.q);
+    msg_pos.mut_pos().set_r(pos.pos.r);
 }

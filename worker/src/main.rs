@@ -19,6 +19,8 @@ fn init() {
     dep_dotenv::dotenv().unwrap_or_default();
 
     env_logger::init();
+
+    sentry::integrations::panic::register_panic_handler();
 }
 
 fn tick(storage: &mut World) {
@@ -163,6 +165,9 @@ fn send_schema(client: &redis::Client) -> Result<(), Box<dyn std::error::Error>>
 }
 
 fn main() {
+    let _guard = std::env::var("SENTRY_URI")
+        .ok()
+        .map(|uri| sentry::init(uri));
     init();
     let n_actors = std::env::var("N_ACTORS")
         .ok()

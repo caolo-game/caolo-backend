@@ -30,7 +30,11 @@ serde = "1"
 serde_derive = "1"
 redis = "0.15"
 rand="*"
+sentry = "0.12"
 
 dep-dotenv = { version="0.14", optional=true, package="dotenv" }
 uuid = { version="0.7" }
 protobuf = { version="2", features=["with-serde"] }
+
+[dev-dependencies]
+env_logger = { version="*", default-features=false }

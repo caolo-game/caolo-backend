@@ -92,6 +92,14 @@ fn send_terrain(storage: &World, client: &redis::Client) -> Result<(), Box<dyn s
 
     let mut world = WorldTerrain::new();
 
+    if let Some(room_props) = storage
+        .view::<EmptyKey, components::RoomProperties>()
+        .value
+        .as_ref()
+    {
+        world.mut_roomProperties().set_roomRadius(room_props.radius);
+    }
+
     for tile in output::build_terrain(FromWorld::new(storage)) {
         world.mut_tiles().push(tile);
     }

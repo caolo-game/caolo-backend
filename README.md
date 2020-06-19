@@ -11,8 +11,9 @@
 ### Docker builds:
 
 - [Docker](https://www.docker.com/)
-- [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
-- [minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/) (Optional, for local deployments)
+- [Make](https://www.gnu.org/software/make/) (Optional)
+- [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) (Optional)
+- [MiniKube](https://kubernetes.io/docs/tasks/tools/install-minikube/) (Optional, for local deployments)
 
 ## Setting up
 
@@ -36,6 +37,11 @@ diesel database setup
   cargo run --bin caolo-web
   ```
 
+- Building via Docker
+  ```
+  make
+  ```
+
 ## Deployment
 
 ### Deploying to [Heroku](https://heroku.com)
@@ -45,3 +51,13 @@ diesel database setup
 ### Deploying via kubectl:
 
 `make deploy`
+
+### Running locally via [MiniKube](https://kubernetes.io/docs/setup/learning-environment/minikube/)
+
+```
+minkube start
+echo <your google_userid> > google_userid
+echo <your google_secret> > google_secret
+kubectl create secret generic google-creds --from-file=./google_userid --from-file=./google_secret
+make deploy
+```

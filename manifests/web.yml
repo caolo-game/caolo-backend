@@ -16,27 +16,34 @@ spec:
         - name: caolo-web
           image: frenetiq/caolo-web:latest
           command:
-            - ./caolo-web
+            - /caolo/caolo-web
           env:
             - name: HOST
               value: "0.0.0.0"
             - name: PORT
               value: "8000"
             - name: RUST_LOG
-              value: info,web=debug
+              value: info,caolo_web=debug
             - name: REDIS_URL
               value: redis://cache:6379
             - name: DATABASE_URL
               value: postgres://postgres:verysecurepw@database:5432
             - name: GOOGLE_OAUTH_CLIENT_ID
-              value: "<your google id>"
+              valueFrom:
+                secretKeyRef:
+                  name: google-creds
+                  key: google_userid
             - name: GOOGLE_OAUTH_CLIENT_SECRET
-              value: "<your google secret>"
+              valueFrom:
+                secretKeyRef:
+                  name: google-creds
+                  key: google_secret
+
           lifecycle:
             postStart:
               exec:
                 command:
-                  - ./release.sh
+                  - /caolo/release.sh
 
 ---
 apiVersion: v1

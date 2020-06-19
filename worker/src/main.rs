@@ -2,10 +2,12 @@ mod init;
 mod input;
 mod output;
 
+use anyhow::Context;
 use caolo_sim::prelude::*;
 use log::{debug, error, info};
 use std::thread;
 use std::time::{Duration, Instant};
+use thiserror::Error;
 
 use caolo_messages::{
     Function, RoomProperties as RoomPropertiesMsg, Schema, WorldState, WorldTerrain,
@@ -16,8 +18,6 @@ fn init() {
     dep_dotenv::dotenv().unwrap_or_default();
 
     env_logger::init();
-
-    sentry::integrations::panic::register_panic_handler();
 }
 
 fn tick(storage: &mut World) {
@@ -39,7 +39,7 @@ fn tick(storage: &mut World) {
         .unwrap();
 }
 
-fn send_world(storage: &World, client: &redis::Client) -> Result<(), Box<dyn std::error::Error>> {
+fn send_world(storage: &World, client: &redis::Client) -> anyhow::Result<()> {
     debug!("Sending world state");
 
     let bots: Vec<_> = output::build_bots(FromWorld::new(storage)).collect();
@@ -65,7 +65,7 @@ fn send_world(storage: &World, client: &redis::Client) -> Result<(), Box<dyn std
         structures,
     };
 
-    let payload = rmp_serde::to_vec(&world)?;
+    let payload = rmp_serde::to_vec_named(&world)?;
 
     debug!("sending {} bytes", payload.len());
 
@@ -74,13 +74,20 @@ fn send_world(storage: &World, client: &redis::Client) -> Result<(), Box<dyn std
         .cmd("SET")
         .arg("WORLD_STATE")
         .arg(payload)
-        .query(&mut con)?;
+        .query(&mut con)
+        .with_context(|| "Failed to send WORLD_STATE")?;
 
     debug!("Sending world state done");
     Ok(())
 }
 
-fn send_terrain(storage: &World, client: &redis::Client) -> Result<(), Box<dyn std::error::Error>> {
+#[derive(Debug, Clone, Error)]
+pub enum TerrainSendFail {
+    #[error("RoomProperties were not set")]
+    RoomPropertiesNotSet,
+}
+
+fn send_terrain(storage: &World, client: &redis::Client) -> anyhow::Result<()> {
     let room_properties = storage
         .view::<EmptyKey, components::RoomProperties>()
         .value
@@ -88,7 +95,7 @@ fn send_terrain(storage: &World, client: &redis::Client) -> Result<(), Box<dyn s
         .map(|rp| RoomPropertiesMsg {
             room_radius: rp.radius,
         })
-        .ok_or_else(|| "RoomProperties not set")?;
+        .ok_or_else(|| TerrainSendFail::RoomPropertiesNotSet)?;
 
     let tiles = output::build_terrain(FromWorld::new(storage)).collect::<Vec<_>>();
 
@@ -99,7 +106,7 @@ fn send_terrain(storage: &World, client: &redis::Client) -> Result<(), Box<dyn s
         room_properties,
     };
 
-    let payload = rmp_serde::to_vec(&world).unwrap();
+    let payload = rmp_serde::to_vec_named(&world).unwrap();
     debug!("sending {} bytes", payload.len());
 
     let mut con = client.get_connection()?;
@@ -107,13 +114,14 @@ fn send_terrain(storage: &World, client: &redis::Client) -> Result<(), Box<dyn s
         .cmd("SET")
         .arg("WORLD_TERRAIN")
         .arg(payload)
-        .query(&mut con)?;
+        .query(&mut con)
+        .with_context(|| "Failed to set WORLD_TERRAIN")?;
 
     debug!("sending terrain done");
     Ok(())
 }
 
-fn send_schema(client: &redis::Client) -> Result<(), Box<dyn std::error::Error>> {
+fn send_schema(client: &redis::Client) -> anyhow::Result<()> {
     debug!("Sending schema");
     let mut con = client.get_connection()?;
 
@@ -148,23 +156,24 @@ fn send_schema(client: &redis::Client) -> Result<(), Box<dyn std::error::Error>>
 
     let schema = Schema { functions };
 
-    let payload = rmp_serde::to_vec(&schema).unwrap();
+    let payload = rmp_serde::to_vec_named(&schema).unwrap();
 
     redis::pipe()
         .cmd("SET")
         .arg("SCHEMA")
         .arg(payload)
-        .query(&mut con)?;
+        .query(&mut con)
+        .with_context(|| "Failed to set SCHEMA")?;
 
     debug!("Sending schema done");
     Ok(())
 }
 
 fn main() {
+    init();
     let _guard = std::env::var("SENTRY_URI")
         .ok()
         .map(|uri| sentry::init(uri));
-    init();
     let n_actors = std::env::var("N_ACTORS")
         .ok()
         .and_then(|s| s.parse::<usize>().ok())
@@ -184,6 +193,11 @@ fn main() {
     let tick_freq = Duration::from_millis(tick_freq);
 
     send_schema(&client).expect("Send schema");
+
+    sentry::capture_message(
+        "Caolo Worker initialization complete! Starting the game loop",
+        sentry::Level::Info,
+    );
     loop {
         let start = Instant::now();
         input::handle_messages(&mut storage, &client);

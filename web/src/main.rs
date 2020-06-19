@@ -32,6 +32,10 @@ async fn main() -> std::io::Result<()> {
     #[cfg(feature = "web-dotenv")]
     dotenv().ok();
 
+    let _guard = std::env::var("SENTRY_URI")
+        .ok()
+        .map(|uri| sentry::init(uri));
+
     env_logger::init();
 
     let conf = Config::read().unwrap();

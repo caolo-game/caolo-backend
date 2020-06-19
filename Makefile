@@ -1,4 +1,4 @@
-.DEFAULT_GOAL := start
+.DEFAULT_GOAL := buildall
 .PHONY: web worker
 
 test:

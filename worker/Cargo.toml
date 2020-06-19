@@ -26,8 +26,10 @@ serde = "1"
 serde_derive = "1"
 redis = "0.15"
 rand="*"
-sentry = "0.12"
+sentry = "0.19"
 rmp-serde = "0.14"
+anyhow = "1"
+thiserror = "1"
 
 dep-dotenv = { version="0.14", optional=true, package="dotenv" }
 uuid = { version="0.7" }

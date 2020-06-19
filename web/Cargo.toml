@@ -3,10 +3,7 @@ name = "caolo-web"
 version = "0.1.0"
 authors = ["Daniel Kiss <littlesnorrboy@gmail.com>"]
 edition = "2018"
-build = "build.rs"
 
-[build-dependencies]
-protoc-rust = "2"
 
 [[bin]]
 name = "caolo-web"
@@ -22,7 +19,7 @@ with-serde = []
 dotenv = { version="0.9", optional=true }
 reqwest = { version= "0.10", features = ["json"] }
 cao-lang = { git = "https://github.com/caolo-game/cao-lang.git", features=[] }
-protobuf = { version="2", features=["with-serde"] }
+caolo-messages = { path = "../messages" }
 
 actix = "0.9"
 actix-web = "2"
@@ -36,6 +33,7 @@ failure = "0.1"
 serde = { version = "1" }
 serde_derive = "1"
 serde_json = "1"
+rmp-serde = "0.14"
 env_logger = "0.7"
 redis = "0.15"
 r2d2_redis = "0.13.0"

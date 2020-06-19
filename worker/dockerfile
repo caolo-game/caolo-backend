@@ -1,23 +1,17 @@
 FROM rust:latest AS build
 
-# install protoc
-WORKDIR /usr/protocinstall
-ENV PROTOC_ZIP=protoc-3.11.3-linux-x86_64.zip
-RUN curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v3.11.3/$PROTOC_ZIP
-RUN unzip -o $PROTOC_ZIP -d /usr/local bin/protoc
-
 WORKDIR /caolo
 
 COPY ./rust-toolchain ./rust-toolchain
 # cache the toolchain
 RUN cargo --version
 
-COPY ./protos/ ./protos/
 COPY ./worker/ ./worker
+COPY ./messages/ ./messages
 COPY ./Cargo.lock ./worker/Cargo.lock
 
 WORKDIR /caolo/worker
-RUN cargo install --path . --root . --no-default-features --features="with-serde"
+RUN cargo install --path . --root . --no-default-features
 
 # ---------- Copy the built binary to a scratch container, to minimize the image size ----------
 

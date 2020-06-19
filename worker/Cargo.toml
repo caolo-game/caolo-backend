@@ -3,23 +3,19 @@ name = "caolo-worker"
 version = "0.1.0"
 authors = ["Daniel Kiss <littlesnorrboy@gmail.com>"]
 edition = "2018"
-build="build.rs"
 
 [[bin]]
 name = "caolo-worker"
-required-features = ["with-serde"]
-
-[build-dependencies]
-protoc-rust = { version="2" }
+required-features = []
 
 [features]
-default = ["dotenv", "with-serde"]
+default = ["dotenv"]
 dotenv = ["dep-dotenv"]
-with-serde = [] # for protobuf
 
 [dependencies]
 caolo-sim = { git = "https://github.com/caolo-game/cao-sim.git", features=[] }
 cao-lang = { git = "https://github.com/caolo-game/cao-lang.git" }
+caolo-messages = { path= "../messages" }
 
 log = "*"
 env_logger = "*"
@@ -31,10 +27,10 @@ serde_derive = "1"
 redis = "0.15"
 rand="*"
 sentry = "0.12"
+rmp-serde = "0.14"
 
 dep-dotenv = { version="0.14", optional=true, package="dotenv" }
 uuid = { version="0.7" }
-protobuf = { version="2", features=["with-serde"] }
 
 [dev-dependencies]
 env_logger = { version="*", default-features=false }

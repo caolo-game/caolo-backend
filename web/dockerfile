@@ -1,11 +1,5 @@
 FROM rust:latest AS build
 
-# install protoc
-WORKDIR /usr/protocinstall
-ENV PROTOC_ZIP=protoc-3.11.3-linux-x86_64.zip
-RUN curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v3.11.3/$PROTOC_ZIP
-RUN unzip -o $PROTOC_ZIP -d /usr/local bin/protoc
-
 RUN apt-get update
 RUN apt-get install sudo postgresql postgresql-contrib -y
 RUN service postgresql start
@@ -24,7 +18,7 @@ ENV DATABASE_URL=postgres://postgres:postgres@localhost:5432/caolo
 WORKDIR /caolo
 COPY ./web/build.sh ./
 COPY ./migrations/ ./migrations/
-COPY ./protos/ ./protos/
+COPY ./messages/ ./messages/
 COPY ./web/ ./web/
 
 WORKDIR /caolo/web

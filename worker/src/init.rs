@@ -1,12 +1,10 @@
 use cao_lang::prelude::*;
+use caolo_sim::components;
+use caolo_sim::geometry::{Axial, Hexagon};
 use caolo_sim::map_generation::generate_full_map;
 use caolo_sim::map_generation::overworld::OverworldGenerationParams;
 use caolo_sim::map_generation::room::RoomGenerationParams;
-use caolo_sim::model::{
-    self, components,
-    geometry::{Axial, Hexagon},
-    EntityId, Room, ScriptId, WorldPosition,
-};
+use caolo_sim::model::{self, EntityId, Room, ScriptId, WorldPosition};
 use caolo_sim::storage::views::{FromWorld, FromWorldMut, UnsafeView, View};
 use caolo_sim::World;
 use log::{debug, trace};

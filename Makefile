@@ -47,4 +47,3 @@ deploy-heroku: buildall release
 
 deploy: buildall pushall
 	kubectl apply -f ./manifests
-

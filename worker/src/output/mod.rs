@@ -1,17 +1,16 @@
-use crate::protos::world::Bot as BotMsg;
-use crate::protos::world::LogEntry as LogMsg;
-use crate::protos::world::{Resource as ResourceMsg, Resource_ResourceType};
-use crate::protos::world::{Structure as StructureMsg, StructureSpawn as StructureSpawnMsg};
-use crate::protos::world::{Tile as TileMsg, Tile_TerrainType};
-use caolo_sim::model::{
-    components::{
-        Bot, EnergyComponent, LogEntry, OwnedEntity, PositionComponent, Resource,
-        ResourceComponent, SpawnComponent, Structure, TerrainComponent,
-    },
-    indices::EntityTime,
-    terrain::TileTerrainType,
-    EntityId, WorldPosition,
+use caolo_messages::Bot as BotMsg;
+use caolo_messages::LogEntry as LogMsg;
+use caolo_messages::{AxialPoint, TerrainType, Tile as TileMsg, WorldPosition as WorldPositionMsg};
+use caolo_messages::{Resource as ResourceMsg, ResourceType};
+use caolo_messages::{
+    Structure as StructureMsg, StructurePayload as StructurePayloadMsg,
+    StructureSpawn as StructureSpawnMsg,
 };
+use caolo_sim::components::{
+    Bot, EnergyComponent, LogEntry, OwnedEntity, PositionComponent, Resource, ResourceComponent,
+    SpawnComponent, Structure, TerrainComponent,
+};
+use caolo_sim::model::{indices::EntityTime, terrain::TileTerrainType, EntityId, WorldPosition};
 use caolo_sim::storage::views::View;
 use caolo_sim::tables::JoinIterator;
 
@@ -27,14 +26,13 @@ pub fn build_bots<'a>(
     let bots = bots.reborrow().iter();
     let positions = positions.reborrow().iter();
     JoinIterator::new(bots, positions).map(move |(id, (_bot, pos))| {
-        let mut msg = BotMsg::default();
-        msg.set_id(id.0);
-        let msg_pos = msg.mut_position();
-        init_world_pos(msg_pos, pos.0);
-        msg.mut_owner().clear();
-        if let Some(owner) = owned_entities.get_by_id(&id) {
-            *msg.mut_owner() = owner.owner_id.0.as_bytes().to_vec();
-        }
+        let msg = BotMsg {
+            id: id.0,
+            position: init_world_pos(pos.0),
+            owner: owned_entities
+                .get_by_id(&id)
+                .map(|OwnedEntity { owner_id }| owner_id.0),
+        };
         msg
     })
 }
@@ -42,35 +40,25 @@ pub fn build_bots<'a>(
 pub fn build_logs<'a>(v: View<'a, EntityTime, LogEntry>) -> impl Iterator<Item = LogMsg> + 'a {
     v.reborrow()
         .iter()
-        .map(|(EntityTime(EntityId(eid), time), entries)| {
-            let mut msg = LogMsg::new();
-            msg.set_entity_id(eid);
-            msg.set_time(time);
-            for e in entries.payload.iter() {
-                msg.mut_payload().push(e.clone());
-            }
-            msg
+        .map(|(EntityTime(EntityId(eid), time), entries)| LogMsg {
+            entity_id: eid,
+            time,
+            payload: entries.payload.iter().cloned().collect(),
         })
 }
 
 pub fn build_terrain<'a>(
     v: View<'a, WorldPosition, TerrainComponent>,
 ) -> impl Iterator<Item = TileMsg> + 'a {
-    v.reborrow().iter().map(|(pos, tile)| {
-        let mut msg = TileMsg::new();
-        let msg_pos = msg.mut_position();
-        init_world_pos(msg_pos, pos);
-        match tile.0 {
-            TileTerrainType::Bridge => {
-                msg.set_ty(Tile_TerrainType::BRIDGE);
-            }
-            TileTerrainType::Plain => {
-                msg.set_ty(Tile_TerrainType::PLAIN);
-            }
-            TileTerrainType::Wall => {
-                msg.set_ty(Tile_TerrainType::WALL);
-            }
-        }
+    v.reborrow().iter().map(|(pos, TerrainComponent(tile))| {
+        let msg = TileMsg {
+            position: init_world_pos(pos),
+            ty: match tile {
+                TileTerrainType::Plain => TerrainType::Plain,
+                TileTerrainType::Wall => TerrainType::Wall,
+                TileTerrainType::Bridge => TerrainType::Bridge,
+            },
+        };
         msg
     })
 }
@@ -92,13 +80,14 @@ pub fn build_resources<'a>(
     JoinIterator::new(join, energy_table.reborrow().iter()).map(
         |(id, ((resource, pos), energy))| match resource.0 {
             Resource::Energy => {
-                let mut msg = ResourceMsg::new();
-                msg.set_id(id.0);
-                let msg_pos = msg.mut_position();
-                init_world_pos(msg_pos, pos.0);
-                msg.set_ty(Resource_ResourceType::ENERGY);
-                msg.set_energy(energy.energy as u32);
-                msg.set_energyMax(energy.energy_max as u32);
+                let msg = ResourceMsg {
+                    id: id.0,
+                    position: init_world_pos(pos.0),
+                    ty: ResourceType::Energy {
+                        energy: energy.energy as u32,
+                        energy_max: energy.energy_max as u32,
+                    },
+                };
                 msg
             }
         },
@@ -121,28 +110,31 @@ pub fn build_structures<'a>(
     );
     JoinIterator::new(spawns, position_table.reborrow().iter()).map(
         move |(id, ((spawn, _structure), pos))| {
-            let mut msg = StructureMsg::new();
-            msg.set_id(id.0);
-            let msg_pos = msg.mut_position();
-            init_world_pos(msg_pos, pos.0);
-            msg.mut_owner().clear();
-            if let Some(owner) = owner_table.get_by_id(&id) {
-                *msg.mut_owner() = owner.owner_id.0.as_bytes().to_vec();
-            }
-            let mut payload = StructureSpawnMsg::new();
-            payload.set_time_to_spawn(spawn.time_to_spawn as i32);
-            if let Some(spawning) = spawn.spawning {
-                payload.set_spawning(spawning.0);
-            }
-            msg.set_spawn(payload);
+            let msg = StructureMsg {
+                id: id.0,
+                position: init_world_pos(pos.0),
+                owner: owner_table
+                    .get_by_id(&id)
+                    .map(|OwnedEntity { owner_id }| owner_id.0),
+                payload: StructurePayloadMsg::Spawn(StructureSpawnMsg {
+                    spawning: spawn.spawning.map(|EntityId(id)| id),
+                    time_to_spawn: spawn.time_to_spawn as i32,
+                }),
+            };
             msg
         },
     )
 }
 
-fn init_world_pos(msg_pos: &mut crate::protos::world::WorldPosition, pos: WorldPosition) {
-    msg_pos.mut_room().set_q(pos.room.q);
-    msg_pos.mut_room().set_r(pos.room.r);
-    msg_pos.mut_pos().set_q(pos.pos.q);
-    msg_pos.mut_pos().set_r(pos.pos.r);
+fn init_world_pos(pos: WorldPosition) -> WorldPositionMsg {
+    WorldPositionMsg {
+        room: AxialPoint {
+            q: pos.room.q,
+            r: pos.room.r,
+        },
+        pos: AxialPoint {
+            q: pos.pos.q,
+            r: pos.pos.r,
+        },
+    }
 }

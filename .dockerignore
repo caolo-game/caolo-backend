@@ -3,6 +3,7 @@
 !rust-toolchain
 !web
 !protos
+!messages
 !migrations
 !diesel.toml
 !release.sh

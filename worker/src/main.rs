@@ -1,18 +1,15 @@
-// for protobuf
-#[macro_use]
-extern crate serde_derive;
-
 mod init;
 mod input;
 mod output;
-mod protos;
 
 use caolo_sim::prelude::*;
 use log::{debug, error, info};
-use protobuf::{Message, RepeatedField};
-use protos::schema::{Function as SchemaFunctionDTO, Schema as SchemaMessage};
 use std::thread;
 use std::time::{Duration, Instant};
+
+use caolo_messages::{
+    Function, RoomProperties as RoomPropertiesMsg, Schema, WorldState, WorldTerrain,
+};
 
 fn init() {
     #[cfg(feature = "dotenv")]
@@ -43,36 +40,32 @@ fn tick(storage: &mut World) {
 }
 
 fn send_world(storage: &World, client: &redis::Client) -> Result<(), Box<dyn std::error::Error>> {
-    use protos::world::WorldState;
-
     debug!("Sending world state");
 
-    let mut world = WorldState::new();
-    for bot in output::build_bots(FromWorld::new(storage)) {
-        world.mut_bots().push(bot);
-    }
+    let bots: Vec<_> = output::build_bots(FromWorld::new(storage)).collect();
 
-    debug!("sending {} bots", world.get_bots().len());
+    debug!("sending {} bots", bots.len());
 
-    for log in output::build_logs(FromWorld::new(storage)) {
-        world.mut_logs().push(log);
-    }
+    let logs: Vec<_> = output::build_logs(FromWorld::new(storage)).collect();
 
-    debug!("sending {} logs", world.get_logs().len());
+    debug!("sending {} logs", logs.len());
 
-    for resource in output::build_resources(FromWorld::new(storage)) {
-        world.mut_resources().push(resource);
-    }
+    let resources: Vec<_> = output::build_resources(FromWorld::new(storage)).collect();
 
-    debug!("sending {} resources", world.get_resources().len());
+    debug!("sending {} resources", resources.len());
 
-    for structure in output::build_structures(FromWorld::new(storage)) {
-        world.mut_structures().push(structure);
-    }
+    let structures: Vec<_> = output::build_structures(FromWorld::new(storage)).collect();
 
-    debug!("sending {} structures", world.get_structures().len());
+    debug!("sending {} structures", structures.len());
 
-    let payload = world.write_to_bytes()?;
+    let world = WorldState {
+        bots,
+        logs,
+        resources,
+        structures,
+    };
+
+    let payload = rmp_serde::to_vec(&world)?;
 
     debug!("sending {} bytes", payload.len());
 
@@ -88,24 +81,25 @@ fn send_world(storage: &World, client: &redis::Client) -> Result<(), Box<dyn std
 }
 
 fn send_terrain(storage: &World, client: &redis::Client) -> Result<(), Box<dyn std::error::Error>> {
-    use protos::world::WorldTerrain;
-
-    let mut world = WorldTerrain::new();
-
-    if let Some(room_props) = storage
+    let room_properties = storage
         .view::<EmptyKey, components::RoomProperties>()
         .value
         .as_ref()
-    {
-        world.mut_roomProperties().set_roomRadius(room_props.radius);
-    }
+        .map(|rp| RoomPropertiesMsg {
+            room_radius: rp.radius,
+        })
+        .ok_or_else(|| "RoomProperties not set")?;
 
-    for tile in output::build_terrain(FromWorld::new(storage)) {
-        world.mut_tiles().push(tile);
-    }
+    let tiles = output::build_terrain(FromWorld::new(storage)).collect::<Vec<_>>();
 
-    debug!("sending {} terrain", world.get_tiles().len());
-    let payload = world.write_to_bytes()?;
+    debug!("sending {} terrain", tiles.len());
+
+    let world = WorldTerrain {
+        tiles,
+        room_properties,
+    };
+
+    let payload = rmp_serde::to_vec(&world).unwrap();
     debug!("sending {} bytes", payload.len());
 
     let mut con = client.get_connection()?;
@@ -124,43 +118,37 @@ fn send_schema(client: &redis::Client) -> Result<(), Box<dyn std::error::Error>>
     let mut con = client.get_connection()?;
 
     let schema = caolo_sim::api::make_import();
-    let imports = schema
+    let functions = schema
         .imports()
         .iter()
         .map(|import| {
             let import = &import.desc;
-            let mut fun = SchemaFunctionDTO::new();
-            fun.set_name(import.name.to_owned());
-            fun.set_description(import.description.to_owned());
-            fun.set_input(RepeatedField::from_ref(
-                import
+            let fun = Function {
+                name: import.name.to_owned(),
+                description: import.description.to_owned(),
+                input: import
                     .input
                     .iter()
                     .map(|x| x.to_string())
                     .collect::<Vec<_>>(),
-            ));
-            fun.set_params(RepeatedField::from_ref(
-                import
-                    .params
-                    .iter()
-                    .map(|x| x.to_string())
-                    .collect::<Vec<_>>(),
-            ));
-            fun.set_output(RepeatedField::from_ref(
-                import
+                output: import
                     .output
                     .iter()
                     .map(|x| x.to_string())
                     .collect::<Vec<_>>(),
-            ));
+                params: import
+                    .params
+                    .iter()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<_>>(),
+            };
             fun
         })
         .collect::<Vec<_>>();
 
-    let mut schema = SchemaMessage::new();
-    schema.set_functions(RepeatedField::from_vec(imports));
+    let schema = Schema { functions };
 
-    let payload = schema.write_to_bytes()?;
+    let payload = rmp_serde::to_vec(&schema).unwrap();
 
     redis::pipe()
         .cmd("SET")

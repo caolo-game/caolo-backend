@@ -16,17 +16,22 @@ spec:
         - name: caolo-web
           image: frenetiq/caolo-web:latest
           command:
-            - node
-            - lib/index.js
+            - ./caolo-web
           env:
             - name: HOST
               value: "0.0.0.0"
             - name: PORT
-              value: "8080"
+              value: "8000"
             - name: RUST_LOG
               value: info,web=debug
+            - name: REDIS_URL
+              value: redis://cache:6379
             - name: DATABASE_URL
               value: postgres://postgres:verysecurepw@database:5432
+            - name: GOOGLE_OAUTH_CLIENT_ID
+              value: "<your google id>"
+            - name: GOOGLE_OAUTH_CLIENT_SECRET
+              value: "<your google secret>"
           lifecycle:
             postStart:
               exec:
@@ -42,6 +47,6 @@ spec:
   type: LoadBalancer
   ports:
     - name: "caolo-web"
-      port: 8080
+      port: 8000
   selector:
     app: caolo-web

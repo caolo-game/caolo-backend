@@ -1,4 +1,5 @@
 use crate::PgPool;
+use serde::{Serialize};
 use actix_identity::Identity;
 use actix_web::FromRequest;
 use actix_web::{
@@ -9,7 +10,6 @@ use actix_web::{
 };
 use chrono::{DateTime, Utc};
 use log::debug;
-use serde::Serialize;
 use sqlx::FromRow;
 use std::future::Future;
 use std::pin::Pin;

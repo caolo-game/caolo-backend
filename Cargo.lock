@@ -684,7 +684,7 @@ dependencies = [
 [[package]]
 name = "cao_storage_derive"
 version = "0.1.0"
-source = "git+https://github.com/caolo-game/cao-sim.git#f7adb5df53aec703c8122673a49ab37827c1f93c"
+source = "git+https://github.com/caolo-game/cao-sim.git#e858f431c8b4763c609a209bdb16152196834e78"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -692,9 +692,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "caolo-messages"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "uuid 0.7.4",
+]
+
+[[package]]
 name = "caolo-sim"
 version = "0.1.0"
-source = "git+https://github.com/caolo-game/cao-sim.git#f7adb5df53aec703c8122673a49ab37827c1f93c"
+source = "git+https://github.com/caolo-game/cao-sim.git#e858f431c8b4763c609a209bdb16152196834e78"
 dependencies = [
  "arrayvec",
  "cao-lang",
@@ -721,18 +729,18 @@ dependencies = [
  "actix-web-actors",
  "base64 0.12.2",
  "cao-lang",
+ "caolo-messages",
  "chrono",
  "dotenv 0.9.0",
  "env_logger 0.7.1",
  "failure",
  "log",
  "oauth2",
- "protobuf",
- "protoc-rust",
  "r2d2_redis",
  "rand 0.7.3",
  "redis",
  "reqwest 0.10.6",
+ "rmp-serde",
  "serde",
  "serde_derive",
  "serde_json",
@@ -747,15 +755,15 @@ name = "caolo-worker"
 version = "0.1.0"
 dependencies = [
  "cao-lang",
+ "caolo-messages",
  "caolo-sim",
  "chrono",
  "dotenv 0.14.1",
  "env_logger 0.7.1",
  "log",
- "protobuf",
- "protoc-rust",
  "rand 0.7.3",
  "redis",
+ "rmp-serde",
  "sentry",
  "serde",
  "serde_derive",
@@ -981,9 +989,9 @@ dependencies = [
 
 [[package]]
 name = "derive_more"
-version = "0.99.7"
+version = "0.99.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2127768764f1556535c01b5326ef94bd60ff08dcfbdc544d53e69ed155610f5d"
+checksum = "bc655351f820d774679da6cdc23355a93de496867d8203496675162e17b1d671"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1036,9 +1044,9 @@ checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
 
 [[package]]
 name = "dtoa"
-version = "0.4.5"
+version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4358a9e11b9a09cf52383b451b49a169e8d797b68aa02301ff586d70d9661ea3"
+checksum = "134951f4028bdadb9b84baf4232681efbf277da25144b9b0ad65df75946c422b"
 
 [[package]]
 name = "either"
@@ -1665,9 +1673,9 @@ dependencies = [
 
 [[package]]
 name = "itoa"
-version = "0.4.5"
+version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b8b7a7c0c47db5545ed3fef7468ee7bb5b74691498139e4b3f6a20685dc6dd8e"
+checksum = "dc6f3ad7b9d11a0c00842ff8de1b60ee58661048eb8049ed33c73594f359d7e6"
 
 [[package]]
 name = "js-sys"
@@ -2144,46 +2152,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "protobuf"
-version = "2.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e86d370532557ae7573551a1ec8235a0f8d6cb276c7c9e6aa490b511c447485"
-dependencies = [
- "serde",
- "serde_derive",
-]
-
-[[package]]
-name = "protobuf-codegen"
-version = "2.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de113bba758ccf2c1ef816b127c958001b7831136c9bc3f8e9ec695ac4e82b0c"
-dependencies = [
- "protobuf",
-]
-
-[[package]]
-name = "protoc"
-version = "2.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "349d80967ee438cd03ccd236d548d4dcd5f2d9349acda206bef1490a826165d3"
-dependencies = [
- "log",
-]
-
-[[package]]
-name = "protoc-rust"
-version = "2.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "58f2fb1de3a1355b1eb91108bf59d6221c1f565eee9983605be53846019fdf38"
-dependencies = [
- "protobuf",
- "protobuf-codegen",
- "protoc",
- "tempfile",
-]
-
-[[package]]
 name = "publicsuffix"
 version = "1.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2592,9 +2560,9 @@ dependencies = [
 
 [[package]]
 name = "ring"
-version = "0.16.14"
+version = "0.16.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "06b3fefa4f12272808f809a0af618501fdaba41a58963c5fb72238ab0be09603"
+checksum = "952cd6b98c85bbc30efa1ba5783b8abf12fec8b3287ffa52605b9432313e34e4"
 dependencies = [
  "cc",
  "libc",
@@ -2603,6 +2571,27 @@ dependencies = [
  "untrusted",
  "web-sys",
  "winapi 0.3.8",
+]
+
+[[package]]
+name = "rmp"
+version = "0.8.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0f10b46df14cf1ee1ac7baa4d2fbc2c52c0622a4b82fa8740e37bc452ac0184f"
+dependencies = [
+ "byteorder",
+ "num-traits",
+]
+
+[[package]]
+name = "rmp-serde"
+version = "0.14.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4c1ee98f14fe8b8e9c5ea13d25da7b2a1796169202c57a09d7288de90d56222b"
+dependencies = [
+ "byteorder",
+ "rmp",
+ "serde",
 ]
 
 [[package]]
@@ -3131,6 +3120,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "tinyvec"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "53953d2d3a5ad81d9f844a32f14ebb121f50b650cd59d0ee2a07cf13c617efed"
+
+[[package]]
 name = "tokio"
 version = "0.1.22"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3423,11 +3418,11 @@ dependencies = [
 
 [[package]]
 name = "unicode-normalization"
-version = "0.1.12"
+version = "0.1.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5479532badd04e128284890390c1e876ef7a993d0570b3597ae43dfa1d59afa4"
+checksum = "6fb19cf769fa8c6a80a162df694621ebeb4dafb606470b2b2fce0be40a98a977"
 dependencies = [
- "smallvec 1.4.0",
+ "tinyvec",
 ]
 
 [[package]]

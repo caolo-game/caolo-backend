@@ -1,5 +1,5 @@
 use crate::model::User;
-use crate::protos::world::WorldState;
+use caolo_messages::WorldState;
 use crate::RedisPool;
 use actix::prelude::*;
 use actix::{Actor, StreamHandler};
@@ -8,7 +8,6 @@ use actix_web::{get, Responder};
 use actix_web_actors::ws;
 use failure::Fail;
 use log::{debug, error, warn};
-use protobuf::{parse_from_bytes, ProtobufError};
 use redis::Commands;
 use redis::RedisError;
 use std::sync::Arc;
@@ -27,8 +26,6 @@ struct WorldStream {
 enum ReadError {
     #[fail(display = "RedisError {:?}", 0)]
     RedisError(RedisError),
-    #[fail(display = "ProtoError {:?}", 0)]
-    ProtoError(ProtobufError),
 }
 
 impl WorldStream {
@@ -63,10 +60,11 @@ impl WorldStream {
             match connection
                 .get::<_, Vec<u8>>("WORLD_STATE")
                 .map_err(ReadError::RedisError)
-                .and_then(|bytes| {
-                    parse_from_bytes::<WorldState>(bytes.as_slice()).map_err(ReadError::ProtoError)
+                .map(|bytes| {
+                    rmp_serde::from_read_ref(bytes.as_slice()).expect("WorldState deserialization error")
                 }) {
-                Ok(state) => {
+                Ok(state ) => {
+                    let state: WorldState = state;
                     debug!("Sending world state to client");
                     let mut buffer = Vec::with_capacity(512);
                     serde_json::to_writer(&mut buffer, &state).expect("json serialize");

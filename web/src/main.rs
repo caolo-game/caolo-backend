@@ -1,13 +1,7 @@
-// for protobuf
-#[cfg(feature = "with-serde")]
-#[macro_use]
-extern crate serde_derive;
-
 mod config;
 mod google_auth;
 mod handler;
 mod model;
-mod protos;
 mod world;
 
 use actix_cors::Cors;

@@ -16,14 +16,14 @@ spec:
         - name: caolo-worker
           image: frenetiq/caolo-worker:latest
           command:
-            - "/caolo"
+            - ./caolo-worker
           env:
             - name: N_ACTORS
-              value: "666"
+              value: "69"
             - name: RUST_LOG
               value: info,caolo_worker=debug
             - name: TARGET_TICK_FREQUENCY_MS
-              value: "2000"
+              value: "1000"
             - name: REDIS_URL
               value: redis://cache:6379
 

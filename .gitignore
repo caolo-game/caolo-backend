@@ -12,3 +12,6 @@ docker.env
 profile.csv
 
 .ipynb_checkpoints/
+
+google_userid
+google_secret

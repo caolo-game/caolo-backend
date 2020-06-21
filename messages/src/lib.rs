@@ -79,7 +79,7 @@ pub struct Point {
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
 pub struct WorldPosition {
     pub room: AxialPoint,
-    pub pos: AxialPoint,
+    pub room_pos: AxialPoint,
     pub absolute_pos: Point,
 }
 

@@ -170,7 +170,7 @@ fn init_world_pos(
                 q: world_pos.room.q,
                 r: world_pos.room.r,
             },
-            pos: AxialPoint {
+            room_pos: AxialPoint {
                 q: world_pos.pos.q,
                 r: world_pos.pos.r,
             },

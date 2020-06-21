@@ -339,9 +339,9 @@ dependencies = [
 
 [[package]]
 name = "addr2line"
-version = "0.12.1"
+version = "0.12.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a49806b9dadc843c61e7c97e72490ad7f7220ae249012fbda9ad0609457c0543"
+checksum = "602d785912f476e480434627e8732e6766b760c045bbf897d9dfaa9f4fbd399c"
 dependencies = [
  "gimli",
 ]
@@ -699,9 +699,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "cao-math"
+version = "0.3.11"
+source = "git+https://github.com/caolo-game/cao-math.git#82dc81d64ffe202dee06e729e7911e3c0ff6e2ac"
+dependencies = [
+ "console_error_panic_hook",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "wasm-bindgen",
+ "wee_alloc",
+]
+
+[[package]]
 name = "cao_storage_derive"
 version = "0.1.0"
-source = "git+https://github.com/caolo-game/cao-sim.git#2d7b4a5e072104e195f35db3021441bafe8c7662"
+source = "git+https://github.com/caolo-game/cao-sim.git#e07ce2067939aa5427ef880d62c274694b574f9c"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -719,7 +732,7 @@ dependencies = [
 [[package]]
 name = "caolo-sim"
 version = "0.1.0"
-source = "git+https://github.com/caolo-game/cao-sim.git#2d7b4a5e072104e195f35db3021441bafe8c7662"
+source = "git+https://github.com/caolo-game/cao-sim.git#e07ce2067939aa5427ef880d62c274694b574f9c"
 dependencies = [
  "arrayvec",
  "cao-lang",
@@ -749,10 +762,10 @@ dependencies = [
  "caolo-messages",
  "chrono",
  "dotenv 0.9.0",
- "env_logger",
  "failure",
  "log",
  "oauth2",
+ "pretty_env_logger",
  "r2d2_redis",
  "rand 0.7.3",
  "redis",
@@ -773,12 +786,14 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "cao-lang",
+ "cao-math",
  "caolo-messages",
  "caolo-sim",
  "chrono",
  "dotenv 0.14.1",
  "env_logger",
  "log",
+ "pretty_env_logger",
  "rand 0.7.3",
  "redis",
  "rmp-serde",
@@ -844,6 +859,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f83c06aff61f2d899eb87c379df3cbf7876f14471dcab474e0b6dc90ab96c080"
 dependencies = [
  "cache-padded",
+]
+
+[[package]]
+name = "console_error_panic_hook"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b8d976903543e0c48546a91908f21588a680a8c8f984df9a5d69feccb2b2a211"
+dependencies = [
+ "cfg-if",
+ "wasm-bindgen",
 ]
 
 [[package]]
@@ -1718,6 +1743,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "memory_units"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8452105ba047068f40ff7093dd1d9da90898e63dd61736462e9cdda6a90ad3c3"
+
+[[package]]
 name = "mime"
 version = "0.3.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1986,18 +2017,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8b870d8c151b6f2fb93e84a13146138f05d02ed11c7e7c54f8826aaaf7c9f184"
 
 [[package]]
-name = "piper"
-version = "0.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "01608bfa680dafb103f9207fa944facf572e4e3e708d10de19a0d0c3d36e5f18"
-dependencies = [
- "crossbeam-utils",
- "futures-io",
- "futures-sink",
- "futures-util",
-]
-
-[[package]]
 name = "pkg-config"
 version = "0.3.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2008,6 +2027,16 @@ name = "ppv-lite86"
 version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "237a5ed80e274dbc66f86bd59c1e25edc039660be53194b5fe0a482e0f2612ea"
+
+[[package]]
+name = "pretty_env_logger"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "926d36b9553851b8b0005f1275891b392ee4d2d833852c417ed025477350fb9d"
+dependencies = [
+ "env_logger",
+ "log",
+]
 
 [[package]]
 name = "proc-macro-hack"
@@ -2751,9 +2780,9 @@ checksum = "c7cb5678e1615754284ec264d9bb5b4c27d2018577fd90ac0ceb578591ed5ee4"
 
 [[package]]
 name = "smol"
-version = "0.1.14"
+version = "0.1.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f50d21240d7045d848746d6244762b8cb96449b586b4200519719784859ef50"
+checksum = "4de2eab434e51cc924e14fcbb1ef70373aebc94eea7e39205a4ef4ff2126fb06"
 dependencies = [
  "async-task",
  "blocking",
@@ -2763,11 +2792,10 @@ dependencies = [
  "futures-util",
  "libc",
  "once_cell",
- "piper",
  "scoped-tls 1.0.0",
  "slab",
  "socket2",
- "wepoll-binding",
+ "wepoll-sys-stjepang",
 ]
 
 [[package]]
@@ -2871,9 +2899,9 @@ checksum = "2d67a5a62ba6e01cb2192ff309324cb4875d0c451d55fe2319433abe7a05a8ee"
 
 [[package]]
 name = "syn"
-version = "1.0.31"
+version = "1.0.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b5304cfdf27365b7585c25d4af91b35016ed21ef88f17ced89c7093b43dba8b6"
+checksum = "a994520748611c17d163e81b6c4a4b13d11b7f63884362ab2efac3aa9cf16d00"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3331,20 +3359,22 @@ dependencies = [
 ]
 
 [[package]]
-name = "wepoll-binding"
-version = "2.0.2"
+name = "wee_alloc"
+version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "374fff4ff9701ff8b6ad0d14bacd3156c44063632d8c136186ff5967d48999a7"
+checksum = "dbb3b5a6b2bb17cb6ad44a2e68a43e8d2722c997da10e928665c72ec6c0a0b8e"
 dependencies = [
- "bitflags",
- "wepoll-sys",
+ "cfg-if",
+ "libc",
+ "memory_units",
+ "winapi 0.3.8",
 ]
 
 [[package]]
-name = "wepoll-sys"
-version = "2.0.0"
+name = "wepoll-sys-stjepang"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9082a777aed991f6769e2b654aa0cb29f1c3d615daf009829b07b66c7aff6a24"
+checksum = "74e0414ddefc9d668689fa1540beede94710b2b978bb531335051a0172a4f496"
 dependencies = [
  "cc",
 ]

@@ -312,7 +312,7 @@ fn uncontested_pos<T: caolo_sim::tables::TableRow + Send + Sync>(
 
         trace!("checking pos {:?}", pos);
 
-        if !bounds.contains(&pos) {
+        if !bounds.contains(pos) {
             trace!("point {:?} is out of bounds {:?}", pos, bounds);
             continue;
         }

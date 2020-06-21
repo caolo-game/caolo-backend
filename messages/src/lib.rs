@@ -70,9 +70,17 @@ pub struct AxialPoint {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
+pub struct Point {
+    pub x: f32,
+    pub y: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
 pub struct WorldPosition {
     pub room: AxialPoint,
     pub pos: AxialPoint,
+    pub absolute_pos: Point,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -88,7 +96,7 @@ pub struct Bot {
 pub struct Structure {
     pub id: u32,
     pub position: WorldPosition,
-    pub owner:Option< Uuid>,
+    pub owner: Option<Uuid>,
     pub payload: StructurePayload,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -101,7 +109,7 @@ pub enum StructurePayload {
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
 pub struct StructureSpawn {
     pub time_to_spawn: i32,
-    pub spawning:Option< u32>,
+    pub spawning: Option<u32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

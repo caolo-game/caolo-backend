@@ -17,7 +17,7 @@ fn init() {
     #[cfg(feature = "dotenv")]
     dep_dotenv::dotenv().unwrap_or_default();
 
-    env_logger::init();
+    pretty_env_logger::init();
 }
 
 fn tick(storage: &mut World) {

@@ -36,7 +36,7 @@ async fn main() -> std::io::Result<()> {
         .ok()
         .map(|uri| sentry::init(uri));
 
-    env_logger::init();
+    pretty_env_logger::init();
 
     let conf = Config::read().unwrap();
 

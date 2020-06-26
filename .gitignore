@@ -15,3 +15,5 @@ profile.csv
 
 google_userid
 google_secret
+
+*.log

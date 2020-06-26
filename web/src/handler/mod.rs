@@ -10,6 +10,7 @@ use actix_web::{error, get, post, Responder};
 use cao_lang::compiler::{self, CompilationUnit};
 use caolo_messages::{AxialPoint, Schema};
 use redis::Commands;
+use serde::Deserialize;
 
 #[get("/")]
 pub async fn index_page() -> impl Responder {
@@ -64,13 +65,19 @@ pub async fn terrain_rooms(db: web::Data<PgPool>) -> Result<HttpResponse, error:
     Ok(HttpResponse::Ok().json(res))
 }
 
+#[derive(Debug, Deserialize)]
+pub struct TerrainQuery {
+    q: i32,
+    r: i32,
+}
+
 #[get("/terrain")]
 pub async fn terrain(
-    web::Query(q): web::Query<i32>,
-    web::Query(r): web::Query<i32>,
+    query: web::Query<TerrainQuery>,
     db: web::Data<PgPool>,
 ) -> Result<HttpResponse, error::Error> {
     let db = db.into_inner();
+    let TerrainQuery { q, r } = query.0;
 
     struct Res {
         payload: serde_json::Value,

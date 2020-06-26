@@ -566,9 +566,9 @@ checksum = "b41b7ea54a0c9d92199de89e20e58d49f02f8e699814ef3fdf266f6f748d15c7"
 
 [[package]]
 name = "base64"
-version = "0.12.2"
+version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e223af0dc48c96d4f8342ec01a4974f139df863896b316681efd36742f22cc67"
+checksum = "3441f0f7b02788e948e47f457ca01f1d7e6d92c693bc132c22b087d3141c03ff"
 
 [[package]]
 name = "bitflags"
@@ -725,7 +725,7 @@ dependencies = [
 [[package]]
 name = "cao_storage_derive"
 version = "0.1.0"
-source = "git+https://github.com/caolo-game/cao-sim.git#05a0d9f44b089ab66af31773dd77823fcaab2302"
+source = "git+https://github.com/caolo-game/cao-sim.git#f7cdb6086a7e10244b5f6743acbf5c6a3546f554"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -743,8 +743,9 @@ dependencies = [
 [[package]]
 name = "caolo-sim"
 version = "0.1.0"
-source = "git+https://github.com/caolo-game/cao-sim.git#05a0d9f44b089ab66af31773dd77823fcaab2302"
+source = "git+https://github.com/caolo-game/cao-sim.git#f7cdb6086a7e10244b5f6743acbf5c6a3546f554"
 dependencies = [
+ "anyhow",
  "arrayvec",
  "cao-lang",
  "cao_storage_derive",
@@ -770,7 +771,7 @@ dependencies = [
  "actix-rt",
  "actix-web",
  "actix-web-actors",
- "base64 0.12.2",
+ "base64 0.12.3",
  "cao-lang",
  "caolo-messages",
  "chrono",
@@ -822,9 +823,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.0.54"
+version = "1.0.55"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7bbb73db36c1246e9034e307d0fba23f9a2e251faa47ade70c1bd252220c8311"
+checksum = "b1be3409f94d7bdceeb5f5fac551039d9b3f00e25da7a74fc4d33400a0d96368"
 
 [[package]]
 name = "cfg-if"
@@ -1925,9 +1926,9 @@ checksum = "2839e79665f131bdb5782e51f2c6c9599c133c6098982a54c794358bf432529c"
 
 [[package]]
 name = "openssl"
-version = "0.10.29"
+version = "0.10.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cee6d85f4cb4c4f59a6a85d5b68a233d280c82e29e822913b9c8b129fbf20bdd"
+checksum = "8d575eff3665419f9b83678ff2815858ad9d11567e082f5ac1814baba4e2bcb4"
 dependencies = [
  "bitflags",
  "cfg-if",
@@ -1958,9 +1959,9 @@ dependencies = [
 
 [[package]]
 name = "parking"
-version = "1.0.2"
+version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1bcaa58ee64f8e4a3d02f5d8e6ed0340eae28fed6fdabd984ad1776e3b43848a"
+checksum = "c4029bc3504a62d92e42f30b9095fdef73b8a0b2a06aa41ce2935143b05a1a06"
 
 [[package]]
 name = "parking_lot"
@@ -2390,7 +2391,7 @@ version = "0.10.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3b82c9238b305f26f53443e3a4bc8528d64b8d0bee408ec949eb7bf5635ec680"
 dependencies = [
- "base64 0.12.2",
+ "base64 0.12.3",
  "bytes",
  "encoding_rs",
  "futures-core",
@@ -2849,7 +2850,7 @@ dependencies = [
  "async-native-tls",
  "async-std",
  "async-stream",
- "base64 0.12.2",
+ "base64 0.12.3",
  "bitflags",
  "byteorder",
  "chrono",

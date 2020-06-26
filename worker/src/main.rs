@@ -98,9 +98,9 @@ async fn send_terrain(storage: &World, client: &PgPool) -> anyhow::Result<()> {
 
     let room_radius = room_properties.radius;
 
-    sqlx::query!("BEGIN").execute(client).await?;
+    let mut tx = client.begin().await?;
     sqlx::query!("DELETE FROM world_map WHERE 1=1;")
-        .execute(client)
+        .execute(&mut tx)
         .await?;
 
     for (room, tiles) in output::build_terrain(FromWorld::new(storage)) {
@@ -123,16 +123,16 @@ async fn send_terrain(storage: &World, client: &PgPool) -> anyhow::Result<()> {
 
         sqlx::query!(
             "
-                INSERT INTO world_map (q, r, payload)
-                VALUES ($1, $2, $3)",
+            INSERT INTO world_map (q, r, payload)
+            VALUES ($1, $2, $3)",
             q,
             r,
             payload
         )
-        .execute(client)
+        .execute(&mut tx)
         .await?;
     }
-    sqlx::query!("END").execute(client).await?;
+    tx.commit().await?;
 
     debug!("sending terrain done");
     Ok(())

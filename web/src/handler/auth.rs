@@ -9,12 +9,12 @@ use actix_web::{get, http::StatusCode, Responder, ResponseError};
 use log::{debug, error};
 use oauth2::{prelude::*, AuthorizationCode, CsrfToken, TokenResponse};
 use rand::RngCore;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::ops::DerefMut;
 use std::sync::Arc;
 use thiserror::Error;
 use uuid::Uuid;
-use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LoginMetadata {

@@ -145,7 +145,7 @@ pub struct LogEntry {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
-pub struct WorldTerrain {
+pub struct RoomTerrainMessage {
     pub tiles: Vec<Tile>,
     pub room_properties: RoomProperties,
 }
@@ -154,6 +154,7 @@ pub struct WorldTerrain {
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
 pub struct RoomProperties {
     pub room_radius: u32,
+    pub room_id: AxialPoint,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

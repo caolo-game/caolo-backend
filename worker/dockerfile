@@ -1,17 +1,28 @@
 FROM rust:latest AS build
 
+RUN apt-get update
+RUN apt-get install sudo postgresql postgresql-contrib -y
+RUN service postgresql start
+
+ENV DATABASE_URL=postgres://postgres:postgres@localhost:5432/caolo
+
+WORKDIR /caolo/worker
+RUN cargo install diesel_cli --root . --no-default-features --features="postgres"
+
 WORKDIR /caolo
 
 COPY ./rust-toolchain ./rust-toolchain
 # cache the toolchain
 RUN cargo --version
 
-COPY ./worker/ ./worker
+COPY ./web/build.sh ./
+COPY ./migrations/ ./migrations/
 COPY ./messages/ ./messages
+COPY ./worker/ ./worker
 COPY ./Cargo.lock ./worker/Cargo.lock
 
 WORKDIR /caolo/worker
-RUN cargo install --path . --root . --no-default-features
+RUN bash ./build.sh
 
 # ---------- Copy the built binary to a scratch container, to minimize the image size ----------
 

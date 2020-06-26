@@ -5,12 +5,13 @@ mod output;
 use anyhow::Context;
 use caolo_sim::prelude::*;
 use log::{debug, error, info};
+use sqlx::postgres::PgPool;
 use std::thread;
 use std::time::{Duration, Instant};
 use thiserror::Error;
 
 use caolo_messages::{
-    Function, RoomProperties as RoomPropertiesMsg, Schema, WorldState, WorldTerrain,
+    Function, RoomProperties as RoomPropertiesMsg, RoomTerrainMessage, Schema, WorldState,
 };
 
 fn init() {
@@ -87,35 +88,51 @@ pub enum TerrainSendFail {
     RoomPropertiesNotSet,
 }
 
-fn send_terrain(storage: &World, client: &redis::Client) -> anyhow::Result<()> {
+async fn send_terrain(storage: &World, client: &PgPool) -> anyhow::Result<()> {
     let room_properties = storage
         .view::<EmptyKey, components::RoomProperties>()
+        .reborrow()
         .value
         .as_ref()
-        .map(|rp| RoomPropertiesMsg {
-            room_radius: rp.radius,
-        })
         .ok_or_else(|| TerrainSendFail::RoomPropertiesNotSet)?;
 
-    let tiles = output::build_terrain(FromWorld::new(storage)).collect::<Vec<_>>();
+    let room_radius = room_properties.radius;
 
-    debug!("sending {} terrain", tiles.len());
+    sqlx::query!("BEGIN").execute(client).await?;
+    sqlx::query!("DELETE FROM world_map WHERE 1=1;")
+        .execute(client)
+        .await?;
 
-    let world = WorldTerrain {
-        tiles,
-        room_properties,
-    };
+    for (room, tiles) in output::build_terrain(FromWorld::new(storage)) {
+        debug!("sending room {:?} terrain, len: {}", room, tiles.len());
 
-    let payload = rmp_serde::to_vec_named(&world).unwrap();
-    debug!("sending {} bytes", payload.len());
+        let q = room.q;
+        let r = room.r;
 
-    let mut con = client.get_connection()?;
-    redis::pipe()
-        .cmd("SET")
-        .arg("WORLD_TERRAIN")
-        .arg(payload)
-        .query(&mut con)
-        .with_context(|| "Failed to set WORLD_TERRAIN")?;
+        let room_properties = RoomPropertiesMsg {
+            room_radius,
+            room_id: room,
+        };
+
+        let world = RoomTerrainMessage {
+            tiles,
+            room_properties,
+        };
+
+        let payload = serde_json::to_value(&world).unwrap();
+
+        sqlx::query!(
+            "
+                INSERT INTO world_map (q, r, payload)
+                VALUES ($1, $2, $3)",
+            q,
+            r,
+            payload
+        )
+        .execute(client)
+        .await?;
+    }
+    sqlx::query!("END").execute(client).await?;
 
     debug!("sending terrain done");
     Ok(())
@@ -169,7 +186,8 @@ fn send_schema(client: &redis::Client) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn main() {
+#[async_std::main]
+async fn main() -> Result<(), anyhow::Error> {
     init();
     let _guard = std::env::var("SENTRY_URI")
         .ok()
@@ -185,7 +203,15 @@ fn main() {
     let mut storage = init::init_storage(n_actors);
     let client = redis::Client::open(redis_url.as_str()).expect("Redis client");
 
-    send_terrain(&*storage.as_ref(), &client).expect("Send terrain");
+    let pg_pool = PgPool::new(
+        &std::env::var("DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://postgres:admin@localhost:5432/caolo".to_owned()),
+    )
+    .await?;
+
+    send_terrain(&*storage.as_ref(), &pg_pool)
+        .await
+        .context("Send terrain")?;
 
     let tick_freq = std::env::var("TARGET_TICK_FREQUENCY_MS")
         .map(|i| i.parse::<u64>().unwrap())

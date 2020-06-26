@@ -61,7 +61,7 @@ async fn main() -> std::io::Result<()> {
             .data(cache_pool)
             .data(db_pool)
             .wrap(IdentityService::new(
-                    // TODO
+                // TODO
                 CookieIdentityPolicy::new(&[123; 32])
                     .name("authorization")
                     .secure(true),
@@ -86,6 +86,7 @@ async fn main() -> std::io::Result<()> {
             .service(handler::terrain)
             .service(handler::login)
             .service(handler::login_redirect)
+            .service(handler::terrain_rooms)
             .service(world::world_stream)
     })
     .bind(&bind)?

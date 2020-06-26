@@ -61,21 +61,31 @@ pub fn build_terrain<'a>(
         View<'a, WorldPosition, TerrainComponent>,
         View<'a, EmptyKey, RoomProperties>,
     ),
-) -> impl Iterator<Item = TileMsg> + 'a {
+) -> impl Iterator<Item = (AxialPoint, Vec<TileMsg>)> + 'a {
+    let room_props = room_props;
     let position_tranform = init_world_pos(room_props);
-    v.reborrow()
-        .iter()
-        .map(move |(pos, TerrainComponent(tile))| {
-            let msg = TileMsg {
-                position: position_tranform(pos),
-                ty: match tile {
-                    TileTerrainType::Plain => TerrainType::Plain,
-                    TileTerrainType::Wall => TerrainType::Wall,
-                    TileTerrainType::Bridge => TerrainType::Bridge,
-                },
-            };
-            msg
-        })
+    v.reborrow().table.iter().map(move |(room, table)| {
+        (
+            AxialPoint {
+                q: room.q,
+                r: room.r,
+            },
+            table
+                .iter()
+                .map(|(pos, TerrainComponent(tile))| {
+                    let pos = WorldPosition { room, pos };
+                    TileMsg {
+                        position: position_tranform(pos),
+                        ty: match tile {
+                            TileTerrainType::Plain => TerrainType::Plain,
+                            TileTerrainType::Wall => TerrainType::Wall,
+                            TileTerrainType::Bridge => TerrainType::Bridge,
+                        },
+                    }
+                })
+                .collect(),
+        )
+    })
 }
 
 type ResourceInput<'a> = (
@@ -150,8 +160,7 @@ fn init_world_pos(
 ) -> impl Fn(WorldPosition) -> WorldPositionMsg {
     let radius = conf.unwrap_value().radius;
     let trans = cao_math::hex::axial_to_pixel_mat_flat().as_mat3f().val
-        * (radius as f32 + 0.5)
-        * 3.0f32.sqrt();
+        * ((radius as f32 + 0.5) * 3.0f32.sqrt());
     let transform = cao_math::hex::axial_to_pixel_mat_pointy().as_mat3f();
 
     move |world_pos| {

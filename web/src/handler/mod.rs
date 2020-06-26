@@ -3,11 +3,12 @@ mod auth;
 pub use auth::*;
 
 use crate::model::User;
-use caolo_messages::{Schema, WorldTerrain};
+use crate::PgPool;
 use crate::RedisPool;
 use actix_web::web::{self, HttpResponse, Json};
 use actix_web::{error, get, post, Responder};
 use cao_lang::compiler::{self, CompilationUnit};
+use caolo_messages::{AxialPoint, Schema};
 use redis::Commands;
 
 #[get("/")]
@@ -31,25 +32,73 @@ pub async fn schema(cache: web::Data<RedisPool>) -> Result<HttpResponse, error::
     conn.get("SCHEMA")
         .map_err(actix_web::error::ErrorInternalServerError)
         .map(|schema: Vec<u8>| {
-            rmp_serde::from_read_ref(schema.as_slice())
-                .expect("Schema msg deserialization failure")
+            rmp_serde::from_read_ref(schema.as_slice()).expect("Schema msg deserialization failure")
         })
         .map(|schema: Schema| HttpResponse::Ok().json(schema))
 }
 
-#[get("/terrain")]
-pub async fn terrain(cache: web::Data<RedisPool>) -> Result<HttpResponse, error::Error> {
-    let mut conn = cache
-        .into_inner()
-        .get()
-        .map_err(actix_web::error::ErrorInternalServerError)?;
+#[get("/terrain/rooms")]
+pub async fn terrain_rooms(db: web::Data<PgPool>) -> Result<HttpResponse, error::Error> {
+    struct RoomId {
+        q: i32,
+        r: i32,
+    };
+    let db = db.into_inner();
 
-    conn.get("WORLD_TERRAIN")
-        .map_err(actix_web::error::ErrorInternalServerError)
-        .map(|terrain: Vec<u8>| {
-            rmp_serde::from_read_ref(terrain.as_slice()).expect("Terrain msg deserialization failure")
-        })
-        .map(|terrain: WorldTerrain| HttpResponse::Ok().json(terrain))
+    let res = sqlx::query_as!(
+        RoomId,
+        "
+        SELECT q, r
+        FROM world_map;
+        "
+    )
+    .fetch_all(&*db)
+    .await
+    .expect("Failed to query world");
+
+    let res = res
+        .into_iter()
+        .map(|RoomId { q, r }| AxialPoint { q, r })
+        .collect::<Vec<_>>();
+
+    Ok(HttpResponse::Ok().json(res))
+}
+
+#[get("/terrain")]
+pub async fn terrain(
+    web::Query(q): web::Query<i32>,
+    web::Query(r): web::Query<i32>,
+    db: web::Data<PgPool>,
+) -> Result<HttpResponse, error::Error> {
+    let db = db.into_inner();
+
+    struct Res {
+        payload: serde_json::Value,
+    }
+
+    let res = sqlx::query_as!(
+        Res,
+        "
+        SELECT payload
+        FROM world_map
+        WHERE q=$1 AND r=$2
+        ",
+        q,
+        r
+    )
+    .fetch_one(&*db)
+    .await
+    .map(|r| r.payload)
+    .map_err(|e| match e {
+        sqlx::Error::RowNotFound => error::ErrorNotFound("Room was not found in the database"),
+        _ => {
+            log::error!("Failed to query database {:?}", e);
+            error::ErrorInternalServerError("Failed to query database")
+        }
+    })?;
+
+    let res = HttpResponse::Ok().json(res);
+    Ok(res)
 }
 
 #[post("/compile")]

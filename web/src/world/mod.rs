@@ -1,11 +1,11 @@
 use crate::model::User;
-use caolo_messages::WorldState;
 use crate::RedisPool;
 use actix::prelude::*;
 use actix::{Actor, StreamHandler};
 use actix_web::web::{self, HttpRequest};
 use actix_web::{get, Responder};
 use actix_web_actors::ws;
+use caolo_messages::WorldState;
 use failure::Fail;
 use log::{debug, error, warn};
 use redis::Commands;
@@ -61,9 +61,10 @@ impl WorldStream {
                 .get::<_, Vec<u8>>("WORLD_STATE")
                 .map_err(ReadError::RedisError)
                 .map(|bytes| {
-                    rmp_serde::from_read_ref(bytes.as_slice()).expect("WorldState deserialization error")
+                    rmp_serde::from_read_ref(bytes.as_slice())
+                        .expect("WorldState deserialization error")
                 }) {
-                Ok(state ) => {
+                Ok(state) => {
                     let state: WorldState = state;
                     debug!("Sending world state to client");
                     let mut buffer = Vec::with_capacity(512);

@@ -15,6 +15,17 @@ RUN cargo install diesel_cli --root . --no-default-features --features="postgres
 
 ENV DATABASE_URL=postgres://postgres:postgres@localhost:5432/caolo
 
+# ============= cache dependencies =============
+WORKDIR /caolo/web
+COPY ./Cargo.lock ./Cargo.lock
+COPY ./web/Cargo.toml ./Cargo.toml
+RUN mkdir src/
+RUN echo "fn main() {}" > ./src/dummy.rs
+RUN sed -i 's/src\/main.rs/src\/dummy.rs/' Cargo.toml
+# remove 'caolo-messages' dependency because it changes often
+RUN sed -i '/caolo-messages/d' Cargo.toml
+RUN cargo build --release
+
 WORKDIR /caolo
 COPY ./web/build.sh ./
 COPY ./messages/ ./messages/

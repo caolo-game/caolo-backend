@@ -35,7 +35,11 @@ services:
       - cache
       - postgres
     entrypoint:
-      - ./caolo-worker
+      - bash 
+      - ./run-debug.sh
+      # - ./caolo-worker
+    volumes:
+       - ./massif/:/caolo/massif/
 
   cache:
     image: eqalpha/keydb:latest
@@ -49,3 +53,4 @@ services:
       POSTGRES_PASSWORD: admin
     ports:
       - "5432:5432"
+

@@ -37,7 +37,10 @@ pub fn init_storage(n_fake_users: usize) -> Pin<Box<World>> {
             w.parse()
                 .expect("expected map overworld radius to be an integer")
         })
-        .unwrap_or((n_fake_users as f32).sqrt().max(1.0) as usize * 2);
+        .unwrap_or_else(|_| {
+            let a = n_fake_users as f32;
+            (a * 2.0 / (3.0 * 3.0f32.sqrt())).sqrt().ceil() as usize
+        });
     let width = std::env::var("CAO_MAP_WIDTH")
         .map(|w| w.parse().expect("expected map width to be an integer"))
         .unwrap_or(32);

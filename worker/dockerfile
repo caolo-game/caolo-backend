@@ -15,11 +15,23 @@ COPY ./rust-toolchain ./rust-toolchain
 # cache the toolchain
 RUN cargo --version
 
-COPY ./web/build.sh ./
+# ============= cache dependencies =============
+WORKDIR /caolo/worker
+COPY ./Cargo.lock ./Cargo.lock
+COPY ./worker/Cargo.toml ./Cargo.toml
+RUN mkdir src/
+RUN echo "fn main() {}" > ./src/dummy.rs
+RUN sed -i 's/src\/main.rs/src\/dummy.rs/' Cargo.toml
+# remove 'caolo-messages' dependency because it changes often
+RUN sed -i '/caolo-messages/d' Cargo.toml
+RUN cargo build --release
+
+WORKDIR /caolo
+
+COPY ./worker/build.sh ./
 COPY ./migrations/ ./migrations/
 COPY ./messages/ ./messages
 COPY ./worker/ ./worker
-COPY ./Cargo.lock ./worker/Cargo.lock
 
 WORKDIR /caolo/worker
 RUN bash ./build.sh
@@ -31,7 +43,11 @@ WORKDIR /caolo
 
 RUN apt-get update -y
 RUN apt-get install libssl-dev -y
+RUN apt-get install valgrind -y
+RUN apt-get install heaptrack -y
+
 
 COPY --from=build /caolo/worker/bin/caolo-worker ./caolo-worker
+COPY ./worker/run-debug.sh ./run-debug.sh
 
-ENTRYPOINT ["./caolo-worker"]
+ENTRYPOINT [ "./caolo-worker" ]

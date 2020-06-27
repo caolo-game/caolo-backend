@@ -4,3 +4,8 @@ members = [
     "web",
     "worker"
 ]
+
+
+[profile.release]
+debug=true
+lto=false

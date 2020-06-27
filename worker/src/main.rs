@@ -10,6 +10,9 @@ use std::thread;
 use std::time::{Duration, Instant};
 use thiserror::Error;
 
+#[global_allocator]
+static GLOBAL: jemallocator::Jemalloc = jemallocator::Jemalloc;
+
 use caolo_messages::{
     Function, RoomProperties as RoomPropertiesMsg, RoomTerrainMessage, Schema, WorldState,
 };
@@ -17,8 +20,6 @@ use caolo_messages::{
 fn init() {
     #[cfg(feature = "dotenv")]
     dep_dotenv::dotenv().unwrap_or_default();
-
-    // pretty_env_logger::init();
 }
 
 fn tick(storage: &mut World) {
@@ -34,8 +35,9 @@ fn tick(storage: &mut World) {
                 duration.num_milliseconds()
             );
         })
-        .map_err(|e| {
-            error!("Failure in forward {:?}", e);
+        .map_err(|err| {
+            error!("Failure in forward {:?}", err);
+            err
         })
         .unwrap();
 }
@@ -208,14 +210,16 @@ async fn main() -> Result<(), anyhow::Error> {
     let n_actors = std::env::var("N_ACTORS")
         .ok()
         .and_then(|s| s.parse::<usize>().ok())
-        .unwrap_or(8);
+        .unwrap_or(100);
+
+    info!("Starting with {} actors", n_actors);
 
     let redis_url =
         std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379/0".to_owned());
 
     let mut storage = init::init_storage(n_actors);
-    let client = redis::Client::open(redis_url.as_str()).expect("Redis client");
 
+    let client = redis::Client::open(redis_url.as_str()).expect("Redis client");
     let pg_pool = PgPool::new(
         &std::env::var("DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:admin@localhost:5432/caolo".to_owned()),

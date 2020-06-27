@@ -2,3 +2,5 @@
 !src/
 !Cargo.toml
 !Cargo.lock
+!run-debug.sh
+!build.sh

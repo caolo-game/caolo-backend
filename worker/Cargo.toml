@@ -6,6 +6,7 @@ edition = "2018"
 
 [[bin]]
 name = "caolo-worker"
+path = "src/main.rs"
 required-features = []
 
 [features]
@@ -15,9 +16,10 @@ dotenv = ["dep-dotenv"]
 [dependencies]
 caolo-sim = { git = "https://github.com/caolo-game/cao-sim.git" }
 cao-lang = { git = "https://github.com/caolo-game/cao-lang.git" }
-cao-math = { git = "https://github.com/caolo-game/cao-math.git" }
+cao-math = { git = "https://github.com/caolo-game/cao-math.git", default-features=false }
 caolo-messages = { path= "../messages" }
 
+jemallocator = "0.3"
 log = "*"
 pretty_env_logger = "0.4"
 chrono = { version="0.4", features=["serde"] }
@@ -41,5 +43,4 @@ uuid = { version="0.7" }
 env_logger = { version="*", default-features=false }
 
 [profile.release]
-codegen-units=1
-lto=true
+debug=true

@@ -58,6 +58,7 @@ diesel database setup
 minkube start
 echo <your google_userid> > google_userid
 echo <your google_secret> > google_secret
-kubectl create secret generic google-creds --from-file=./google_userid --from-file=./google_secret
+kubectl create namespace caolo
+kubectl create secret generic google-creds --from-file=./google_userid --from-file=./google_secret -n=caolo
 make deploy
 ```

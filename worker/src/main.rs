@@ -4,7 +4,7 @@ mod output;
 
 use anyhow::Context;
 use caolo_sim::prelude::*;
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use sqlx::postgres::PgPool;
 use std::thread;
 use std::time::{Duration, Instant};
@@ -18,7 +18,7 @@ fn init() {
     #[cfg(feature = "dotenv")]
     dep_dotenv::dotenv().unwrap_or_default();
 
-    pretty_env_logger::init();
+    // pretty_env_logger::init();
 }
 
 fn tick(storage: &mut World) {
@@ -189,9 +189,22 @@ fn send_schema(client: &redis::Client) -> anyhow::Result<()> {
 #[async_std::main]
 async fn main() -> Result<(), anyhow::Error> {
     init();
-    let _guard = std::env::var("SENTRY_URI")
+
+    let _sentry = std::env::var("SENTRY_URI")
         .ok()
-        .map(|uri| sentry::init(uri));
+        .map(|uri| {
+            let mut log_builder = pretty_env_logger::formatted_builder();
+            log_builder.parse_filters("info");
+            let log_integration = sentry_log::LogIntegration::default()
+                .with_env_logger_dest(Some(log_builder.build()));
+            let options: sentry::ClientOptions = uri.as_str().into();
+            sentry::init(options.add_integration(log_integration))
+        })
+        .ok_or_else(|| {
+            warn!("Sentry URI was not provided");
+            pretty_env_logger::init();
+        });
+
     let n_actors = std::env::var("N_ACTORS")
         .ok()
         .and_then(|s| s.parse::<usize>().ok())

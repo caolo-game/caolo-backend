@@ -10,6 +10,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 use thiserror::Error;
 
+#[cfg(feature="jemallocator")]
 #[global_allocator]
 static GLOBAL: jemallocator::Jemalloc = jemallocator::Jemalloc;
 

@@ -19,7 +19,7 @@ spec:
             - ./caolo-worker
           env:
             - name: N_ACTORS
-              value: "100"
+              value: "2000"
             - name: CAO_MAP_OVERWORLD_RADIUS
               value: "4"
             - name: RUST_LOG

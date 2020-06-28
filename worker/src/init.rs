@@ -337,23 +337,23 @@ fn uncontested_pos<T: caolo_sim::tables::TableRow + Send + Sync>(
 const PROGRAM: &str = r#"
 {
   "nodes": {
+      "-10": {
+      "node": {
+        "ScalarInt": 1
+      },
+      "child": 0
+    },
     "0": {
       "node": {
-        "ScalarInt": 0
+        "Call": "find_closest_resource_by_range"
       },
       "child": 1
     },
     "1": {
       "node": {
-        "Call": "make_operation_result"
+        "ScalarInt": 0
       },
       "child": 3
-    },
-    "2": {
-      "node": {
-        "Call": "find_closest_resource_by_range"
-      },
-      "child": 0
     },
     "3": {
       "node": {
@@ -401,7 +401,7 @@ const PROGRAM: &str = r#"
       "node": {
         "Start": null
       },
-      "child": 2
+      "child": -10
     }
   }
 }

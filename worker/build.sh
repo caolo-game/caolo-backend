@@ -14,4 +14,4 @@ sudo -u postgres psql -c "ALTER USER postgres PASSWORD 'postgres';"
 
 bin/diesel database setup
 
-cargo install --path . --root . --no-default-features
+cargo install --path . --root . --no-default-features --features=jemallocator

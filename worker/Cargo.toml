@@ -19,7 +19,7 @@ cao-lang = { git = "https://github.com/caolo-game/cao-lang.git" }
 cao-math = { git = "https://github.com/caolo-game/cao-math.git", default-features=false }
 caolo-messages = { path= "../messages" }
 
-jemallocator = "0.3"
+jemallocator = { version="0.3", optional=true }
 log = "*"
 pretty_env_logger = "0.4"
 chrono = { version="0.4", features=["serde"] }

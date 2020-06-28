@@ -43,8 +43,8 @@ WORKDIR /caolo
 
 RUN apt-get update -y
 RUN apt-get install libssl-dev -y
-RUN apt-get install valgrind -y
-RUN apt-get install heaptrack -y
+# RUN apt-get install valgrind -y
+# RUN apt-get install heaptrack -y
 
 
 COPY --from=build /caolo/worker/bin/caolo-worker ./caolo-worker

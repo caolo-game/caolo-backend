@@ -101,7 +101,7 @@ pub fn init_storage(n_fake_users: usize) -> Pin<Box<World>> {
 
     let mut taken_rooms = Vec::with_capacity(n_fake_users);
     for i in 0..n_fake_users {
-        debug!("initializing spawn #{}", i);
+        trace!("initializing room #{}", i);
         let storage = &mut storage;
         let spawnid = storage.insert_entity();
 
@@ -109,7 +109,7 @@ pub fn init_storage(n_fake_users: usize) -> Pin<Box<World>> {
         let room = rooms[room];
         taken_rooms.push(room);
 
-        debug!("initializing spawn #{} in room {:?}", i, room);
+        trace!("initializing room #{} in room {:?}", i, room);
         unsafe {
             init_spawn(
                 &bounds,
@@ -119,7 +119,7 @@ pub fn init_storage(n_fake_users: usize) -> Pin<Box<World>> {
                 FromWorldMut::new(storage),
                 FromWorld::new(storage),
             );
-            debug!("spawning entities");
+            trace!("spawning entities");
             let spawn_pos = storage
                 .view::<EntityId, components::PositionComponent>()
                 .get_by_id(&spawnid)
@@ -130,14 +130,7 @@ pub fn init_storage(n_fake_users: usize) -> Pin<Box<World>> {
                 init_bot(botid, script_id, spawn_pos, FromWorldMut::new(storage));
             }
         }
-        debug!("initializing spawn #{} done", i);
-    }
-
-    for _ in 0..(n_fake_users / 3).max(1) {
-        let room = rng.gen_range(0, taken_rooms.len());
-        let room = taken_rooms[room];
         let id = storage.insert_entity();
-        let storage = &mut storage;
         unsafe {
             init_resource(
                 &bounds,
@@ -148,6 +141,7 @@ pub fn init_storage(n_fake_users: usize) -> Pin<Box<World>> {
                 FromWorld::new(storage),
             );
         }
+        trace!("initializing room #{} done", i);
     }
 
     debug!("init done");
@@ -353,45 +347,57 @@ const PROGRAM: &str = r#"
       "node": {
         "ScalarInt": 0
       },
-      "child": 3
+      "child": 30
     },
-    "3": {
+    "30": {
       "node": {
         "Equals": null
       },
-      "child": 4
+      "child": 40
     },
-    "4": {
+    "40": {
       "node": {
-        "JumpIfTrue": 6
+        "JumpIfTrue": 60
       },
-      "child": 5
+      "child": 42
     },
-    "5": {
+    "42": {
+        "node": {
+            "StringLiteral": "No resource found"
+        },
+        "child": 45
+    },
+    "45": {
+      "node": {
+        "Call": "console_log"
+      },
+      "child": 50
+    },
+    "50": {
       "node": {
         "Exit": null
       },
-      "child": 6
+      "child": 60
     },
-    "6": {
+    "60": {
       "node": {
         "CopyLast": null
       },
-      "child": 7
+      "child": 70
     },
-    "7": {
+    "70": {
       "node": {
         "Call": "approach_entity"
       },
-      "child": 8
+      "child": 80
     },
-    "8": {
+    "80": {
       "node": {
         "Pop": null
       },
-      "child": 9
+      "child": 90
     },
-    "9": {
+    "90": {
       "node": {
         "Call": "mine_resource"
       },

@@ -4,13 +4,13 @@ mod output;
 
 use anyhow::Context;
 use caolo_sim::prelude::*;
-use log::{debug, error, info, warn};
+use log::{debug, error, info, trace, warn};
 use sqlx::postgres::PgPool;
 use std::thread;
 use std::time::{Duration, Instant};
 use thiserror::Error;
 
-#[cfg(feature="jemallocator")]
+#[cfg(feature = "jemallocator")]
 #[global_allocator]
 static GLOBAL: jemallocator::Jemalloc = jemallocator::Jemalloc;
 
@@ -107,7 +107,7 @@ async fn send_terrain(storage: &World, client: &PgPool) -> anyhow::Result<()> {
         .await?;
 
     for (room, tiles) in output::build_terrain(FromWorld::new(storage)) {
-        debug!("sending room {:?} terrain, len: {}", room, tiles.len());
+        trace!("sending room {:?} terrain, len: {}", room, tiles.len());
 
         let q = room.q;
         let r = room.r;
@@ -197,7 +197,8 @@ async fn main() -> Result<(), anyhow::Error> {
         .ok()
         .map(|uri| {
             let mut log_builder = pretty_env_logger::formatted_builder();
-            log_builder.parse_filters("info");
+            let filters = std::env::var("RUST_LOG").unwrap_or_else(|_| "info".to_owned());
+            log_builder.parse_filters(filters.as_str());
             let log_integration = sentry_log::LogIntegration::default()
                 .with_env_logger_dest(Some(log_builder.build()));
             let options: sentry::ClientOptions = uri.as_str().into();

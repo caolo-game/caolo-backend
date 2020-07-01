@@ -19,7 +19,8 @@ pub fn init_storage(n_fake_users: usize) -> Pin<Box<World>> {
 
     let script_id = ScriptId::default();
     let script: CompilationUnit =
-        serde_json::from_str(PROGRAM).expect("deserialize example program");
+        serde_json::from_str(include_str!("./programs/mining_program.json"))
+            .expect("deserialize example program");
     debug!("compiling default program");
     let compiled = compile(script).expect("failed to compile example program");
     debug!("compilation done");
@@ -39,7 +40,7 @@ pub fn init_storage(n_fake_users: usize) -> Pin<Box<World>> {
         })
         .unwrap_or_else(|_| {
             let a = n_fake_users as f32;
-            (a * 2.0 / (3.0 * 3.0f32.sqrt())).sqrt().ceil() as usize
+            ((a * 1.0 / (3.0 * 3.0f32.sqrt())).powf(0.33)).ceil() as usize
         });
     let width = std::env::var("CAO_MAP_WIDTH")
         .map(|w| w.parse().expect("expected map width to be an integer"))
@@ -327,91 +328,6 @@ fn uncontested_pos<T: caolo_sim::tables::TableRow + Send + Sync>(
         from, to, TRIES
     );
 }
-
-const PROGRAM: &str = r#"
-{
-  "nodes": {
-      "-10": {
-      "node": {
-        "ScalarInt": 1
-      },
-      "child": 0
-    },
-    "0": {
-      "node": {
-        "Call": "find_closest_resource_by_range"
-      },
-      "child": 1
-    },
-    "1": {
-      "node": {
-        "ScalarInt": 0
-      },
-      "child": 30
-    },
-    "30": {
-      "node": {
-        "Equals": null
-      },
-      "child": 40
-    },
-    "40": {
-      "node": {
-        "JumpIfTrue": 60
-      },
-      "child": 42
-    },
-    "42": {
-        "node": {
-            "StringLiteral": "No resource found"
-        },
-        "child": 45
-    },
-    "45": {
-      "node": {
-        "Call": "console_log"
-      },
-      "child": 50
-    },
-    "50": {
-      "node": {
-        "Exit": null
-      },
-      "child": 60
-    },
-    "60": {
-      "node": {
-        "CopyLast": null
-      },
-      "child": 70
-    },
-    "70": {
-      "node": {
-        "Call": "approach_entity"
-      },
-      "child": 80
-    },
-    "80": {
-      "node": {
-        "Pop": null
-      },
-      "child": 90
-    },
-    "90": {
-      "node": {
-        "Call": "mine_resource"
-      },
-      "child": null
-    },
-    "-1": {
-      "node": {
-        "Start": null
-      },
-      "child": -10
-    }
-  }
-}
-"#;
 
 #[cfg(test)]
 mod tests {

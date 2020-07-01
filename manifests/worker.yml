@@ -19,11 +19,9 @@ spec:
             - ./caolo-worker
           env:
             - name: N_ACTORS
-              value: "2000"
-            - name: CAO_MAP_OVERWORLD_RADIUS
-              value: "4"
+              value: "100"
             - name: RUST_LOG
-              value: info,caolo_worker=debug,caolo_sim=debug,caolo_sim::api=trace
+              value: info,caolo_sim::systems=debug,caolo_worker=debug
             - name: TARGET_TICK_FREQUENCY_MS
               value: "1000"
             - name: REDIS_URL

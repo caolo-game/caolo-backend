@@ -1,18 +1,10 @@
 use crate::PgPool;
-use actix_identity::Identity;
-use actix_web::FromRequest;
-use actix_web::{
-    dev::Payload,
-    http::StatusCode,
-    web::{self, HttpRequest},
-    ResponseError,
-};
+use anyhow::Context;
 use chrono::{DateTime, Utc};
 use log::debug;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
-use std::future::Future;
-use std::pin::Pin;
+use std::str::FromStr;
 use thiserror::Error;
 use uuid::Uuid;
 
@@ -27,55 +19,46 @@ pub struct User {
 
 #[derive(Debug, Error)]
 pub enum UserReadError {
-    #[error("Failed to connect to database")]
-    PoolError,
     #[error("Failed to query the database")]
     DbError(sqlx::Error),
-    #[error("Identity could not be found")]
-    IdNotFound,
 }
 
-impl ResponseError for UserReadError {
-    fn status_code(&self) -> StatusCode {
-        match self {
-            Self::DbError(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            Self::IdNotFound => StatusCode::NOT_FOUND,
-            Self::PoolError => StatusCode::INTERNAL_SERVER_ERROR,
-        }
+impl warp::reject::Reject for UserReadError {}
+
+#[derive(Debug, Deserialize)]
+pub struct Identity {
+    pub id: Uuid,
+    pub token: String,
+}
+
+impl FromStr for Identity {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        serde_json::from_str(s).with_context(|| "failed to deseralize identity")
     }
 }
 
-impl FromRequest for User {
-    type Error = UserReadError;
-    type Future = Pin<Box<dyn Future<Output = Result<Self, Self::Error>>>>;
-    type Config = ();
-
-    fn from_request(req: &HttpRequest, payload: &mut Payload) -> Self::Future {
-        debug!("LoggedInUserId from_request");
-        let id = Identity::from_request(req, payload);
-        let conn = web::Data::<PgPool>::from_request(req, payload);
-        Box::pin(async move {
-            let id = id.await.map_err(|e| {
-                debug!("Id not found {:?}", e);
-                UserReadError::IdNotFound
-            })?;
-            let conn = conn.await.map_err(|e| {
-                debug!("Conn not found {:?}", e);
-                UserReadError::PoolError
-            })?;
-            sqlx::query_as!(
-                User,
-                "
-                SELECT ua.id, ua.display_name, ua.email, ua.created, ua.updated
-                FROM user_account AS ua
-                INNER JOIN user_credential AS uc
-                ON uc.token = $1 AND uc.user_id = ua.id;
-                ",
-                id.identity()
-            )
-            .fetch_one(&*conn.into_inner())
-            .await
-            .map_err(UserReadError::DbError)
-        })
-    }
+pub async fn current_user(
+    id: Option<Identity>,
+    pool: PgPool,
+) -> Result<Option<User>, warp::Rejection> {
+    debug!("LoggedInUser from request {:?}", id);
+    let id = match id {
+        Some(id) => id,
+        None => return Ok(None),
+    };
+    sqlx::query_as!(
+        User,
+        "
+        SELECT ua.id, ua.display_name, ua.email, ua.created, ua.updated
+        FROM user_account AS ua
+        INNER JOIN user_credential AS uc
+        ON uc.token = $1 AND uc.user_id = ua.id; ",
+        id.token
+    )
+    .fetch_optional(&pool)
+    .await
+    .map_err(UserReadError::DbError)
+    .map_err(warp::reject::custom)
 }

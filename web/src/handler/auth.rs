@@ -2,10 +2,6 @@ use crate::google_auth::oauth_client;
 use crate::Config;
 use crate::PgPool;
 use crate::RedisPool;
-use actix_identity::Identity;
-use actix_web::error::BlockingError;
-use actix_web::web::{self, HttpResponse};
-use actix_web::{get, http::StatusCode, Responder, ResponseError};
 use log::{debug, error};
 use oauth2::{prelude::*, AuthorizationCode, CsrfToken, TokenResponse};
 use rand::RngCore;
@@ -58,24 +54,7 @@ pub enum LoginError {
     GoogleMyselfDeserializationError(reqwest::Error),
 }
 
-impl ResponseError for LoginError {
-    fn status_code(&self) -> StatusCode {
-        match self {
-            Self::CsrfTokenMisMatch => StatusCode::UNAUTHORIZED,
-            Self::CsrfTokenNotFoundInCache => StatusCode::UNAUTHORIZED,
-            Self::CsrfTokenDeserializeError(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            Self::IdNotFoud => StatusCode::UNAUTHORIZED,
-            Self::DbError(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            Self::CachePoolError(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            Self::BlockingCancel => StatusCode::INTERNAL_SERVER_ERROR,
-            Self::ExchangeCodeFailure => StatusCode::UNAUTHORIZED,
-            Self::GoogleMyselfQueryFailure => StatusCode::UNAUTHORIZED,
-            Self::GoogleMyselfDeserializationError(_) => StatusCode::INTERNAL_SERVER_ERROR,
-        }
-    }
-}
 
-#[get("/login/google/redirect")]
 pub async fn login_redirect(
     query: web::Query<LoginRedirectQuery>,
     identity: Identity,
@@ -238,8 +217,8 @@ async fn register_user(
     let mut tx = db.begin().await.map_err(LoginError::DbError)?;
     let user_id = sqlx::query!(
         "INSERT INTO user_account (email)
-                VALUES ($1)
-                RETURNING id;",
+        VALUES ($1)
+        RETURNING id;",
         email
     )
     .fetch_one(&mut tx)
@@ -249,9 +228,8 @@ async fn register_user(
 
     sqlx::query!(
         "
-                INSERT INTO user_credential (user_id, token)
-                VALUES ($1, $2)
-                ",
+        INSERT INTO user_credential (user_id, token)
+        VALUES ($1, $2)",
         user_id,
         identity
     )
@@ -264,7 +242,6 @@ async fn register_user(
     Ok(user_id)
 }
 
-#[get("/login/google")]
 pub async fn login(
     query: web::Query<LoginQuery>,
     config: web::Data<Config>,

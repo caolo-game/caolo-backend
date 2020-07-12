@@ -1,118 +1,114 @@
 use crate::model::User;
 use crate::RedisPool;
-use actix::prelude::*;
-use actix::{Actor, StreamHandler};
-use actix_web::web::{self, HttpRequest};
-use actix_web::{get, Responder};
-use actix_web_actors::ws;
 use caolo_messages::WorldState;
-use failure::Fail;
-use log::{debug, error, warn};
+use futures::stream::StreamExt;
+use futures::FutureExt;
+use log::{debug, error, trace};
 use redis::Commands;
 use redis::RedisError;
-use std::sync::Arc;
 use std::time::{Duration, Instant};
+use thiserror::Error;
+use tokio::sync::mpsc::{self, UnboundedSender};
+use warp::ws::{Message, WebSocket};
 
 #[derive(Debug)]
 struct WorldStream {
     pub hb: Instant,
     pub last_sent: Instant,
-    pub pool: Arc<RedisPool>,
-    pub buffer: Vec<u8>,
+    pub pool: RedisPool,
     pub user: Option<User>,
 }
 
-#[derive(Debug, Fail)]
-enum ReadError {
-    #[fail(display = "RedisError {:?}", 0)]
+#[derive(Debug, Error)]
+pub enum ReadError {
+    #[error("RedisError {0:?}")]
     RedisError(RedisError),
 }
 
+#[derive(Debug, Error)]
+pub enum WorldSendError {
+    #[error("Failed to send {0:?}")]
+    SendError(mpsc::error::SendError<std::result::Result<warp::filters::ws::Message, warp::Error>>),
+    #[error("Failed to read world state {0:?}")]
+    ReadError(ReadError),
+}
+
 impl WorldStream {
-    pub fn new(user: Option<User>, pool: Arc<RedisPool>) -> Self {
+    pub fn new(user: Option<User>, pool: RedisPool) -> Self {
         Self {
             user,
             pool,
             hb: Instant::now(),
             last_sent: Instant::now(),
-            buffer: Vec::with_capacity(512),
-        }
-    }
-
-    fn start_stream(&self, ctx: &mut <Self as Actor>::Context) {
-        ctx.run_interval(Duration::from_millis(1000), |act, ctx| {
-            // check client heartbeats
-            let now = Instant::now();
-            if now.duration_since(act.hb) > Duration::from_secs(10) {
-                // heartbeat timed out
-                log::debug!("Websocket Client heartbeat failed, disconnecting!");
-
-                // stop actor
-                ctx.stop();
-
-                // don't try to send a ping
-                return;
-            }
-            ctx.ping(b"");
-        });
-        ctx.run_interval(Duration::from_millis(500), |act, ctx| {
-            let mut connection = act.pool.get().expect("get redis connection");
-            match connection
-                .get::<_, Vec<u8>>("WORLD_STATE")
-                .map_err(ReadError::RedisError)
-                .map(|bytes| {
-                    rmp_serde::from_read_ref(bytes.as_slice())
-                        .expect("WorldState deserialization error")
-                }) {
-                Ok(state) => {
-                    let state: WorldState = state;
-                    debug!("Sending world state to client");
-                    let mut buffer = Vec::with_capacity(512);
-                    serde_json::to_writer(&mut buffer, &state).expect("json serialize");
-                    ctx.binary(buffer);
-                }
-                Err(e) => {
-                    error!("Failed to get world state {:?}", e);
-                }
-            }
-        });
-    }
-}
-
-impl Actor for WorldStream {
-    type Context = ws::WebsocketContext<Self>;
-
-    fn started(&mut self, ctx: &mut Self::Context) {
-        debug!("WorldStream actor is starting {:?}", self);
-        self.start_stream(ctx);
-    }
-}
-
-impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WorldStream {
-    fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
-        match msg {
-            Ok(ws::Message::Pong(_)) => {
-                self.hb = Instant::now();
-            }
-            Ok(ws::Message::Ping(msg)) => {
-                self.hb = Instant::now();
-                ctx.pong(&msg);
-            }
-            Err(e) => {
-                warn!("WorldStream handler failed {:?}", e);
-            }
-            _ => {}
         }
     }
 }
 
-#[get("/world")]
-pub async fn world_stream(
-    user: Option<User>,
-    req: HttpRequest,
-    pool: web::Data<RedisPool>,
-    stream: web::Payload,
-) -> impl Responder {
-    let pool = pool.into_inner();
-    ws::start(WorldStream::new(user, pool), &req, stream)
+pub fn send(
+    pool: &RedisPool,
+    sender: &mut UnboundedSender<Result<Message, warp::Error>>,
+) -> Result<(), WorldSendError> {
+    let mut connection = pool.get().unwrap();
+    let state = connection
+        .get::<_, Vec<u8>>("WORLD_STATE")
+        .map_err(|err| ReadError::RedisError(err))
+        .map(|bytes| {
+            rmp_serde::from_read_ref(bytes.as_slice()).expect("WorldState deserialization error")
+        })
+        .map_err(WorldSendError::ReadError)?;
+    let state: WorldState = state;
+    trace!("Sending world state to client");
+    let mut buffer = Vec::with_capacity(512);
+    serde_json::to_writer(&mut buffer, &state).expect("json serialize");
+    let msg = Message::binary(buffer);
+    sender.send(Ok(msg)).map_err(WorldSendError::SendError)?;
+    Ok(())
+}
+
+pub async fn world_stream(ws: WebSocket, user: Option<User>, pool: RedisPool) {
+    log::debug!("starting world stream for user {:?}", user);
+
+    let (world_ws_tx, mut world_ws_rx) = ws.split();
+
+    let handler = WorldStream::new(user, pool.clone());
+
+    let (mut tx, rx) = mpsc::unbounded_channel();
+    tokio::task::spawn(rx.forward(world_ws_tx).map(|result| {
+        if let Err(err) = result {
+            log::debug!("websocket send error: {}", err);
+        }
+    }));
+
+    tokio::task::spawn({
+        async move {
+            let mut interval = tokio::time::interval(Duration::from_millis(100));
+            loop {
+                interval.tick().await;
+                if let Err(err) = send(&pool, &mut tx) {
+                    match err {
+                        WorldSendError::SendError(mpsc::error::SendError(Err(err))) => {
+                            error!("Failed to send world state {:?}", err)
+                        }
+                        _ => trace!("Failed to send world state {:?}", err),
+                    }
+                    break;
+                }
+            }
+
+            debug!("Stopping stream");
+        }
+    });
+
+    while let Some(result) = world_ws_rx.next().await {
+        let msg = match result {
+            Ok(msg) => msg,
+            Err(err) => {
+                log::error!("websocket error(user={:?}): {}", handler.user, err);
+                break;
+            }
+        };
+        debug!("received message by user {:?}", msg);
+    }
+
+    log::debug!("bye user {:?}", handler.user);
 }

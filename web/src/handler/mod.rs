@@ -1,6 +1,6 @@
-mod auth;
-
-pub use auth::*;
+// mod auth;
+//
+// pub use auth::*;
 
 use crate::model::User;
 use crate::PgPool;

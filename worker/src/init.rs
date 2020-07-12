@@ -10,28 +10,49 @@ use caolo_sim::World;
 use log::{debug, trace};
 use rand::Rng;
 use std::pin::Pin;
+use uuid::Uuid;
 
 pub fn init_storage(n_fake_users: usize) -> Pin<Box<World>> {
     debug!("initializing world");
     assert!(n_fake_users >= 1);
 
+    let mut rng = rand::thread_rng();
+
     let mut storage = caolo_sim::init_inmemory_storage();
 
-    let script_id = ScriptId::default();
+    let mining_script_id = ScriptId(Uuid::new_v4());
     let script: CompilationUnit =
         serde_json::from_str(include_str!("./programs/mining_program.json"))
             .expect("deserialize example program");
     debug!("compiling default program");
     let compiled = compile(script).expect("failed to compile example program");
     debug!("compilation done");
-    unsafe {
-        storage
-            .unsafe_view::<ScriptId, components::ScriptComponent>()
-            .as_mut()
-            .insert_or_update(script_id, components::ScriptComponent(compiled));
-    };
 
-    let mut rng = rand::thread_rng();
+    caolo_sim::query!(
+        mutate
+        storage
+        {
+            ScriptId, components::ScriptComponent,
+                .insert_or_update(mining_script_id, components::ScriptComponent(compiled));
+        }
+    );
+
+    let center_walking_script_id = ScriptId(Uuid::new_v4());
+    let script: CompilationUnit =
+        serde_json::from_str(include_str!("./programs/center_walking_program.json"))
+            .expect("deserialize example program");
+    debug!("compiling default program");
+    let compiled = compile(script).expect("failed to compile example program");
+    debug!("compilation done");
+
+    caolo_sim::query!(
+        mutate
+        storage
+        {
+            ScriptId, components::ScriptComponent,
+                .insert_or_update(center_walking_script_id, components::ScriptComponent(compiled));
+        }
+    );
 
     let world_radius = std::env::var("CAO_MAP_OVERWORLD_RADIUS")
         .map(|w| {
@@ -51,7 +72,7 @@ pub fn init_storage(n_fake_users: usize) -> Pin<Box<World>> {
     let params = OverworldGenerationParams::builder()
         .with_radius(world_radius as u32)
         .with_room_radius(radius)
-        .with_min_bridge_len(radius / 2)
+        .with_min_bridge_len(radius - 1)
         .with_max_bridge_len(radius)
         .build()
         .unwrap();
@@ -128,7 +149,21 @@ pub fn init_storage(n_fake_users: usize) -> Pin<Box<World>> {
                 .0;
             for _ in 0..3 {
                 let botid = storage.insert_entity();
-                init_bot(botid, script_id, spawn_pos, FromWorldMut::new(storage));
+                init_bot(
+                    botid,
+                    mining_script_id,
+                    spawn_pos,
+                    FromWorldMut::new(storage),
+                );
+            }
+            for _ in 0..3 {
+                let botid = storage.insert_entity();
+                init_bot(
+                    botid,
+                    center_walking_script_id,
+                    spawn_pos,
+                    FromWorldMut::new(storage),
+                );
             }
         }
         let id = storage.insert_entity();

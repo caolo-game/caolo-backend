@@ -1,34 +1,28 @@
 mod config;
-mod google_auth;
-mod handler;
+// mod google_auth;
+// mod handler;
 mod model;
 mod world;
 
-use actix_cors::Cors;
-use actix_identity::{CookieIdentityPolicy, IdentityService};
-use actix_web::{http, middleware, App, HttpServer};
 pub use config::*;
+use log::warn;
 use r2d2_redis::{r2d2, RedisConnectionManager};
 use sqlx::postgres::PgPool;
+use std::convert::Infallible;
+use warp::Filter;
 
 #[cfg(feature = "web-dotenv")]
 use dotenv::dotenv;
 
 pub type RedisPool = r2d2::Pool<RedisConnectionManager>;
 
-fn cors_options<'a>(allowed_origins: impl Iterator<Item = &'a str> + 'a) -> Cors {
-    allowed_origins
-        .fold(Cors::new(), |cors, o| {
-            cors.allowed_origin(o).supports_credentials()
-        })
-        .allowed_methods(vec!["GET", "POST", "DELETE", "PUT", "OPTIONS"])
-        .allowed_headers(vec![http::header::ACCEPT, http::header::CONTENT_TYPE])
-        .max_age(3600)
-        .supports_credentials()
+async fn health_check() -> Result<impl warp::Reply, Infallible> {
+    let response = warp::http::Response::builder().body("healthy boi").unwrap();
+    Ok(response)
 }
 
-#[actix_rt::main]
-async fn main() -> std::io::Result<()> {
+#[tokio::main]
+async fn main() -> Result<(), anyhow::Error> {
     #[cfg(feature = "web-dotenv")]
     dotenv().ok();
 
@@ -40,56 +34,61 @@ async fn main() -> std::io::Result<()> {
 
     let conf = Config::read().unwrap();
 
-    let bind = format!("{}:{}", conf.host, conf.port);
-
     let cache_manager = RedisConnectionManager::new(conf.redis_url.as_str()).unwrap();
     let cache_pool: RedisPool = r2d2::Pool::builder().build(cache_manager).unwrap();
+
+    let cache_pool = warp::any().map(move || cache_pool.clone());
 
     let db_pool = PgPool::builder()
         .max_size(8)
         .build(&conf.db_url)
         .await
         .unwrap();
+    // PgPool has an Arc inside it so cloning should work as expected
+    let db_pool = warp::any().map(move || db_pool.clone());
 
-    HttpServer::new(move || {
-        let conf = conf.clone();
-        let cache_pool = cache_pool.clone();
-        let db_pool = db_pool.clone();
-        let cors = cors_options(conf.allowed_origins.iter().map(|s| s.as_str()));
-        App::new()
-            .data(conf)
-            .data(cache_pool)
-            .data(db_pool)
-            .wrap(IdentityService::new(
-                // TODO
-                CookieIdentityPolicy::new(&[123; 32])
-                    .name("authorization")
-                    .secure(true),
-            ))
-            .wrap(cors.finish())
-            // enable logger - always register actix-web Logger middleware last
-            .wrap(middleware::Logger::new(
-                r#"
-    Remote IP: %a
-    Started processing: %t
-    First line: "%r"
-    Status: %s
-    Size: %b B
-    Referer: "%{Referer}i"
-    User-Agent: "%{User-Agent}i"
-    Done in %D ms"#,
-            ))
-            .service(handler::index_page)
-            .service(handler::myself)
-            .service(handler::schema)
-            .service(handler::compile)
-            .service(handler::terrain)
-            .service(handler::login)
-            .service(handler::login_redirect)
-            .service(handler::terrain_rooms)
-            .service(world::world_stream)
-    })
-    .bind(&bind)?
-    .run()
-    .await
+    let identity = warp::filters::header::optional::<model::Identity>("authorization")
+        .and(
+            warp::filters::cookie::optional("authorization").map(|cookie: Option<String>| {
+                cookie.and_then(|cookie| {
+                    let id: model::Identity = serde_json::from_str(cookie.as_str())
+                        .map_err(|e| {
+                            warn!("identity cookie deserialization failed {:?}", e);
+                        })
+                        .ok()?;
+                    Some(id)
+                })
+            }),
+        )
+        .map(
+            |header_id: Option<model::Identity>, cookie_id: Option<model::Identity>| {
+                header_id.or(cookie_id)
+            },
+        );
+
+    let current_user = warp::any()
+        .and(identity)
+        .and(db_pool)
+        .and_then(move |id, db_pool| model::current_user(id, db_pool));
+
+    let health_check = warp::get().and(warp::path("health")).and_then(health_check);
+    let world_stream = warp::get()
+        .and(warp::path("world"))
+        .and(warp::ws())
+        .and(current_user)
+        .and(cache_pool)
+        .map(move |ws: warp::ws::Ws, user, pool| {
+            ws.on_upgrade(move |socket| world::world_stream(socket, user, pool))
+        });
+
+    let api = health_check.or(world_stream);
+
+    warp::serve(
+        api.with(warp::log("caolo_web-router"))
+            .with(warp::cors().allow_any_origin().allow_credentials(true)),
+    )
+    .run((conf.host, conf.port))
+    .await;
+
+    Ok(())
 }

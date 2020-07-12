@@ -12,9 +12,8 @@ path = "src/main.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-default = ["web-dotenv", "with-serde"]
+default = ["web-dotenv"]
 web-dotenv = ["dotenv"]
-with-serde = []
 
 [dependencies]
 dotenv = { version="0.9", optional=true }
@@ -22,12 +21,9 @@ reqwest = { version= "0.10", features = ["json"] }
 cao-lang = { git = "https://github.com/caolo-game/cao-lang.git", features=[] }
 caolo-messages = { path = "../messages" }
 
-actix = "0.9"
-actix-web = "2"
-actix-identity = "0.2"
-actix-cors = "0.2"
-actix-rt = "1"
-actix-web-actors = "2"
+tokio = { version = "0.2", features = ["macros"] }
+warp = "0.2"
+
 oauth2 = { version="2", features=[] }
 log = "0.4"
 failure = "0.1"
@@ -41,7 +37,9 @@ uuid = { version="0.8", features=["serde"] }
 chrono = { version="*", features=["serde"] }
 sqlx = { version="0.3", features=["postgres", "chrono", "uuid", "json", "tls"] }
 thiserror = "1"
+futures = "*"
 url = "1.7"
 rand = "0.7"
 base64 = "0.12"
 sentry = "0.19"
+anyhow = "1"

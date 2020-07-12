@@ -36,11 +36,7 @@ fn tick(storage: &mut World) {
                 duration.num_milliseconds()
             );
         })
-        .map_err(|err| {
-            error!("Failure in forward {:?}", err);
-            err
-        })
-        .unwrap();
+        .expect("Failed to forward game state")
 }
 
 fn send_world(storage: &World, client: &redis::Client) -> anyhow::Result<()> {

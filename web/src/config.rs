@@ -1,4 +1,5 @@
 use std::env::{self, VarError};
+use std::net::IpAddr;
 use thiserror::Error;
 
 #[derive(Clone)]
@@ -9,8 +10,8 @@ pub struct Config {
     pub google_id: String,
     pub google_secret: String,
     pub base_url: String,
-    pub host: String,
-    pub port: String,
+    pub host: IpAddr,
+    pub port: u16,
 }
 
 #[derive(Error, Debug)]
@@ -21,8 +22,23 @@ pub enum ConfigReadError {
 
 impl Config {
     pub fn read() -> Result<Self, ConfigReadError> {
-        let host = env::var("HOST").unwrap_or_else(|_| "localhost".to_owned());
-        let port = env::var("PORT").unwrap_or_else(|_| "8000".to_owned());
+        let host = env::var("HOST")
+            .ok()
+            .and_then(|host| {
+                host.parse()
+                    .map_err(|e| {
+                        log::error!("Failed to parse host {:?}", e);
+                    })
+                    .ok()
+            })
+            .unwrap_or_else(|| IpAddr::from([127, 0, 0, 1]));
+        let port = env::var("PORT")
+            .map_err(anyhow::Error::new)
+            .and_then(|port| port.parse().map_err(anyhow::Error::new))
+            .unwrap_or_else(|err| {
+                log::warn!("Failed to parse port number: {}", err);
+                8000
+            });
         let config = Config {
             allowed_origins: env::var("ALLOWED_ORIGINS")
                 .map(|origins| origins.split(";").map(|s| s.to_owned()).collect())

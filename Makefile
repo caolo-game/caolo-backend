@@ -21,13 +21,13 @@ startweb:
 worker:
 	docker build -t frenetiq/caolo-worker:latest -f worker/dockerfile .
 
-pushworker:
+pushworker: worker
 	docker push frenetiq/caolo-worker:latest
 
 web:
 	docker build -t frenetiq/caolo-web:latest -f web/dockerfile .
 
-pushweb:
+pushweb: web
 	docker push frenetiq/caolo-web:latest
 
 release:

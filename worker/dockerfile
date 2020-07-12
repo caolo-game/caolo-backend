@@ -22,7 +22,8 @@ COPY ./worker/Cargo.toml ./Cargo.toml
 RUN mkdir src/
 RUN echo "fn main() {}" > ./src/dummy.rs
 RUN sed -i 's/src\/main.rs/src\/dummy.rs/' Cargo.toml
-# remove 'caolo-messages' dependency because it changes often
+# remove 'caolo' dependencies because they change often
+RUN sed -i '/caolo-game/d' Cargo.toml
 RUN sed -i '/caolo-messages/d' Cargo.toml
 RUN cargo build --release
 

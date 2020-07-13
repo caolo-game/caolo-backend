@@ -1,50 +1,60 @@
 // mod auth;
 //
 // pub use auth::*;
-
 use crate::model::User;
 use crate::PgPool;
 use crate::RedisPool;
-use actix_web::web::{self, HttpResponse, Json};
-use actix_web::{error, get, post, Responder};
+use anyhow::Context;
 use cao_lang::compiler::{self, CompilationUnit};
 use caolo_messages::{AxialPoint, Schema};
+use log::{debug, error, trace};
 use redis::Commands;
 use serde::Deserialize;
+use std::convert::Infallible;
+use warp::http::StatusCode;
+use warp::reply::with_status;
 
-#[get("/")]
-pub async fn index_page() -> impl Responder {
-    HttpResponse::Ok().body("Helllo Worlllld")
+pub async fn myself(user: Option<User>) -> Result<impl warp::Reply, Infallible> {
+    let resp = warp::reply::json(&user);
+    let resp = match user {
+        Some(_) => with_status(resp, StatusCode::OK),
+        None => with_status(resp, StatusCode::NOT_FOUND),
+    };
+    Ok(resp)
 }
 
-#[get("/myself")]
-pub async fn myself(user: Option<User>) -> Result<HttpResponse, HttpResponse> {
-    user.map(|user: User| HttpResponse::Ok().json(user))
-        .ok_or_else(|| HttpResponse::NotFound().finish())
-}
+pub async fn schema(cache: RedisPool) -> Result<impl warp::Reply, Infallible> {
+    let mut conn = cache.get().expect("failed to aquire cache connection");
 
-#[get("/schema")]
-pub async fn schema(cache: web::Data<RedisPool>) -> Result<HttpResponse, error::Error> {
-    let mut conn = cache
-        .into_inner()
-        .get()
-        .map_err(actix_web::error::ErrorInternalServerError)?;
-
-    conn.get("SCHEMA")
-        .map_err(actix_web::error::ErrorInternalServerError)
-        .map(|schema: Vec<u8>| {
-            rmp_serde::from_read_ref(schema.as_slice()).expect("Schema msg deserialization failure")
+    let schema: Result<Schema, _> = conn
+        .get("SCHEMA")
+        .map_err(|err| {
+            error!("Failed to read schema {:?}", err);
+            err
         })
-        .map(|schema: Schema| HttpResponse::Ok().json(schema))
+        .with_context(|| "failed to read schema")
+        .and_then(|schema: Vec<u8>| {
+            rmp_serde::from_read_ref(schema.as_slice())
+                .with_context(|| "Schema msg deserialization failure")
+        });
+    let resp = match schema {
+        Ok(ref schema) => with_status(warp::reply::json(schema), StatusCode::OK),
+        Err(err) => {
+            error!("Failed to read schema {:?}", err);
+            with_status(
+                warp::reply::json(&Option::<()>::None),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            )
+        }
+    };
+    Ok(resp)
 }
 
-#[get("/terrain/rooms")]
-pub async fn terrain_rooms(db: web::Data<PgPool>) -> Result<HttpResponse, error::Error> {
+pub async fn terrain_rooms(db: PgPool) -> Result<impl warp::Reply, Infallible> {
     struct RoomId {
         q: i32,
         r: i32,
     };
-    let db = db.into_inner();
 
     let res = sqlx::query_as!(
         RoomId,
@@ -53,7 +63,7 @@ pub async fn terrain_rooms(db: web::Data<PgPool>) -> Result<HttpResponse, error:
         FROM world_map;
         "
     )
-    .fetch_all(&*db)
+    .fetch_all(&db)
     .await
     .expect("Failed to query world");
 
@@ -62,7 +72,9 @@ pub async fn terrain_rooms(db: web::Data<PgPool>) -> Result<HttpResponse, error:
         .map(|RoomId { q, r }| AxialPoint { q, r })
         .collect::<Vec<_>>();
 
-    Ok(HttpResponse::Ok().json(res))
+    let resp = warp::reply::json(&res);
+
+    Ok(resp)
 }
 
 #[derive(Debug, Deserialize)]
@@ -71,13 +83,8 @@ pub struct TerrainQuery {
     r: i32,
 }
 
-#[get("/terrain")]
-pub async fn terrain(
-    query: web::Query<TerrainQuery>,
-    db: web::Data<PgPool>,
-) -> Result<HttpResponse, error::Error> {
-    let db = db.into_inner();
-    let TerrainQuery { q, r } = query.0;
+pub async fn terrain(query: TerrainQuery, db: PgPool) -> Result<impl warp::Reply, Infallible> {
+    let TerrainQuery { q, r } = query;
 
     struct Res {
         payload: serde_json::Value,
@@ -93,24 +100,38 @@ pub async fn terrain(
         q,
         r
     )
-    .fetch_one(&*db)
+    .fetch_one(&db)
     .await
-    .map(|r| r.payload)
-    .map_err(|e| match e {
-        sqlx::Error::RowNotFound => error::ErrorNotFound("Room was not found in the database"),
-        _ => {
-            log::error!("Failed to query database {:?}", e);
-            error::ErrorInternalServerError("Failed to query database")
+    .map(|r| warp::reply::json(&r.payload))
+    .map(|r| with_status(r, StatusCode::OK))
+    .or_else(|e| match e {
+        sqlx::Error::RowNotFound => {
+            let resp = warp::reply::json(&Option::<()>::None);
+            Ok(with_status(resp, StatusCode::NOT_FOUND))
         }
-    })?;
+        _ => {
+            error!("Failed to query database {:?}", e);
+            let resp = warp::reply::json(&Option::<()>::None);
+            Ok::<_, Infallible>(with_status(resp, StatusCode::INTERNAL_SERVER_ERROR))
+        }
+    })
+    .unwrap();
 
-    let res = HttpResponse::Ok().json(res);
     Ok(res)
 }
 
-#[post("/compile")]
-pub async fn compile(cu: Json<CompilationUnit>) -> impl Responder {
-    compiler::compile(cu.into_inner())
-        .map(|_res| HttpResponse::NoContent().finish())
-        .map_err(error::ErrorBadRequest)
+pub async fn compile(cu: CompilationUnit) -> Result<Box<dyn warp::Reply>, Infallible> {
+    match compiler::compile(cu) {
+        Ok(res) => {
+            trace!("compilation succeeded {:?}", res);
+            let resp = Box::new(StatusCode::NO_CONTENT);
+            Ok(resp)
+        }
+        Err(err) => {
+            debug!("compilation failed {:?}", err);
+            let resp = warp::reply::json(&err);
+            let resp = Box::new(with_status(resp, StatusCode::BAD_REQUEST));
+            Ok(resp)
+        }
+    }
 }

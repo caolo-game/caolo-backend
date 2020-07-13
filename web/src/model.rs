@@ -1,12 +1,24 @@
 use crate::PgPool;
 use anyhow::Context;
 use chrono::{DateTime, Utc};
+use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+use lazy_static::lazy_static;
 use log::debug;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use std::str::FromStr;
 use thiserror::Error;
 use uuid::Uuid;
+
+lazy_static! {
+    // TODO: RSA
+    static ref JWT_SECRET: String = {
+        let secret = std::env::var("SECRET").unwrap_or_else(|_| "foobar".to_owned());
+        secret
+    };
+    static ref JWT_ENCODE: EncodingKey = EncodingKey::from_secret(JWT_SECRET.as_bytes());
+    static ref JWT_DECODE: DecodingKey<'static> = DecodingKey::from_secret(JWT_SECRET.as_bytes());
+}
 
 #[derive(Debug, FromRow, Serialize)]
 pub struct User {
@@ -25,17 +37,29 @@ pub enum UserReadError {
 
 impl warp::reject::Reject for UserReadError {}
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Identity {
     pub id: Uuid,
     pub token: String,
+    pub exp: usize,
+    pub iat: usize,
 }
 
 impl FromStr for Identity {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        serde_json::from_str(s).with_context(|| "failed to deseralize identity")
+        let token = decode::<Identity>(s, &*JWT_DECODE, &Validation::default())
+            .with_context(|| "failed to deseralize identity")?;
+        Ok(token.claims)
+    }
+}
+
+impl Identity {
+    pub fn serialize_token(&self) -> Result<String, anyhow::Error> {
+        let token = encode(&Header::default(), self, &JWT_ENCODE)
+            .with_context(|| "failed to encode identity")?;
+        Ok(token)
     }
 }
 

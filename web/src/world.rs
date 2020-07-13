@@ -66,7 +66,7 @@ pub fn send(
 }
 
 pub async fn world_stream(ws: WebSocket, user: Option<User>, pool: RedisPool) {
-    log::debug!("starting world stream for user {:?}", user);
+    log::debug!("Starting world stream for user {:?}", user);
 
     let (world_ws_tx, mut world_ws_rx) = ws.split();
 
@@ -75,7 +75,7 @@ pub async fn world_stream(ws: WebSocket, user: Option<User>, pool: RedisPool) {
     let (mut tx, rx) = mpsc::unbounded_channel();
     tokio::task::spawn(rx.forward(world_ws_tx).map(|result| {
         if let Err(err) = result {
-            log::debug!("websocket send error: {}", err);
+            log::debug!("Websocket send error: {}", err);
         }
     }));
 
@@ -103,12 +103,12 @@ pub async fn world_stream(ws: WebSocket, user: Option<User>, pool: RedisPool) {
         let msg = match result {
             Ok(msg) => msg,
             Err(err) => {
-                log::error!("websocket error(user={:?}): {}", handler.user, err);
+                log::error!("Websocket error(user={:?}): {}", handler.user, err);
                 break;
             }
         };
-        debug!("received message by user {:?}", msg);
+        debug!("Received message by user {:?}", msg);
     }
 
-    log::debug!("bye user {:?}", handler.user);
+    log::debug!("Bye user {:?}", handler.user);
 }

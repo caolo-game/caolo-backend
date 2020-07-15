@@ -1,14 +1,16 @@
+mod auth;
 mod config;
-// mod google_auth;
+mod google_auth;
 mod handler;
 mod model;
 mod world;
 
 pub use config::*;
-use log::warn;
+use log::{trace, warn};
 use r2d2_redis::{r2d2, RedisConnectionManager};
 use sqlx::postgres::PgPool;
 use std::convert::Infallible;
+use std::str::FromStr;
 use warp::Filter;
 
 #[cfg(feature = "web-dotenv")]
@@ -53,24 +55,32 @@ async fn main() -> Result<(), anyhow::Error> {
         move || filter.clone()
     };
 
-    let identity = warp::filters::header::optional::<model::Identity>("authorization")
-        .and(
-            warp::filters::cookie::optional("authorization").map(|cookie: Option<String>| {
-                cookie.and_then(|cookie| {
-                    let id: model::Identity = serde_json::from_str(cookie.as_str())
-                        .map_err(|e| {
-                            warn!("identity cookie deserialization failed {:?}", e);
-                        })
-                        .ok()?;
-                    Some(id)
-                })
-            }),
-        )
-        .map(
-            |header_id: Option<model::Identity>, cookie_id: Option<model::Identity>| {
-                header_id.or(cookie_id)
-            },
-        );
+    let host = conf.host;
+    let port = conf.port;
+
+    let conf = std::sync::Arc::new(conf);
+    let config = {
+        let filter = warp::any().map(move || {
+            let conf = std::sync::Arc::clone(&conf);
+            conf
+        });
+        move || filter.clone()
+    };
+
+    let identity = warp::filters::header::optional::<String>("authorization")
+        .and(warp::filters::cookie::optional("authorization"))
+        .map(|header_id: Option<String>, cookie_id: Option<String>| {
+            header_id.or(cookie_id).and_then(|cookie: String| {
+                trace!("deseralizing Identity: {:?}", cookie);
+                let id: model::Identity = FromStr::from_str(cookie.as_str())
+                    .map_err(|e| {
+                        // TODO: on expiration use the refresh token and issue a new token
+                        warn!("identity cookie deserialization failed {:?}", e);
+                    })
+                    .ok()?;
+                Some(id)
+            })
+        });
 
     let current_user = {
         let current_user = warp::any()
@@ -79,6 +89,26 @@ async fn main() -> Result<(), anyhow::Error> {
             .and_then(move |id, db_pool| model::current_user(id, db_pool));
         move || current_user.clone()
     };
+
+    let extend_token = warp::get()
+        .and(warp::path("extend-token"))
+        .and(identity)
+        .and(current_user())
+        .and_then(|id: Option<model::Identity>, user: Option<model::User>| {
+            async move {
+                match id.and_then(|id| user.map(|u| (id, u))) {
+                    Some((id, _user)) => {
+                        let new_id = model::Identity {
+                            exp: (chrono::Utc::now() + chrono::Duration::minutes(5)).timestamp(),
+                            ..id
+                        };
+                        Ok::<_, Infallible>(handler::set_identity(warp::reply(), new_id))
+                    }
+                    // the user is not logged in (or the token expired)
+                    None => unimplemented!(),
+                }
+            }
+        });
 
     let health_check = warp::get().and(warp::path("health")).and_then(health_check);
     let world_stream = warp::get()
@@ -116,19 +146,38 @@ async fn main() -> Result<(), anyhow::Error> {
         .and(warp::filters::body::json())
         .and_then(handler::compile);
 
+    let google_login_redirect = warp::get()
+        .and(warp::path!("login" / "google" / "redirect"))
+        .and(warp::cookie("session_id"))
+        .and(warp::query())
+        .and(config())
+        .and(cache_pool())
+        .and(db_pool())
+        .and_then(handler::login_redirect);
+
+    let google_login = warp::get()
+        .and(warp::path!("login" / "google"))
+        .and(warp::query())
+        .and(config())
+        .and(cache_pool())
+        .and_then(handler::login);
+
     let api = health_check
         .or(world_stream)
         .or(myself)
         .or(schema)
         .or(terrain_rooms)
         .or(terrain)
+        .or(google_login_redirect)
+        .or(google_login)
+        .or(extend_token)
         .or(compile);
 
     warp::serve(
         api.with(warp::log("caolo_web-router"))
             .with(warp::cors().allow_any_origin().allow_credentials(true)),
     )
-    .run((conf.host, conf.port))
+    .run((host, port))
     .await;
 
     Ok(())

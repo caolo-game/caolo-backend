@@ -39,10 +39,9 @@ impl warp::reject::Reject for UserReadError {}
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Identity {
-    pub id: Uuid,
-    pub token: String,
-    pub exp: usize,
-    pub iat: usize,
+    pub user_id: Uuid,
+    pub exp: i64,
+    pub iat: i64,
 }
 
 impl FromStr for Identity {
@@ -50,7 +49,7 @@ impl FromStr for Identity {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let token = decode::<Identity>(s, &*JWT_DECODE, &Validation::default())
-            .with_context(|| "failed to deseralize identity")?;
+            .with_context(|| "failed to decode identity")?;
         Ok(token.claims)
     }
 }
@@ -77,9 +76,9 @@ pub async fn current_user(
         "
         SELECT ua.id, ua.display_name, ua.email, ua.created, ua.updated
         FROM user_account AS ua
-        INNER JOIN user_credential AS uc
-        ON uc.token = $1 AND uc.user_id = ua.id; ",
-        id.token
+        WHERE ua.id=$1
+        ",
+        id.user_id
     )
     .fetch_optional(&pool)
     .await

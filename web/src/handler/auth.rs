@@ -1,21 +1,27 @@
+use crate::auth::generate_refresh_token;
 use crate::google_auth::oauth_client;
+use crate::model::Identity;
 use crate::Config;
 use crate::PgPool;
 use crate::RedisPool;
-use log::{debug, error};
-use oauth2::{prelude::*, AuthorizationCode, CsrfToken, TokenResponse};
-use rand::RngCore;
+use chrono::Utc;
+use log::{debug, error, warn};
+use oauth2::reqwest::async_http_client;
+use oauth2::AsyncCodeTokenRequest;
+use oauth2::{AuthorizationCode, CsrfToken, PkceCodeVerifier, TokenResponse};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::convert::Infallible;
 use std::ops::DerefMut;
-use std::sync::Arc;
 use thiserror::Error;
 use uuid::Uuid;
+use warp::http::StatusCode;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LoginMetadata {
     pub redirect: Option<String>,
     pub csrf_token: CsrfToken,
+    pub pkce_code_verifier: PkceCodeVerifier,
 }
 
 #[derive(Deserialize, Debug)]
@@ -38,35 +44,63 @@ pub enum LoginError {
     CsrfTokenNotFoundInCache,
     #[error("Failed to deserialize state {0:?}")]
     CsrfTokenDeserializeError(serde_json::Error),
-    #[error("Identity was not found.")]
-    IdNotFoud,
     #[error("There has been an error querying the database")]
     DbError(sqlx::Error),
     #[error("There has been an error querying the cache")]
     CachePoolError(r2d2_redis::r2d2::Error),
     #[error("Failed to authorize via Google")]
     ExchangeCodeFailure,
-    #[error("Critical server error")]
-    BlockingCancel,
     #[error("Failed to query Google for user info")]
     GoogleMyselfQueryFailure,
     #[error("Failed to deserialize state {0:?}")]
     GoogleMyselfDeserializationError(reqwest::Error),
+    #[error("Critical internal error")]
+    InternalError,
 }
 
+impl warp::reject::Reject for LoginError {}
+
+impl LoginError {
+    pub fn into_reply(&self) -> impl warp::Reply {
+        let code = match self {
+            LoginError::CsrfTokenMisMatch | LoginError::ExchangeCodeFailure => {
+                StatusCode::UNAUTHORIZED
+            }
+            LoginError::GoogleMyselfQueryFailure => StatusCode::NOT_FOUND,
+            _ => StatusCode::INTERNAL_SERVER_ERROR,
+        };
+        warp::reply::with_status(warp::reply::html(format!("{}", self)), code)
+    }
+}
 
 pub async fn login_redirect(
-    query: web::Query<LoginRedirectQuery>,
-    identity: Identity,
-    config: web::Data<Config>,
-    cache: web::Data<RedisPool>,
-    db: web::Data<PgPool>,
-) -> Result<impl Responder, LoginError> {
-    let query = query.into_inner();
+    session_id: String,
+    query: LoginRedirectQuery,
+    config: std::sync::Arc<Config>,
+    cache: RedisPool,
+    db: PgPool,
+) -> Result<Box<dyn warp::Reply>, Infallible> {
+    login_redirect_impl(session_id, query, config, cache, db)
+        .await
+        .or_else(|err| {
+            match err {
+                _ => {
+                    error!("Internal error while processing google login {:?}", err);
+                }
+            }
+            let payload = err.into_reply();
+            Ok(Box::new(payload))
+        })
+}
 
-    let identity = identity.identity().ok_or_else(|| LoginError::IdNotFoud)?;
-
-    let meta: LoginMetadata = get_csrf_token(cache.into_inner(), identity.clone()).await?;
+async fn login_redirect_impl(
+    identity: String,
+    query: LoginRedirectQuery,
+    config: std::sync::Arc<Config>,
+    cache: RedisPool,
+    db: PgPool,
+) -> Result<Box<dyn warp::Reply>, LoginError> {
+    let meta: LoginMetadata = get_csrf_token(&cache, identity).await?;
     if meta.csrf_token.secret() != &query.state {
         error!(
             "Got invalid csrf_token expected: {:?}, found: {:?}",
@@ -75,17 +109,16 @@ pub async fn login_redirect(
         return Err(LoginError::CsrfTokenMisMatch);
     }
 
-    let client = oauth_client(&*config);
-    let token = web::block(move || client.exchange_code(AuthorizationCode::new(query.code)))
+    let client = oauth_client(&config);
+    let token = client
+        .exchange_code(AuthorizationCode::new(query.code))
+        .set_pkce_verifier(meta.pkce_code_verifier)
+        .request_async(async_http_client)
         .await
-        .map_err(|e| match e {
-            BlockingError::Error(e) => {
-                error!("Failed to exchange code {:?}", e);
-                LoginError::ExchangeCodeFailure
-            }
-            BlockingError::Canceled => LoginError::BlockingCancel,
+        .map_err(|err| {
+            warn!("Failed to exchange code {:?}", err);
+            LoginError::ExchangeCodeFailure
         })?;
-
     let access_token = token.access_token();
 
     let client = reqwest::Client::new();
@@ -112,8 +145,6 @@ pub async fn login_redirect(
         .get(0)
         .and_then(|email| email["value"].as_str());
 
-    let db = db.into_inner();
-
     let user_id: Option<Uuid> = sqlx::query!(
         "
         SELECT user_id FROM user_google_token
@@ -121,10 +152,12 @@ pub async fn login_redirect(
         ",
         google_id
     )
-    .fetch_optional(&*db)
+    .fetch_optional(&db)
     .await
     .map_err(LoginError::DbError)?
     .map(|row| row.user_id);
+
+    let refresh_token = generate_refresh_token(128);
 
     let user_id = match user_id {
         Some(x) => {
@@ -133,18 +166,18 @@ pub async fn login_redirect(
                 INSERT INTO user_credential (user_id, token)
                 VALUES ($1, $2)
                 ON CONFLICT (user_id) DO
-                UPDATE 
+                UPDATE
                 SET token = $2
                 ",
                 user_id,
-                identity
+                refresh_token.as_str()
             )
-            .execute(&*db)
+            .execute(&db)
             .await
             .map_err(LoginError::DbError)?;
             x
         }
-        None => register_user(Arc::clone(&db), email, identity.as_str()).await?,
+        None => register_user(&db, email, refresh_token.as_str()).await?,
     };
 
     sqlx::query!(
@@ -152,42 +185,59 @@ pub async fn login_redirect(
         INSERT INTO user_google_token (google_id, user_id, access_token)
         VALUES ($1,$2,$3)
         ON CONFLICT (google_id, user_id) DO
-        UPDATE 
+        UPDATE
         SET access_token=$3
         ",
         google_id,
         user_id,
         access_token.secret()
     )
-    .execute(&*db)
+    .execute(&db)
     .await
     .map_err(LoginError::DbError)?;
 
-    let response = meta
-        .redirect
-        .map(|redirect| {
-            HttpResponse::Found()
-                .set_header("Location", redirect)
-                .finish()
-        })
-        .unwrap_or_else(|| HttpResponse::Ok().finish());
+    let identity = Identity {
+        user_id,
+        iat: Utc::now().timestamp(),
+        exp: (Utc::now() + chrono::Duration::minutes(5)).timestamp(),
+    };
 
+    let response: Box<dyn warp::Reply> = match meta.redirect {
+        Some(redirect) => {
+            let resp = warp::redirect(redirect.as_str().parse::<warp::http::Uri>().unwrap());
+            let resp = set_identity(resp, identity);
+            Box::new(resp)
+        }
+        None => {
+            let resp = warp::reply();
+            let resp = set_identity(resp, identity);
+            Box::new(resp)
+        }
+    };
     Ok(response)
 }
 
-async fn get_csrf_token(
-    cache: Arc<RedisPool>,
-    identity: String,
-) -> Result<LoginMetadata, LoginError> {
+pub fn set_identity(response: impl warp::Reply, identity: Identity) -> impl warp::Reply {
+    warp::reply::with_header(
+        response,
+        "Set-Cookie",
+        format!(
+            "authorization={}; HttpOnly Secure; Path=/",
+            identity.serialize_token().expect("Failed to serialize JWT")
+        ),
+    )
+}
+
+async fn get_csrf_token(cache: &RedisPool, identity: String) -> Result<LoginMetadata, LoginError> {
     let mut conn = cache.get().map_err(LoginError::CachePoolError)?;
-    web::block(move || {
+    tokio::spawn(async move {
         redis::pipe()
             .get(&identity)
             .del(&identity)
             .ignore()
             .query(conn.deref_mut())
-            .map_err(|e| {
-                error!("Failed read csrf_token {:?}", e);
+            .map_err(|err| {
+                error!("Failed read csrf_token {:?}", err);
                 LoginError::CsrfTokenNotFoundInCache
             })
             .and_then(|v: Vec<String>| {
@@ -200,20 +250,17 @@ async fn get_csrf_token(
             })
     })
     .await
-    .map_err(|e| {
-        error!("Failed to get csrf_token {:?}", e);
-        match e {
-            BlockingError::Error(e) => e,
-            BlockingError::Canceled => LoginError::BlockingCancel,
-        }
+    .map_err(|err| {
+        error!("Failed to get csrf_token {:?}", err);
+        LoginError::InternalError
+    })?
+    .map_err(|err| {
+        warn!("Failed to get csrf_token {:?}", err);
+        err
     })
 }
 
-async fn register_user(
-    db: Arc<PgPool>,
-    email: Option<&str>,
-    identity: &str,
-) -> Result<Uuid, LoginError> {
+async fn register_user(db: &PgPool, email: Option<&str>, token: &str) -> Result<Uuid, LoginError> {
     let mut tx = db.begin().await.map_err(LoginError::DbError)?;
     let user_id = sqlx::query!(
         "INSERT INTO user_account (email)
@@ -231,7 +278,7 @@ async fn register_user(
         INSERT INTO user_credential (user_id, token)
         VALUES ($1, $2)",
         user_id,
-        identity
+        token
     )
     .execute(&mut tx)
     .await
@@ -243,42 +290,57 @@ async fn register_user(
 }
 
 pub async fn login(
-    query: web::Query<LoginQuery>,
-    config: web::Data<Config>,
-    id: Identity,
-    cache: web::Data<RedisPool>,
-) -> Result<impl Responder, HttpResponse> {
-    let mut rng = rand::thread_rng();
-    let mut randid = vec![0; 128];
-    rng.fill_bytes(&mut randid);
+    query: LoginQuery,
+    config: std::sync::Arc<Config>,
+    cache: RedisPool,
+) -> Result<impl warp::Reply, warp::Rejection> {
+    debug!("user is logging in via Google OAuth");
+    let randid = generate_refresh_token(64);
 
-    let randid = base64::encode(&randid);
     let client = oauth_client(&*config);
 
-    let (auth_url, csrf_token) = client.authorize_url(CsrfToken::new_random);
+    let (pkce_code_challenge, pkce_code_verifier) = oauth2::PkceCodeChallenge::new_random_sha256();
 
-    let mut conn = cache
-        .into_inner()
-        .get()
-        .map_err(actix_web::error::ErrorInternalServerError)?;
+    let (auth_url, csrf_token) = client
+        .authorize_url(CsrfToken::new_random)
+        .add_scope(oauth2::Scope::new("email".to_owned()))
+        .set_pkce_challenge(pkce_code_challenge)
+        .url();
+
+    let mut conn = cache.get().expect("Failed to aquire cache connection");
 
     let meta = LoginMetadata {
         csrf_token,
-        redirect: query.into_inner().redirect,
+        redirect: query.redirect,
+        pkce_code_verifier,
     };
 
     let meta = serde_json::to_string(&meta).unwrap();
-    id.remember(randid.clone());
-    web::block(move || {
-        redis::pipe()
-            .set_ex(&randid, meta, 60)
-            .query(conn.deref_mut())
-    })
-    .await
-    .map_err(actix_web::error::ErrorInternalServerError)?;
 
-    let result = HttpResponse::Found()
-        .set_header("Location", auth_url.as_str())
-        .finish();
+    {
+        let randid = randid.clone();
+        tokio::spawn(async move {
+            redis::pipe()
+                .set_ex(&randid, meta, 60)
+                .query::<()>(conn.deref_mut())
+                .expect("Failed to save csrf challenge in redis");
+            Ok::<_, Infallible>(())
+        })
+        .await
+        .expect("Failed to save csrf challenge")
+        .unwrap();
+    }
+
+    let result = warp::redirect(
+        auth_url
+            .to_string()
+            .parse::<warp::http::Uri>()
+            .expect("Expected valid auth url"),
+    );
+    let result = warp::reply::with_header(
+        result,
+        "Set-Cookie",
+        format!("session_id={}; HttpOnly Secure; Path=/", randid),
+    );
     Ok(result)
 }

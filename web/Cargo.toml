@@ -40,6 +40,7 @@ futures = "*"
 rand = "0.7"
 base64 = "0.12"
 sentry = "0.19"
+sentry-log = { version="0.19", features=["env_logger"] }
 anyhow = "1"
 jsonwebtoken = "7"
 lazy_static="1.4"

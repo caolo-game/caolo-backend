@@ -74,7 +74,6 @@ async fn main() -> Result<(), anyhow::Error> {
                 trace!("deseralizing Identity: {:?}", cookie);
                 let id: model::Identity = FromStr::from_str(cookie.as_str())
                     .map_err(|e| {
-                        // TODO: on expiration use the refresh token and issue a new token
                         warn!("identity cookie deserialization failed {:?}", e);
                     })
                     .ok()?;

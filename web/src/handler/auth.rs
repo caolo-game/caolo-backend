@@ -44,18 +44,12 @@ pub enum LoginError {
     CsrfTokenNotFoundInCache,
     #[error("Failed to deserialize state {0:?}")]
     CsrfTokenDeserializeError(serde_json::Error),
-    #[error("There has been an error querying the database")]
-    DbError(sqlx::Error),
-    #[error("There has been an error querying the cache")]
-    CachePoolError(r2d2_redis::r2d2::Error),
     #[error("Failed to authorize via Google")]
     ExchangeCodeFailure,
     #[error("Failed to query Google for user info")]
     GoogleMyselfQueryFailure,
     #[error("Failed to deserialize state {0:?}")]
     GoogleMyselfDeserializationError(reqwest::Error),
-    #[error("Critical internal error")]
-    InternalError,
 }
 
 impl warp::reject::Reject for LoginError {}
@@ -154,7 +148,7 @@ async fn login_redirect_impl(
     )
     .fetch_optional(&db)
     .await
-    .map_err(LoginError::DbError)?
+    .expect("failed to get user_id using the google_id")
     .map(|row| row.user_id);
 
     let refresh_token = generate_refresh_token(128);
@@ -174,7 +168,7 @@ async fn login_redirect_impl(
             )
             .execute(&db)
             .await
-            .map_err(LoginError::DbError)?;
+            .expect("failed to insert/update user_credentials");
             x
         }
         None => register_user(&db, email, refresh_token.as_str()).await?,
@@ -194,7 +188,7 @@ async fn login_redirect_impl(
     )
     .execute(&db)
     .await
-    .map_err(LoginError::DbError)?;
+    .expect("failed to insert/update user_google_token");
 
     let identity = Identity {
         user_id,
@@ -229,7 +223,7 @@ pub fn set_identity(response: impl warp::Reply, identity: Identity) -> impl warp
 }
 
 async fn get_csrf_token(cache: &RedisPool, identity: String) -> Result<LoginMetadata, LoginError> {
-    let mut conn = cache.get().map_err(LoginError::CachePoolError)?;
+    let mut conn = cache.get().expect("failed to aquire cache connection");
     tokio::spawn(async move {
         redis::pipe()
             .get(&identity)
@@ -250,10 +244,7 @@ async fn get_csrf_token(cache: &RedisPool, identity: String) -> Result<LoginMeta
             })
     })
     .await
-    .map_err(|err| {
-        error!("Failed to get csrf_token {:?}", err);
-        LoginError::InternalError
-    })?
+    .expect("Failed to get csrf_token")
     .map_err(|err| {
         warn!("Failed to get csrf_token {:?}", err);
         err
@@ -261,7 +252,7 @@ async fn get_csrf_token(cache: &RedisPool, identity: String) -> Result<LoginMeta
 }
 
 async fn register_user(db: &PgPool, email: Option<&str>, token: &str) -> Result<Uuid, LoginError> {
-    let mut tx = db.begin().await.map_err(LoginError::DbError)?;
+    let mut tx = db.begin().await.expect("failed to begin transaction");
     let user_id = sqlx::query!(
         "INSERT INTO user_account (email)
         VALUES ($1)
@@ -270,7 +261,7 @@ async fn register_user(db: &PgPool, email: Option<&str>, token: &str) -> Result<
     )
     .fetch_one(&mut tx)
     .await
-    .map_err(LoginError::DbError)?
+    .expect("failed to insert into user_account")
     .id;
 
     sqlx::query!(
@@ -282,9 +273,9 @@ async fn register_user(db: &PgPool, email: Option<&str>, token: &str) -> Result<
     )
     .execute(&mut tx)
     .await
-    .map_err(LoginError::DbError)?;
+    .expect("failed to insert into user_credential");
 
-    tx.commit().await.map_err(LoginError::DbError)?;
+    tx.commit().await.expect("failed to commit transaction");
 
     Ok(user_id)
 }

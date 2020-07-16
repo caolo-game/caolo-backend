@@ -77,24 +77,17 @@ pub fn api(
         .and(identity)
         .and(current_user())
         .and_then(
-            |conf: Arc<Config>, id: Option<model::Identity>, user: Option<model::User>| {
-                async move {
-                    match id.and_then(|id| user.map(|u| (id, u))) {
-                        Some((id, _user)) => {
-                            let new_id = model::Identity {
-                                exp: (chrono::Utc::now() + conf.auth_token_duration).timestamp(),
-                                ..id
-                            };
-                            let response = with_status(warp::reply(), StatusCode::NO_CONTENT);
-                            let response = handler::set_identity(response, new_id);
-                            Ok(response)
-                        }
-                        None => {
-                            // the user is not logged in (or the token expired)
-                            Err(warp::reject::not_found())
-                        }
-                    }
-                }
+            |conf: Arc<Config>, id: Option<model::Identity>, user: Option<model::User>| async move {
+                id.and_then(|id| user.map(|u| (id, u)))
+                    .map(|(id, _user)| {
+                        let new_id = model::Identity {
+                            exp: (chrono::Utc::now() + conf.auth_token_duration).timestamp(),
+                            ..id
+                        };
+                        let response = with_status(warp::reply(), StatusCode::NO_CONTENT);
+                        handler::set_identity(response, new_id)
+                    })
+                    .ok_or_else(|| warp::reject::not_found())
             },
         );
 

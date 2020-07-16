@@ -13,10 +13,11 @@ use sqlx::postgres::PgPool;
 use std::convert::Infallible;
 use std::str::FromStr;
 use warp::http::StatusCode;
+use warp::reply::with_status;
 use warp::Filter;
 
 async fn health_check() -> Result<impl warp::Reply, Infallible> {
-    let response = warp::reply::with_status(warp::reply(), StatusCode::NO_CONTENT);
+    let response = with_status(warp::reply(), StatusCode::NO_CONTENT);
     Ok(response)
 }
 
@@ -81,7 +82,9 @@ pub fn api(
                             exp: (chrono::Utc::now() + chrono::Duration::minutes(5)).timestamp(),
                             ..id
                         };
-                        Ok(handler::set_identity(warp::reply(), new_id))
+                        let response = with_status(warp::reply(), StatusCode::NO_CONTENT);
+                        let response = handler::set_identity(response, new_id);
+                        Ok(response)
                     }
                     None => {
                         // the user is not logged in (or the token expired)

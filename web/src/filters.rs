@@ -12,6 +12,7 @@ use r2d2_redis::{r2d2, RedisConnectionManager};
 use sqlx::postgres::PgPool;
 use std::convert::Infallible;
 use std::str::FromStr;
+use std::sync::Arc;
 use warp::http::StatusCode;
 use warp::reply::with_status;
 use warp::Filter;
@@ -40,7 +41,7 @@ pub fn api(
 
     let config = {
         let filter = warp::any().map(move || {
-            let conf = std::sync::Arc::clone(&conf);
+            let conf = Arc::clone(&conf);
             conf
         });
         move || filter.clone()
@@ -72,27 +73,30 @@ pub fn api(
 
     let extend_token = warp::get()
         .and(warp::path("extend-token"))
+        .and(config())
         .and(identity)
         .and(current_user())
-        .and_then(|id: Option<model::Identity>, user: Option<model::User>| {
-            async move {
-                match id.and_then(|id| user.map(|u| (id, u))) {
-                    Some((id, _user)) => {
-                        let new_id = model::Identity {
-                            exp: (chrono::Utc::now() + chrono::Duration::minutes(5)).timestamp(),
-                            ..id
-                        };
-                        let response = with_status(warp::reply(), StatusCode::NO_CONTENT);
-                        let response = handler::set_identity(response, new_id);
-                        Ok(response)
-                    }
-                    None => {
-                        // the user is not logged in (or the token expired)
-                        Err(warp::reject::not_found())
+        .and_then(
+            |conf: Arc<Config>, id: Option<model::Identity>, user: Option<model::User>| {
+                async move {
+                    match id.and_then(|id| user.map(|u| (id, u))) {
+                        Some((id, _user)) => {
+                            let new_id = model::Identity {
+                                exp: (chrono::Utc::now() + conf.auth_token_duration).timestamp(),
+                                ..id
+                            };
+                            let response = with_status(warp::reply(), StatusCode::NO_CONTENT);
+                            let response = handler::set_identity(response, new_id);
+                            Ok(response)
+                        }
+                        None => {
+                            // the user is not logged in (or the token expired)
+                            Err(warp::reject::not_found())
+                        }
                     }
                 }
-            }
-        });
+            },
+        );
 
     let health_check = warp::get().and(warp::path("health")).and_then(health_check);
     let world_stream = warp::get()

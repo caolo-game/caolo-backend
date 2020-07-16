@@ -194,7 +194,7 @@ async fn login_redirect_impl(
     let identity = Identity {
         user_id,
         iat: Utc::now().timestamp(),
-        exp: (Utc::now() + chrono::Duration::minutes(5)).timestamp(),
+        exp: (Utc::now() + config.auth_token_duration).timestamp(),
     };
 
     let response: Box<dyn warp::Reply> = match meta.redirect {

@@ -13,6 +13,8 @@ pub struct Config {
     pub base_url: String,
     pub host: IpAddr,
     pub port: u16,
+
+    pub auth_token_duration: chrono::Duration,
 }
 
 #[derive(Error, Debug)]
@@ -61,6 +63,8 @@ impl Config {
             port,
             base_url: env::var("CAOLO_BASE_URL")
                 .unwrap_or_else(|_| "http://localhost:8000".to_owned()),
+
+            auth_token_duration: chrono::Duration::minutes(10),
         };
         debug!("Reading configuration done {:#?}", config);
         Ok(config)

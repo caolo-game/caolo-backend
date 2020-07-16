@@ -1,8 +1,9 @@
+use log::debug;
 use std::env::{self, VarError};
 use std::net::IpAddr;
 use thiserror::Error;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Config {
     pub allowed_origins: Vec<String>,
     pub redis_url: String,
@@ -22,6 +23,7 @@ pub enum ConfigReadError {
 
 impl Config {
     pub fn read() -> Result<Self, ConfigReadError> {
+        debug!("Reading configuration");
         let host = env::var("HOST")
             .ok()
             .and_then(|host| {
@@ -48,15 +50,19 @@ impl Config {
             db_url: env::var("DATABASE_URL")
                 .unwrap_or_else(|_| "postgres://postgres:admin@localhost:5432/caolo".to_owned()),
             google_id: env::var("GOOGLE_OAUTH_CLIENT_ID")
+                .map(|id| id.trim().to_owned())
                 .map_err(|e| ConfigReadError::EnvNotSet("GOOGLE_OAUTH_CLIENT_ID".to_owned(), e))?,
-            google_secret: env::var("GOOGLE_OAUTH_CLIENT_SECRET").map_err(|e| {
-                ConfigReadError::EnvNotSet("GOOGLE_OAUTH_CLIENT_SECRET".to_owned(), e)
-            })?,
+            google_secret: env::var("GOOGLE_OAUTH_CLIENT_SECRET")
+                .map(|id| id.trim().to_owned())
+                .map_err(|e| {
+                    ConfigReadError::EnvNotSet("GOOGLE_OAUTH_CLIENT_SECRET".to_owned(), e)
+                })?,
             host,
             port,
             base_url: env::var("CAOLO_BASE_URL")
                 .unwrap_or_else(|_| "http://localhost:8000".to_owned()),
         };
+        debug!("Reading configuration done {:#?}", config);
         Ok(config)
     }
 }

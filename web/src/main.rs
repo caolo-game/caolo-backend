@@ -40,7 +40,7 @@ async fn main() -> Result<(), anyhow::Error> {
             sentry::init(options.add_integration(log_integration))
         })
         .ok_or_else(|| {
-            warn!("Sentry URI was not provided");
+            eprintln!("Sentry URI was not provided");
             pretty_env_logger::init();
         });
 
@@ -77,6 +77,8 @@ async fn main() -> Result<(), anyhow::Error> {
         move || filter.clone()
     };
 
+    // I used `and + optional` instead of `or` because a lack of `authorization` is not inherently
+    // and error, however `or` would return 400 if neither method is used
     let identity = warp::filters::header::optional::<String>("authorization")
         .and(warp::filters::cookie::optional("authorization"))
         .map(|header_id: Option<String>, cookie_id: Option<String>| {

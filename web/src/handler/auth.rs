@@ -88,13 +88,14 @@ pub async fn login_redirect(
 }
 
 async fn login_redirect_impl(
-    identity: String,
+    session_id: String,
     query: LoginRedirectQuery,
     config: std::sync::Arc<Config>,
     cache: RedisPool,
     db: PgPool,
 ) -> Result<Box<dyn warp::Reply>, LoginError> {
-    let meta: LoginMetadata = get_csrf_token(&cache, identity).await?;
+    debug!("handling login redirect {:?} {:?}", session_id, query);
+    let meta: LoginMetadata = get_csrf_token(&cache, session_id).await?;
     if meta.csrf_token.secret() != &query.state {
         error!(
             "Got invalid csrf_token expected: {:?}, found: {:?}",
@@ -331,7 +332,7 @@ pub async fn login(
     let result = warp::reply::with_header(
         result,
         "Set-Cookie",
-        format!("session_id={}; HttpOnly Secure; Path=/", randid),
+        format!("session_id={}; HttpOnly Secure", randid),
     );
     Ok(result)
 }

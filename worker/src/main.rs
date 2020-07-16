@@ -147,26 +147,13 @@ fn send_schema(client: &redis::Client) -> anyhow::Result<()> {
         .iter()
         .map(|import| {
             let import = &import.desc;
-            let fun = Function {
-                name: import.name.to_owned(),
-                description: import.description.to_owned(),
-                input: import
-                    .input
-                    .iter()
-                    .map(|x| x.to_string())
-                    .collect::<Vec<_>>(),
-                output: import
-                    .output
-                    .iter()
-                    .map(|x| x.to_string())
-                    .collect::<Vec<_>>(),
-                params: import
-                    .params
-                    .iter()
-                    .map(|x| x.to_string())
-                    .collect::<Vec<_>>(),
-            };
-            fun
+            Function::from_str_parts(
+                import.name,
+                import.description,
+                import.input.as_ref(),
+                import.output.as_ref(),
+                import.params.as_ref(),
+            )
         })
         .collect::<Vec<_>>();
 

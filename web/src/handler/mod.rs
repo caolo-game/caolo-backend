@@ -5,8 +5,9 @@ use crate::PgPool;
 use crate::RedisPool;
 use anyhow::Context;
 pub use auth::*;
+use cao_lang::compiler::description::get_instruction_descriptions;
 use cao_lang::compiler::{self, CompilationUnit};
-use caolo_messages::{AxialPoint, Schema};
+use caolo_messages::{AxialPoint, Function, Schema};
 use log::{debug, error, trace};
 use redis::Commands;
 use serde::Deserialize;
@@ -26,6 +27,8 @@ pub async fn myself(user: Option<User>) -> Result<impl warp::Reply, Infallible> 
 pub async fn schema(cache: RedisPool) -> Result<impl warp::Reply, Infallible> {
     let mut conn = cache.get().expect("failed to aquire cache connection");
 
+    let basic_schema = get_instruction_descriptions();
+
     let schema: Result<Schema, _> = conn
         .get("SCHEMA")
         .map_err(|err| {
@@ -38,7 +41,20 @@ pub async fn schema(cache: RedisPool) -> Result<impl warp::Reply, Infallible> {
                 .with_context(|| "Schema msg deserialization failure")
         });
     let resp = match schema {
-        Ok(ref schema) => with_status(warp::reply::json(schema), StatusCode::OK),
+        Ok(mut schema) => {
+            schema
+                .functions
+                .extend(basic_schema.into_iter().map(|item| {
+                    Function::from_str_parts(
+                        item.name,
+                        item.description,
+                        item.input.as_ref(),
+                        item.output.as_ref(),
+                        item.params.as_ref(),
+                    )
+                }));
+            with_status(warp::reply::json(&schema), StatusCode::OK)
+        }
         Err(err) => {
             error!("Failed to read schema {:?}", err);
             with_status(

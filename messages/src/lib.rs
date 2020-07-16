@@ -55,6 +55,24 @@ pub struct Function {
     pub params: Vec<String>,
 }
 
+impl Function {
+    pub fn from_str_parts(
+        name: &str,
+        description: &str,
+        input: &[&str],
+        output: &[&str],
+        params: &[&str],
+    ) -> Self {
+        Self {
+            name: name.to_owned(),
+            description: description.to_owned(),
+            input: input.iter().map(|x| x.to_string()).collect(),
+            output: output.iter().map(|x| x.to_string()).collect(),
+            params: params.iter().map(|x| x.to_string()).collect(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
 pub struct Schema {

@@ -1,3 +1,8 @@
+//! Warp filters.
+//!
+//! Entry point filters will call handlers to execute logic.
+//!
+//!
 use crate::config::*;
 use crate::handler;
 use crate::model;
@@ -75,10 +80,12 @@ pub fn api(
                             exp: (chrono::Utc::now() + chrono::Duration::minutes(5)).timestamp(),
                             ..id
                         };
-                        Ok::<_, Infallible>(handler::set_identity(warp::reply(), new_id))
+                        Ok(handler::set_identity(warp::reply(), new_id))
                     }
-                    // the user is not logged in (or the token expired)
-                    None => unimplemented!(),
+                    None => {
+                        // the user is not logged in (or the token expired)
+                        Err(warp::reject::not_found())
+                    }
                 }
             }
         });

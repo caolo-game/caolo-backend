@@ -66,7 +66,10 @@ pub fn send(
 }
 
 pub async fn world_stream(ws: WebSocket, user: Option<User>, pool: RedisPool) {
-    log::debug!("Starting world stream for user {:?}", user);
+    log::debug!(
+        "Starting world stream for user {:?}",
+        user.as_ref().map(|u| u.id)
+    );
 
     let (world_ws_tx, mut world_ws_rx) = ws.split();
 
@@ -110,5 +113,5 @@ pub async fn world_stream(ws: WebSocket, user: Option<User>, pool: RedisPool) {
         debug!("Received message by user {:?}", msg);
     }
 
-    log::debug!("Bye user {:?}", handler.user);
+    log::debug!("Bye user {:?}", handler.user.map(|u| u.id));
 }

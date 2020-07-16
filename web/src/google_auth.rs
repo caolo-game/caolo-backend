@@ -9,8 +9,7 @@ pub fn oauth_client(config: &Config) -> BasicClient {
         AuthUrl::new("https://accounts.google.com/o/oauth2/v2/auth".to_owned()).unwrap(),
         Some(TokenUrl::new("https://oauth2.googleapis.com/token".to_owned()).unwrap()),
     )
-    .set_redirect_url(RedirectUrl::new(format!(
-        "{}/login/google/redirect",
-        config.base_url
-    )).unwrap())
+    .set_redirect_url(
+        RedirectUrl::new(format!("{}/login/google/redirect", config.base_url)).unwrap(),
+    )
 }

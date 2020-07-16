@@ -12,10 +12,11 @@ use r2d2_redis::{r2d2, RedisConnectionManager};
 use sqlx::postgres::PgPool;
 use std::convert::Infallible;
 use std::str::FromStr;
+use warp::http::StatusCode;
 use warp::Filter;
 
 async fn health_check() -> Result<impl warp::Reply, Infallible> {
-    let response = warp::http::Response::builder().body("healthy boi").unwrap();
+    let response = warp::reply::with_status(warp::reply(), StatusCode::NO_CONTENT);
     Ok(response)
 }
 

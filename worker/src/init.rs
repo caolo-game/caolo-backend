@@ -72,8 +72,8 @@ pub fn init_storage(n_fake_users: usize) -> Pin<Box<World>> {
     let params = OverworldGenerationParams::builder()
         .with_radius(world_radius as u32)
         .with_room_radius(radius)
-        .with_min_bridge_len(radius - 1)
-        .with_max_bridge_len(radius)
+        .with_min_bridge_len(3)
+        .with_max_bridge_len(radius - 3)
         .build()
         .unwrap();
     let room_params = RoomGenerationParams::builder()

@@ -12,8 +12,6 @@
 
 - [Docker](https://www.docker.com/)
 - [Make](https://www.gnu.org/software/make/) (Optional)
-- [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/) (Optional)
-- [MiniKube](https://kubernetes.io/docs/tasks/tools/install-minikube/) (Optional, for local deployments)
 
 ## Setting up
 
@@ -47,18 +45,3 @@ diesel database setup
 ### Deploying to [Heroku](https://heroku.com)
 
 `make deploy-heroku app=<your heroku app name>`
-
-### Deploying via kubectl:
-
-`make deploy`
-
-### Running locally via [MiniKube](https://kubernetes.io/docs/setup/learning-environment/minikube/)
-
-```
-minkube start
-echo <your google_userid> > google_userid
-echo <your google_secret> > google_secret
-kubectl create namespace caolo
-kubectl create secret generic google-creds --from-file=./google_userid --from-file=./google_secret -n=caolo
-make deploy
-```

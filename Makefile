@@ -45,8 +45,3 @@ deploy-heroku: buildall release
 	docker push registry.heroku.com/$(app)/worker
 	docker push registry.heroku.com/$(app)/release
 	heroku container:release web worker release
-
-deploy: buildall pushall
-	kubectl apply -f ./manifests -n=caolo
-	kubectl rollout restart deployment.apps/caolo-web -n=caolo
-	kubectl rollout restart deployment.apps/caolo-worker -n=caolo

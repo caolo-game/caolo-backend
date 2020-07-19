@@ -1,11 +1,5 @@
 [workspace]
 members = [
     "messages",
-    "web",
-    "worker"
+    "web"
 ]
-
-
-[profile.release]
-debug=true
-lto=false

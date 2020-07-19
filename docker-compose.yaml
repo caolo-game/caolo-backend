@@ -28,19 +28,6 @@ services:
       retries: 3
       start_period: 5s
 
-  worker:
-    image: frenetiq/caolo-worker
-    env_file: docker.env
-    depends_on:
-      - cache
-      - postgres
-    entrypoint:
-      - bash 
-      - ./run-debug.sh
-      # - ./caolo-worker
-    volumes:
-       - ./massif/:/caolo/massif/
-
   cache:
     image: eqalpha/keydb:latest
     ports:

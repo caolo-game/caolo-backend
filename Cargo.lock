@@ -311,9 +311,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "cao-profile"
+version = "0.1.0"
+source = "git+https://github.com/caolo-game/cao-profile.git#67bbfce3b8d9e7b82e59dffc3987884b065ede24"
+dependencies = [
+ "anyhow",
+ "curl",
+ "lazy_static",
+ "log 0.4.11",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "cao_storage_derive"
 version = "0.1.0"
-source = "git+https://github.com/caolo-game/cao-sim.git#3040ca454f8dc3e9297e7a01999d0e9edc866672"
+source = "git+https://github.com/caolo-game/cao-sim.git#67b3f883feae2f43bea3a0863973164b29ecf751"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -331,11 +344,12 @@ dependencies = [
 [[package]]
 name = "caolo-sim"
 version = "0.1.0"
-source = "git+https://github.com/caolo-game/cao-sim.git#3040ca454f8dc3e9297e7a01999d0e9edc866672"
+source = "git+https://github.com/caolo-game/cao-sim.git#67b3f883feae2f43bea3a0863973164b29ecf751"
 dependencies = [
  "anyhow",
  "arrayvec",
  "cao-lang",
+ "cao-profile",
  "cao_storage_derive",
  "chrono",
  "log 0.4.11",
@@ -544,6 +558,36 @@ checksum = "4434400df11d95d556bac068ddfedd482915eb18fe8bea89bc80b6e4b1c179e5"
 dependencies = [
  "generic-array",
  "subtle",
+]
+
+[[package]]
+name = "curl"
+version = "0.4.30"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b0447a642435be046540f042950d874a4907f9fee28c0513a0beb3ba89f91eb7"
+dependencies = [
+ "curl-sys",
+ "libc",
+ "openssl-probe",
+ "openssl-sys",
+ "schannel",
+ "socket2",
+ "winapi 0.3.9",
+]
+
+[[package]]
+name = "curl-sys"
+version = "0.4.32+curl-7.70.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "834425a2f22fdd621434196965bf99fbfd9eaed96348488e27b7ac40736c560b"
+dependencies = [
+ "cc",
+ "libc",
+ "libz-sys",
+ "openssl-sys",
+ "pkg-config",
+ "vcpkg",
+ "winapi 0.3.9",
 ]
 
 [[package]]
@@ -872,6 +916,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "hashbrown"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "34f595585f103464d8d2f6e9864682d74c1601fed5e07d62b1c9058dba8246fb"
+dependencies = [
+ "autocfg 1.0.0",
+]
+
+[[package]]
 name = "headers"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1058,11 +1111,12 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "1.4.0"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c398b2b113b55809ceb9ee3e753fcbac793f1956663f3c36549c1346015c2afe"
+checksum = "5b88cd59ee5f71fea89a62248fc8f387d44400cefe05ef548466d61ced9029a7"
 dependencies = [
  "autocfg 1.0.0",
+ "hashbrown",
 ]
 
 [[package]]
@@ -1169,6 +1223,18 @@ name = "libc"
 version = "0.2.72"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a9f8082297d534141b30c8d39e9b1773713ab50fdbe4ff30f750d063b3bfd701"
+
+[[package]]
+name = "libz-sys"
+version = "1.0.25"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2eb5e43362e38e2bca2fd5f5134c4d4564a23a5c28e9b95411652021a8675ebe"
+dependencies = [
+ "cc",
+ "libc",
+ "pkg-config",
+ "vcpkg",
+]
 
 [[package]]
 name = "lock_api"

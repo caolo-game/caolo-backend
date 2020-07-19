@@ -1,28 +1,14 @@
 .DEFAULT_GOAL := buildall
-.PHONY: web worker
+.PHONY: web
 
 test:
 	cargo check
 	cargo clippy
 	cargo test --benches
 
-start: worker web
+start: web
 	docker-compose up -d 
 	docker-compose logs -f --tail=100
-
-startworker:
-	docker-compose up --scale web=0 -d
-	docker-compose logs -f --tail=100 worker
-
-startweb:
-	docker-compose up --scale worker=0 -d
-	docker-compose logs -f --tail=100 web
-
-worker:
-	docker build -t frenetiq/caolo-worker:latest -f worker/dockerfile .
-
-pushworker: worker
-	docker push frenetiq/caolo-worker:latest
 
 web:
 	docker build -t frenetiq/caolo-web:latest -f web/dockerfile .
@@ -33,15 +19,8 @@ pushweb: web
 release:
 	docker build -t frenetiq/caolo-release:latest -f web/dockerfile.release .
 
-buildall: web worker
-
-pushall: pushworker pushweb
-
-deploy-heroku: buildall release
+deploy-heroku: web release
 	docker tag frenetiq/caolo-web:latest registry.heroku.com/$(app)/web
-	docker tag frenetiq/caolo-worker:latest registry.heroku.com/$(app)/worker
 	docker tag frenetiq/caolo-release:latest registry.heroku.com/$(app)/release
 	docker push registry.heroku.com/$(app)/web
-	docker push registry.heroku.com/$(app)/worker
 	docker push registry.heroku.com/$(app)/release
-	heroku container:release web worker release

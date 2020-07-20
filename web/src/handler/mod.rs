@@ -137,14 +137,15 @@ pub async fn terrain(query: TerrainQuery, db: PgPool) -> Result<impl warp::Reply
 }
 
 pub async fn compile(cu: CompilationUnit) -> Result<Box<dyn warp::Reply>, Infallible> {
-    match compiler::compile(cu) {
+    match compiler::compile(None, cu) {
         Ok(res) => {
             trace!("compilation succeeded {:?}", res);
             let resp = Box::new(StatusCode::NO_CONTENT);
             Ok(resp)
         }
         Err(err) => {
-            debug!("compilation failed {:?}", err);
+            debug!("compilation failed {}", err);
+            let err = format!("{}", err);
             let resp = warp::reply::json(&err);
             let resp = Box::new(with_status(resp, StatusCode::BAD_REQUEST));
             Ok(resp)

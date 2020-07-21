@@ -44,3 +44,6 @@ sentry-log = { version="0.19", features=["env_logger"] }
 anyhow = "1"
 jsonwebtoken = "7"
 lazy_static="1.4"
+
+slog = { version="2", features=["max_level_trace", "release_max_level_info"] }
+slog-stdlog = "3"

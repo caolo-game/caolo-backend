@@ -345,6 +345,8 @@ dependencies = [
  "sentry-log",
  "serde",
  "serde_json",
+ "slog",
+ "slog-stdlog",
  "sqlx",
  "thiserror",
  "tokio",

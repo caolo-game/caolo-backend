@@ -8,6 +8,7 @@ mod world;
 
 pub use config::*;
 use r2d2_redis::{r2d2, RedisConnectionManager};
+use slog::{o, Drain, Logger};
 use sqlx::postgres::PgPool;
 
 #[cfg(feature = "web-dotenv")]
@@ -19,6 +20,9 @@ pub type RedisPool = r2d2::Pool<RedisConnectionManager>;
 async fn main() -> Result<(), anyhow::Error> {
     #[cfg(feature = "web-dotenv")]
     dotenv().ok();
+
+    // TODO: async log
+    let logger = Logger::root(slog_stdlog::StdLog.fuse(), o!());
 
     let _sentry = std::env::var("SENTRY_URI")
         .ok()
@@ -50,7 +54,7 @@ async fn main() -> Result<(), anyhow::Error> {
     let host = conf.host;
     let port = conf.port;
 
-    let api = filters::api(conf, cache_pool, db_pool);
+    let api = filters::api(logger, conf, cache_pool, db_pool);
 
     warp::serve(api).run((host, port)).await;
 

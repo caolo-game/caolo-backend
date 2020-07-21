@@ -9,6 +9,7 @@ use crate::model;
 use crate::world;
 use log::{trace, warn};
 use r2d2_redis::{r2d2, RedisConnectionManager};
+use slog::Logger;
 use sqlx::postgres::PgPool;
 use std::convert::Infallible;
 use std::str::FromStr;
@@ -23,6 +24,7 @@ async fn health_check() -> Result<impl warp::Reply, Infallible> {
 }
 
 pub fn api(
+    logger: Logger,
     conf: Config,
     cache_pool: r2d2::Pool<RedisConnectionManager>,
     db_pool: PgPool,
@@ -44,6 +46,11 @@ pub fn api(
             let conf = Arc::clone(&conf);
             conf
         });
+        move || filter.clone()
+    };
+
+    let logger = {
+        let filter = warp::any().map(move || logger.clone());
         move || filter.clone()
     };
 
@@ -94,11 +101,12 @@ pub fn api(
     let health_check = warp::get().and(warp::path("health")).and_then(health_check);
     let world_stream = warp::get()
         .and(warp::path("world"))
+        .and(logger())
         .and(warp::ws())
         .and(current_user())
         .and(cache_pool())
-        .map(move |ws: warp::ws::Ws, user, pool| {
-            ws.on_upgrade(move |socket| world::world_stream(socket, user, pool))
+        .map(move |logger: Logger, ws: warp::ws::Ws, user, pool| {
+            ws.on_upgrade(move |socket| world::world_stream(logger, socket, user, pool))
         });
 
     let myself = warp::get()

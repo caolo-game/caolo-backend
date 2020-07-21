@@ -3,21 +3,14 @@ use crate::RedisPool;
 use caolo_messages::WorldState;
 use futures::stream::StreamExt;
 use futures::FutureExt;
-use log::{debug, error, trace};
 use redis::Commands;
 use redis::RedisError;
-use std::time::{Duration, Instant};
+use slog::{debug, error, trace, warn};
+use slog::{o, Logger};
+use std::time::Duration;
 use thiserror::Error;
 use tokio::sync::mpsc::{self, UnboundedSender};
 use warp::ws::{Message, WebSocket};
-
-#[derive(Debug)]
-struct WorldStream {
-    pub hb: Instant,
-    pub last_sent: Instant,
-    pub pool: RedisPool,
-    pub user: Option<User>,
-}
 
 #[derive(Debug, Error)]
 pub enum ReadError {
@@ -33,18 +26,8 @@ pub enum WorldSendError {
     ReadError(ReadError),
 }
 
-impl WorldStream {
-    pub fn new(user: Option<User>, pool: RedisPool) -> Self {
-        Self {
-            user,
-            pool,
-            hb: Instant::now(),
-            last_sent: Instant::now(),
-        }
-    }
-}
-
 pub fn send(
+    logger: &Logger,
     pool: &RedisPool,
     sender: &mut UnboundedSender<Result<Message, warp::Error>>,
 ) -> Result<(), WorldSendError> {
@@ -57,7 +40,7 @@ pub fn send(
         })
         .map_err(WorldSendError::ReadError)?;
     let state: WorldState = state;
-    trace!("Sending world state to client");
+    trace!(logger, "Sending world state to client");
     let mut buffer = Vec::with_capacity(512);
     serde_json::to_writer(&mut buffer, &state).expect("json serialize");
     let msg = Message::binary(buffer);
@@ -65,40 +48,40 @@ pub fn send(
     Ok(())
 }
 
-pub async fn world_stream(ws: WebSocket, user: Option<User>, pool: RedisPool) {
-    log::debug!(
-        "Starting world stream for user {:?}",
-        user.as_ref().map(|u| u.id)
-    );
+pub async fn world_stream(logger: Logger, ws: WebSocket, user: Option<User>, pool: RedisPool) {
+    let logger = logger.new(o!("user_id" => user.as_ref().map(|u|format!("{}",u.id))));
+    debug!(logger, "Starting world stream");
 
     let (world_ws_tx, mut world_ws_rx) = ws.split();
 
-    let handler = WorldStream::new(user, pool.clone());
-
     let (mut tx, rx) = mpsc::unbounded_channel();
-    tokio::task::spawn(rx.forward(world_ws_tx).map(|result| {
-        if let Err(err) = result {
-            log::debug!("Websocket send error: {}", err);
-        }
-    }));
+    {
+        let logger = logger.clone();
+        tokio::task::spawn(rx.forward(world_ws_tx).map(move |result| {
+            if let Err(err) = result {
+                debug!(logger, "Websocket send error: {}", err);
+            }
+        }));
+    }
 
     tokio::task::spawn({
+        let logger = logger.clone();
         async move {
             let mut interval = tokio::time::interval(Duration::from_millis(100));
             loop {
                 interval.tick().await;
-                if let Err(err) = send(&pool, &mut tx) {
+                if let Err(err) = send(&logger, &pool, &mut tx) {
                     match err {
                         WorldSendError::SendError(mpsc::error::SendError(Err(err))) => {
-                            error!("Failed to send world state {:?}", err)
+                            warn!(logger, "Failed to send world state {:?}", err)
                         }
-                        _ => trace!("Failed to send world state {:?}", err),
+                        _ => trace!(logger, "Failed to send world state {:?}", err),
                     }
                     break;
                 }
             }
 
-            debug!("Stopping stream");
+            debug!(logger, "Stopping stream");
         }
     });
 
@@ -106,12 +89,12 @@ pub async fn world_stream(ws: WebSocket, user: Option<User>, pool: RedisPool) {
         let msg = match result {
             Ok(msg) => msg,
             Err(err) => {
-                log::error!("Websocket error(user={:?}): {}", handler.user, err);
+                error!(logger, "Websocket error(user={:?}): {}", user, err);
                 break;
             }
         };
-        debug!("Received message by user {:?}", msg);
+        debug!(logger, "Received message by user {:?}", msg);
     }
 
-    log::debug!("Bye user {:?}", handler.user.map(|u| u.id));
+    debug!(logger, "Bye user {:?}", user.map(|u| u.id));
 }

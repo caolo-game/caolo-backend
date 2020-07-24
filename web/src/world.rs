@@ -49,7 +49,6 @@ pub fn send(
 }
 
 pub async fn world_stream(logger: Logger, ws: WebSocket, user: Option<User>, pool: RedisPool) {
-    let logger = logger.new(o!("user_id" => user.as_ref().map(|u|format!("{}",u.id))));
     info!(logger, "Starting world stream");
 
     let (world_ws_tx, mut world_ws_rx) = ws.split();

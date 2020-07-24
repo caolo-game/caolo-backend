@@ -37,12 +37,20 @@ async fn main() -> Result<(), anyhow::Error> {
     let log_wrapper = {
         let logger = logger.clone();
         warp::log::custom(move |info| {
+            let t = info.elapsed().as_micros();
+
+            let ms = t / 1000;
+            let us = t % 1000;
+
             info!(
                 logger,
-                "{} {} {}",
+                "[{:?}]: {} {} {} done in {}ms {}μs",
+                info.remote_addr(),
                 info.method(),
                 info.path(),
                 info.status(),
+                ms,
+                us
             );
         })
     };
@@ -73,9 +81,9 @@ async fn main() -> Result<(), anyhow::Error> {
 
     let api = filters::api(logger, conf, cache_pool, db_pool)
         .recover(handle_rejection)
-        .with(log_wrapper)
         .with(warp::cors().allow_any_origin().allow_credentials(true))
-        .with(warp::trace::request());
+        .with(warp::trace::request())
+        .with(log_wrapper);
 
     warp::serve(api).run((host, port)).await;
 

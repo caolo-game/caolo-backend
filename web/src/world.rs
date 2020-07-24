@@ -5,7 +5,7 @@ use futures::stream::StreamExt;
 use futures::FutureExt;
 use redis::Commands;
 use redis::RedisError;
-use slog::{debug, error, trace, warn};
+use slog::{debug, error, info, trace, warn};
 use slog::{o, Logger};
 use std::time::Duration;
 use thiserror::Error;
@@ -50,7 +50,7 @@ pub fn send(
 
 pub async fn world_stream(logger: Logger, ws: WebSocket, user: Option<User>, pool: RedisPool) {
     let logger = logger.new(o!("user_id" => user.as_ref().map(|u|format!("{}",u.id))));
-    debug!(logger, "Starting world stream");
+    info!(logger, "Starting world stream");
 
     let (world_ws_tx, mut world_ws_rx) = ws.split();
 
@@ -96,5 +96,5 @@ pub async fn world_stream(logger: Logger, ws: WebSocket, user: Option<User>, poo
         debug!(logger, "Received message from user {:?}", msg);
     }
 
-    debug!(logger, "Bye user {:?}", user.map(|u| u.id));
+    info!(logger, "Bye user {:?}", user.map(|u| u.id));
 }

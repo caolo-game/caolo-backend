@@ -61,7 +61,8 @@ async fn main() -> Result<(), anyhow::Error> {
     let api = filters::api(logger, conf, cache_pool, db_pool)
         .recover(handle_rejection)
         .with(warp::log("caolo_web-router"))
-        .with(warp::cors().allow_any_origin().allow_credentials(true));
+        .with(warp::cors().allow_any_origin().allow_credentials(true))
+        .with(warp::trace::request());
 
     warp::serve(api).run((host, port)).await;
 

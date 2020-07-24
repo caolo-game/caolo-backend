@@ -13,7 +13,7 @@ start: web
 web:
 	docker build -t frenetiq/caolo-web:latest -f web/dockerfile .
 
-pushweb: web
+push: web
 	docker push frenetiq/caolo-web:latest
 
 release:

@@ -8,7 +8,7 @@ use crate::handler;
 use crate::model;
 use crate::world;
 use r2d2_redis::{r2d2, RedisConnectionManager};
-use slog::{trace, warn, Logger};
+use slog::{o, trace, warn, Logger};
 use sqlx::postgres::PgPool;
 use std::convert::Infallible;
 use std::str::FromStr;
@@ -48,20 +48,15 @@ pub fn api(
         move || filter.clone()
     };
 
-    let logger = {
-        let filter = warp::any().map(move || logger.clone());
-        move || filter.clone()
-    };
-
     // I used `and + optional` instead of `or` because a lack of `authorization` is not inherently
     // and error, however `or` would return 400 if neither method is used
     let identity = {
+        let logger = logger.clone();
         let identity = warp::any()
-            .and(logger())
             .and(warp::filters::header::optional::<String>("authorization"))
             .and(warp::filters::cookie::optional("authorization"))
             .map(
-                |logger: Logger, header_id: Option<String>, cookie_id: Option<String>| {
+                move |header_id: Option<String>, cookie_id: Option<String>| {
                     header_id.or(cookie_id).and_then(|cookie: String| {
                         trace!(logger, "deseralizing Identity: {:?}", cookie);
                         let id: model::Identity = FromStr::from_str(cookie.as_str())
@@ -82,6 +77,18 @@ pub fn api(
             .and(db_pool())
             .and_then(model::current_user);
         move || current_user.clone()
+    };
+
+    let logger = {
+        let filter = warp::any().and(warp::addr::remote()).and(identity()).map(
+            move |addr: Option<std::net::SocketAddr>, id: Option<model::Identity>| {
+                logger.new(o!(
+                    "current_user" => id.map(|id|format!("{:?}", id.user_id)),
+                    "address" => addr
+                ))
+            },
+        );
+        move || filter.clone()
     };
 
     let extend_token = warp::get()

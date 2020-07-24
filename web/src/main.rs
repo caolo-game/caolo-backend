@@ -8,7 +8,7 @@ mod world;
 
 pub use config::*;
 use r2d2_redis::{r2d2, RedisConnectionManager};
-use slog::{o, Drain};
+use slog::{info, o, Drain};
 use sqlx::postgres::PgPool;
 use warp::Filter;
 
@@ -32,6 +32,19 @@ async fn main() -> Result<(), anyhow::Error> {
             .build()
             .fuse();
         slog::Logger::root(drain, o!())
+    };
+
+    let log_wrapper = {
+        let logger = logger.clone();
+        warp::log::custom(move |info| {
+            info!(
+                logger,
+                "{} {} {}",
+                info.method(),
+                info.path(),
+                info.status(),
+            );
+        })
     };
 
     let _sentry = std::env::var("SENTRY_URI")
@@ -60,7 +73,7 @@ async fn main() -> Result<(), anyhow::Error> {
 
     let api = filters::api(logger, conf, cache_pool, db_pool)
         .recover(handle_rejection)
-        .with(warp::log("caolo_web-router"))
+        .with(log_wrapper)
         .with(warp::cors().allow_any_origin().allow_credentials(true))
         .with(warp::trace::request());
 

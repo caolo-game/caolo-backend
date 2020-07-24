@@ -3,7 +3,6 @@ use anyhow::Context;
 use chrono::{DateTime, Utc};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use lazy_static::lazy_static;
-use log::debug;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use std::str::FromStr;
@@ -66,7 +65,6 @@ pub async fn current_user(
     id: Option<Identity>,
     pool: PgPool,
 ) -> Result<Option<User>, warp::Rejection> {
-    debug!("LoggedInUser from request {:?}", id);
     let id = match id {
         Some(id) => id,
         None => return Ok(None),

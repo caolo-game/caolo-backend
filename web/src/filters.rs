@@ -7,9 +7,8 @@ use crate::config::*;
 use crate::handler;
 use crate::model;
 use crate::world;
-use log::{trace, warn};
 use r2d2_redis::{r2d2, RedisConnectionManager};
-use slog::Logger;
+use slog::{trace, warn, Logger};
 use sqlx::postgres::PgPool;
 use std::convert::Infallible;
 use std::str::FromStr;
@@ -56,32 +55,39 @@ pub fn api(
 
     // I used `and + optional` instead of `or` because a lack of `authorization` is not inherently
     // and error, however `or` would return 400 if neither method is used
-    let identity = warp::filters::header::optional::<String>("authorization")
-        .and(warp::filters::cookie::optional("authorization"))
-        .map(|header_id: Option<String>, cookie_id: Option<String>| {
-            header_id.or(cookie_id).and_then(|cookie: String| {
-                trace!("deseralizing Identity: {:?}", cookie);
-                let id: model::Identity = FromStr::from_str(cookie.as_str())
-                    .map_err(|e| {
-                        warn!("identity cookie deserialization failed {:?}", e);
+    let identity = {
+        let identity = warp::any()
+            .and(logger())
+            .and(warp::filters::header::optional::<String>("authorization"))
+            .and(warp::filters::cookie::optional("authorization"))
+            .map(
+                |logger: Logger, header_id: Option<String>, cookie_id: Option<String>| {
+                    header_id.or(cookie_id).and_then(|cookie: String| {
+                        trace!(logger, "deseralizing Identity: {:?}", cookie);
+                        let id: model::Identity = FromStr::from_str(cookie.as_str())
+                            .map_err(|e| {
+                                warn!(logger, "identity cookie deserialization failed {:?}", e);
+                            })
+                            .ok()?;
+                        Some(id)
                     })
-                    .ok()?;
-                Some(id)
-            })
-        });
+                },
+            );
+        move || identity.clone()
+    };
 
     let current_user = {
         let current_user = warp::any()
-            .and(identity)
+            .and(identity())
             .and(db_pool())
-            .and_then(move |id, db_pool| model::current_user(id, db_pool));
+            .and_then(model::current_user);
         move || current_user.clone()
     };
 
     let extend_token = warp::get()
         .and(warp::path("extend-token"))
         .and(config())
-        .and(identity)
+        .and(identity())
         .and(current_user())
         .and_then(
             |conf: Arc<Config>, id: Option<model::Identity>, user: Option<model::User>| async move {
@@ -116,6 +122,7 @@ pub fn api(
 
     let schema = warp::get()
         .and(warp::path("schema"))
+        .and(logger())
         .and(cache_pool())
         .and_then(handler::schema);
 
@@ -126,17 +133,20 @@ pub fn api(
 
     let terrain = warp::get()
         .and(warp::path("terrain"))
+        .and(logger())
         .and(warp::query())
         .and(db_pool())
         .and_then(handler::terrain);
 
     let compile = warp::post()
         .and(warp::path("compile"))
+        .and(logger())
         .and(warp::filters::body::json())
         .and_then(handler::compile);
 
     let save_script = warp::post()
-        .and(warp::path!("scripts" / "save"))
+        .and(warp::path!("scripts" / "commit"))
+        .and(logger())
         .and(current_user())
         .and(warp::filters::body::json())
         .and(db_pool())
@@ -145,6 +155,7 @@ pub fn api(
 
     let google_login_redirect = warp::get()
         .and(warp::path!("login" / "google" / "redirect"))
+        .and(logger())
         .and(warp::cookie("session_id"))
         .and(warp::query())
         .and(config())
@@ -154,6 +165,7 @@ pub fn api(
 
     let google_login = warp::get()
         .and(warp::path!("login" / "google"))
+        .and(logger())
         .and(warp::query())
         .and(config())
         .and(cache_pool())

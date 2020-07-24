@@ -8,9 +8,9 @@ pub use auth::*;
 use cao_lang::compiler::description::get_instruction_descriptions;
 use cao_lang::compiler::{self, CompilationUnit};
 use caolo_messages::{AxialPoint, Function, Schema};
-use log::{debug, error, trace};
 use redis::Commands;
 use serde::Deserialize;
+use slog::{debug, error, trace, Logger};
 use std::convert::Infallible;
 use thiserror::Error;
 use warp::http::StatusCode;
@@ -25,45 +25,32 @@ pub async fn myself(user: Option<User>) -> Result<impl warp::Reply, Infallible> 
     Ok(resp)
 }
 
-pub async fn schema(cache: RedisPool) -> Result<impl warp::Reply, Infallible> {
+pub async fn schema(_logger: Logger, cache: RedisPool) -> Result<impl warp::Reply, Infallible> {
     let mut conn = cache.get().expect("failed to aquire cache connection");
 
     let basic_schema = get_instruction_descriptions();
 
-    let schema: Result<Schema, _> = conn
+    let mut schema: Schema = conn
         .get("SCHEMA")
-        .map_err(|err| {
-            error!("Failed to read schema {:?}", err);
-            err
-        })
         .with_context(|| "failed to read schema")
         .and_then(|schema: Vec<u8>| {
             rmp_serde::from_read_ref(schema.as_slice())
                 .with_context(|| "Schema msg deserialization failure")
-        });
-    let resp = match schema {
-        Ok(mut schema) => {
-            schema
-                .functions
-                .extend(basic_schema.into_iter().map(|item| {
-                    Function::from_str_parts(
-                        item.name,
-                        item.description,
-                        item.input.as_ref(),
-                        item.output.as_ref(),
-                        item.params.as_ref(),
-                    )
-                }));
-            with_status(warp::reply::json(&schema), StatusCode::OK)
-        }
-        Err(err) => {
-            error!("Failed to read schema {:?}", err);
-            with_status(
-                warp::reply::json(&Option::<()>::None),
-                StatusCode::INTERNAL_SERVER_ERROR,
+        })
+        .expect("Failed to read schema");
+
+    schema
+        .functions
+        .extend(basic_schema.into_iter().map(|item| {
+            Function::from_str_parts(
+                item.name,
+                item.description,
+                item.input.as_ref(),
+                item.output.as_ref(),
+                item.params.as_ref(),
             )
-        }
-    };
+        }));
+    let resp = with_status(warp::reply::json(&schema), StatusCode::OK);
     Ok(resp)
 }
 
@@ -100,7 +87,11 @@ pub struct TerrainQuery {
     r: i32,
 }
 
-pub async fn terrain(query: TerrainQuery, db: PgPool) -> Result<impl warp::Reply, Infallible> {
+pub async fn terrain(
+    logger: Logger,
+    query: TerrainQuery,
+    db: PgPool,
+) -> Result<impl warp::Reply, Infallible> {
     let TerrainQuery { q, r } = query;
 
     struct Res {
@@ -127,7 +118,7 @@ pub async fn terrain(query: TerrainQuery, db: PgPool) -> Result<impl warp::Reply
             Ok(with_status(resp, StatusCode::NOT_FOUND))
         }
         _ => {
-            error!("Failed to query database {:?}", e);
+            error!(logger, "Failed to query database {:?}", e);
             let resp = warp::reply::json(&Option::<()>::None);
             Ok::<_, Infallible>(with_status(resp, StatusCode::INTERNAL_SERVER_ERROR))
         }
@@ -160,21 +151,25 @@ pub fn handle_compile_err(err: &CompileError) -> impl warp::Reply {
     err.into_reply()
 }
 
-pub async fn compile(cu: CompilationUnit) -> Result<impl warp::Reply, warp::Rejection> {
+pub async fn compile(
+    logger: Logger,
+    cu: CompilationUnit,
+) -> Result<impl warp::Reply, warp::Rejection> {
     match compiler::compile(None, cu) {
         Ok(res) => {
-            trace!("compilation succeeded {:?}", res);
+            trace!(logger, "compilation succeeded {:?}", res);
             let resp = Box::new(StatusCode::NO_CONTENT);
             Ok(resp)
         }
         Err(err) => {
-            debug!("compilation failed {}", err);
+            debug!(logger, "compilation failed {}", err);
             Err(warp::reject::custom(CompileError::CompileError(err)))
         }
     }
 }
 
 pub async fn save_script(
+    logger: Logger,
     user: Option<User>,
     cu: CompilationUnit,
     _db: PgPool,
@@ -185,7 +180,7 @@ pub async fn save_script(
     let _program = match compiler::compile(None, cu) {
         Ok(res) => res,
         Err(err) => {
-            debug!("compilation failure {:?}", err);
+            debug!(logger, "compilation failure {:?}", err);
             return Err(warp::reject::custom(CompileError::CompileError(err)));
         }
     };

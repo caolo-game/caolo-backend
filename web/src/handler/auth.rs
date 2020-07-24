@@ -5,12 +5,12 @@ use crate::Config;
 use crate::PgPool;
 use crate::RedisPool;
 use chrono::Utc;
-use log::{debug, error, warn};
 use oauth2::reqwest::async_http_client;
 use oauth2::AsyncCodeTokenRequest;
 use oauth2::{AuthorizationCode, CsrfToken, PkceCodeVerifier, TokenResponse};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use slog::{debug, error, warn, Logger};
 use std::convert::Infallible;
 use std::ops::DerefMut;
 use thiserror::Error;
@@ -68,18 +68,22 @@ impl LoginError {
 }
 
 pub async fn login_redirect(
+    logger: Logger,
     session_id: String,
     query: LoginRedirectQuery,
     config: std::sync::Arc<Config>,
     cache: RedisPool,
     db: PgPool,
 ) -> Result<Box<dyn warp::Reply>, Infallible> {
-    login_redirect_impl(session_id, query, config, cache, db)
+    login_redirect_impl(logger.clone(), session_id, query, config, cache, db)
         .await
         .or_else(|err| {
             match err {
                 _ => {
-                    error!("Internal error while processing google login {:?}", err);
+                    error!(
+                        logger,
+                        "Internal error while processing google login {:?}", err
+                    );
                 }
             }
             let payload = err.into_reply();
@@ -88,18 +92,22 @@ pub async fn login_redirect(
 }
 
 async fn login_redirect_impl(
+    logger: Logger,
     session_id: String,
     query: LoginRedirectQuery,
     config: std::sync::Arc<Config>,
     cache: RedisPool,
     db: PgPool,
 ) -> Result<Box<dyn warp::Reply>, LoginError> {
-    debug!("handling login redirect {:?} {:?}", session_id, query);
-    let meta: LoginMetadata = get_csrf_token(&cache, session_id).await?;
+    debug!(
+        logger,
+        "handling login redirect {:?} {:?}", session_id, query
+    );
+    let meta: LoginMetadata = get_csrf_token(logger.clone(), &cache, session_id).await?;
     if meta.csrf_token.secret() != &query.state {
         error!(
-            "Got invalid csrf_token expected: {:?}, found: {:?}",
-            meta.csrf_token, query.state
+            logger,
+            "Got invalid csrf_token expected: {:?}, found: {:?}", meta.csrf_token, query.state
         );
         return Err(LoginError::CsrfTokenMisMatch);
     }
@@ -111,7 +119,7 @@ async fn login_redirect_impl(
         .request_async(async_http_client)
         .await
         .map_err(|err| {
-            warn!("Failed to exchange code {:?}", err);
+            warn!(logger, "Failed to exchange code {:?}", err);
             LoginError::ExchangeCodeFailure
         })?;
     let access_token = token.access_token();
@@ -123,18 +131,18 @@ async fn login_redirect_impl(
         .send()
         .await
         .map_err(|e| {
-            error!("Error while getting user info {:?}", e);
+            error!(logger, "Error while getting user info {:?}", e);
             LoginError::GoogleMyselfQueryFailure
         })?;
     if response.status() != 200 {
-        error!("Google response {:#?}", response);
+        error!(logger, "Google response {:#?}", response);
         return Err(LoginError::GoogleMyselfQueryFailure);
     }
     let json: Value = response.json().await.map_err(|e| {
-        error!("Error getting response body {:?}", e);
+        error!(logger, "Error getting response body {:?}", e);
         LoginError::GoogleMyselfDeserializationError(e)
     })?;
-    debug!("Google response {:#?}", json);
+    debug!(logger, "Google response {:#?}", json);
     let google_id = json["id"].as_str().expect("Id not found in user data");
     let email: Option<&str> = json["emails"]
         .get(0)
@@ -223,31 +231,38 @@ pub fn set_identity(response: impl warp::Reply, identity: Identity) -> impl warp
     )
 }
 
-async fn get_csrf_token(cache: &RedisPool, identity: String) -> Result<LoginMetadata, LoginError> {
+async fn get_csrf_token(
+    logger: Logger,
+    cache: &RedisPool,
+    identity: String,
+) -> Result<LoginMetadata, LoginError> {
     let mut conn = cache.get().expect("failed to aquire cache connection");
-    tokio::spawn(async move {
-        redis::pipe()
-            .get(&identity)
-            .del(&identity)
-            .ignore()
-            .query(conn.deref_mut())
-            .map_err(|err| {
-                error!("Failed read csrf_token {:?}", err);
-                LoginError::CsrfTokenNotFoundInCache
-            })
-            .and_then(|v: Vec<String>| {
-                v.get(0)
-                    .ok_or_else(|| LoginError::CsrfTokenNotFoundInCache)
-                    .and_then(|v| {
-                        serde_json::from_str(v.as_str())
-                            .map_err(LoginError::CsrfTokenDeserializeError)
-                    })
-            })
+    tokio::spawn({
+        let logger = logger.clone();
+        async move {
+            redis::pipe()
+                .get(&identity)
+                .del(&identity)
+                .ignore()
+                .query(conn.deref_mut())
+                .map_err(|err| {
+                    error!(logger, "Failed read csrf_token {:?}", err);
+                    LoginError::CsrfTokenNotFoundInCache
+                })
+                .and_then(|v: Vec<String>| {
+                    v.get(0)
+                        .ok_or_else(|| LoginError::CsrfTokenNotFoundInCache)
+                        .and_then(|v| {
+                            serde_json::from_str(v.as_str())
+                                .map_err(LoginError::CsrfTokenDeserializeError)
+                        })
+                })
+        }
     })
     .await
     .expect("Failed to get csrf_token")
     .map_err(|err| {
-        warn!("Failed to get csrf_token {:?}", err);
+        warn!(logger, "Failed to get csrf_token {:?}", err);
         err
     })
 }
@@ -282,11 +297,12 @@ async fn register_user(db: &PgPool, email: Option<&str>, token: &str) -> Result<
 }
 
 pub async fn login(
+    logger: Logger,
     query: LoginQuery,
     config: std::sync::Arc<Config>,
     cache: RedisPool,
 ) -> Result<impl warp::Reply, warp::Rejection> {
-    debug!("user is logging in via Google OAuth");
+    debug!(logger, "user is logging in via Google OAuth");
     let randid = generate_refresh_token(64);
 
     let client = oauth_client(&*config);

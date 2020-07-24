@@ -1,4 +1,4 @@
-use log::debug;
+use slog::{debug, error, o, warn, Logger, Drain};
 use std::env::{self, VarError};
 use std::net::IpAddr;
 use thiserror::Error;
@@ -24,14 +24,17 @@ pub enum ConfigReadError {
 }
 
 impl Config {
-    pub fn read() -> Result<Self, ConfigReadError> {
-        debug!("Reading configuration");
+    pub fn read(logger: impl Into<Option<Logger>>) -> Result<Self, ConfigReadError> {
+        let logger = logger
+            .into()
+            .unwrap_or_else(|| Logger::root(slog_stdlog::StdLog.fuse(), o!()));
+        debug!(logger, "Reading configuration");
         let host = env::var("HOST")
             .ok()
             .and_then(|host| {
                 host.parse()
                     .map_err(|e| {
-                        log::error!("Failed to parse host {:?}", e);
+                        error!(logger, "Failed to parse host {:?}", e);
                     })
                     .ok()
             })
@@ -40,7 +43,7 @@ impl Config {
             .map_err(anyhow::Error::new)
             .and_then(|port| port.parse().map_err(anyhow::Error::new))
             .unwrap_or_else(|err| {
-                log::warn!("Failed to parse port number: {}", err);
+                warn!(logger, "Failed to parse port number: {}", err);
                 8000
             });
         let config = Config {
@@ -66,7 +69,7 @@ impl Config {
 
             auth_token_duration: chrono::Duration::minutes(10),
         };
-        debug!("Reading configuration done {:#?}", config);
+        debug!(logger, "Reading configuration done {:#?}", config);
         Ok(config)
     }
 }

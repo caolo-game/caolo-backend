@@ -10,6 +10,7 @@ pub use config::*;
 use r2d2_redis::{r2d2, RedisConnectionManager};
 use slog::{o, Drain, Logger};
 use sqlx::postgres::PgPool;
+use warp::Filter;
 
 #[cfg(feature = "web-dotenv")]
 use dotenv::dotenv;
@@ -54,9 +55,21 @@ async fn main() -> Result<(), anyhow::Error> {
     let host = conf.host;
     let port = conf.port;
 
-    let api = filters::api(logger, conf, cache_pool, db_pool);
+    let api = filters::api(logger, conf, cache_pool, db_pool)
+        .recover(handle_rejection)
+        .with(warp::log("caolo_web-router"))
+        .with(warp::cors().allow_any_origin().allow_credentials(true));
 
     warp::serve(api).run((host, port)).await;
 
     Ok(())
+}
+
+async fn handle_rejection(
+    err: warp::Rejection,
+) -> Result<impl warp::Reply, std::convert::Infallible> {
+    if let Some(err) = err.find() {
+        return Ok(handler::handle_compile_err(err));
+    }
+    unimplemented!()
 }

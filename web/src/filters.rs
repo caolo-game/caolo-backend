@@ -28,7 +28,7 @@ pub fn api(
     conf: Config,
     cache_pool: r2d2::Pool<RedisConnectionManager>,
     db_pool: PgPool,
-) -> impl Filter<Extract = impl warp::Reply> + Clone {
+) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
     let conf = std::sync::Arc::new(conf);
 
     let cache_pool = {
@@ -135,6 +135,14 @@ pub fn api(
         .and(warp::filters::body::json())
         .and_then(handler::compile);
 
+    let save_script = warp::post()
+        .and(warp::path!("scripts" / "save"))
+        .and(current_user())
+        .and(warp::filters::body::json())
+        .and(db_pool())
+        .and(cache_pool())
+        .and_then(handler::save_script);
+
     let google_login_redirect = warp::get()
         .and(warp::path!("login" / "google" / "redirect"))
         .and(warp::cookie("session_id"))
@@ -151,7 +159,7 @@ pub fn api(
         .and(cache_pool())
         .and_then(handler::login);
 
-    let api = health_check
+    health_check
         .or(world_stream)
         .or(myself)
         .or(schema)
@@ -159,9 +167,7 @@ pub fn api(
         .or(terrain)
         .or(google_login_redirect)
         .or(google_login)
+        .or(save_script)
+        .or(compile)
         .or(extend_token)
-        .or(compile);
-
-    api.with(warp::log("caolo_web-router"))
-        .with(warp::cors().allow_any_origin().allow_credentials(true))
 }

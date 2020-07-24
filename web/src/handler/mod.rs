@@ -12,6 +12,7 @@ use log::{debug, error, trace};
 use redis::Commands;
 use serde::Deserialize;
 use std::convert::Infallible;
+use thiserror::Error;
 use warp::http::StatusCode;
 use warp::reply::with_status;
 
@@ -135,8 +136,31 @@ pub async fn terrain(query: TerrainQuery, db: PgPool) -> Result<impl warp::Reply
 
     Ok(res)
 }
+#[derive(Debug, Error)]
+pub enum CompileError {
+    #[error("Failed to compile script {0}")]
+    CompileError(compiler::CompilationError),
+    #[error("User info was not found. Did you log in?")]
+    Unauthorized,
+}
 
-pub async fn compile(cu: CompilationUnit) -> Result<Box<dyn warp::Reply>, Infallible> {
+impl warp::reject::Reject for CompileError {}
+
+impl CompileError {
+    pub fn into_reply(&self) -> impl warp::Reply {
+        let code = match self {
+            CompileError::CompileError(_) => StatusCode::BAD_REQUEST,
+            CompileError::Unauthorized => StatusCode::UNAUTHORIZED,
+        };
+        warp::reply::with_status(warp::reply::html(format!("{}", self)), code)
+    }
+}
+
+pub fn handle_compile_err(err: &CompileError) -> impl warp::Reply {
+    err.into_reply()
+}
+
+pub async fn compile(cu: CompilationUnit) -> Result<impl warp::Reply, warp::Rejection> {
     match compiler::compile(None, cu) {
         Ok(res) => {
             trace!("compilation succeeded {:?}", res);
@@ -145,10 +169,25 @@ pub async fn compile(cu: CompilationUnit) -> Result<Box<dyn warp::Reply>, Infall
         }
         Err(err) => {
             debug!("compilation failed {}", err);
-            let err = format!("{}", err);
-            let resp = warp::reply::json(&err);
-            let resp = Box::new(with_status(resp, StatusCode::BAD_REQUEST));
-            Ok(resp)
+            Err(warp::reject::custom(CompileError::CompileError(err)))
         }
     }
+}
+
+pub async fn save_script(
+    user: Option<User>,
+    cu: CompilationUnit,
+    _db: PgPool,
+    _cache: RedisPool,
+) -> Result<Box<dyn warp::Reply>, warp::Rejection> {
+    let _user = user.ok_or_else(|| warp::reject::custom(CompileError::Unauthorized))?;
+
+    let _program = match compiler::compile(None, cu) {
+        Ok(res) => res,
+        Err(err) => {
+            debug!("compilation failure {:?}", err);
+            return Err(warp::reject::custom(CompileError::CompileError(err)));
+        }
+    };
+    unimplemented!()
 }

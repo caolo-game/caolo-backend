@@ -93,7 +93,7 @@ pub async fn world_stream(logger: Logger, ws: WebSocket, user: Option<User>, poo
                 break;
             }
         };
-        debug!(logger, "Received message by user {:?}", msg);
+        debug!(logger, "Received message from user {:?}", msg);
     }
 
     debug!(logger, "Bye user {:?}", user.map(|u| u.id));

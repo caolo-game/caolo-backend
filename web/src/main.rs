@@ -92,9 +92,12 @@ async fn main() -> Result<(), anyhow::Error> {
 
 async fn handle_rejection(
     err: warp::Rejection,
-) -> Result<impl warp::Reply, std::convert::Infallible> {
+) -> Result<Box<dyn warp::Reply>, std::convert::Infallible> {
     if let Some(err) = err.find() {
-        return Ok(handler::handle_compile_err(err));
+        return Ok(Box::new(handler::handle_compile_err(err)));
     }
-    unimplemented!()
+    Ok(Box::new(warp::reply::with_status(
+        warp::reply::html(format!("{:?}", err)),
+        warp::http::StatusCode::INTERNAL_SERVER_ERROR,
+    )))
 }

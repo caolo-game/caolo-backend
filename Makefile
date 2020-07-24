@@ -24,3 +24,4 @@ deploy-heroku: web release
 	docker tag frenetiq/caolo-release:latest registry.heroku.com/$(app)/release
 	docker push registry.heroku.com/$(app)/web
 	docker push registry.heroku.com/$(app)/release
+	heroku container:release web release -a=$(app)

@@ -10,6 +10,7 @@ pub use config::*;
 use r2d2_redis::{r2d2, RedisConnectionManager};
 use slog::{info, o, Drain};
 use sqlx::postgres::PgPool;
+use warp::reply::{self, with_status};
 use warp::Filter;
 
 #[cfg(feature = "web-dotenv")]
@@ -90,14 +91,14 @@ async fn main() -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-async fn handle_rejection(
-    err: warp::Rejection,
-) -> Result<Box<dyn warp::Reply>, std::convert::Infallible> {
-    if let Some(err) = err.find() {
-        return Ok(Box::new(handler::handle_compile_err(err)));
+async fn handle_rejection(err: warp::Rejection) -> Result<impl warp::Reply, warp::Rejection> {
+    let status;
+    let payload: serde_json::Value;
+    if let Some(err) = err.find::<handler::CompileError>() {
+        status = err.status();
+        payload = format!("{}", err).into();
+    } else {
+        return Err(err);
     }
-    Ok(Box::new(warp::reply::with_status(
-        warp::reply::html(format!("{:?}", err)),
-        warp::http::StatusCode::INTERNAL_SERVER_ERROR,
-    )))
+    Ok(with_status(reply::json(&payload), status))
 }

@@ -138,17 +138,12 @@ pub enum CompileError {
 impl warp::reject::Reject for CompileError {}
 
 impl CompileError {
-    pub fn into_reply(&self) -> impl warp::Reply {
-        let code = match self {
+    pub fn status(&self) -> StatusCode {
+        match self {
             CompileError::CompileError(_) => StatusCode::BAD_REQUEST,
             CompileError::Unauthorized => StatusCode::UNAUTHORIZED,
-        };
-        warp::reply::with_status(warp::reply::html(format!("{}", self)), code)
+        }
     }
-}
-
-pub fn handle_compile_err(err: &CompileError) -> impl warp::Reply {
-    err.into_reply()
 }
 
 pub async fn compile(

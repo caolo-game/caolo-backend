@@ -1,23 +1,14 @@
+pub use alcoholic_jwt::{JWK, JWKS};
 use crate::PgPool;
-use anyhow::Context;
+use arrayvec::{ArrayString, ArrayVec};
 use chrono::{DateTime, Utc};
-use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
-use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
+use slog::{debug, info, Logger};
 use sqlx::FromRow;
-use std::str::FromStr;
+use std::convert::Infallible;
+use std::sync::{Arc, Once, RwLock};
 use thiserror::Error;
 use uuid::Uuid;
-
-lazy_static! {
-    // TODO: RSA
-    static ref JWT_SECRET: String = {
-        let secret = std::env::var("SECRET").unwrap_or_else(|_| "foobar".to_owned());
-        secret
-    };
-    static ref JWT_ENCODE: EncodingKey = EncodingKey::from_secret(JWT_SECRET.as_bytes());
-    static ref JWT_DECODE: DecodingKey<'static> = DecodingKey::from_secret(JWT_SECRET.as_bytes());
-}
 
 #[derive(Debug, FromRow, Serialize)]
 pub struct User {
@@ -38,27 +29,10 @@ impl warp::reject::Reject for UserReadError {}
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Identity {
-    pub user_id: Uuid,
+    /// the user
+    pub sub: String,
     pub exp: i64,
     pub iat: i64,
-}
-
-impl FromStr for Identity {
-    type Err = anyhow::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let token = decode::<Identity>(s, &*JWT_DECODE, &Validation::default())
-            .with_context(|| "failed to decode identity")?;
-        Ok(token.claims)
-    }
-}
-
-impl Identity {
-    pub fn serialize_token(&self) -> Result<String, anyhow::Error> {
-        let token = encode(&Header::default(), self, &JWT_ENCODE)
-            .with_context(|| "failed to encode identity")?;
-        Ok(token)
-    }
 }
 
 pub async fn current_user(
@@ -69,17 +43,53 @@ pub async fn current_user(
         Some(id) => id,
         None => return Ok(None),
     };
-    sqlx::query_as!(
-        User,
-        "
-        SELECT ua.id, ua.display_name, ua.email, ua.created, ua.updated
-        FROM user_account AS ua
-        WHERE ua.id=$1
-        ",
-        id.user_id
-    )
-    .fetch_optional(&pool)
-    .await
-    .map_err(UserReadError::DbError)
-    .map_err(warp::reject::custom)
+    unimplemented!()
+    // sqlx::query_as!(
+    //     User,
+    //     "
+    //     SELECT ua.id, ua.display_name, ua.email, ua.created, ua.updated
+    //     FROM user_account AS ua
+    //     WHERE ua.id=$1
+    //     ",
+    //     // id.user_id
+    // )
+    // .fetch_optional(&pool)
+    // .await
+    // .map_err(UserReadError::DbError)
+    // .map_err(warp::reject::custom)
+}
+
+
+static JWKS_LOAD: Once = Once::new();
+
+pub async fn load_jwks<'a>(
+    logger: Logger,
+    cache: Arc<RwLock<std::mem::MaybeUninit<JWKS>>>,
+) -> Result<&'a JWKS, Infallible> {
+    {
+        let cache = Arc::clone(&cache);
+        tokio::task::spawn_blocking(move || {
+            JWKS_LOAD.call_once(|| {
+                info!(logger, "performing initial JWK load");
+                let cc = Arc::clone(&cache);
+                let cache = cc;
+                let uri = std::env::var("JWKS_URI")
+                    .expect("Can not perform authorization without JWKS_URI");
+                let payload = reqwest::blocking::get(&uri);
+                let payload = payload.unwrap();
+                let payload: JWKS = payload.json().unwrap();
+
+                let mut cache = cache.write().unwrap();
+                *cache = std::mem::MaybeUninit::new(payload);
+                info!(logger, "JWK load finished");
+                debug!(logger, "JWKs loaded: {:#?}", *cache);
+            });
+        })
+        .await
+        .expect("Failed to load JWKS");
+    }
+
+    let cache = cache.read().unwrap();
+    let cache = cache.as_ptr();
+    unsafe { Ok(&*cache) }
 }

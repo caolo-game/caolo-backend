@@ -1,10 +1,7 @@
-mod auth;
-
 use crate::model::User;
 use crate::PgPool;
 use crate::RedisPool;
 use anyhow::Context;
-pub use auth::*;
 use cao_lang::compiler::description::get_instruction_descriptions;
 use cao_lang::compiler::{self, CompilationUnit};
 use caolo_messages::{AxialPoint, Function, Schema};

@@ -39,7 +39,7 @@ rand = "0.7"
 base64 = "0.12"
 sentry = "0.19"
 anyhow = "1"
-jsonwebtoken = "7"
+alcoholic_jwt = "1"
 lazy_static="1.4"
 
 slog = { version="2", features=["max_level_trace", "release_max_level_info"] }

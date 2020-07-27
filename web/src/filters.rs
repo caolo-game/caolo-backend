@@ -7,12 +7,14 @@ use crate::config::*;
 use crate::handler;
 use crate::model;
 use crate::world;
+use arrayvec::ArrayString;
 use r2d2_redis::{r2d2, RedisConnectionManager};
-use slog::{o, trace, warn, Logger};
+use serde::Deserialize;
+use slog::{debug, info, o, trace, warn, Logger};
 use sqlx::postgres::PgPool;
 use std::convert::Infallible;
 use std::str::FromStr;
-use std::sync::Arc;
+use std::sync::{Arc, Once, RwLock};
 use warp::http::StatusCode;
 use warp::reply::with_status;
 use warp::Filter;
@@ -48,6 +50,21 @@ pub fn api(
         move || filter.clone()
     };
 
+    let jwks_cache = {
+        let cache = Arc::new(RwLock::new(Vec::new()));
+        let filter = warp::any().map(move || Arc::clone(&cache));
+        move || filter.clone()
+    };
+
+    let jwks = {
+        let logger = logger.clone();
+        let filter = warp::any()
+            .and(warp::any().map(move || logger.clone()))
+            .and(jwks_cache())
+            .and_then(load_jwks);
+        move || filter.clone()
+    };
+
     // I used `and + optional` instead of `or` because a lack of `authorization` is not inherently
     // and error, however `or` would return 400 if neither method is used
     let identity = {
@@ -55,13 +72,19 @@ pub fn api(
         let identity = warp::any()
             .and(warp::filters::header::optional::<String>("authorization"))
             .and(warp::filters::cookie::optional("authorization"))
+            .and(jwks())
             .map(
-                move |header_id: Option<String>, cookie_id: Option<String>| {
-                    header_id.or(cookie_id).and_then(|cookie: String| {
-                        trace!(logger, "deseralizing Identity: {:?}", cookie);
-                        let id: model::Identity = FromStr::from_str(cookie.as_str())
+                move |header_id: Option<String>, cookie_id: Option<String>, jwks: &[JWK]| {
+                    header_id.or(cookie_id).and_then(|token: String| {
+                        trace!(
+                            logger,
+                            "deseralizing Identity: {:?} using jwks: {:?}",
+                            token,
+                            jwks
+                        );
+                        let id: model::Identity = FromStr::from_str(token.as_str())
                             .map_err(|e| {
-                                warn!(logger, "identity cookie deserialization failed {:?}", e);
+                                warn!(logger, "identity token deserialization failed {:?}", e);
                             })
                             .ok()?;
                         Some(id)
@@ -189,4 +212,50 @@ pub fn api(
         .or(save_script)
         .or(compile)
         .or(extend_token)
+}
+
+#[derive(Deserialize, Debug)]
+pub struct JWK {
+    pub x5c: Vec<String>,
+    pub alg: ArrayString<[u8; 16]>,
+    pub kid: ArrayString<[u8; 32]>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct JWKS {
+    pub keys: Vec<JWK>,
+}
+
+static JWKS_LOAD: Once = Once::new();
+
+async fn load_jwks<'a>(
+    logger: Logger,
+    cache: Arc<RwLock<Vec<JWK>>>,
+) -> Result<&'a [JWK], Infallible> {
+    {
+        let cache = Arc::clone(&cache);
+        tokio::task::spawn_blocking(move || {
+            JWKS_LOAD.call_once(|| {
+                info!(logger, "performing initial JWK load");
+                let cc = Arc::clone(&cache);
+                let cache = cc;
+                let uri = std::env::var("JWKS_URI")
+                    .expect("Can not perform authorization without JWKS_URI");
+                let payload = reqwest::blocking::get(&uri);
+                let payload = payload.unwrap();
+                let payload: JWKS = payload.json().unwrap();
+
+                let mut cache = cache.write().unwrap();
+                *cache.as_mut() = payload.keys;
+                info!(logger, "JWK load finished");
+                debug!(logger, "JWKs loaded: {:#?}", *cache);
+            });
+        })
+        .await
+        .expect("Failed to load JWKS");
+    }
+
+    let cache = cache.read().unwrap();
+    let ptr = cache.as_ptr();
+    unsafe { Ok(std::slice::from_raw_parts(ptr, cache.len())) }
 }

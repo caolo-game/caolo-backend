@@ -47,3 +47,5 @@ slog-stdlog = "3"
 slog-async = "*"
 slog-term = "*"
 slog-envlogger = "*"
+
+arrayvec = { version="*", features=["serde"] }

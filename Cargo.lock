@@ -342,6 +342,7 @@ name = "caolo-web"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "arrayvec",
  "base64 0.12.3",
  "cao-lang",
  "caolo-messages",

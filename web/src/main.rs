@@ -54,6 +54,7 @@ async fn main() -> Result<(), anyhow::Error> {
         })
     };
 
+    info!(logger, "initializing Sentry");
     let _sentry = std::env::var("SENTRY_URI")
         .ok()
         .map(|uri| {
@@ -64,11 +65,14 @@ async fn main() -> Result<(), anyhow::Error> {
             warn!(logger, "Sentry URI was not provided");
         });
 
+    info!(logger, "reading config");
     let conf = Config::read(logger.clone()).unwrap();
 
+    info!(logger, "initializing Redis pool");
     let cache_manager = RedisConnectionManager::new(conf.redis_url.as_str()).unwrap();
     let cache_pool: RedisPool = r2d2::Pool::builder().build(cache_manager).unwrap();
 
+    info!(logger, "initializing Postgres pool");
     let db_pool = PgPool::builder()
         .max_size(8)
         .build(&conf.db_url)
@@ -78,12 +82,14 @@ async fn main() -> Result<(), anyhow::Error> {
     let host = conf.host;
     let port = conf.port;
 
-    let api = filters::api(logger, conf, cache_pool, db_pool)
+    info!(logger, "initializing API");
+    let api = filters::api(logger.clone(), conf, cache_pool, db_pool)
         .recover(handle_rejection)
         .with(warp::cors().allow_any_origin().allow_credentials(true))
         .with(warp::trace::request())
         .with(log_wrapper);
 
+    info!(logger, "initialization done. starting the service...");
     warp::serve(api).run((host, port)).await;
 
     Ok(())

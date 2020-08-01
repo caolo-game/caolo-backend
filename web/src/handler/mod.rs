@@ -1,3 +1,6 @@
+mod user;
+pub use user::*;
+
 use crate::model::User;
 use crate::PgPool;
 use crate::RedisPool;
@@ -7,98 +10,11 @@ use cao_lang::compiler::{self, CompilationUnit};
 use caolo_messages::{AxialPoint, Function, Schema};
 use redis::Commands;
 use serde::Deserialize;
-use serde_json::Value;
 use slog::{debug, error, trace, Logger};
 use std::convert::Infallible;
 use thiserror::Error;
 use warp::http::StatusCode;
 use warp::reply::with_status;
-
-pub async fn myself(user: Option<User>) -> Result<impl warp::Reply, Infallible> {
-    let resp = warp::reply::json(&user);
-    let resp = match user {
-        Some(_) => with_status(resp, StatusCode::OK),
-        None => with_status(resp, StatusCode::NOT_FOUND),
-    };
-    Ok(resp)
-}
-
-#[derive(Deserialize, Debug)]
-pub struct UserRegistrationData {
-    pub id: String,
-    pub tenant: String,
-    pub username: String,
-    pub email: String,
-    #[serde(rename = "emailVerified")]
-    pub email_verified: bool,
-    pub user_metadata: Value,
-}
-
-#[derive(Debug, Error)]
-pub enum UserRegistrationError {
-    #[error("This user ID has already been registered")]
-    UserIdTaken,
-    #[error("This e-mail address has already been registered")]
-    EmailTaken,
-    #[error("Unexpected error while attempting to register new user")]
-    InternalError,
-}
-
-impl warp::reject::Reject for UserRegistrationError {}
-
-impl UserRegistrationError {
-    pub fn status(&self) -> StatusCode {
-        match self {
-            UserRegistrationError::InternalError => StatusCode::INTERNAL_SERVER_ERROR,
-            UserRegistrationError::UserIdTaken | UserRegistrationError::EmailTaken => {
-                StatusCode::BAD_REQUEST
-            }
-        }
-    }
-}
-
-pub async fn register(
-    logger: Logger,
-    payload: UserRegistrationData,
-    db: PgPool,
-) -> Result<impl warp::Reply, warp::Rejection> {
-    let res = sqlx::query!(
-        "
-        INSERT INTO user_account
-            (auth0_id, display_name, email, email_verified)
-        VALUES
-            ($1, $2, $3, $4)
-        ",
-        payload.id,
-        payload.username,
-        payload.email,
-        payload.email_verified,
-    )
-    .execute(&db)
-    .await;
-    if let Err(err) = res {
-        use sqlx::Error;
-        match err {
-            Error::Database(ref err) => match err.constraint_name() {
-                Some(constraint) if constraint == "email_is_unique" => {
-                    let err = UserRegistrationError::EmailTaken;
-                    return Err(warp::reject::custom(err));
-                }
-                Some(constraint) if constraint == "auth0_id_is_unique" => {
-                    let err = UserRegistrationError::UserIdTaken;
-                    return Err(warp::reject::custom(err));
-                }
-                _ => {}
-            },
-            _ => {}
-        }
-        error!(logger, "Unexpected error while registering user {:?}", err);
-        let err = UserRegistrationError::InternalError;
-        return Err(warp::reject::custom(err));
-    }
-    let res = warp::reply::reply();
-    Ok(res)
-}
 
 pub async fn schema(_logger: Logger, cache: RedisPool) -> Result<impl warp::Reply, Infallible> {
     let mut conn = cache.get().expect("failed to aquire cache connection");

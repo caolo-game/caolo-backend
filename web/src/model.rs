@@ -1,8 +1,9 @@
+use crate::config::Config;
 use crate::PgPool;
 pub use alcoholic_jwt::{JWK, JWKS};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use slog::{debug, info, Logger};
+use slog::{debug, info, trace, warn, Logger};
 use sqlx::FromRow;
 use std::convert::Infallible;
 use std::sync::{Arc, Once, RwLock};
@@ -24,6 +25,33 @@ pub struct Identity {
     pub sub: String,
     pub exp: i64,
     pub iat: i64,
+}
+
+impl Identity {
+    /// Returns None on error and logs it.
+    pub fn validated_id(
+        logger: &Logger,
+        config: &Config,
+        token: &str,
+        jwks: &JWKS,
+    ) -> Option<Self> {
+        trace!(logger, "deseralizing Identity: {:?}", token);
+        let kid = alcoholic_jwt::token_kid(&token)
+            .expect("failed to find token")
+            .expect("token was empty");
+        let jwk = jwks.find(kid.as_str())?;
+        let validations = vec![alcoholic_jwt::Validation::Audience(
+            config.auth_token_audience.clone(),
+        )];
+        let token = alcoholic_jwt::validate(&token, jwk, validations)
+            .map_err(|e| {
+                warn!(logger, "token deserialization failed {:?}", e);
+            })
+            .ok()?;
+        serde_json::from_value(token.claims)
+            .map_err(|err| warn!(logger, "failed to deserialize claims {:?}", err))
+            .ok()
+    }
 }
 
 pub async fn current_user(id: Option<Identity>, pool: PgPool) -> Result<Option<User>, Infallible> {

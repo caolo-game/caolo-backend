@@ -8,7 +8,7 @@ use crate::handler;
 use crate::model;
 use crate::world;
 use r2d2_redis::{r2d2, RedisConnectionManager};
-use slog::{o, trace, warn, Logger};
+use slog::{o, Logger};
 use sqlx::postgres::PgPool;
 use std::convert::Infallible;
 use std::sync::{Arc, RwLock};
@@ -68,33 +68,27 @@ pub fn api(
         let logger = logger.clone();
         let identity = warp::any()
             .and(config())
-            .and(warp::filters::header::optional::<String>("authorization"))
-            .and(warp::filters::cookie::optional("authorization"))
+            .and(warp::filters::header::optional("Authorization"))
+            .and(warp::filters::cookie::optional("Authorization"))
             .and(jwks())
             .map(
                 move |config: Arc<Config>,
                       header_id: Option<String>,
                       cookie_id: Option<String>,
                       jwks: &model::JWKS| {
-                    header_id.or(cookie_id).and_then(|token: String| {
-                        trace!(logger, "deseralizing Identity: {:?}", token);
-                        let kid = alcoholic_jwt::token_kid(&token)
-                            .expect("failed to find token")
-                            .expect("token was empty");
-                        let jwk = jwks.find(kid.as_str())?;
-                        let validations = vec![alcoholic_jwt::Validation::Audience(
-                            config.auth_token_audience.clone(),
-                        )];
-                        let token = alcoholic_jwt::validate(&token, jwk, validations)
-                            .map_err(|e| {
-                                warn!(logger, "token deserialization failed {:?}", e);
-                            })
-                            .ok()?;
-                        let id: model::Identity = serde_json::from_value(token.claims)
-                            .expect("failed to deserialize claims");
-                        slog::debug!(logger, "WIN {:?}", id);
-                        Some(id)
-                    })
+                    header_id
+                        .as_ref()
+                        .and_then(|id| {
+                            const BEARER_PREFIX: &str = "Bearer ";
+                            if !id.starts_with(BEARER_PREFIX) {
+                                return None;
+                            }
+                            Some(&id[BEARER_PREFIX.len()..])
+                        })
+                        .or(cookie_id.as_ref().map(|id| id.as_str()))
+                        .and_then(|token: &str| {
+                            model::Identity::validated_id(&logger, config.as_ref(), token, jwks)
+                        })
                 },
             );
         move || identity.clone()
@@ -112,7 +106,7 @@ pub fn api(
         let filter = warp::any().and(warp::addr::remote()).and(identity()).map(
             move |addr: Option<std::net::SocketAddr>, id: Option<model::Identity>| {
                 logger.new(o!(
-                    "current_user" => id.map(|id|format!("{:?}", id.id)),
+                    "current_user_id" => id.map(|id|format!("{:?}", id.id)),
                     "address" => addr
                 ))
             },
@@ -176,6 +170,13 @@ pub fn api(
         .and(db_pool())
         .and_then(handler::register);
 
+    let put_user = warp::put()
+        .and(warp::path!("user"))
+        .and(logger())
+        .and(warp::filters::body::json())
+        .and(db_pool())
+        .and_then(handler::put_user);
+
     health_check
         .or(world_stream)
         .or(myself)
@@ -185,4 +186,5 @@ pub fn api(
         .or(save_script)
         .or(compile)
         .or(register)
+        .or(put_user)
 }

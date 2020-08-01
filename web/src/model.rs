@@ -1,64 +1,50 @@
-pub use alcoholic_jwt::{JWK, JWKS};
 use crate::PgPool;
-use arrayvec::{ArrayString, ArrayVec};
+pub use alcoholic_jwt::{JWK, JWKS};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use slog::{debug, info, Logger};
 use sqlx::FromRow;
 use std::convert::Infallible;
 use std::sync::{Arc, Once, RwLock};
-use thiserror::Error;
 use uuid::Uuid;
 
 #[derive(Debug, FromRow, Serialize)]
 pub struct User {
     pub id: Uuid,
+    pub auth0_id: String,
     pub display_name: Option<String>,
     pub email: Option<String>,
     pub created: DateTime<Utc>,
     pub updated: DateTime<Utc>,
 }
 
-#[derive(Debug, Error)]
-pub enum UserReadError {
-    #[error("Failed to query the database")]
-    DbError(sqlx::Error),
-}
-
-impl warp::reject::Reject for UserReadError {}
-
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Identity {
-    /// the user
+    pub id: String,
     pub sub: String,
     pub exp: i64,
     pub iat: i64,
 }
 
-pub async fn current_user(
-    id: Option<Identity>,
-    pool: PgPool,
-) -> Result<Option<User>, warp::Rejection> {
+pub async fn current_user(id: Option<Identity>, pool: PgPool) -> Result<Option<User>, Infallible> {
     let id = match id {
         Some(id) => id,
         None => return Ok(None),
     };
-    unimplemented!()
-    // sqlx::query_as!(
-    //     User,
-    //     "
-    //     SELECT ua.id, ua.display_name, ua.email, ua.created, ua.updated
-    //     FROM user_account AS ua
-    //     WHERE ua.id=$1
-    //     ",
-    //     // id.user_id
-    // )
-    // .fetch_optional(&pool)
-    // .await
-    // .map_err(UserReadError::DbError)
-    // .map_err(warp::reject::custom)
+    let res = sqlx::query_as!(
+        User,
+        "
+        SELECT ua.id, ua.auth0_id, ua.display_name, ua.email, ua.created, ua.updated
+        FROM user_account AS ua
+        WHERE ua.auth0_id=$1
+        ",
+        id.id
+    )
+    .fetch_optional(&pool)
+    .await
+    .expect("failed to query database");
+    Ok(res)
 }
-
 
 static JWKS_LOAD: Once = Once::new();
 

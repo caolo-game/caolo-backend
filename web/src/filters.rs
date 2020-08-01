@@ -11,7 +11,6 @@ use r2d2_redis::{r2d2, RedisConnectionManager};
 use slog::{o, trace, warn, Logger};
 use sqlx::postgres::PgPool;
 use std::convert::Infallible;
-use std::str::FromStr;
 use std::sync::{Arc, RwLock};
 use warp::http::StatusCode;
 use warp::reply::with_status;
@@ -68,11 +67,15 @@ pub fn api(
     let identity = {
         let logger = logger.clone();
         let identity = warp::any()
+            .and(config())
             .and(warp::filters::header::optional::<String>("authorization"))
             .and(warp::filters::cookie::optional("authorization"))
             .and(jwks())
             .map(
-                move |header_id: Option<String>, cookie_id: Option<String>, jwks: &model::JWKS| {
+                move |config: Arc<Config>,
+                      header_id: Option<String>,
+                      cookie_id: Option<String>,
+                      jwks: &model::JWKS| {
                     header_id.or(cookie_id).and_then(|token: String| {
                         trace!(logger, "deseralizing Identity: {:?}", token);
                         let kid = alcoholic_jwt::token_kid(&token)
@@ -80,7 +83,7 @@ pub fn api(
                             .expect("token was empty");
                         let jwk = jwks.find(kid.as_str())?;
                         let validations = vec![alcoholic_jwt::Validation::Audience(
-                            "https://caolo.herokuapp.com/".into(),
+                            config.auth_token_audience.clone(),
                         )];
                         let token = alcoholic_jwt::validate(&token, jwk, validations)
                             .map_err(|e| {
@@ -109,7 +112,7 @@ pub fn api(
         let filter = warp::any().and(warp::addr::remote()).and(identity()).map(
             move |addr: Option<std::net::SocketAddr>, id: Option<model::Identity>| {
                 logger.new(o!(
-                    // "current_user" => id.map(|id|format!("{:?}", id.user_id)),
+                    "current_user" => id.map(|id|format!("{:?}", id.id)),
                     "address" => addr
                 ))
             },
@@ -166,6 +169,13 @@ pub fn api(
         .and(cache_pool())
         .and_then(handler::save_script);
 
+    let register = warp::post()
+        .and(warp::path!("user" / "register"))
+        .and(logger())
+        .and(warp::filters::body::json())
+        .and(db_pool())
+        .and_then(handler::register);
+
     health_check
         .or(world_stream)
         .or(myself)
@@ -174,4 +184,5 @@ pub fn api(
         .or(terrain)
         .or(save_script)
         .or(compile)
+        .or(register)
 }

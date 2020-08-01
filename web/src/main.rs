@@ -1,14 +1,12 @@
-mod auth;
 mod config;
 mod filters;
-mod google_auth;
 mod handler;
 mod model;
 mod world;
 
 pub use config::*;
 use r2d2_redis::{r2d2, RedisConnectionManager};
-use slog::{info, o, Drain};
+use slog::{info, o, warn, Drain};
 use sqlx::postgres::PgPool;
 use warp::reply::{self, with_status};
 use warp::Filter;
@@ -63,7 +61,7 @@ async fn main() -> Result<(), anyhow::Error> {
             sentry::init(options)
         })
         .ok_or_else(|| {
-            eprintln!("Sentry URI was not provided");
+            warn!(logger, "Sentry URI was not provided");
         });
 
     let conf = Config::read(logger.clone()).unwrap();
@@ -95,6 +93,9 @@ async fn handle_rejection(err: warp::Rejection) -> Result<impl warp::Reply, warp
     let status;
     let payload: serde_json::Value;
     if let Some(err) = err.find::<handler::CompileError>() {
+        status = err.status();
+        payload = format!("{}", err).into();
+    } else if let Some(err) = err.find::<handler::UserRegistrationError>() {
         status = err.status();
         payload = format!("{}", err).into();
     } else {

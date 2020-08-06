@@ -35,7 +35,7 @@ pub struct Identity {
     pub user_id: String,
 }
 #[derive(Debug, Deserialize, Serialize)]
-struct PrivateClaims{}
+struct PrivateClaims {}
 
 impl Identity {
     /// Returns None on error and logs it.
@@ -82,7 +82,13 @@ impl Identity {
     }
 }
 
-pub async fn current_user(id: Option<Identity>, pool: PgPool) -> Result<Option<User>, Infallible> {
+pub async fn current_user(
+    logger: Logger,
+    id: Option<Identity>,
+    pool: PgPool,
+) -> Result<Option<User>, Infallible> {
+    trace!(logger, "current_user by id {:?}", id);
+
     let id = match id {
         Some(id) => id,
         None => return Ok(None),
@@ -99,6 +105,9 @@ pub async fn current_user(id: Option<Identity>, pool: PgPool) -> Result<Option<U
     .fetch_optional(&pool)
     .await
     .expect("failed to query database");
+    if res.is_none() {
+        warn!(logger, "Failed to find user by the given identity {:?}", id);
+    }
     Ok(res)
 }
 

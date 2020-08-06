@@ -79,6 +79,7 @@ pub async fn put_user(
     let res = warp::reply::reply();
     Ok(res)
 }
+
 pub async fn register(
     logger: Logger,
     payload: UserRegistrationData,

@@ -94,23 +94,25 @@ pub fn api(
         move || identity.clone()
     };
 
+    let root_logger = {
+        let filter =
+            warp::any()
+                .and(warp::addr::remote())
+                .map(move |addr: Option<std::net::SocketAddr>| {
+                    logger.new(o!(
+                        "address" => addr
+                    ))
+                });
+        move || filter.clone()
+    };
+
     let current_user = {
         let current_user = warp::any()
+            .and(root_logger())
             .and(identity())
             .and(db_pool())
             .and_then(model::current_user);
         move || current_user.clone()
-    };
-
-    let root_logger = {
-        let filter = warp::any().and(warp::addr::remote()).map(
-            move |addr: Option<std::net::SocketAddr>| {
-                logger.new(o!(
-                    "address" => addr
-                ))
-            },
-        );
-        move || filter.clone()
     };
 
     let logger = {

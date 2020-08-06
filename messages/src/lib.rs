@@ -4,6 +4,13 @@ use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
+pub enum ClientMessage {
+    /// Authenthicate using a brearer token
+    AuthToken(String),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
 pub enum InputPayload {
     UpdateScript(UpdateScript),
     UpdateEntityScript(UpdateEntityScript),

@@ -85,9 +85,18 @@ async fn main() -> Result<(), anyhow::Error> {
     info!(logger, "initializing API");
     let api = filters::api(logger.clone(), conf, cache_pool, db_pool)
         .recover(handle_rejection)
-        .with(warp::cors().allow_any_origin().allow_credentials(true))
+        .with(log_wrapper)
         .with(warp::trace::request())
-        .with(log_wrapper);
+        .with(
+            warp::cors()
+                .allow_any_origin()
+                .allow_credentials(true)
+                .allow_header("authorization")
+                .allow_method(warp::http::Method::GET)
+                .allow_method(warp::http::Method::PUT)
+                .allow_method(warp::http::Method::OPTIONS)
+                .allow_method(warp::http::Method::POST),
+        );
 
     info!(logger, "initialization done. starting the service...");
     warp::serve(api).run((host, port)).await;

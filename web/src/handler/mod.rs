@@ -1,7 +1,7 @@
 mod user;
 pub use user::*;
 
-use crate::model::User;
+use crate::model::Identity;
 use crate::PgPool;
 use crate::RedisPool;
 use anyhow::Context;
@@ -156,7 +156,7 @@ pub async fn compile(
 
 pub async fn save_script(
     logger: Logger,
-    user: Option<User>,
+    user: Option<Identity>,
     cu: CompilationUnit,
     _db: PgPool,
     _cache: RedisPool,

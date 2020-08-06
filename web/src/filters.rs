@@ -102,12 +102,22 @@ pub fn api(
         move || current_user.clone()
     };
 
-    let logger = {
-        let filter = warp::any().and(warp::addr::remote()).and(identity()).map(
-            move |addr: Option<std::net::SocketAddr>, id: Option<model::Identity>| {
+    let root_logger = {
+        let filter = warp::any().and(warp::addr::remote()).map(
+            move |addr: Option<std::net::SocketAddr>| {
                 logger.new(o!(
-                    "current_user_id" => id.map(|id|format!("{:?}", id.id)),
                     "address" => addr
+                ))
+            },
+        );
+        move || filter.clone()
+    };
+
+    let logger = {
+        let filter = warp::any().and(root_logger()).and(identity()).map(
+            move |logger: Logger, id: Option<model::Identity>| {
+                logger.new(o!(
+                    "user_id" => id.map(|id|format!("{:?}", id.user_id))
                 ))
             },
         );
@@ -117,13 +127,19 @@ pub fn api(
     let health_check = warp::get().and(warp::path("health")).and_then(health_check);
     let world_stream = warp::get()
         .and(warp::path("world"))
-        .and(logger())
+        .and(root_logger())
         .and(warp::ws())
-        .and(current_user())
+        .and(identity())
         .and(cache_pool())
-        .map(move |logger: Logger, ws: warp::ws::Ws, user, pool| {
-            ws.on_upgrade(move |socket| world::world_stream(logger, socket, user, pool))
-        });
+        .and(jwks())
+        .and(config())
+        .map(
+            move |logger: Logger, ws: warp::ws::Ws, user, pool, jwks, config| {
+                ws.on_upgrade(move |socket| {
+                    world::world_stream(logger, socket, user, pool, jwks, config)
+                })
+            },
+        );
 
     let myself = warp::get()
         .and(warp::path("myself"))
@@ -157,7 +173,7 @@ pub fn api(
     let save_script = warp::post()
         .and(warp::path!("scripts" / "commit"))
         .and(logger())
-        .and(current_user())
+        .and(identity())
         .and(warp::filters::body::json())
         .and(db_pool())
         .and(cache_pool())

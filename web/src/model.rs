@@ -1,6 +1,12 @@
+pub use biscuit::jwk::JWK;
+
 use crate::config::Config;
 use crate::PgPool;
-pub use alcoholic_jwt::{JWK, JWKS};
+use biscuit::{
+    jwa::SignatureAlgorithm,
+    jwk::{AlgorithmParameters, JWKSet},
+    JWT,
+};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use slog::{debug, info, trace, warn, Logger};
@@ -8,6 +14,11 @@ use sqlx::FromRow;
 use std::convert::Infallible;
 use std::sync::{Arc, Once, RwLock};
 use uuid::Uuid;
+
+#[derive(Debug, Deserialize)]
+pub struct JWKAddition {}
+
+pub type JWKS = JWKSet<JWKAddition>;
 
 #[derive(Debug, FromRow, Serialize)]
 pub struct User {
@@ -19,38 +30,55 @@ pub struct User {
     pub updated: DateTime<Utc>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug)]
 pub struct Identity {
-    pub id: String,
-    pub sub: String,
-    pub exp: i64,
-    pub iat: i64,
+    pub user_id: String,
 }
+#[derive(Debug, Deserialize, Serialize)]
+struct PrivateClaims{}
 
 impl Identity {
     /// Returns None on error and logs it.
     pub fn validated_id(
         logger: &Logger,
-        config: &Config,
+        _config: &Config,
         token: &str,
         jwks: &JWKS,
     ) -> Option<Self> {
         trace!(logger, "deseralizing Identity: {:?}", token);
-        let kid = alcoholic_jwt::token_kid(&token)
-            .expect("failed to find token")
-            .expect("token was empty");
-        let jwk = jwks.find(kid.as_str())?;
-        let validations = vec![alcoholic_jwt::Validation::Audience(
-            config.auth_token_audience.clone(),
-        )];
-        let token = alcoholic_jwt::validate(&token, jwk, validations)
-            .map_err(|e| {
-                warn!(logger, "token deserialization failed {:?}", e);
+        let token = JWT::<_, biscuit::Empty>::new_encoded(&token);
+        let kid = token
+            .unverified_header()
+            .map_err(|err| {
+                warn!(logger, "failed to deserialize header : {:?}", err);
             })
+            .ok()?
+            .registered
+            .key_id?;
+        trace!(logger, "found kid: {:?}", kid);
+        let jwk = jwks.find(kid.as_str())?;
+        trace!(logger, "found jwk: {:?}", jwk);
+        let secret = match jwk.algorithm {
+            AlgorithmParameters::RSA(ref alg) => alg.jws_public_key_secret(),
+            _ => panic!("Given jwk algorithm not implemented {:?}", jwk),
+        };
+        let token = token
+            .into_decoded(&secret, SignatureAlgorithm::RS256)
+            .map_err(|err| warn!(logger, "failed to validate token {:?}", err))
             .ok()?;
-        serde_json::from_value(token.claims)
-            .map_err(|err| warn!(logger, "failed to deserialize claims {:?}", err))
-            .ok()
+        let (_, res) = token.unwrap_decoded();
+        let _: &PrivateClaims = &res.private; // provide type hint
+        trace!(logger, "found identity: {:?}", res);
+        let id = Identity {
+            user_id: res
+                .registered
+                .subject
+                .ok_or_else(|| {
+                    debug!(logger, "JWT did not contain subject field");
+                })
+                .ok()?,
+        };
+        Some(id)
     }
 }
 
@@ -66,7 +94,7 @@ pub async fn current_user(id: Option<Identity>, pool: PgPool) -> Result<Option<U
         FROM user_account AS ua
         WHERE ua.auth0_id=$1
         ",
-        id.id
+        id.user_id
     )
     .fetch_optional(&pool)
     .await
@@ -90,8 +118,13 @@ pub async fn load_jwks<'a>(
                 let uri = std::env::var("JWKS_URI")
                     .expect("Can not perform authorization without JWKS_URI");
                 let payload = reqwest::blocking::get(&uri);
-                let payload = payload.unwrap();
-                let payload: JWKS = payload.json().unwrap();
+                let payload = payload.map(|pl| pl.json::<serde_json::Value>());
+                trace!(logger, "Got payload: {:#?}", payload);
+                let payload = payload
+                    .unwrap()
+                    .expect("Failed to deserialize payload to json value");
+                let payload: JWKS = serde_json::from_value(payload)
+                    .expect("failed to deserialize payload value to jwks");
 
                 let mut cache = cache.write().unwrap();
                 *cache = std::mem::MaybeUninit::new(payload);

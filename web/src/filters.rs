@@ -8,7 +8,7 @@ use crate::handler;
 use crate::model;
 use crate::world;
 use r2d2_redis::{r2d2, RedisConnectionManager};
-use slog::{o, Logger};
+use slog::{o, trace, Logger};
 use sqlx::postgres::PgPool;
 use std::convert::Infallible;
 use std::sync::{Arc, RwLock};
@@ -76,6 +76,12 @@ pub fn api(
                       header_id: Option<String>,
                       cookie_id: Option<String>,
                       jwks: &model::JWKS| {
+                    trace!(
+                        logger,
+                        "Deserializing identity from:\nheader\n{:?}\ncookie\n{:?}",
+                        header_id,
+                        cookie_id
+                    );
                     header_id
                         .as_ref()
                         .and_then(|id| {
@@ -87,6 +93,7 @@ pub fn api(
                         })
                         .or(cookie_id.as_ref().map(|id| id.as_str()))
                         .and_then(|token: &str| {
+                            trace!(logger, "Deserializing token {}", token);
                             model::Identity::validated_id(&logger, config.as_ref(), token, jwks)
                         })
                 },

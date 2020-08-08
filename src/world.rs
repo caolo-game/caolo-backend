@@ -1,7 +1,7 @@
 use crate::config::Config;
 use crate::model::{Identity, JWKS};
 use crate::RedisPool;
-use caolo_messages::{ClientMessage, WorldState};
+use cao_messages::{ClientMessage, WorldState};
 use futures::stream::StreamExt;
 use futures::FutureExt;
 use redis::Commands;

@@ -10,29 +10,26 @@ COPY ./rust-toolchain ./rust-toolchain
 # cache the toolchain
 RUN cargo --version
 
-WORKDIR /caolo/web
+WORKDIR /caolo
 RUN cargo install diesel_cli --root . --no-default-features --features="postgres"
 
 ENV DATABASE_URL=postgres://postgres:postgres@localhost:5432/caolo
 
 # ============= cache dependencies =============
-WORKDIR /caolo/web
+WORKDIR /caolo
 COPY ./Cargo.lock ./Cargo.lock
-COPY ./web/Cargo.toml ./Cargo.toml
+COPY ./Cargo.toml ./Cargo.toml
 RUN mkdir src/
 RUN echo "fn main() {}" > ./src/dummy.rs
 RUN sed -i 's/src\/main.rs/src\/dummy.rs/' Cargo.toml
-# remove 'caolo-messages' dependency because it changes often
-RUN sed -i '/caolo-messages/d' Cargo.toml
 RUN cargo build --release
 
 WORKDIR /caolo
-COPY ./web/build.sh ./
-COPY ./messages/ ./messages/
-COPY ./web/ ./web/
+COPY ./build.sh ./
+COPY ./src/ ./src/
+COPY ./Cargo.toml ./Cargo.toml
 COPY ./migrations/ ./migrations/
 
-WORKDIR /caolo/web
 RUN bash ./build.sh
 
 # ---------- Copy the built binary to a scratch container, to minimize the image size ----------
@@ -43,8 +40,8 @@ RUN apt-get update
 RUN apt-get install curl libpq-dev -y
 
 COPY ./migrations/ ./migrations/
-COPY ./web/release.sh ./
-COPY --from=build /caolo/web/bin/ ./
+COPY ./release.sh ./
+COPY --from=build /caolo/bin/ ./
 
 RUN ls -al /caolo
 

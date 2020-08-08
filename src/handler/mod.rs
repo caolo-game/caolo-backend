@@ -7,7 +7,7 @@ use crate::RedisPool;
 use anyhow::Context;
 use cao_lang::compiler::description::get_instruction_descriptions;
 use cao_lang::compiler::{self, CompilationUnit};
-use caolo_messages::{AxialPoint, Function, Schema};
+use cao_messages::{AxialPoint, Function, Schema};
 use redis::Commands;
 use serde::Deserialize;
 use slog::{debug, error, trace, Logger};

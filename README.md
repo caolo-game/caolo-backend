@@ -42,6 +42,10 @@ diesel database setup
 
 ## Deployment
 
+### Setting up Auth0
+
+TBA
+
 ### Deploying to [Heroku](https://heroku.com)
 
 `make deploy-heroku app=<your heroku app name>`

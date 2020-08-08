@@ -1,13 +1,12 @@
 *
-!worker
 !rust-toolchain
-!web
-!protos
-!messages
+!src
 !migrations
 !diesel.toml
 !release.sh
+!build.sh
 !Cargo.lock
+!Cargo.toml
 **/target
 **/*~
 **/index.node

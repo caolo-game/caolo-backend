@@ -11,13 +11,13 @@ start: web
 	docker-compose logs -f --tail=100
 
 web:
-	docker build -t frenetiq/caolo-web:latest -f web/dockerfile .
+	docker build -t frenetiq/caolo-web:latest -f dockerfile .
 
 push: web
 	docker push frenetiq/caolo-web:latest
 
 release:
-	docker build -t frenetiq/caolo-release:latest -f web/dockerfile.release .
+	docker build -t frenetiq/caolo-release:latest -f dockerfile.release .
 
 deploy-heroku: web release
 	docker tag frenetiq/caolo-web:latest registry.heroku.com/$(app)/web

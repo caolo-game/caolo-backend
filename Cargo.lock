@@ -345,8 +345,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "caolo-messages"
+name = "cao-messages"
 version = "0.1.0"
+source = "git+https://github.com/caolo-game/cao-messages.git#739370f0622285fe20ca0c072130adc6484dbc2d"
 dependencies = [
  "serde",
  "uuid 0.7.4",
@@ -361,7 +362,7 @@ dependencies = [
  "base64 0.12.3",
  "biscuit",
  "cao-lang",
- "caolo-messages",
+ "cao-messages",
  "chrono",
  "dotenv 0.9.0",
  "futures",

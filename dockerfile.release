@@ -16,7 +16,7 @@ RUN apt-get update
 RUN apt-get install libpq-dev -y
 
 COPY ./migrations/ ./migrations/
-COPY ./web/release.sh ./
+COPY ./release.sh ./
 COPY --from=build /caolo/web/bin/ ./
 
 ENTRYPOINT ["./release.sh"]

@@ -109,7 +109,7 @@ async fn main() -> Result<(), anyhow::Error> {
 async fn handle_rejection(err: warp::Rejection) -> Result<impl warp::Reply, warp::Rejection> {
     let status;
     let payload: serde_json::Value;
-    if let Some(err) = err.find::<handler::CompileError>() {
+    if let Some(err) = err.find::<handler::ScriptError>() {
         status = err.status();
         payload = format!("{}", err).into();
     } else if let Some(err) = err.find::<handler::UserRegistrationError>() {

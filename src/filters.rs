@@ -174,10 +174,16 @@ pub fn api(
         .and_then(handler::terrain);
 
     let compile = warp::post()
-        .and(warp::path("compile"))
+        .and(warp::path!("scripts" / "compile"))
         .and(logger())
         .and(warp::filters::body::json())
         .and_then(handler::compile);
+
+    let list_scripts = warp::get()
+        .and(warp::path("scripts"))
+        .and(identity())
+        .and(db_pool())
+        .and_then(handler::list_scripts);
 
     let save_script = warp::post()
         .and(warp::path!("scripts" / "commit"))
@@ -208,6 +214,7 @@ pub fn api(
         .or(schema)
         .or(terrain_rooms)
         .or(terrain)
+        .or(list_scripts)
         .or(save_script)
         .or(compile)
         .or(register)

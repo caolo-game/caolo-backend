@@ -1,7 +1,7 @@
 mod user;
 pub use user::*;
 
-use crate::model::Identity;
+use crate::model::{Identity, ScriptEntity};
 use crate::PgPool;
 use crate::RedisPool;
 use anyhow::Context;
@@ -122,7 +122,7 @@ pub async fn terrain(
     Ok(res)
 }
 #[derive(Debug, Error)]
-pub enum CompileError {
+pub enum ScriptError {
     #[error("Failed to compile script {0}")]
     CompileError(compiler::CompilationError),
     #[error("User info was not found. Did you log in?")]
@@ -131,14 +131,14 @@ pub enum CompileError {
     InternalError(anyhow::Error),
 }
 
-impl warp::reject::Reject for CompileError {}
+impl warp::reject::Reject for ScriptError {}
 
-impl CompileError {
+impl ScriptError {
     pub fn status(&self) -> StatusCode {
         match self {
-            CompileError::CompileError(_) => StatusCode::BAD_REQUEST,
-            CompileError::Unauthorized => StatusCode::UNAUTHORIZED,
-            CompileError::InternalError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            ScriptError::CompileError(_) => StatusCode::BAD_REQUEST,
+            ScriptError::Unauthorized => StatusCode::UNAUTHORIZED,
+            ScriptError::InternalError(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 }
@@ -155,9 +155,39 @@ pub async fn compile(
         }
         Err(err) => {
             debug!(logger, "compilation failed {}", err);
-            Err(warp::reject::custom(CompileError::CompileError(err)))
+            Err(warp::reject::custom(ScriptError::CompileError(err)))
         }
     }
+}
+
+pub async fn list_scripts(
+    identity: Option<Identity>,
+    db: PgPool,
+) -> Result<impl warp::Reply, warp::Rejection> {
+    let identity = identity.ok_or_else(|| warp::reject::not_found())?;
+
+    let scripts = sqlx::query_as!(
+        ScriptEntity,
+        r#"
+        SELECT 
+            user_script.owner_id AS user_id
+            , user_script.id AS script_id
+            , user_script.program AS payload
+        FROM user_script
+        INNER JOIN user_account 
+            ON user_script.owner_id=user_account.id
+        WHERE user_account.auth0_id=$1
+        "#,
+        identity.user_id
+    )
+    .fetch_all(&db)
+    .await
+    .with_context(|| "Failed to query scripts")
+    .map_err(ScriptError::InternalError)
+    .map_err(warp::reject::custom)?;
+
+    let res = warp::reply::json(&scripts);
+    Ok(res)
 }
 
 pub async fn save_script(
@@ -169,7 +199,7 @@ pub async fn save_script(
 ) -> Result<impl warp::Reply, warp::Rejection> {
     let mut tx = db.begin().await.expect("failed to begin transaction");
 
-    let identity = identity.ok_or_else(|| warp::reject::custom(CompileError::Unauthorized))?;
+    let identity = identity.ok_or_else(|| warp::reject::custom(ScriptError::Unauthorized))?;
 
     struct QueryRes {
         /// script_id
@@ -201,7 +231,7 @@ pub async fn save_script(
 
     let program = compiler::compile(None, cu).map_err(|err| {
         debug!(logger, "compilation failure {:?}", err);
-        warp::reject::custom(CompileError::CompileError(err))
+        warp::reject::custom(ScriptError::CompileError(err))
     })?;
 
     // map cao_lang script to cao_messages script
@@ -220,7 +250,7 @@ pub async fn save_script(
     } = query
         .await
         .with_context(|| "failed to insert the program")
-        .map_err(CompileError::InternalError)
+        .map_err(ScriptError::InternalError)
         .map_err(warp::reject::custom)?;
 
     let msg = UpdateScript {
@@ -236,7 +266,7 @@ pub async fn save_script(
             serde_json::to_vec(&msg).expect("failed to serialize msg"),
         )
         .with_context(|| "Failed to send msg")
-        .map_err(CompileError::InternalError)
+        .map_err(ScriptError::InternalError)
         .map_err(warp::reject::custom)?;
 
     tx.commit().await.expect("failed to commit tx");

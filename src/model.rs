@@ -9,6 +9,7 @@ use biscuit::{
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use slog::{debug, info, trace, warn, Logger};
 use sqlx::FromRow;
 use std::convert::Infallible;
@@ -148,4 +149,11 @@ pub async fn load_jwks<'a>(
     let cache = cache.read().unwrap();
     let cache = cache.as_ptr();
     unsafe { Ok(&*cache) }
+}
+
+#[derive(Debug, Serialize)]
+pub struct ScriptEntity {
+    pub user_id: Uuid,
+    pub script_id: Uuid,
+    pub payload: Value,
 }

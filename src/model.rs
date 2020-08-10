@@ -152,6 +152,7 @@ pub async fn load_jwks<'a>(
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ScriptEntity {
     pub user_id: Uuid,
     pub script_id: Uuid,

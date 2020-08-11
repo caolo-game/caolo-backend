@@ -38,6 +38,15 @@ pub struct Identity {
 #[derive(Debug, Deserialize, Serialize)]
 struct PrivateClaims {}
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ScriptEntity {
+    pub name: String,
+    pub user_id: Uuid,
+    pub script_id: Uuid,
+    pub payload: Value,
+}
+
 impl Identity {
     /// Returns None on error and logs it.
     pub fn validated_id(
@@ -149,12 +158,4 @@ pub async fn load_jwks<'a>(
     let cache = cache.read().unwrap();
     let cache = cache.as_ptr();
     unsafe { Ok(&*cache) }
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ScriptEntity {
-    pub user_id: Uuid,
-    pub script_id: Uuid,
-    pub payload: Value,
 }

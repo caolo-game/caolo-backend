@@ -171,6 +171,7 @@ pub async fn list_scripts(
         r#"
         SELECT 
             user_script.owner_id AS user_id
+            , user_script.name
             , user_script.id AS script_id
             , user_script.program AS payload
         FROM user_script
@@ -190,14 +191,35 @@ pub async fn list_scripts(
     Ok(res)
 }
 
+#[derive(Debug, Clone, Deserialize)]
+pub struct SaveScriptPayload {
+    pub name: String,
+    pub cu: CompilationUnit,
+}
+
 pub async fn save_script(
     logger: Logger,
     identity: Option<Identity>,
-    cu: CompilationUnit,
+    payload: SaveScriptPayload,
     db: PgPool,
     cache: RedisPool,
 ) -> Result<impl warp::Reply, warp::Rejection> {
-    let mut tx = db.begin().await.expect("failed to begin transaction");
+    macro_rules! log_error {
+        () => {
+            |arg| {
+                error!(logger, "Error in save_script {:?}", arg);
+                arg
+            }
+        };
+    };
+
+    let mut tx = db
+        .begin()
+        .await
+        .map_err(log_error!())
+        .with_context(|| "Failed to begin transaction")
+        .map_err(ScriptError::InternalError)
+        .map_err(warp::reject::custom)?;
 
     let identity = identity.ok_or_else(|| warp::reject::custom(ScriptError::Unauthorized))?;
 
@@ -211,25 +233,27 @@ pub async fn save_script(
         QueryRes,
         r#"
         INSERT INTO user_script
-        (program, owner_id)
+        (program, name, owner_id)
         VALUES
         (
             $1
+            , $2
             , (
                 SELECT id AS owner_id
                 FROM user_account
-                WHERE auth0_id=$2
+                WHERE auth0_id=$3
                 LIMIT 1
             )
         )
         RETURNING id, owner_id;
         "#,
-        serde_json::to_value(&cu).expect("failed to serialize CompilationUnit"),
+        serde_json::to_value(&payload.cu).expect("failed to serialize CompilationUnit"),
+        payload.name.as_str(),
         identity.user_id,
     )
     .fetch_one(&mut tx);
 
-    let program = compiler::compile(None, cu).map_err(|err| {
+    let program = compiler::compile(None, payload.cu).map_err(|err| {
         debug!(logger, "compilation failure {:?}", err);
         warp::reject::custom(ScriptError::CompileError(err))
     })?;
@@ -249,6 +273,7 @@ pub async fn save_script(
         owner_id: user_id,
     } = query
         .await
+        .map_err(log_error!())
         .with_context(|| "failed to insert the program")
         .map_err(ScriptError::InternalError)
         .map_err(warp::reject::custom)?;
@@ -259,12 +284,18 @@ pub async fn save_script(
         compiled_script,
     };
 
-    let mut conn = cache.get().expect("failed to get cache conn");
+    let mut conn = cache
+        .get()
+        .map_err(log_error!())
+        .expect("failed to get cache conn");
     let _: () = conn
         .lpush(
             "UPDATE_SCRIPT",
-            serde_json::to_vec(&msg).expect("failed to serialize msg"),
+            serde_json::to_vec(&msg)
+                .map_err(log_error!())
+                .expect("failed to serialize msg"),
         )
+        .map_err(log_error!())
         .with_context(|| "Failed to send msg")
         .map_err(ScriptError::InternalError)
         .map_err(warp::reject::custom)?;

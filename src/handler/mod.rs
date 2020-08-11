@@ -197,7 +197,7 @@ pub struct SaveScriptPayload {
     pub cu: CompilationUnit,
 }
 
-pub async fn save_script(
+pub async fn commit(
     logger: Logger,
     identity: Option<Identity>,
     payload: SaveScriptPayload,
@@ -207,7 +207,7 @@ pub async fn save_script(
     macro_rules! log_error {
         () => {
             |arg| {
-                error!(logger, "Error in save_script {:?}", arg);
+                error!(logger, "Error in commit {:?}", arg);
                 arg
             }
         };
@@ -229,29 +229,20 @@ pub async fn save_script(
         owner_id: Uuid,
     };
 
-    let query = sqlx::query_as!(
-        QueryRes,
-        r#"
-        INSERT INTO user_script
-        (program, name, owner_id)
-        VALUES
-        (
-            $1
-            , $2
-            , (
-                SELECT id AS owner_id
-                FROM user_account
-                WHERE auth0_id=$3
-                LIMIT 1
-            )
+    let query = {
+        let name = payload.name.as_str();
+        let payload =
+            serde_json::to_value(&payload.cu).expect("failed to serialize CompilationUnit");
+        let owner_id = identity.user_id;
+        sqlx::query_file_as!(
+            QueryRes,
+            "src/handler/commit_script.sql",
+            payload,
+            name,
+            owner_id,
         )
-        RETURNING id, owner_id;
-        "#,
-        serde_json::to_value(&payload.cu).expect("failed to serialize CompilationUnit"),
-        payload.name.as_str(),
-        identity.user_id,
-    )
-    .fetch_one(&mut tx);
+        .fetch_one(&mut tx)
+    };
 
     let program = compiler::compile(None, payload.cu).map_err(|err| {
         debug!(logger, "compilation failure {:?}", err);

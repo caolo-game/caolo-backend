@@ -10,13 +10,11 @@ COPY ./rust-toolchain ./rust-toolchain
 # cache the toolchain
 RUN cargo --version
 
-WORKDIR /caolo
 RUN cargo install diesel_cli --root . --no-default-features --features="postgres"
 
 ENV DATABASE_URL=postgres://postgres:postgres@localhost:5432/caolo
 
 # ============= cache dependencies =============
-WORKDIR /caolo
 COPY ./Cargo.lock ./Cargo.lock
 COPY ./Cargo.toml ./Cargo.toml
 RUN mkdir src/
@@ -24,7 +22,7 @@ RUN echo "fn main() {}" > ./src/dummy.rs
 RUN sed -i 's/src\/main.rs/src\/dummy.rs/' Cargo.toml
 RUN cargo build --release
 
-WORKDIR /caolo
+COPY ./Cargo.lock ./Cargo.lock
 COPY ./build.sh ./
 COPY ./src/ ./src/
 COPY ./Cargo.toml ./Cargo.toml

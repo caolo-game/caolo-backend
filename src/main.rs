@@ -8,7 +8,7 @@ pub use config::*;
 use r2d2_redis::{r2d2, RedisConnectionManager};
 use slog::{info, o, warn, Drain};
 use sqlx::postgres::PgPool;
-use warp::reply::{self, with_status};
+use warp::http::Method;
 use warp::Filter;
 
 #[cfg(feature = "web-dotenv")]
@@ -84,39 +84,32 @@ async fn main() -> Result<(), anyhow::Error> {
 
     info!(logger, "initializing API");
     let api = filters::api(logger.clone(), conf, cache_pool, db_pool)
-        .recover(handle_rejection)
-        .with(log_wrapper)
-        .with(warp::trace::request())
         .with(
             warp::cors()
                 .allow_any_origin()
-                .allow_credentials(true)
-                .allow_header("authorization")
-                .allow_header("content-type")
-                .allow_method(warp::http::Method::GET)
-                .allow_method(warp::http::Method::PUT)
-                .allow_method(warp::http::Method::DELETE)
-                .allow_method(warp::http::Method::OPTIONS)
-                .allow_method(warp::http::Method::POST),
-        );
+                .allow_headers(vec![
+                    "Authorization",
+                    "Content-Type",
+                    "User-Agent",
+                    "Sec-Fetch-Mode",
+                    "Referer",
+                    "Origin",
+                    "Access-Control-Request-Method",
+                    "Access-Control-Request-Headers",
+                ])
+                .allow_methods(vec![
+                    Method::GET,
+                    Method::PUT,
+                    Method::DELETE,
+                    Method::OPTIONS,
+                    Method::POST,
+                ]),
+        )
+        .with(warp::trace::request())
+        .with(log_wrapper);
 
     info!(logger, "initialization done. starting the service...");
     warp::serve(api).run((host, port)).await;
 
     Ok(())
-}
-
-async fn handle_rejection(err: warp::Rejection) -> Result<impl warp::Reply, warp::Rejection> {
-    let status;
-    let payload: serde_json::Value;
-    if let Some(err) = err.find::<handler::ScriptError>() {
-        status = err.status();
-        payload = format!("{}", err).into();
-    } else if let Some(err) = err.find::<handler::UserRegistrationError>() {
-        status = err.status();
-        payload = format!("{}", err).into();
-    } else {
-        return Err(err);
-    }
-    Ok(with_status(reply::json(&payload), status))
 }

@@ -1,7 +1,7 @@
 mod user;
 pub use user::*;
 
-use crate::model::{Identity, ScriptEntity};
+use crate::model::{Identity, ScriptEntity, ScriptMetadata};
 use crate::PgPool;
 use crate::RedisPool;
 use anyhow::Context;
@@ -160,26 +160,42 @@ pub async fn compile(
     }
 }
 
+pub async fn get_script(
+    id: Uuid,
+    identity: Option<Identity>,
+    db: PgPool,
+) -> Result<impl warp::Reply, warp::Rejection> {
+    let identity = identity.ok_or_else(|| warp::reject::not_found())?;
+
+    let user_id = identity.user_id;
+    let script = sqlx::query_file_as!(
+        ScriptEntity,
+        "src/handler/get_users_script.sql",
+        user_id,
+        id
+    )
+    .fetch_optional(&db)
+    .await
+    .with_context(|| "Failed to query scripts")
+    .map_err(ScriptError::InternalError)
+    .map_err(warp::reject::custom)?;
+
+    script
+        .map(|script| warp::reply::json(&script))
+        .ok_or_else(|| warp::reject::not_found())
+}
+
 pub async fn list_scripts(
     identity: Option<Identity>,
     db: PgPool,
 ) -> Result<impl warp::Reply, warp::Rejection> {
     let identity = identity.ok_or_else(|| warp::reject::not_found())?;
 
-    let scripts = sqlx::query_as!(
-        ScriptEntity,
-        r#"
-        SELECT 
-            user_script.owner_id AS user_id
-            , user_script.name
-            , user_script.id AS script_id
-            , user_script.program AS payload
-        FROM user_script
-        INNER JOIN user_account 
-            ON user_script.owner_id=user_account.id
-        WHERE user_account.auth0_id=$1
-        "#,
-        identity.user_id
+    let user_id = identity.user_id;
+    let scripts = sqlx::query_file_as!(
+        ScriptMetadata,
+        "src/handler/list_users_scripts.sql",
+        user_id
     )
     .fetch_all(&db)
     .await
@@ -255,7 +271,7 @@ pub async fn commit(
         labels: program
             .labels
             .into_iter()
-            .map(|(k, cao_lang::Label { block, myself })| (k, Label { block, myself }))
+            .map(|(key, cao_lang::Label { block, myself })| (key, Label { block, myself }))
             .collect(),
     };
 

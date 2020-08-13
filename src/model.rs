@@ -40,6 +40,13 @@ struct PrivateClaims {}
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct ScriptMetadata {
+    pub name: String,
+    pub script_id: Uuid,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ScriptEntity {
     pub name: String,
     pub user_id: Uuid,

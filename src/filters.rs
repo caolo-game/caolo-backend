@@ -12,8 +12,9 @@ use slog::{o, trace, Logger};
 use sqlx::postgres::PgPool;
 use std::convert::Infallible;
 use std::sync::{Arc, RwLock};
+use uuid::Uuid;
 use warp::http::StatusCode;
-use warp::reply::with_status;
+use warp::reply::{self, with_status};
 use warp::Filter;
 
 async fn health_check() -> Result<impl warp::Reply, Infallible> {
@@ -69,18 +70,13 @@ pub fn api(
         let identity = warp::any()
             .and(config())
             .and(warp::filters::header::optional("Authorization"))
-            .and(warp::filters::cookie::optional("Authorization"))
             .and(jwks())
             .map(
-                move |config: Arc<Config>,
-                      header_id: Option<String>,
-                      cookie_id: Option<String>,
-                      jwks: &model::JWKS| {
+                move |config: Arc<Config>, header_id: Option<String>, jwks: &model::JWKS| {
                     trace!(
                         logger,
-                        "Deserializing identity from:\nheader\n{:?}\ncookie\n{:?}",
+                        "Deserializing identity from:\nheader\n{:?}",
                         header_id,
-                        cookie_id
                     );
                     header_id
                         .as_ref()
@@ -91,7 +87,6 @@ pub fn api(
                             }
                             Some(&id[BEARER_PREFIX.len()..])
                         })
-                        .or(cookie_id.as_ref().map(|id| id.as_str()))
                         .and_then(|token: &str| {
                             trace!(logger, "Deserializing token {}", token);
                             model::Identity::validated_id(&logger, config.as_ref(), token, jwks)
@@ -177,13 +172,22 @@ pub fn api(
         .and(warp::path!("scripts" / "compile"))
         .and(logger())
         .and(warp::filters::body::json())
-        .and_then(handler::compile);
+        .and_then(handler::compile)
+        .recover(handle_script_rejection);
+
+    let get_script = warp::get()
+        .and(warp::path!("scripts" / Uuid))
+        .and(identity())
+        .and(db_pool())
+        .and_then(handler::get_script)
+        .recover(handle_script_rejection);
 
     let list_scripts = warp::get()
         .and(warp::path("scripts"))
         .and(identity())
         .and(db_pool())
-        .and_then(handler::list_scripts);
+        .and_then(handler::list_scripts)
+        .recover(handle_script_rejection);
 
     let commit = warp::post()
         .and(warp::path!("scripts" / "commit"))
@@ -192,21 +196,24 @@ pub fn api(
         .and(warp::filters::body::json())
         .and(db_pool())
         .and(cache_pool())
-        .and_then(handler::commit);
+        .and_then(handler::commit)
+        .recover(handle_script_rejection);
 
     let register = warp::post()
         .and(warp::path!("user" / "register"))
         .and(logger())
         .and(warp::filters::body::json())
         .and(db_pool())
-        .and_then(handler::register);
+        .and_then(handler::register)
+        .recover(handle_user_rejection);
 
     let put_user = warp::put()
         .and(warp::path!("user"))
         .and(logger())
         .and(warp::filters::body::json())
         .and(db_pool())
-        .and_then(handler::put_user);
+        .and_then(handler::put_user)
+        .recover(handle_user_rejection);
 
     health_check
         .or(world_stream)
@@ -215,8 +222,31 @@ pub fn api(
         .or(terrain_rooms)
         .or(terrain)
         .or(list_scripts)
+        .or(get_script)
         .or(commit)
         .or(compile)
         .or(register)
         .or(put_user)
+}
+
+async fn handle_user_rejection(err: warp::Rejection) -> Result<impl warp::Reply, warp::Rejection> {
+    if let Some(err) = err.find::<handler::UserRegistrationError>() {
+        let status = err.status();
+        let payload: serde_json::Value = format!("{}", err).into();
+        Ok(with_status(reply::json(&payload), status))
+    } else {
+        Err(err)
+    }
+}
+
+async fn handle_script_rejection(
+    err: warp::Rejection,
+) -> Result<impl warp::Reply, warp::Rejection> {
+    if let Some(err) = err.find::<handler::ScriptError>() {
+        let status = err.status();
+        let payload: serde_json::Value = format!("{}", err).into();
+        Ok(with_status(reply::json(&payload), status))
+    } else {
+        Err(err)
+    }
 }

@@ -1,4 +1,6 @@
+mod bots;
 mod user;
+pub use bots::*;
 pub use user::*;
 
 use crate::model::{Identity, ScriptEntity, ScriptMetadata};
@@ -7,8 +9,8 @@ use crate::RedisPool;
 use anyhow::Context;
 use cao_lang::compiler::description::get_instruction_descriptions;
 use cao_lang::compiler::{self, CompilationUnit};
+use cao_messages::{command::UpdateScriptCommand, CompiledScript, Label};
 use cao_messages::{AxialPoint, Function, Schema};
-use cao_messages::{CompiledScript, Label, UpdateScript};
 use redis::Commands;
 use serde::Deserialize;
 use serde::Serialize;
@@ -285,7 +287,7 @@ pub async fn commit(
         .map_err(ScriptError::InternalError)
         .map_err(warp::reject::custom)?;
 
-    let msg = UpdateScript {
+    let msg = UpdateScriptCommand {
         script_id,
         user_id,
         compiled_script,

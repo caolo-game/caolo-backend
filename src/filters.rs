@@ -215,6 +215,14 @@ pub fn api(
         .and_then(handler::put_user)
         .recover(handle_user_rejection);
 
+    let read_bots_by_room = warp::get()
+        .and(warp::path("bots"))
+        .and(logger())
+        .and(current_user())
+        .and(cache_pool())
+        .and(warp::query())
+        .and_then(handler::get_bots);
+
     health_check
         .or(world_stream)
         .or(myself)
@@ -227,6 +235,7 @@ pub fn api(
         .or(compile)
         .or(register)
         .or(put_user)
+        .or(read_bots_by_room)
 }
 
 async fn handle_user_rejection(err: warp::Rejection) -> Result<impl warp::Reply, warp::Rejection> {

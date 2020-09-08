@@ -218,10 +218,23 @@ pub fn api(
     let read_bots_by_room = warp::get()
         .and(warp::path("bots"))
         .and(logger())
-        .and(current_user())
         .and(cache_pool())
         .and(warp::query())
         .and_then(handler::get_bots);
+
+    let read_structures_by_room = warp::get()
+        .and(warp::path("structures"))
+        .and(logger())
+        .and(cache_pool())
+        .and(warp::query())
+        .and_then(handler::get_structures);
+
+    let read_resources_by_room = warp::get()
+        .and(warp::path("resources"))
+        .and(logger())
+        .and(cache_pool())
+        .and(warp::query())
+        .and_then(handler::get_resources);
 
     health_check
         .or(world_stream)
@@ -236,6 +249,8 @@ pub fn api(
         .or(register)
         .or(put_user)
         .or(read_bots_by_room)
+        .or(read_structures_by_room)
+        .or(read_resources_by_room)
 }
 
 async fn handle_user_rejection(err: warp::Rejection) -> Result<impl warp::Reply, warp::Rejection> {

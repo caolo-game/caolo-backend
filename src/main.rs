@@ -2,7 +2,6 @@ mod config;
 mod filters;
 mod handler;
 mod model;
-mod world;
 
 pub use config::*;
 use r2d2_redis::{r2d2, RedisConnectionManager};

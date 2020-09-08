@@ -6,7 +6,6 @@
 use crate::config::*;
 use crate::handler;
 use crate::model;
-use crate::world;
 use r2d2_redis::{r2d2, RedisConnectionManager};
 use slog::{o, trace, Logger};
 use sqlx::postgres::PgPool;
@@ -129,21 +128,6 @@ pub fn api(
     };
 
     let health_check = warp::get().and(warp::path("health")).and_then(health_check);
-    let world_stream = warp::get()
-        .and(warp::path("world"))
-        .and(root_logger())
-        .and(warp::ws())
-        .and(identity())
-        .and(cache_pool())
-        .and(jwks())
-        .and(config())
-        .map(
-            move |logger: Logger, ws: warp::ws::Ws, user, pool, jwks, config| {
-                ws.on_upgrade(move |socket| {
-                    world::world_stream(logger, socket, user, pool, jwks, config)
-                })
-            },
-        );
 
     let myself = warp::get()
         .and(warp::path("myself"))
@@ -237,7 +221,6 @@ pub fn api(
         .and_then(handler::get_resources);
 
     health_check
-        .or(world_stream)
         .or(myself)
         .or(schema)
         .or(terrain_rooms)

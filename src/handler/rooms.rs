@@ -2,10 +2,9 @@
 //!
 
 use crate::PgPool;
-use crate::RedisPool;
-use cao_messages::{AxialPoint, Bot, Resource, Structure, WorldState};
-use redis::Commands;
-use slog::{error, Logger};
+use crate::SharedState;
+use cao_messages::AxialPoint;
+use slog::{error, warn, Logger};
 use std::convert::Infallible;
 use warp::http::StatusCode;
 use warp::reply::with_status;
@@ -49,97 +48,30 @@ pub async fn terrain(
     Ok(res)
 }
 
+pub async fn get_room_objects(
+    logger: Logger,
+    room: AxialPoint,
+    state: SharedState,
+) -> Result<impl warp::Reply, warp::Rejection> {
+    let state = state.read().unwrap();
+    let response = warp::reply::json(state.rooms.get(&room).ok_or_else(|| {
+        warn!(logger, "Room {:?} does not exist", room);
+        warp::reject()
+    })?);
+
+    Ok(response)
+}
+
 pub async fn get_bots(
     logger: Logger,
-    pool: RedisPool,
     room: AxialPoint,
+    state: SharedState,
 ) -> Result<impl warp::Reply, warp::Rejection> {
-    let bots = read_bots(&logger, room, &pool).expect("Failed to read world");
-    let response = warp::reply::json(&bots);
+    let state = state.read().unwrap();
+    let room = state.rooms.get(&room).ok_or_else(|| {
+        warn!(logger, "room does not exist {:?}", room);
+        warp::reject()
+    })?;
+    let response = warp::reply::json(&room.bots);
     Ok(response)
-}
-
-fn read_bots(logger: &Logger, room: AxialPoint, pool: &RedisPool) -> anyhow::Result<Vec<Bot>> {
-    let mut connection = pool.get().unwrap();
-    let state: WorldState = connection
-        .get::<_, Vec<u8>>("WORLD_STATE")
-        .map(|bytes| {
-            rmp_serde::from_read_ref(bytes.as_slice()).expect("WorldState deserialization error")
-        })
-        .map_err(|err| {
-            error!(logger, "Failed to read world state {:?}", err);
-            err
-        })?;
-    let bots = state
-        .bots
-        .into_iter()
-        .filter(|bot| bot.position.room == room)
-        .collect();
-    Ok(bots)
-}
-
-pub async fn get_structures(
-    logger: Logger,
-    pool: RedisPool,
-    room: AxialPoint,
-) -> Result<impl warp::Reply, warp::Rejection> {
-    let structures = read_structures(&logger, room, &pool).expect("Failed to read world");
-    let response = warp::reply::json(&structures);
-    Ok(response)
-}
-
-fn read_structures(
-    logger: &Logger,
-    room: AxialPoint,
-    pool: &RedisPool,
-) -> anyhow::Result<Vec<Structure>> {
-    let mut connection = pool.get().unwrap();
-    let state: WorldState = connection
-        .get::<_, Vec<u8>>("WORLD_STATE")
-        .map(|bytes| {
-            rmp_serde::from_read_ref(bytes.as_slice()).expect("WorldState deserialization error")
-        })
-        .map_err(|err| {
-            error!(logger, "Failed to read world state {:?}", err);
-            err
-        })?;
-    let structures = state
-        .structures
-        .into_iter()
-        .filter(|bot| bot.position.room == room)
-        .collect();
-    Ok(structures)
-}
-
-pub async fn get_resources(
-    logger: Logger,
-    pool: RedisPool,
-    room: AxialPoint,
-) -> Result<impl warp::Reply, warp::Rejection> {
-    let resources = read_resources(&logger, room, &pool).expect("Failed to read world");
-    let response = warp::reply::json(&resources);
-    Ok(response)
-}
-
-fn read_resources(
-    logger: &Logger,
-    room: AxialPoint,
-    pool: &RedisPool,
-) -> anyhow::Result<Vec<Resource>> {
-    let mut connection = pool.get().unwrap();
-    let state: WorldState = connection
-        .get::<_, Vec<u8>>("WORLD_STATE")
-        .map(|bytes| {
-            rmp_serde::from_read_ref(bytes.as_slice()).expect("WorldState deserialization error")
-        })
-        .map_err(|err| {
-            error!(logger, "Failed to read world state {:?}", err);
-            err
-        })?;
-    let resources = state
-        .resources
-        .into_iter()
-        .filter(|bot| bot.position.room == room)
-        .collect();
-    Ok(resources)
 }

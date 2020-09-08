@@ -6,6 +6,9 @@
 use crate::config::*;
 use crate::handler;
 use crate::model;
+use crate::world_state::refresh_state_job;
+use crate::SharedState;
+use cao_messages::WorldState;
 use r2d2_redis::{r2d2, RedisConnectionManager};
 use slog::{o, trace, Logger};
 use sqlx::postgres::PgPool;
@@ -27,6 +30,24 @@ pub fn api(
     cache_pool: r2d2::Pool<RedisConnectionManager>,
     db_pool: PgPool,
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
+    let world_state = {
+        let tick = tokio::time::Duration::from_millis(500); // TODO: read from conf
+        let state: SharedState = Arc::new(RwLock::new(WorldState {
+            rooms: Default::default(),
+            logs: Default::default(),
+        }));
+        let refresh = refresh_state_job(
+            "WORLD_STATE",
+            cache_pool.clone(),
+            logger.clone(),
+            Arc::clone(&state),
+            tick,
+        );
+        tokio::spawn(refresh);
+        let filter = warp::any().map(move || Arc::clone(&state));
+        move || filter.clone()
+    };
+
     let conf = std::sync::Arc::new(conf);
 
     let cache_pool = {
@@ -202,25 +223,19 @@ pub fn api(
     let read_bots_by_room = warp::get()
         .and(warp::path("bots"))
         .and(logger())
-        .and(cache_pool())
         .and(warp::query())
+        .and(world_state())
         .and_then(handler::get_bots);
 
-    let read_structures_by_room = warp::get()
-        .and(warp::path("structures"))
+    let get_room_objects = warp::get()
+        .and(warp::path("room-objects"))
         .and(logger())
-        .and(cache_pool())
         .and(warp::query())
-        .and_then(handler::get_structures);
-
-    let read_resources_by_room = warp::get()
-        .and(warp::path("resources"))
-        .and(logger())
-        .and(cache_pool())
-        .and(warp::query())
-        .and_then(handler::get_resources);
+        .and(world_state())
+        .and_then(handler::get_room_objects);
 
     health_check
+        .or(get_room_objects)
         .or(myself)
         .or(schema)
         .or(terrain_rooms)
@@ -232,8 +247,6 @@ pub fn api(
         .or(register)
         .or(put_user)
         .or(read_bots_by_room)
-        .or(read_structures_by_room)
-        .or(read_resources_by_room)
 }
 
 async fn handle_user_rejection(err: warp::Rejection) -> Result<impl warp::Reply, warp::Rejection> {

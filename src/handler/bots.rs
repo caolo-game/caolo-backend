@@ -26,9 +26,10 @@ fn read_bots(logger: &Logger, room: AxialPoint, pool: &RedisPool) -> anyhow::Res
             error!(logger, "Failed to read world state {:?}", err);
             err
         })?;
-    Ok(state
+    let bots = state
         .bots
         .into_iter()
         .filter(|bot| bot.position.room == room)
-        .collect())
+        .collect();
+    Ok(bots)
 }

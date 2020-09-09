@@ -81,18 +81,18 @@ pub async fn get_room_objects(
     })?;
     let mut room = serde_json::to_value(room).expect("Failed to serialize room");
 
-    if projection_bots.map(|x| x == 0).unwrap_or(false) {
-        // if projection.bots is 0
-        room["bots"].take();
-    }
-    if projection_structures.map(|x| x == 0).unwrap_or(false) {
-        // if projection.bots is 0
-        room["structures"].take();
-    }
-    if projection_resources.map(|x| x == 0).unwrap_or(false) {
-        // if projection.bots is 0
-        room["resources"].take();
-    }
+    macro_rules! deproject {
+        ($projection: ident, $key: expr) => {
+            if $projection.map(|x| x == 0).unwrap_or(false) {
+                // if projection.$key is 0
+                room[$key].take();
+            }
+        };
+    };
+
+    deproject!(projection_bots, "bots");
+    deproject!(projection_structures, "structures");
+    deproject!(projection_resources, "resources");
 
     let response = warp::reply::json(&room);
 

@@ -4,6 +4,7 @@
 use crate::PgPool;
 use crate::SharedState;
 use cao_messages::AxialPoint;
+use serde::Deserialize;
 use slog::{error, warn, Logger};
 use std::convert::Infallible;
 use warp::http::StatusCode;
@@ -48,16 +49,49 @@ pub async fn terrain(
     Ok(res)
 }
 
+#[derive(Deserialize)]
+pub struct RoomObjectsQuery {
+    pub q: i32,
+    pub r: i32,
+
+    pub bots: Option<i32>,
+    pub resources: Option<i32>,
+    pub structures: Option<i32>,
+}
+
 pub async fn get_room_objects(
     logger: Logger,
-    room: AxialPoint,
+    RoomObjectsQuery {
+        q,
+        r,
+        bots: projection_bots,
+        resources: projection_resources,
+        structures: projection_structures,
+    }: RoomObjectsQuery,
     state: SharedState,
 ) -> Result<impl warp::Reply, warp::Rejection> {
+    let room = AxialPoint { q, r };
     let state = state.read().unwrap();
-    let response = warp::reply::json(state.rooms.get(&room).ok_or_else(|| {
+    let room = state.rooms.get(&room).ok_or_else(|| {
         warn!(logger, "Room {:?} does not exist", room);
         warp::reject()
-    })?);
+    })?;
+    let mut room = serde_json::to_value(room).expect("Failed to serialize room");
+
+    if projection_bots.map(|x| x == 0).unwrap_or(false) {
+        // if projection.bots is 0
+        room["bots"].take();
+    }
+    if projection_structures.map(|x| x == 0).unwrap_or(false) {
+        // if projection.bots is 0
+        room["structures"].take();
+    }
+    if projection_resources.map(|x| x == 0).unwrap_or(false) {
+        // if projection.bots is 0
+        room["resources"].take();
+    }
+
+    let response = warp::reply::json(&room);
 
     Ok(response)
 }

@@ -54,11 +54,14 @@ pub struct RoomObjectsQuery {
     pub q: i32,
     pub r: i32,
 
+    // projections
     pub bots: Option<i32>,
     pub resources: Option<i32>,
     pub structures: Option<i32>,
 }
 
+/// ## Projection:
+/// You can disable sending of certain fields by using the `<field-name>=0` query parameter
 pub async fn get_room_objects(
     logger: Logger,
     RoomObjectsQuery {

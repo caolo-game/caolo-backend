@@ -395,7 +395,7 @@ dependencies = [
 [[package]]
 name = "cao-messages"
 version = "0.1.0"
-source = "git+https://github.com/caolo-game/cao-messages.git#780ec570280b6e9c1d2aeb78ad3f75e2ee91016e"
+source = "git+https://github.com/caolo-game/cao-messages.git#e44743dae069adafe49a2ada194dcb1913536ea5"
 dependencies = [
  "serde",
  "uuid",

@@ -1,5 +1,8 @@
+mod commands;
 mod rooms;
 mod user;
+
+pub use commands::*;
 pub use rooms::*;
 pub use user::*;
 

@@ -245,7 +245,8 @@ pub fn api(
         .and(current_user())
         .and(cache_pool())
         .and(warp::filters::body::json())
-        .and_then(handler::place_structure);
+        .and_then(handler::place_structure)
+        .recover(handle_command_rejection);
 
     health_check
         .or(get_room_objects)
@@ -274,14 +275,22 @@ async fn handle_user_rejection(err: warp::Rejection) -> Result<impl warp::Reply,
     }
 }
 
+async fn handle_command_rejection(
+    err: warp::Rejection,
+) -> Result<impl warp::Reply, warp::Rejection> {
+    if let Some(err) = err.find::<handler::CommandError>() {
+        let status = err.status();
+        let payload: serde_json::Value = format!("{}", err).into();
+        Ok(with_status(reply::json(&payload), status))
+    } else {
+        Err(err)
+    }
+}
+
 async fn handle_script_rejection(
     err: warp::Rejection,
 ) -> Result<impl warp::Reply, warp::Rejection> {
     if let Some(err) = err.find::<handler::ScriptError>() {
-        let status = err.status();
-        let payload: serde_json::Value = format!("{}", err).into();
-        Ok(with_status(reply::json(&payload), status))
-    } else if let Some(err) = err.find::<handler::CommandError>() {
         let status = err.status();
         let payload: serde_json::Value = format!("{}", err).into();
         Ok(with_status(reply::json(&payload), status))

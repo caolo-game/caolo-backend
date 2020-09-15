@@ -234,6 +234,11 @@ pub fn api(
         .and(world_state())
         .and_then(handler::get_room_objects);
 
+    let get_sim_config = warp::get()
+        .and(warp::path("sim-config"))
+        .and(cache_pool())
+        .and_then(handler::get_sim_config);
+
     health_check
         .or(get_room_objects)
         .or(myself)
@@ -247,6 +252,7 @@ pub fn api(
         .or(register)
         .or(put_user)
         .or(read_bots_by_room)
+        .or(get_sim_config)
 }
 
 async fn handle_user_rejection(err: warp::Rejection) -> Result<impl warp::Reply, warp::Rejection> {

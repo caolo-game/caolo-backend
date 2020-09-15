@@ -50,6 +50,22 @@ pub async fn schema(_logger: Logger, cache: RedisPool) -> Result<impl warp::Repl
     Ok(resp)
 }
 
+pub async fn get_sim_config(cache: RedisPool) -> Result<impl warp::Reply, Infallible> {
+    let mut conn = cache.get().expect("failed to aquire cache connection");
+
+    let conf: serde_json::Value = conn
+        .get("SIM_CONFIG")
+        .with_context(|| "failed to read config")
+        .and_then(|payload: Vec<u8>| {
+            rmp_serde::from_read_ref(payload.as_slice())
+                .with_context(|| "Config msg deserialization failure")
+        })
+        .expect("Failed to read payload");
+
+    let resp = with_status(warp::reply::json(&conf), StatusCode::OK);
+    Ok(resp)
+}
+
 pub async fn terrain_rooms(db: PgPool) -> Result<impl warp::Reply, Infallible> {
     struct RoomId {
         q: i32,

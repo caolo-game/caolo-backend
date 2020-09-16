@@ -12,11 +12,10 @@ use crate::RedisPool;
 use anyhow::Context;
 use cao_lang::compiler::description::get_instruction_descriptions;
 use cao_lang::compiler::{self, CompilationUnit};
-use cao_messages::{command::UpdateScriptCommand, CompiledScript, Label};
+use cao_messages::{command::UpdateScriptCommand, CompiledScript, InputMsg, InputPayload, Label};
 use cao_messages::{AxialPoint, Function, Schema};
 use redis::Commands;
 use serde::Deserialize;
-use serde::Serialize;
 use slog::{debug, error, trace, Logger};
 use std::convert::Infallible;
 use thiserror::Error;
@@ -104,6 +103,8 @@ pub enum ScriptError {
     Unauthorized,
     #[error("Unexpected error while attempting to commit the script: {0}")]
     InternalError(anyhow::Error),
+    #[error("Failed to send update script command: {0}")]
+    CommandError(CommandError),
 }
 
 impl warp::reject::Reject for ScriptError {}
@@ -111,6 +112,7 @@ impl warp::reject::Reject for ScriptError {}
 impl ScriptError {
     pub fn status(&self) -> StatusCode {
         match self {
+            ScriptError::CommandError(ref err) => err.status(),
             ScriptError::CompileError(_) => StatusCode::BAD_REQUEST,
             ScriptError::Unauthorized => StatusCode::UNAUTHORIZED,
             ScriptError::InternalError(_) => StatusCode::INTERNAL_SERVER_ERROR,
@@ -266,32 +268,27 @@ pub async fn commit(
         compiled_script,
     };
 
-    let mut conn = cache
-        .get()
-        .map_err(log_error!())
-        .expect("failed to get cache conn");
-    let _: () = conn
-        .lpush(
-            "UPDATE_SCRIPT",
-            serde_json::to_vec(&msg)
-                .map_err(log_error!())
-                .expect("failed to serialize msg"),
-        )
-        .map_err(log_error!())
-        .with_context(|| "Failed to send msg")
+    let msg_id = uuid::Uuid::new_v4();
+
+    send_command_to_worker(
+        logger.clone(),
+        InputMsg {
+            msg_id,
+            payload: InputPayload::UpdateScript(msg),
+        },
+        cache,
+    )
+    .await
+    .map_err(ScriptError::CommandError)
+    .map_err(warp::reject::custom)?;
+
+    tx.commit()
+        .await
+        .with_context(|| "tx commit")
         .map_err(ScriptError::InternalError)
         .map_err(warp::reject::custom)?;
 
-    tx.commit().await.expect("failed to commit tx");
-
-    #[derive(Debug, Serialize)]
-    #[serde(rename_all = "camelCase")]
-    pub struct SaveResult {
-        script_id: Uuid,
-    }
-
-    let result = SaveResult { script_id };
-
+    let result = serde_json::json!({ "scriptId": script_id });
     let result = warp::reply::json(&result);
     Ok(result)
 }

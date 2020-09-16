@@ -94,11 +94,13 @@ pub async fn place_structure(
         .map_err(warp::reject::custom)?;
     }
 
+    let msg_id = format!("{}", msg_id);
+
     // retry loop
-    for _ in 0..2_i32 {
+    for _ in 0..40_i32 {
         // getting a response may take a while, give other threads a chance to do some work
         // TODO: read the expected game frequency from the game config
-        let wait_for = Duration::from_secs(1);
+        let wait_for = Duration::from_millis(50);
         delay_for(wait_for).await;
         let cache = cache.clone();
 
@@ -113,7 +115,7 @@ pub async fn place_structure(
             .map_err(warp::reject::custom)?;
 
         match conn
-            .get::<_, Option<Vec<u8>>>(format!("{}", msg_id))
+            .get::<_, Option<Vec<u8>>>(&msg_id)
             .map::<Option<CommandResult>, _>(|message| {
                 message.map(|message| {
                     let res: CommandResult = rmp_serde::from_read_ref(message.as_slice())

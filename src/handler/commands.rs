@@ -67,6 +67,19 @@ pub async fn place_structure(
     let msg_id = uuid::Uuid::new_v4();
 
     let payload = InputMsg { msg_id, payload };
+
+    send_command_to_worker(logger, payload, cache)
+        .await
+        .map(|_| with_status(warp::reply(), StatusCode::NO_CONTENT))
+        .map_err(warp::reject::custom)
+}
+
+pub async fn send_command_to_worker(
+    logger: Logger,
+    payload: InputMsg,
+    cache: RedisPool,
+) -> Result<(), CommandError> {
+    let msg_id = payload.msg_id;
     let payload = rmp_serde::to_vec_named(&payload).expect("Failed to serialize inputmsg");
 
     {
@@ -90,8 +103,7 @@ pub async fn place_structure(
             error!(logger, "Failed to send command {:?}", err);
             CommandError::Internal
         })
-        .and_then(|x| x) // unwrap the inner error
-        .map_err(warp::reject::custom)?;
+        .and_then(|x| x)?; // unwrap the inner error
     }
 
     let msg_id = format!("{}", msg_id);
@@ -106,13 +118,10 @@ pub async fn place_structure(
 
         // get a new connection in each tick to free it at the end and let other threads access
         // this connection while we wait
-        let mut conn = cache
-            .get()
-            .map_err(|err| {
-                error!(logger, "Failed to get redis conn {:?}", err);
-                CommandError::Internal
-            })
-            .map_err(warp::reject::custom)?;
+        let mut conn = cache.get().map_err(|err| {
+            error!(logger, "Failed to get redis conn {:?}", err);
+            CommandError::Internal
+        })?;
 
         match conn
             .get::<_, Option<Vec<u8>>>(&msg_id)
@@ -129,17 +138,17 @@ pub async fn place_structure(
             }
             Ok(Some(CommandResult::Ok)) => {
                 // done
-                return Ok(with_status(warp::reply(), StatusCode::NO_CONTENT));
+                return Ok(());
             }
             Ok(Some(CommandResult::Error(err))) => {
                 warn!(logger, "Failed to execute command, {}", err);
-                return Err(warp::reject::custom(CommandError::ExecutionError(err)));
+                return Err(CommandError::ExecutionError(err));
             }
             Err(err) => {
                 error!(logger, "Failed to get response, {:?}", err);
-                return Err(warp::reject::custom(CommandError::Internal));
+                return Err(CommandError::Internal);
             }
         }
     }
-    Err(warp::reject::custom(CommandError::Timeout))
+    Err(CommandError::Timeout)
 }

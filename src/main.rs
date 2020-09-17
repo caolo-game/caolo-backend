@@ -21,6 +21,8 @@ pub type SharedState = Arc<RwLock<WorldState>>;
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
+    println!("cao-lo backend main");
+
     #[cfg(feature = "web-dotenv")]
     dotenv().ok();
 

@@ -10,6 +10,7 @@ use crate::world_state::refresh_state_job;
 use crate::SharedState;
 use cao_messages::WorldState;
 use r2d2_redis::{r2d2, RedisConnectionManager};
+use serde_json::json;
 use slog::{o, trace, Logger};
 use sqlx::postgres::PgPool;
 use std::convert::Infallible;
@@ -29,7 +30,7 @@ pub fn api(
     conf: Config,
     cache_pool: r2d2::Pool<RedisConnectionManager>,
     db_pool: PgPool,
-) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
+) -> impl Filter<Extract = impl warp::Reply, Error = Infallible> + Clone {
     let world_state = {
         let tick = tokio::time::Duration::from_millis(500); // TODO: read from conf
         let state: SharedState = Arc::new(RwLock::new(WorldState {
@@ -177,22 +178,19 @@ pub fn api(
         .and(warp::path!("scripts" / "compile"))
         .and(logger())
         .and(warp::filters::body::json())
-        .and_then(handler::compile)
-        .recover(handle_script_rejection);
+        .and_then(handler::compile);
 
     let get_script = warp::get()
         .and(warp::path!("scripts" / Uuid))
         .and(identity())
         .and(db_pool())
-        .and_then(handler::get_script)
-        .recover(handle_script_rejection);
+        .and_then(handler::get_script);
 
     let list_scripts = warp::get()
         .and(warp::path("scripts"))
         .and(identity())
         .and(db_pool())
-        .and_then(handler::list_scripts)
-        .recover(handle_script_rejection);
+        .and_then(handler::list_scripts);
 
     let commit = warp::post()
         .and(warp::path!("scripts" / "commit"))
@@ -201,24 +199,21 @@ pub fn api(
         .and(warp::filters::body::json())
         .and(db_pool())
         .and(cache_pool())
-        .and_then(handler::commit)
-        .recover(handle_script_rejection);
+        .and_then(handler::commit);
 
     let register = warp::post()
         .and(warp::path!("user" / "register"))
         .and(logger())
         .and(warp::filters::body::json())
         .and(db_pool())
-        .and_then(handler::register)
-        .recover(handle_user_rejection);
+        .and_then(handler::register);
 
     let put_user = warp::put()
         .and(warp::path!("user"))
         .and(logger())
         .and(warp::filters::body::json())
         .and(db_pool())
-        .and_then(handler::put_user)
-        .recover(handle_user_rejection);
+        .and_then(handler::put_user);
 
     let read_bots_by_room = warp::get()
         .and(warp::path("bots"))
@@ -245,8 +240,7 @@ pub fn api(
         .and(current_user())
         .and(cache_pool())
         .and(warp::filters::body::json())
-        .and_then(handler::place_structure)
-        .recover(handle_command_rejection);
+        .and_then(handler::place_structure);
 
     health_check
         .or(get_room_objects)
@@ -263,38 +257,27 @@ pub fn api(
         .or(read_bots_by_room)
         .or(get_sim_config)
         .or(place_structure)
+        .recover(handle_rejections)
 }
 
-async fn handle_user_rejection(err: warp::Rejection) -> Result<impl warp::Reply, warp::Rejection> {
+async fn handle_rejections(err: warp::Rejection) -> Result<impl warp::Reply, Infallible> {
+    let status;
+    let payload: serde_json::Value;
+
     if let Some(err) = err.find::<handler::UserRegistrationError>() {
-        let status = err.status();
-        let payload: serde_json::Value = format!("{}", err).into();
-        Ok(with_status(reply::json(&payload), status))
+        status = err.status();
+        payload = json!({ "message": format!("{}", err) });
+    } else if let Some(err) = err.find::<handler::CommandError>() {
+        status = err.status();
+        payload = json!({ "message": format!("{}", err) });
+    } else if let Some(err) = err.find::<handler::ScriptError>() {
+        status = err.status();
+        payload = json!({ "message": format!("{}", err) });
     } else {
-        Err(err)
+        // if we allow a rejection to escape our filters CORS will not work
+        status = warp::http::StatusCode::METHOD_NOT_ALLOWED;
+        payload = json!({ "message": format!("{:?}", err) });
     }
-}
 
-async fn handle_command_rejection(
-    err: warp::Rejection,
-) -> Result<impl warp::Reply, warp::Rejection> {
-    if let Some(err) = err.find::<handler::CommandError>() {
-        let status = err.status();
-        let payload: serde_json::Value = format!("{}", err).into();
-        Ok(with_status(reply::json(&payload), status))
-    } else {
-        Err(err)
-    }
-}
-
-async fn handle_script_rejection(
-    err: warp::Rejection,
-) -> Result<impl warp::Reply, warp::Rejection> {
-    if let Some(err) = err.find::<handler::ScriptError>() {
-        let status = err.status();
-        let payload: serde_json::Value = format!("{}", err).into();
-        Ok(with_status(reply::json(&payload), status))
-    } else {
-        Err(err)
-    }
+    Ok(with_status(reply::json(&payload), status))
 }

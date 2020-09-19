@@ -37,7 +37,7 @@ thiserror = "1"
 futures = "*"
 rand = "0.7"
 base64 = "0.12"
-sentry = "0.19"
+sentry = "0.20"
 anyhow = "1"
 biscuit = { version="0.5.0-beta2" }
 lazy_static="1.4"

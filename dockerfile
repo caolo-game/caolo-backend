@@ -1,12 +1,12 @@
 FROM rust:latest AS build
 
 RUN apt-get update
-RUN apt-get install sudo postgresql postgresql-contrib -y
-RUN service postgresql start
+RUN apt-get install sudo postgresql postgresql-contrib clang lld -y
 
 WORKDIR /caolo
 
 COPY ./rust-toolchain ./rust-toolchain
+COPY ./.cargo/ ./.cargo/
 # cache the toolchain
 RUN cargo --version
 

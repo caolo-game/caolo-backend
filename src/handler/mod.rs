@@ -12,10 +12,8 @@ use crate::RedisPool;
 use anyhow::Context;
 use cao_lang::compiler::description::get_instruction_descriptions;
 use cao_lang::compiler::{self, CompilationUnit};
-use cao_messages::{command::UpdateScriptCommand, CompiledScript, InputMsg, InputPayload, Label};
 use cao_messages::{AxialPoint, Function, Schema};
 use redis::Commands;
-use serde::Deserialize;
 use slog::{debug, error, trace, Logger};
 use std::convert::Infallible;
 use thiserror::Error;
@@ -184,111 +182,3 @@ pub async fn list_scripts(
     Ok(res)
 }
 
-#[derive(Debug, Clone, Deserialize)]
-pub struct SaveScriptPayload {
-    pub name: String,
-    pub cu: CompilationUnit,
-}
-
-pub async fn commit(
-    logger: Logger,
-    identity: Option<Identity>,
-    payload: SaveScriptPayload,
-    db: PgPool,
-    cache: RedisPool,
-) -> Result<impl warp::Reply, warp::Rejection> {
-    macro_rules! log_error {
-        () => {
-            |arg| {
-                error!(logger, "Error in commit {:?}", arg);
-                arg
-            }
-        };
-    };
-
-    let mut tx = db
-        .begin()
-        .await
-        .map_err(log_error!())
-        .with_context(|| "Failed to begin transaction")
-        .map_err(ScriptError::InternalError)
-        .map_err(warp::reject::custom)?;
-
-    let identity = identity.ok_or_else(|| warp::reject::custom(ScriptError::Unauthorized))?;
-
-    struct QueryRes {
-        /// script_id
-        id: Uuid,
-        owner_id: Uuid,
-    };
-
-    let query = {
-        let name = payload.name.as_str();
-        let payload =
-            serde_json::to_value(&payload.cu).expect("failed to serialize CompilationUnit");
-        let owner_id = identity.user_id;
-        sqlx::query_file_as!(
-            QueryRes,
-            "src/handler/commit_script.sql",
-            payload,
-            name,
-            owner_id,
-        )
-        .fetch_one(&mut tx)
-    };
-
-    let program = compiler::compile(None, payload.cu).map_err(|err| {
-        debug!(logger, "compilation failure {:?}", err);
-        warp::reject::custom(ScriptError::CompileError(err))
-    })?;
-
-    // map cao_lang script to cao_messages script
-    let compiled_script = CompiledScript {
-        bytecode: program.bytecode,
-        labels: program
-            .labels
-            .into_iter()
-            .map(|(key, cao_lang::Label { block, myself })| (key, Label { block, myself }))
-            .collect(),
-    };
-
-    let QueryRes {
-        id: script_id,
-        owner_id: user_id,
-    } = query
-        .await
-        .map_err(log_error!())
-        .with_context(|| "failed to insert the program")
-        .map_err(ScriptError::InternalError)
-        .map_err(warp::reject::custom)?;
-
-    let msg = UpdateScriptCommand {
-        script_id,
-        user_id,
-        compiled_script,
-    };
-
-    let msg_id = uuid::Uuid::new_v4();
-
-    send_command_to_worker(
-        logger.clone(),
-        InputMsg {
-            msg_id,
-            payload: InputPayload::UpdateScript(msg),
-        },
-        cache,
-    )
-    .await
-    .map_err(ScriptError::CommandError)
-    .map_err(warp::reject::custom)?;
-
-    tx.commit()
-        .await
-        .with_context(|| "tx commit")
-        .map_err(ScriptError::InternalError)
-        .map_err(warp::reject::custom)?;
-
-    let result = serde_json::json!({ "scriptId": script_id });
-    let result = warp::reply::json(&result);
-    Ok(result)
-}

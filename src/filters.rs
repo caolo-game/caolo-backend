@@ -201,6 +201,15 @@ pub fn api(
         .and(cache_pool())
         .and_then(handler::commit);
 
+    let set_default_script = warp::post()
+        .and(warp::path!("scripts" / "default-script"))
+        .and(logger())
+        .and(current_user())
+        .and(warp::filters::body::json())
+        .and(db_pool())
+        .and(cache_pool())
+        .and_then(handler::set_default_script);
+
     let register = warp::post()
         .and(warp::path!("user" / "register"))
         .and(logger())
@@ -251,6 +260,7 @@ pub fn api(
         .or(get_script)
         .or(list_scripts)
         .or(commit)
+        .or(set_default_script)
         .or(compile)
         .or(register)
         .or(put_user)
@@ -273,6 +283,9 @@ async fn handle_rejections(err: warp::Rejection) -> Result<impl warp::Reply, Inf
     } else if let Some(err) = err.find::<handler::ScriptError>() {
         status = err.status();
         payload = json!({ "message": format!("{}", err) });
+    } else if err.is_not_found() {
+        status = warp::http::StatusCode::NOT_FOUND;
+        payload = json!({ "message": format!("{:?}", err) });
     } else {
         // if we allow a rejection to escape our filters CORS will not work
         status = warp::http::StatusCode::METHOD_NOT_ALLOWED;

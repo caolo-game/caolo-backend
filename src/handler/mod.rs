@@ -9,6 +9,7 @@ pub use user::*;
 use crate::model::{Identity, ScriptEntity, ScriptMetadata};
 use crate::PgPool;
 use crate::RedisPool;
+use crate::SharedState;
 use anyhow::Context;
 use cao_lang::compiler::description::get_instruction_descriptions;
 use cao_lang::compiler::{self, CompilationUnit};
@@ -20,6 +21,19 @@ use thiserror::Error;
 use uuid::Uuid;
 use warp::http::StatusCode;
 use warp::reply::with_status;
+
+pub async fn get_bot_history(
+    _logger: Logger,
+    entity_id: u32,
+    state: SharedState,
+) -> Result<impl warp::Reply, warp::Rejection> {
+    // TODO: authorize; users may only inspect their own bots
+    let history = &state.read().unwrap().script_history;
+    history
+        .binary_search_by_key(&entity_id, |entry| entry.entity_id)
+        .map(|i| warp::reply::json(&history[i]))
+        .or_else(|_| Err(warp::reject::not_found()))
+}
 
 pub async fn schema(_logger: Logger, cache: RedisPool) -> Result<impl warp::Reply, Infallible> {
     let mut conn = cache.get().expect("failed to aquire cache connection");
@@ -181,4 +195,3 @@ pub async fn list_scripts(
     let res = warp::reply::json(&scripts);
     Ok(res)
 }
-

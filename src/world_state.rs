@@ -14,6 +14,28 @@ pub async fn load_state(key: &str, pool: RedisPool, logger: Logger) -> anyhow::R
         .map(|bytes| {
             rmp_serde::from_read_ref(bytes.as_slice()).expect("WorldState deserialization error")
         })
+        .map(|mut state: WorldState| {
+            // make sure history is sorted
+            // the worker should do this for us, so report an error if this assumption is broken
+            let history = &mut state.script_history;
+            if history.len() < 2 {
+                return state;
+            }
+            let mut last = &history[0];
+            let mut needs_sort = false;
+            for entry in history[1..].iter() {
+                if last.entity_id > entry.entity_id {
+                    error!(logger, "scrip_history was not sorted!");
+                    needs_sort = true;
+                    break;
+                }
+                last = entry;
+            }
+            if needs_sort {
+                history.sort_unstable_by_key(|entry| entry.entity_id);
+            }
+            state
+        })
         .map_err(|err| {
             error!(logger, "Failed to read world state {:?}", err);
             err

@@ -36,6 +36,7 @@ pub fn api(
         let state: SharedState = Arc::new(RwLock::new(WorldState {
             rooms: Default::default(),
             logs: Default::default(),
+            script_history: Default::default(),
         }));
         let refresh = refresh_state_job(
             "WORLD_STATE",
@@ -231,6 +232,12 @@ pub fn api(
         .and(world_state())
         .and_then(handler::get_bots);
 
+    let read_bot_history = warp::get()
+        .and(logger())
+        .and(warp::path!("bot-history"/u32))
+        .and(world_state())
+        .and_then(handler::get_bot_history);
+
     let get_room_objects = warp::get()
         .and(warp::path("room-objects"))
         .and(logger())
@@ -267,6 +274,7 @@ pub fn api(
         .or(read_bots_by_room)
         .or(get_sim_config)
         .or(place_structure)
+        .or(read_bot_history)
         .recover(handle_rejections)
 }
 

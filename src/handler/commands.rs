@@ -197,7 +197,7 @@ pub async fn set_default_script(
     let payload = InputMsg {
         msg_id,
         payload: InputPayload::SetDefaultScript(SetDefaultScriptCommand {
-            script_id: script_id,
+            script_id,
             user_id: identity.id,
         }),
     };
@@ -271,7 +271,15 @@ pub async fn commit(
         labels: program
             .labels
             .into_iter()
-            .map(|(key, cao_lang::Label { block, myself })| (key, Label { block, myself }))
+            .map(|(key, cao_lang::Label { block })| {
+                (
+                    key,
+                    Label {
+                        block,
+                        myself: block,
+                    },
+                )
+            })
             .collect(),
     };
 

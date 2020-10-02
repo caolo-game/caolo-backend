@@ -1,7 +1,7 @@
 FROM rust:latest AS build
 
 RUN apt-get update
-RUN apt-get install sudo postgresql postgresql-contrib clang lld -y
+RUN apt-get install sudo postgresql postgresql-contrib clang lld capnproto -y
 
 WORKDIR /caolo
 

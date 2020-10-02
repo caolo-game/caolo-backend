@@ -6,6 +6,8 @@ pub use commands::*;
 pub use rooms::*;
 pub use user::*;
 
+use crate::model::script::{Function, Schema};
+use crate::model::world::AxialPoint;
 use crate::model::{Identity, ScriptEntity, ScriptMetadata};
 use crate::PgPool;
 use crate::RedisPool;
@@ -13,7 +15,6 @@ use crate::SharedState;
 use anyhow::Context;
 use cao_lang::compiler::description::get_instruction_descriptions;
 use cao_lang::compiler::{self, CompilationUnit};
-use cao_messages::{AxialPoint, Function, Schema};
 use redis::Commands;
 use slog::{debug, error, trace, Logger};
 use std::convert::Infallible;
@@ -30,36 +31,62 @@ pub async fn get_bot_history(
     // TODO: authorize; users may only inspect their own bots
     let history = &state.read().unwrap().script_history;
     history
-        .binary_search_by_key(&entity_id, |entry| entry.entity_id)
-        .map(|i| warp::reply::json(&history[i]))
-        .or_else(|_| Err(warp::reject::not_found()))
+        .get(&entity_id)
+        .map(|hist| warp::reply::json(hist))
+        .ok_or_else(|| warp::reject::not_found())
 }
 
-pub async fn schema(_logger: Logger, cache: RedisPool) -> Result<impl warp::Reply, Infallible> {
+pub async fn schema(logger: Logger, cache: RedisPool) -> Result<impl warp::Reply, Infallible> {
+    use crate::parsers::parse_function_desc;
+    use capnp::message::{ReaderOptions, TypedReader};
+    use capnp::serialize::try_read_message;
+
+    type InputMsg =
+        TypedReader<capnp::serialize::OwnedSegments, cao_messages::script_capnp::schema::Owned>;
+
     let mut conn = cache.get().expect("failed to aquire cache connection");
 
     let basic_schema = get_instruction_descriptions();
 
-    let mut schema: Schema = conn
+    let schema: InputMsg = conn
         .get("SCHEMA")
         .with_context(|| "failed to read schema")
-        .and_then(|schema: Vec<u8>| {
-            rmp_serde::from_read_ref(schema.as_slice())
-                .with_context(|| "Schema msg deserialization failure")
+        .and_then(|message: Vec<u8>| {
+            try_read_message(
+                message.as_slice(),
+                ReaderOptions {
+                    traversal_limit_in_words: 512,
+                    nesting_limit: 64,
+                },
+            )
+            .map_err(|err| {
+                error!(logger, "Failed to parse capnp message {:?}", err);
+                err
+            })?
+            .map(|x| x.into_typed())
+            .with_context(|| "Failed to get typed reader")
         })
         .expect("Failed to read schema");
 
-    schema
-        .functions
-        .extend(basic_schema.into_iter().map(|item| {
-            Function::from_str_parts(
-                item.name,
-                item.description,
-                item.input.as_ref(),
-                item.output.as_ref(),
-                item.params.as_ref(),
-            )
-        }));
+    let schema = schema.get().unwrap();
+    let functions = schema.get_functions().expect("schema.functions");
+
+    let functions = functions
+        .iter()
+        .map(|fun| parse_function_desc(fun))
+        .collect::<Vec<_>>();
+
+    let mut schema = Schema { functions };
+    schema.functions.extend(basic_schema.iter().map(|item| {
+        Function::from_str_parts(
+            item.name,
+            item.description,
+            item.input.as_ref(),
+            item.output.as_ref(),
+            item.params.as_ref(),
+        )
+    }));
+    trace!(logger, "Returning schema {:#?}", schema);
     let resp = with_status(warp::reply::json(&schema), StatusCode::OK);
     Ok(resp)
 }
@@ -71,7 +98,7 @@ pub async fn get_sim_config(cache: RedisPool) -> Result<impl warp::Reply, Infall
         .get("SIM_CONFIG")
         .with_context(|| "failed to read config")
         .and_then(|payload: Vec<u8>| {
-            rmp_serde::from_read_ref(payload.as_slice())
+            serde_json::from_slice(payload.as_slice())
                 .with_context(|| "Config msg deserialization failure")
         })
         .expect("Failed to read payload");

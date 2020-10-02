@@ -2,9 +2,10 @@ mod config;
 mod filters;
 mod handler;
 mod model;
+mod parsers;
 mod world_state;
 
-use cao_messages::WorldState;
+use crate::model::world::WorldState;
 pub use config::*;
 use r2d2_redis::{r2d2, RedisConnectionManager};
 use slog::{info, o, warn, Drain};

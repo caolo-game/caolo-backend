@@ -1,14 +1,13 @@
 use super::ScriptError;
-use crate::model::Identity;
-use crate::model::User;
+use crate::model::{
+    world::{StructureType, WorldPosition},
+    Identity, User,
+};
 use crate::PgPool;
 use crate::RedisPool;
 use anyhow::Context;
 use cao_lang::compiler::{self, CompilationUnit};
-use cao_messages::{
-    command::{CommandResult, PlaceStructureCommand, SetDefaultScriptCommand, UpdateScriptCommand},
-    CompiledScript, InputMsg, InputPayload, Label, StructureType, WorldPosition,
-};
+use cao_messages::command_capnp::command::input_message;
 use redis::Commands;
 use serde::Deserialize;
 use slog::{debug, error, warn, Logger};
@@ -61,33 +60,49 @@ pub async fn place_structure(
     }
 
     let identity = identity.unwrap();
-
-    let command = PlaceStructureCommand {
-        owner: identity.id,
-        position: payload.position,
-        ty: payload.ty,
-    };
-
-    let payload = InputPayload::PlaceStructure(command);
-
     let msg_id = uuid::Uuid::new_v4();
 
-    let payload = InputMsg { msg_id, payload };
+    let mut capmsg = capnp::message::Builder::new_default();
+    {
+        let mut message = capmsg.init_root::<input_message::Builder>();
+        let mut root = message.reborrow().init_place_structure();
 
-    send_command_to_worker(logger, payload, cache)
+        let mut owner = root.reborrow().init_owner();
+        owner.set_data(&identity.id.as_bytes()[..]);
+
+        init_world_pos(&payload.position, &mut root.reborrow().init_position());
+
+        match payload.ty {
+            StructureType::Spawn => {
+                root.set_ty(cao_messages::command_capnp::StructureType::Spawn);
+            }
+        }
+
+        let mut id = message.reborrow().init_message_id();
+        id.set_data(&msg_id.as_bytes()[..]);
+    }
+
+    send_command_to_worker(logger, msg_id, capmsg, cache)
         .await
         .map(|_| with_status(warp::reply(), StatusCode::NO_CONTENT))
         .map_err(warp::reject::custom)
 }
 
-pub async fn send_command_to_worker(
+pub async fn send_command_to_worker<A>(
     logger: Logger,
-    payload: InputMsg,
+    msg_id: Uuid,
+    msg: capnp::message::Builder<A>,
     cache: RedisPool,
-) -> Result<(), CommandError> {
-    let msg_id = payload.msg_id;
-    let payload = rmp_serde::to_vec_named(&payload).expect("Failed to serialize inputmsg");
+) -> Result<(), CommandError>
+where
+    A: capnp::message::Allocator,
+{
+    use cao_messages::command_capnp::command_result;
+    use capnp::message::{ReaderOptions, TypedReader};
+    use capnp::serialize::try_read_message;
 
+    let mut payload = Vec::with_capacity(5_000);
+    capnp::serialize::write_message(&mut payload, &msg).expect("Failed to serialize msg");
     {
         let cache = cache.clone();
         let l = logger.clone();
@@ -115,10 +130,11 @@ pub async fn send_command_to_worker(
     let msg_id = format!("{}", msg_id);
 
     // retry loop
-    for _ in 0..40_i32 {
+    for i in 0..20 {
         // getting a response may take a while, give other threads a chance to do some work
         // TODO: read the expected game frequency from the game config
-        let wait_for = Duration::from_millis(50);
+        // inrementally wait longer and longer...
+        let wait_for = Duration::from_millis(50 * i);
         delay_for(wait_for).await;
         let cache = cache.clone();
 
@@ -129,26 +145,59 @@ pub async fn send_command_to_worker(
             CommandError::Internal
         })?;
 
+        type ResponseMsg = TypedReader<capnp::serialize::OwnedSegments, command_result::Owned>;
+
         match conn
             .get::<_, Option<Vec<u8>>>(&msg_id)
-            .map::<Option<CommandResult>, _>(|message| {
-                message.map(|message| {
-                    let res: CommandResult = rmp_serde::from_read_ref(message.as_slice())
-                        .expect("Failed to deserialize message");
-                    res
+            .map::<Option<ResponseMsg>, _>(|message| {
+                message.and_then(|message| {
+                    try_read_message(
+                        message.as_slice(),
+                        ReaderOptions {
+                            traversal_limit_in_words: 512,
+                            nesting_limit: 64,
+                        },
+                    )
+                    .map_err(|err| {
+                        error!(logger, "Failed to parse capnp message {:?}", err);
+                    })
+                    .ok()?
+                    .map(|x| x.into_typed())
                 })
             }) {
             Ok(None) => {
                 //retry
                 continue;
             }
-            Ok(Some(CommandResult::Ok)) => {
-                // done
+            Ok(Some(msg)) => {
+                let msg = match msg.get() {
+                    Ok(x) => x,
+                    Err(err) => {
+                        error!(logger, "Failed to get message, {:?}", err);
+                        return Err(CommandError::Internal);
+                    }
+                };
+                if msg.has_error() {
+                    use cao_messages::command_capnp::command_result::Which;
+                    match msg.which() {
+                        Ok(Which::Error(Ok(err))) => {
+                            warn!(logger, "Failed to execute command, {}", err);
+                            return Err(CommandError::ExecutionError(err.to_owned()));
+                        }
+                        Ok(Which::Error(Err(err))) => {
+                            error!(logger, "Failed to get command error, {}", err);
+                            return Err(CommandError::Internal);
+                        }
+                        Ok(_) => {
+                            return Ok(());
+                        }
+                        Err(err) => {
+                            error!(logger, "Failed to get result variant {:?}", err);
+                            return Err(CommandError::Internal);
+                        }
+                    }
+                }
                 return Ok(());
-            }
-            Ok(Some(CommandResult::Error(err))) => {
-                warn!(logger, "Failed to execute command, {}", err);
-                return Err(CommandError::ExecutionError(err));
             }
             Err(err) => {
                 error!(logger, "Failed to get response, {:?}", err);
@@ -194,14 +243,20 @@ pub async fn set_default_script(
     }
 
     let msg_id = uuid::Uuid::new_v4();
-    let payload = InputMsg {
-        msg_id,
-        payload: InputPayload::SetDefaultScript(SetDefaultScriptCommand {
-            script_id,
-            user_id: identity.id,
-        }),
-    };
-    send_command_to_worker(logger, payload, cache)
+    let mut capmsg = capnp::message::Builder::new_default();
+    {
+        let mut message = capmsg.init_root::<input_message::Builder>();
+        let mut root = message.reborrow().init_set_default_script();
+
+        let mut owner = root.reborrow().init_user_id();
+        owner.set_data(&identity.id.as_bytes()[..]);
+        let mut script = root.reborrow().init_user_id();
+        script.set_data(&script_id.as_bytes()[..]);
+
+        let mut id = message.reborrow().init_message_id();
+        id.set_data(&msg_id.as_bytes()[..]);
+    }
+    send_command_to_worker(logger, msg_id, capmsg, cache)
         .await
         .map(|_| with_status(warp::reply(), StatusCode::NO_CONTENT))
         .map_err(warp::reject::custom)
@@ -265,24 +320,6 @@ pub async fn commit(
         warp::reject::custom(ScriptError::CompileError(err))
     })?;
 
-    // map cao_lang script to cao_messages script
-    let compiled_script = CompiledScript {
-        bytecode: program.bytecode,
-        labels: program
-            .labels
-            .into_iter()
-            .map(|(key, cao_lang::Label { block })| {
-                (
-                    key,
-                    Label {
-                        block,
-                        myself: block,
-                    },
-                )
-            })
-            .collect(),
-    };
-
     let QueryRes {
         id: script_id,
         owner_id: user_id,
@@ -293,25 +330,42 @@ pub async fn commit(
         .map_err(ScriptError::InternalError)
         .map_err(warp::reject::custom)?;
 
-    let msg = UpdateScriptCommand {
-        script_id,
-        user_id,
-        compiled_script,
-    };
-
     let msg_id = uuid::Uuid::new_v4();
 
-    send_command_to_worker(
-        logger.clone(),
-        InputMsg {
-            msg_id,
-            payload: InputPayload::UpdateScript(msg),
-        },
-        cache,
-    )
-    .await
-    .map_err(ScriptError::CommandError)
-    .map_err(warp::reject::custom)?;
+    let mut capmsg = capnp::message::Builder::new_default();
+    {
+        let mut message = capmsg.init_root::<input_message::Builder>();
+        let mut id = message.reborrow().init_message_id();
+        id.set_data(&msg_id.as_bytes()[..]);
+
+        let mut root = message.reborrow().init_update_script();
+        let mut owner = root.reborrow().init_user_id();
+        owner.set_data(&user_id.as_bytes()[..]);
+
+        let mut script_id_msg = root.reborrow().init_script_id();
+        script_id_msg.set_data(&script_id.as_bytes()[..]);
+
+        let mut script_msg = root.reborrow().init_compiled_script();
+        script_msg.set_bytecode(&program.bytecode[..]);
+
+        let len = program.labels.len() as u32;
+        let mut labels = script_msg.init_labels(len);
+        program
+            .labels
+            .into_iter()
+            .enumerate()
+            .for_each(|(i, (key, cao_lang::Label { block }))| {
+                let mut label = labels.reborrow().get(i as u32);
+                label.set_key(key);
+                let mut block_msg = label.init_val();
+                block_msg.set_block(block as i32);
+            });
+    }
+
+    send_command_to_worker(logger.clone(), msg_id, capmsg, cache)
+        .await
+        .map_err(ScriptError::CommandError)
+        .map_err(warp::reject::custom)?;
 
     tx.commit()
         .await
@@ -322,4 +376,17 @@ pub async fn commit(
     let result = serde_json::json!({ "scriptId": script_id });
     let result = warp::reply::json(&result);
     Ok(result)
+}
+
+fn init_world_pos(
+    world_pos: &WorldPosition,
+    builder: &mut cao_messages::point_capnp::world_position::Builder,
+) {
+    let mut room = builder.reborrow().init_room();
+    room.set_q(world_pos.room.q);
+    room.set_r(world_pos.room.r);
+
+    let mut room_pos = builder.reborrow().init_room_pos();
+    room_pos.set_q(world_pos.room_pos.q);
+    room_pos.set_r(world_pos.room_pos.r);
 }

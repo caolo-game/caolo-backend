@@ -6,9 +6,9 @@
 use crate::config::*;
 use crate::handler;
 use crate::model;
+use crate::model::world::WorldState;
 use crate::world_state::refresh_state_job;
 use crate::SharedState;
-use cao_messages::WorldState;
 use r2d2_redis::{r2d2, RedisConnectionManager};
 use serde_json::json;
 use slog::{o, trace, Logger};
@@ -234,7 +234,7 @@ pub fn api(
 
     let read_bot_history = warp::get()
         .and(logger())
-        .and(warp::path!("bot-history"/u32))
+        .and(warp::path!("bot-history" / u32))
         .and(world_state())
         .and_then(handler::get_bot_history);
 

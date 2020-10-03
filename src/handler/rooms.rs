@@ -1,9 +1,9 @@
 //! Room specific handlers
 //!
 
+use crate::model::world::AxialPoint;
 use crate::PgPool;
 use crate::SharedState;
-use cao_messages::AxialPoint;
 use serde::Deserialize;
 use slog::{error, warn, Logger};
 use std::convert::Infallible;

@@ -166,7 +166,7 @@ pub fn parse_function_desc<'a>(
         description: fun.get_description().expect("function.description"),
         input: Vec::with_capacity(4),
         output: Vec::with_capacity(4),
-        params: Vec::with_capacity(4),
+        constants: Vec::with_capacity(4),
     };
 
     for input in fun.get_input().expect("function.input").iter() {
@@ -177,8 +177,8 @@ pub fn parse_function_desc<'a>(
         res.output.push(output.expect("failed to read output"));
     }
 
-    for param in fun.get_input().expect("function.params").iter() {
-        res.params.push(param.expect("failed to read param"));
+    for param in fun.get_input().expect("function.constants").iter() {
+        res.constants.push(param.expect("failed to read param"));
     }
 
     res

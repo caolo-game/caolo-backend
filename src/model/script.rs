@@ -7,7 +7,7 @@ pub struct Function<'a> {
     pub description: &'a str,
     pub input: Vec<&'a str>,
     pub output: Vec<&'a str>,
-    pub params: Vec<&'a str>,
+    pub constants: Vec<&'a str>,
 }
 
 impl<'a> Function<'a> {
@@ -16,14 +16,14 @@ impl<'a> Function<'a> {
         description: &'a str,
         input: &'a [&'a str],
         output: &'a [&'a str],
-        params: &'a [&'a str],
+        constants: &'a [&'a str],
     ) -> Self {
         Self {
             name,
             description,
             input: input.iter().map(|x| *x).collect(),
             output: output.iter().map(|x| *x).collect(),
-            params: params.iter().map(|x| *x).collect(),
+            constants: constants.iter().map(|x| *x).collect(),
         }
     }
 }

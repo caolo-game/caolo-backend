@@ -83,7 +83,7 @@ pub async fn schema(logger: Logger, cache: RedisPool) -> Result<impl warp::Reply
             item.description,
             item.input.as_ref(),
             item.output.as_ref(),
-            item.params.as_ref(),
+            item.constants.as_ref(),
         )
     }));
     trace!(logger, "Returning schema {:#?}", schema);

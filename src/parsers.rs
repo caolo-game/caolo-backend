@@ -178,11 +178,11 @@ pub fn parse_function_desc<'a>(
         res.input.push(input.expect("failed to read input"));
     }
 
-    for output in fun.get_input().expect("function.output").iter() {
+    for output in fun.get_output().expect("function.output").iter() {
         res.output.push(output.expect("failed to read output"));
     }
 
-    for param in fun.get_input().expect("function.constants").iter() {
+    for param in fun.get_constants().expect("function.constants").iter() {
         res.constants.push(param.expect("failed to read param"));
     }
 

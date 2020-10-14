@@ -164,6 +164,11 @@ pub fn parse_function_desc<'a>(
     let mut res = Function {
         name: fun.get_name().expect("function.name"),
         description: fun.get_description().expect("function.description"),
+        ty: fun
+            .get_ty()
+            .ok()
+            .and_then(|s| serde_json::from_str(s).ok())
+            .unwrap_or(cao_lang::SubProgramType::Undefined),
         input: Vec::with_capacity(4),
         output: Vec::with_capacity(4),
         constants: Vec::with_capacity(4),

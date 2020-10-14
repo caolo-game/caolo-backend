@@ -81,12 +81,12 @@ pub async fn schema(logger: Logger, cache: RedisPool) -> Result<impl warp::Reply
         Function::from_str_parts(
             item.name,
             item.description,
+            item.ty.clone(),
             item.input.as_ref(),
             item.output.as_ref(),
             item.constants.as_ref(),
         )
     }));
-    trace!(logger, "Returning schema {:#?}", schema);
     let resp = with_status(warp::reply::json(&schema), StatusCode::OK);
     Ok(resp)
 }

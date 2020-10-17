@@ -6,13 +6,13 @@ use crate::model::world::{
     AxialPoint, Bot, LogEntry, Resource, ResourceType, RoomState, ScriptHistoryEntry, Structure,
     StructurePayload, StructureSpawn, WorldPosition,
 };
-use cao_messages::{point_capnp::world_position, script_capnp::card};
+use cao_messages::{point_capnp::world_position, script_capnp::card, world_capnp::bot, world_capnp::log_entry, world_capnp::resource, world_capnp::script_history_entry, world_capnp::structure};
 use std::collections::HashMap;
 
 pub type CaoUuid<'a> = cao_messages::world_capnp::uuid::Reader<'a>;
 
 pub fn parse_bot(
-    bot: &cao_messages::world_capnp::bot::Reader,
+    bot: &bot::Reader,
     rooms: &mut HashMap<AxialPoint, RoomState>,
 ) {
     let world_pos = parse_world_pos(&bot.get_position().expect("bot.pos"));
@@ -36,7 +36,7 @@ pub fn parse_bot(
 }
 
 pub fn parse_structure(
-    structure: &cao_messages::world_capnp::structure::Reader,
+    structure: &structure::Reader,
     rooms: &mut HashMap<AxialPoint, RoomState>,
 ) {
     let world_pos = parse_world_pos(&structure.get_position().expect("structure.pos"));
@@ -73,7 +73,7 @@ pub fn parse_structure(
 }
 
 pub fn parse_resource(
-    resource: &cao_messages::world_capnp::resource::Reader,
+    resource: &resource::Reader,
     rooms: &mut HashMap<AxialPoint, RoomState>,
 ) {
     let world_pos = parse_world_pos(&resource.get_position().expect("resource.pos"));
@@ -122,7 +122,7 @@ pub fn parse_uuid(id: &CaoUuid) -> uuid::Uuid {
 }
 
 pub fn parse_script_history(
-    entry: &cao_messages::world_capnp::script_history_entry::Reader,
+    entry: &script_history_entry::Reader,
 ) -> ScriptHistoryEntry {
     let entity_id = entry.reborrow().get_entity_id();
     let payload = entry.reborrow().get_payload().expect("payload");
@@ -138,7 +138,7 @@ pub fn parse_script_history(
     result
 }
 
-pub fn parse_log(entry: &cao_messages::world_capnp::log_entry::Reader) -> LogEntry {
+pub fn parse_log(entry: &log_entry::Reader) -> LogEntry {
     let mut result = LogEntry {
         entity_id: entry.reborrow().get_entity_id(),
         time: entry.reborrow().get_time(),

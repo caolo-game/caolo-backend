@@ -6,7 +6,7 @@ pub use commands::*;
 pub use rooms::*;
 pub use user::*;
 
-use crate::model::script::{Function, Schema};
+use crate::model::script::{Card, Schema};
 use crate::model::world::AxialPoint;
 use crate::model::{Identity, ScriptEntity, ScriptMetadata};
 use crate::PgPool;
@@ -69,16 +69,16 @@ pub async fn schema(logger: Logger, cache: RedisPool) -> Result<impl warp::Reply
         .expect("Failed to read schema");
 
     let schema = schema.get().unwrap();
-    let functions = schema.get_functions().expect("schema.functions");
+    let cards = schema.get_cards().expect("schema.cards");
 
-    let functions = functions
+    let cards = cards
         .iter()
         .map(|fun| parse_function_desc(fun))
         .collect::<Vec<_>>();
 
-    let mut schema = Schema { functions };
-    schema.functions.extend(basic_schema.iter().map(|item| {
-        Function::from_str_parts(
+    let mut schema = Schema { cards };
+    schema.cards.extend(basic_schema.iter().map(|item| {
+        Card::from_str_parts(
             item.name,
             item.description,
             item.ty.clone(),

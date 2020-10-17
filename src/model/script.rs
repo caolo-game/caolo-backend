@@ -3,7 +3,7 @@ use cao_lang::prelude::SubProgramType;
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all(serialize = "camelCase"))]
-pub struct Function<'a> {
+pub struct Card<'a> {
     pub name: &'a str,
     pub description: &'a str,
     pub ty: SubProgramType,
@@ -12,7 +12,7 @@ pub struct Function<'a> {
     pub constants: Vec<&'a str>,
 }
 
-impl<'a> Function<'a> {
+impl<'a> Card<'a> {
     pub fn from_str_parts(
         name: &'a str,
         description: &'a str,
@@ -35,5 +35,5 @@ impl<'a> Function<'a> {
 #[derive(Clone, Serialize)]
 #[serde(rename_all(serialize = "camelCase"))]
 pub struct Schema<'a> {
-    pub functions: Vec<Function<'a>>,
+    pub cards: Vec<Card<'a>>,
 }

@@ -1,12 +1,12 @@
 //! Parse cao_message's
 //! TODO: return errors instead of panics pls
 //!
-use crate::model::script::Function;
+use crate::model::script::Card;
 use crate::model::world::{
     AxialPoint, Bot, LogEntry, Resource, ResourceType, RoomState, ScriptHistoryEntry, Structure,
     StructurePayload, StructureSpawn, WorldPosition,
 };
-use cao_messages::point_capnp::world_position;
+use cao_messages::{point_capnp::world_position, script_capnp::card};
 use std::collections::HashMap;
 
 pub type CaoUuid<'a> = cao_messages::world_capnp::uuid::Reader<'a>;
@@ -159,11 +159,11 @@ pub fn parse_log(entry: &cao_messages::world_capnp::log_entry::Reader) -> LogEnt
 }
 
 pub fn parse_function_desc<'a>(
-    fun: cao_messages::script_capnp::function::Reader<'a>,
-) -> Function<'a> {
-    let mut res = Function {
-        name: fun.get_name().expect("function.name"),
-        description: fun.get_description().expect("function.description"),
+    fun: card::Reader<'a>,
+) -> Card<'a> {
+    let mut res = Card {
+        name: fun.get_name().expect("card.name"),
+        description: fun.get_description().expect("card.description"),
         ty: fun
             .get_ty()
             .ok()
@@ -174,15 +174,15 @@ pub fn parse_function_desc<'a>(
         constants: Vec::with_capacity(4),
     };
 
-    for input in fun.get_input().expect("function.input").iter() {
+    for input in fun.get_input().expect("card.input").iter() {
         res.input.push(input.expect("failed to read input"));
     }
 
-    for output in fun.get_output().expect("function.output").iter() {
+    for output in fun.get_output().expect("card.output").iter() {
         res.output.push(output.expect("failed to read output"));
     }
 
-    for param in fun.get_constants().expect("function.constants").iter() {
+    for param in fun.get_constants().expect("card.constants").iter() {
         res.constants.push(param.expect("failed to read param"));
     }
 

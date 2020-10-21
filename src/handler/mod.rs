@@ -163,7 +163,7 @@ pub async fn compile(
     logger: Logger,
     cu: CompilationUnit,
 ) -> Result<impl warp::Reply, warp::Rejection> {
-    match compiler::compile(None, cu) {
+    match compiler::compile(None, cu, None) {
         Ok(res) => {
             trace!(logger, "compilation succeeded {:?}", res);
             let resp = Box::new(StatusCode::NO_CONTENT);

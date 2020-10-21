@@ -315,7 +315,7 @@ pub async fn commit(
         .fetch_one(&mut tx)
     };
 
-    let program = compiler::compile(None, payload.cu).map_err(|err| {
+    let _program = compiler::compile(None, payload.cu.clone(), None).map_err(|err| {
         debug!(logger, "compilation failure {:?}", err);
         warp::reject::custom(ScriptError::CompileError(err))
     })?;
@@ -345,21 +345,17 @@ pub async fn commit(
         let mut script_id_msg = root.reborrow().init_script_id();
         script_id_msg.set_data(&script_id.as_bytes()[..]);
 
-        let mut script_msg = root.reborrow().init_compiled_script();
-        script_msg.set_bytecode(&program.bytecode[..]);
-
-        let len = program.labels.len() as u32;
-        let mut labels = script_msg.init_labels(len);
-        program
-            .labels
-            .into_iter()
-            .enumerate()
-            .for_each(|(i, (key, cao_lang::Label { block }))| {
-                let mut label = labels.reborrow().get(i as u32);
-                label.set_key(key);
-                let mut block_msg = label.init_val();
-                block_msg.set_block(block as i32);
-            });
+        let mut script_msg = root.reborrow().init_compilation_unit();
+        let mut cu = script_msg.reborrow().init_compilation_unit();
+        cu.set_value(
+            serde_json::to_vec(&payload.cu)
+                .expect("failed to serialize CU")
+                .as_slice(),
+        );
+        let mut script_ver = script_msg.init_verified_by();
+        script_ver.set_major(cao_lang::version::MAJOR);
+        script_ver.set_minor(cao_lang::version::MINOR);
+        script_ver.set_patch(cao_lang::version::PATCH);
     }
 
     send_command_to_worker(logger.clone(), msg_id, capmsg, cache)

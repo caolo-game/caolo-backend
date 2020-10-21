@@ -6,15 +6,15 @@ use crate::model::world::{
     AxialPoint, Bot, LogEntry, Resource, ResourceType, RoomState, ScriptHistoryEntry, Structure,
     StructurePayload, StructureSpawn, WorldPosition,
 };
-use cao_messages::{point_capnp::world_position, script_capnp::card, world_capnp::bot, world_capnp::log_entry, world_capnp::resource, world_capnp::script_history_entry, world_capnp::structure};
+use cao_messages::{
+    point_capnp::world_position, script_capnp::card, script_capnp::script_history_entry,
+    world_capnp::bot, world_capnp::log_entry, world_capnp::resource, world_capnp::structure,
+};
 use std::collections::HashMap;
 
 pub type CaoUuid<'a> = cao_messages::world_capnp::uuid::Reader<'a>;
 
-pub fn parse_bot(
-    bot: &bot::Reader,
-    rooms: &mut HashMap<AxialPoint, RoomState>,
-) {
+pub fn parse_bot(bot: &bot::Reader, rooms: &mut HashMap<AxialPoint, RoomState>) {
     let world_pos = parse_world_pos(&bot.get_position().expect("bot.pos"));
     rooms.entry(world_pos.room).or_default().bots.push(Bot {
         id: bot.get_id(),
@@ -35,10 +35,7 @@ pub fn parse_bot(
     });
 }
 
-pub fn parse_structure(
-    structure: &structure::Reader,
-    rooms: &mut HashMap<AxialPoint, RoomState>,
-) {
+pub fn parse_structure(structure: &structure::Reader, rooms: &mut HashMap<AxialPoint, RoomState>) {
     let world_pos = parse_world_pos(&structure.get_position().expect("structure.pos"));
 
     let payload = if structure.has_spawn() {
@@ -72,10 +69,7 @@ pub fn parse_structure(
         });
 }
 
-pub fn parse_resource(
-    resource: &resource::Reader,
-    rooms: &mut HashMap<AxialPoint, RoomState>,
-) {
+pub fn parse_resource(resource: &resource::Reader, rooms: &mut HashMap<AxialPoint, RoomState>) {
     let world_pos = parse_world_pos(&resource.get_position().expect("resource.pos"));
 
     let payload = if resource.has_energy() {
@@ -121,9 +115,7 @@ pub fn parse_uuid(id: &CaoUuid) -> uuid::Uuid {
     uuid::Uuid::from_slice(data).expect("parse uuid failed")
 }
 
-pub fn parse_script_history(
-    entry: &script_history_entry::Reader,
-) -> ScriptHistoryEntry {
+pub fn parse_script_history(entry: &script_history_entry::Reader) -> ScriptHistoryEntry {
     let entity_id = entry.reborrow().get_entity_id();
     let payload = entry.reborrow().get_payload().expect("payload");
     let len = payload.len();
@@ -133,7 +125,9 @@ pub fn parse_script_history(
     };
     let pl = &mut result.payload;
     for e in payload.iter() {
-        pl.push(e)
+        let lane = e.get_lane();
+        let pos = e.get_pos();
+        pl.push(cao_lang::prelude::NodeId { lane, pos })
     }
     result
 }
@@ -158,9 +152,7 @@ pub fn parse_log(entry: &log_entry::Reader) -> LogEntry {
     result
 }
 
-pub fn parse_function_desc<'a>(
-    fun: card::Reader<'a>,
-) -> Card<'a> {
+pub fn parse_function_desc<'a>(fun: card::Reader<'a>) -> Card<'a> {
     let mut res = Card {
         name: fun.get_name().expect("card.name"),
         description: fun.get_description().expect("card.description"),

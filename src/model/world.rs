@@ -107,5 +107,5 @@ pub struct LogEntry {
 #[serde(rename_all(serialize = "camelCase"))]
 pub struct ScriptHistoryEntry {
     pub entity_id: u32,
-    pub payload: Vec<i64>,
+    pub payload: Vec<cao_lang::prelude::NodeId>,
 }

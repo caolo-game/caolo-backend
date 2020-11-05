@@ -1,36 +1,26 @@
-use crate::model::world::WorldState;
-
-use crate::parsers::*;
-use crate::RedisPool;
+use crate::model::world::{AxialPoint, WorldState};
+use crate::PgPool;
 use anyhow::Context;
-use capnp::message::{ReaderOptions, TypedReader};
-use capnp::serialize::try_read_message;
-use redis::Commands;
-use slog::{debug, error, o, Logger};
-use std::collections::HashMap;
+
+use slog::{debug, Logger};
+
 use std::sync::{Arc, RwLock};
 use tokio::time::{self, Duration};
-
-use cao_messages::world_capnp;
-
-type InputMsg = TypedReader<capnp::serialize::OwnedSegments, world_capnp::world_state::Owned>;
+use uuid::Uuid;
 
 pub async fn refresh_state_job(
-    key: &str,
-    pool: RedisPool,
+    pool: PgPool,
     logger: Logger,
     state: Arc<RwLock<WorldState>>,
     interval: Duration,
 ) -> anyhow::Result<()> {
     let mut interval = time::interval(interval);
 
-    let logger = logger.new(o!("key"=>key.to_owned()));
-
     loop {
         interval.tick().await;
         debug!(logger, "Reading world state");
 
-        let new_state = load_state(key, pool.clone(), logger.clone()).await?;
+        let new_state = load_state(pool.clone(), logger.clone()).await?;
 
         let mut state = state.write().unwrap();
         *state = new_state;
@@ -39,77 +29,94 @@ pub async fn refresh_state_job(
     }
 }
 
-pub async fn load_state(key: &str, pool: RedisPool, logger: Logger) -> anyhow::Result<WorldState> {
-    let mut connection = pool.get().unwrap();
-    // TODO: async pls
-    connection
-        .get(key)
-        .with_context(|| "Failed to get state from redis")
-        .and_then(|message: Vec<u8>| {
-            try_read_message(
-                message.as_slice(),
-                ReaderOptions {
-                    traversal_limit_in_words: 500_000,
-                    nesting_limit: 32,
-                },
-            )
-            .map_err(|err| {
-                error!(logger, "Failed to parse capnp message {:?}", err);
-                err
-            })?
-            .map(|x| x.into_typed())
-            .with_context(|| "Failed to get typed reader")
-        })
-        .and_then(|state: InputMsg| {
-            let state = state.get().expect("failed to get reader");
-            let mut rooms = HashMap::with_capacity(1024);
+pub async fn load_state(pool: PgPool, logger: Logger) -> anyhow::Result<WorldState> {
+    fn parse_axial(s: &str) -> Result<AxialPoint, &str> {
+        fn _parse(s: &str) -> Option<AxialPoint> {
+            let mut it = s.split(';');
+            let q = it.next()?.parse().ok()?;
+            let r = it.next()?.parse().ok()?;
+            Some(AxialPoint { q, r })
+        }
+        _parse(s).ok_or(s)
+    }
 
-            let mut bot_count = 0;
-            for bot in state.reborrow().get_bots().expect("bots").iter() {
-                parse_bot(&bot, &mut rooms);
-                bot_count += 1;
-            }
+    struct Row {
+        timestamp: i64,
+        queen_tag: Uuid,
+        payload: serde_json::Value,
+    }
+    let mut state = sqlx::query_as!(
+        Row,
+        r#"
+        SELECT world_time AS timestamp, queen_tag, payload
+        FROM world_output
+        ORDER BY world_time
+        DESC
+        LIMIT 1
+        "#
+    )
+    .fetch_one(&pool)
+    .await
+    .with_context(|| "Failed to get state from database")?;
 
-            for structure in state
-                .reborrow()
-                .get_structures()
-                .expect("structures")
-                .iter()
-            {
-                parse_structure(&structure, &mut rooms);
-            }
+    debug!(
+        logger,
+        "Loaded state at time: {} from queen: {}", state.timestamp, state.queen_tag
+    );
 
-            for resource in state.reborrow().get_resources().expect("resources").iter() {
-                parse_resource(&resource, &mut rooms);
-            }
+    let payload = state
+        .payload
+        .as_object_mut()
+        .with_context(|| "Payload is not an object")?;
 
-            let mut history = HashMap::with_capacity(bot_count);
+    let mut state = WorldState::default();
+    state.game_config = payload["gameConfig"].take();
+    state.room_properties = payload["roomProperties"].take();
 
-            for entry in state
-                .reborrow()
-                .get_script_history()
-                .expect("script_history")
-                .iter()
-            {
-                let entry = parse_script_history(&entry);
-                history.insert(entry.entity_id, entry);
-            }
+    for (key, obj) in payload["bots"]
+        .as_object_mut()
+        .with_context(|| "`bots` is not an object")?
+        .iter_mut()
+    {
+        let key = parse_axial(key).expect("Failed to parse key");
+        let obj = obj.take();
+        state
+            .rooms
+            .entry(key)
+            .or_insert_with(Default::default)
+            .bots
+            .push(obj);
+    }
 
-            let mut logs = Vec::new();
-            for entry in state.reborrow().get_logs().expect("logs").iter() {
-                let entry = parse_log(&entry);
-                logs.push(entry);
-            }
+    for (key, obj) in payload["resources"]
+        .as_object_mut()
+        .with_context(|| "`resources` is not an object")?
+        .iter_mut()
+    {
+        let key = parse_axial(key).expect("Failed to parse key");
+        let obj = obj.take();
+        state
+            .rooms
+            .entry(key)
+            .or_insert_with(Default::default)
+            .resources
+            .push(obj);
+    }
 
-            Ok(WorldState {
-                rooms,
-                script_history: history,
-                logs,
-            })
-        })
-        .map_err(|err| {
-            error!(logger, "Failed to read world state {:?}", err);
-            err
-        })
-        .with_context(|| "Failed to read world state")
+    for (key, obj) in payload["structures"]
+        .as_object_mut()
+        .with_context(|| "`structures` is not an object")?
+        .iter_mut()
+    {
+        let key = parse_axial(key).expect("Failed to parse key");
+        let obj = obj.take();
+        state
+            .rooms
+            .entry(key)
+            .or_insert_with(Default::default)
+            .structures
+            .push(obj);
+    }
+
+    Ok(state)
 }

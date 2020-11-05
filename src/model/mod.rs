@@ -1,4 +1,3 @@
-pub mod script;
 pub mod world;
 
 use crate::config::Config;

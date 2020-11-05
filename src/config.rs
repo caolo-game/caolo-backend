@@ -5,9 +5,10 @@ use thiserror::Error;
 
 #[derive(Clone, Debug)]
 pub struct Config {
-    pub allowed_origins: Vec<String>,
-    pub redis_url: String,
     pub db_url: String,
+    pub amqp_url: String,
+
+    pub allowed_origins: Vec<String>,
     pub base_url: String,
     pub host: IpAddr,
     pub port: u16,
@@ -44,12 +45,16 @@ impl Config {
                 warn!(logger, "Failed to parse port number: {}", err);
                 8000
             });
+
+        let amqp_url = std::env::var("AMQP_ADDR")
+            .or_else(|_| std::env::var("CLOUDAMQP_URL"))
+            .unwrap_or_else(|_| "amqp://127.0.0.1:5672/%2f".to_owned());
+
         let config = Config {
+            amqp_url,
             allowed_origins: env::var("ALLOWED_ORIGINS")
                 .map(|origins| origins.split(";").map(|s| s.to_owned()).collect())
                 .unwrap_or_else(|_| vec!["http://localhost:3000".to_owned()]),
-            redis_url: env::var("REDIS_URL")
-                .unwrap_or_else(|_| "redis://localhost:6379/0".to_owned()),
             db_url: env::var("DATABASE_URL")
                 .unwrap_or_else(|_| "postgres://postgres:admin@localhost:5432/caolo".to_owned()),
             host,

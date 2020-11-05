@@ -2,22 +2,20 @@ mod config;
 mod filters;
 mod handler;
 mod model;
-mod parsers;
 mod world_state;
 
 use crate::model::world::WorldState;
 pub use config::*;
-use r2d2_redis::{r2d2, RedisConnectionManager};
 use slog::{info, o, warn, Drain};
 use sqlx::postgres::PgPool;
 use std::sync::{Arc, RwLock};
+use tokio_amqp::*;
 use warp::http::Method;
 use warp::Filter;
 
 #[cfg(feature = "web-dotenv")]
 use dotenv::dotenv;
 
-pub type RedisPool = r2d2::Pool<RedisConnectionManager>;
 pub type SharedState = Arc<RwLock<WorldState>>;
 
 #[tokio::main]
@@ -74,10 +72,6 @@ async fn main() -> Result<(), anyhow::Error> {
     info!(logger, "reading config");
     let conf = Config::read(logger.clone()).unwrap();
 
-    info!(logger, "initializing Redis pool");
-    let cache_manager = RedisConnectionManager::new(conf.redis_url.as_str()).unwrap();
-    let cache_pool: RedisPool = r2d2::Pool::builder().build(cache_manager).unwrap();
-
     info!(logger, "initializing Postgres pool");
     let db_pool = PgPool::builder()
         .max_size(8)
@@ -88,8 +82,15 @@ async fn main() -> Result<(), anyhow::Error> {
     let host = conf.host;
     let port = conf.port;
 
+    let amqp_conn = lapin::Connection::connect(
+        conf.amqp_url.as_str(),
+        lapin::ConnectionProperties::default().with_tokio(),
+    )
+    .await
+    .unwrap();
+
     info!(logger, "initializing API");
-    let api = filters::api(logger.clone(), conf, cache_pool, db_pool)
+    let api = filters::api(logger.clone(), conf, db_pool, amqp_conn)
         .with(
             warp::cors()
                 .allow_any_origin()

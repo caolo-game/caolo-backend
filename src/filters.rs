@@ -9,7 +9,7 @@ use crate::model;
 use crate::model::world::WorldState;
 use crate::world_state::refresh_state_job;
 use crate::SharedState;
-use r2d2_redis::{r2d2, RedisConnectionManager};
+
 use serde_json::json;
 use slog::{o, trace, Logger};
 use sqlx::postgres::PgPool;
@@ -28,23 +28,15 @@ async fn health_check() -> Result<impl warp::Reply, Infallible> {
 pub fn api(
     logger: Logger,
     conf: Config,
-    cache_pool: r2d2::Pool<RedisConnectionManager>,
     db_pool: PgPool,
+    amqp_conn: lapin::Connection,
 ) -> impl Filter<Extract = impl warp::Reply, Error = Infallible> + Clone {
     let world_state = {
         let tick = tokio::time::Duration::from_millis(500); // TODO: read from conf
         let state: SharedState = Arc::new(RwLock::new(WorldState {
-            rooms: Default::default(),
-            logs: Default::default(),
-            script_history: Default::default(),
+            ..Default::default()
         }));
-        let refresh = refresh_state_job(
-            "WORLD_STATE",
-            cache_pool.clone(),
-            logger.clone(),
-            Arc::clone(&state),
-            tick,
-        );
+        let refresh = refresh_state_job(db_pool.clone(), logger.clone(), Arc::clone(&state), tick);
         tokio::spawn(refresh);
         let filter = warp::any().map(move || Arc::clone(&state));
         move || filter.clone()
@@ -52,13 +44,22 @@ pub fn api(
 
     let conf = std::sync::Arc::new(conf);
 
-    let cache_pool = {
-        let filter = warp::any().map(move || cache_pool.clone());
+    let db_pool = {
+        let filter = warp::any().map(move || db_pool.clone());
         move || filter.clone()
     };
 
-    let db_pool = {
-        let filter = warp::any().map(move || db_pool.clone());
+    let amqp_channel = {
+        async fn get_channel(
+            channel: impl std::future::Future<Output = Result<lapin::Channel, lapin::Error>>,
+        ) -> Result<lapin::Channel, Infallible> {
+            let channel = channel.await.expect("Failed to obtain amqp channel");
+            Ok(channel)
+        }
+        let amqp_conn = Arc::new(amqp_conn);
+        let filter = warp::any()
+            .map(move || amqp_conn.create_channel())
+            .and_then(get_channel);
         move || filter.clone()
     };
 
@@ -160,12 +161,12 @@ pub fn api(
     let schema = warp::get()
         .and(warp::path("schema"))
         .and(logger())
-        .and(cache_pool())
+        .and(db_pool())
         .and_then(handler::schema);
 
     let terrain_rooms = warp::get()
         .and(warp::path!("terrain" / "rooms"))
-        .and(db_pool())
+        .and(world_state())
         .and_then(handler::terrain_rooms);
 
     let terrain = warp::get()
@@ -199,7 +200,7 @@ pub fn api(
         .and(identity())
         .and(warp::filters::body::json())
         .and(db_pool())
-        .and(cache_pool())
+        .and(amqp_channel())
         .and_then(handler::commit);
 
     let set_default_script = warp::post()
@@ -208,7 +209,7 @@ pub fn api(
         .and(current_user())
         .and(warp::filters::body::json())
         .and(db_pool())
-        .and(cache_pool())
+        .and(amqp_channel())
         .and_then(handler::set_default_script);
 
     let register = warp::post()
@@ -232,12 +233,6 @@ pub fn api(
         .and(world_state())
         .and_then(handler::get_bots);
 
-    let read_bot_history = warp::get()
-        .and(logger())
-        .and(warp::path!("bot-history" / u32))
-        .and(world_state())
-        .and_then(handler::get_bot_history);
-
     let get_room_objects = warp::get()
         .and(warp::path("room-objects"))
         .and(logger())
@@ -247,15 +242,15 @@ pub fn api(
 
     let get_sim_config = warp::get()
         .and(warp::path("sim-config"))
-        .and(cache_pool())
+        .and(world_state())
         .and_then(handler::get_sim_config);
 
     let place_structure = warp::post()
         .and(warp::path!("commands" / "place-structure"))
         .and(logger())
         .and(current_user())
-        .and(cache_pool())
         .and(warp::filters::body::json())
+        .and(amqp_channel())
         .and_then(handler::place_structure);
 
     health_check
@@ -274,7 +269,6 @@ pub fn api(
         .or(read_bots_by_room)
         .or(get_sim_config)
         .or(place_structure)
-        .or(read_bot_history)
         .recover(handle_rejections)
 }
 

@@ -295,7 +295,7 @@ pub async fn commit(
     struct QueryRes {
         /// script_id
         id: Uuid,
-        owner_id: Uuid,
+        owner_id: Option<Uuid>,
     };
 
     let query = {
@@ -337,8 +337,10 @@ pub async fn commit(
         id.set_data(&msg_id.as_bytes()[..]);
 
         let mut root = message.reborrow().init_update_script();
-        let mut owner = root.reborrow().init_user_id();
-        owner.set_data(&user_id.as_bytes()[..]);
+        if let Some(user_id) = user_id {
+            let mut owner = root.reborrow().init_user_id();
+            owner.set_data(&user_id.as_bytes()[..]);
+        }
 
         let mut script_id_msg = root.reborrow().init_script_id();
         script_id_msg.set_data(&script_id.as_bytes()[..]);

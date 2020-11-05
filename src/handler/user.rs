@@ -2,6 +2,7 @@ use crate::model::User;
 use crate::PgPool;
 use serde::Deserialize;
 use slog::{error, Logger};
+use sqlx::postgres::PgDatabaseError;
 use std::convert::Infallible;
 use thiserror::Error;
 use warp::http::StatusCode;
@@ -102,7 +103,7 @@ pub async fn register(
     if let Err(err) = res {
         use sqlx::Error;
         match err {
-            Error::Database(ref err) => match err.constraint_name() {
+            Error::Database(ref err) => match err.downcast_ref::<PgDatabaseError>().constraint() {
                 Some(constraint) if constraint == "email_is_unique" => {
                     let err = UserRegistrationError::EmailTaken;
                     return Err(warp::reject::custom(err));

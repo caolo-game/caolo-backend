@@ -50,7 +50,7 @@ pub struct ScriptMetadata {
 #[serde(rename_all = "camelCase")]
 pub struct ScriptEntity {
     pub name: String,
-    pub user_id: Uuid,
+    pub user_id: Option<Uuid>,
     pub script_id: Uuid,
     pub payload: Value,
 }

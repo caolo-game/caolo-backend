@@ -73,11 +73,10 @@ async fn main() -> Result<(), anyhow::Error> {
     let conf = Config::read(logger.clone()).unwrap();
 
     info!(logger, "initializing Postgres pool");
-    let db_pool = PgPool::builder()
-        .max_size(8)
-        .build(&conf.db_url)
-        .await
-        .unwrap();
+    let db_pool = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(8)
+        .connect(conf.db_url.as_str())
+        .await?;
 
     let host = conf.host;
     let port = conf.port;

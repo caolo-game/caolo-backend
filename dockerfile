@@ -1,7 +1,7 @@
 FROM rust:latest AS build
 
 RUN apt-get update
-RUN apt-get install sudo postgresql postgresql-contrib clang lld capnproto -y
+RUN apt-get install clang lld capnproto -y
 
 WORKDIR /caolo
 
@@ -12,7 +12,7 @@ RUN cargo --version
 
 RUN cargo install diesel_cli --root . --no-default-features --features="postgres"
 
-ENV DATABASE_URL=postgres://postgres:postgres@localhost:5432/caolo
+ENV SQLX_OFFLINE=1
 
 # ============= cache dependencies =============
 COPY ./Cargo.lock ./Cargo.lock
@@ -22,13 +22,13 @@ RUN echo "fn main() {}" > ./src/dummy.rs
 RUN sed -i 's/src\/main.rs/src\/dummy.rs/' Cargo.toml
 RUN cargo build --release
 
+COPY ./sqlx-data.json ./sqlx-data.json
 COPY ./Cargo.lock ./Cargo.lock
-COPY ./build.sh ./
 COPY ./src/ ./src/
 COPY ./Cargo.toml ./Cargo.toml
 COPY ./migrations/ ./migrations/
 
-RUN bash ./build.sh
+RUN cargo install --path . --root .
 
 # ---------- Copy the built binary to a scratch container, to minimize the image size ----------
 

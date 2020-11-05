@@ -3,7 +3,7 @@
 ### Native builds:
 
 - [Cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html)
-- [Redis](https://redis.io/)
+- [AMQP (e.g. RabbitMQ)](hhttps://www.rabbitmq.com/)
 - [Protoc](https://developers.google.com/protocol-buffers/docs/downloads.html)
 - [PostgeSQL](https://www.postgresql.org/)
 - diesel-cli `cargo install diesel_cli --no-default-features --features "postgres"`
@@ -16,8 +16,6 @@
 ## Setting up
 
 ```
-git submodule init
-git submodule update
 diesel database setup
 ```
 

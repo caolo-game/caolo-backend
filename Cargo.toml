@@ -4,49 +4,58 @@ version = "0.1.0"
 authors = ["Daniel Kiss <littlesnorrboy@gmail.com>"]
 edition = "2018"
 
-
 [[bin]]
 name = "caolo-web"
 path = "src/main.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [features]
 default = ["web-dotenv"]
 web-dotenv = ["dotenv"]
 
 [dependencies]
-dotenv = { version="0.9", optional=true }
-reqwest = { version= "0.10", features = ["json"] }
-cao-lang = { git = "https://github.com/caolo-game/cao-lang.git", features=[] }
-cao-messages = { git = "https://github.com/caolo-game/cao-messages.git", features=[] }
-
-tokio = { version = "0.2", features = ["macros"], default-features=false }
+dotenv = { version = "0.9", optional = true }
+reqwest = { version = "0.10", features = ["json"] }
+cao-lang = { git = "https://github.com/caolo-game/cao-lang.git", features = [] }
+cao-messages = { git = "https://github.com/caolo-game/cao-messages.git", features = [
+] }
+tokio = { version = "0.2", features = ["macros"], default-features = false }
 warp = "0.2"
-
-oauth2 = { version="3", features=["futures-03", "reqwest-010"], default-features=false }
-serde = { version = "1", features=["derive"] }
+oauth2 = { version = "3", features = [
+    "futures-03",
+    "reqwest-010"
+], default-features = false }
+serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-redis = "0.15"
-r2d2_redis = "0.13.0"
-uuid = { version="0.8", features=["serde"] }
-chrono = { version="*", features=["serde"] }
-sqlx = { version="0.3", features=["postgres", "chrono", "uuid", "json", "tls"] }
+rmp-serde = { version = "0.14" }
+uuid = { version = "0.8", features = ["serde"] }
+chrono = { version = "*", features = ["serde"] }
+sqlx = { version = "0.3", features = [
+    "postgres",
+    "chrono",
+    "uuid",
+    "json",
+    "tls"
+] }
 thiserror = "1"
 futures = "*"
 rand = "0.7"
 base64 = "0.12"
 sentry = "0.20"
 anyhow = "1"
-biscuit = { version="0.5.0-beta2" }
-lazy_static="1.4"
-
-slog = { version="2", features=["max_level_trace", "release_max_level_info"] }
+biscuit = { version = "0.5.0-beta2" }
+lazy_static = "1.4"
+slog = { version = "2", features = [
+    "max_level_trace",
+    "release_max_level_info"
+] }
 slog-stdlog = "3"
 slog-async = "*"
 slog-term = "*"
 slog-envlogger = "*"
+arrayvec = { version = "*", features = ["serde"] }
+capnp = "0.13"
 
-arrayvec = { version="*", features=["serde"] }
 
-capnp="0.13"
+lapin = { version = "1" }
+tokio-amqp = { version = "0.1" }

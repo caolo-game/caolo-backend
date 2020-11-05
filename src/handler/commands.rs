@@ -1,14 +1,12 @@
 use super::ScriptError;
-use crate::model::{
-    world::{StructureType, WorldPosition},
-    Identity, User,
-};
+use crate::model::{world::StructureType, world::WorldPosition, Identity, User};
 use crate::PgPool;
-use crate::RedisPool;
 use anyhow::Context;
 use cao_lang::compiler::{self, CompilationUnit};
 use cao_messages::command_capnp::command::input_message;
-use redis::Commands;
+use lapin::{
+    options::BasicPublishOptions, options::QueueDeclareOptions, types::FieldTable, BasicProperties,
+};
 use serde::Deserialize;
 use slog::{debug, error, warn, Logger};
 use thiserror::Error;
@@ -28,6 +26,7 @@ pub enum CommandError {
     #[error("Failed to execute command: {0}")]
     ExecutionError(String),
 }
+
 impl warp::reject::Reject for CommandError {}
 impl CommandError {
     pub fn status(&self) -> StatusCode {
@@ -48,18 +47,21 @@ pub struct PlaceStructureCommandPayload {
 pub async fn place_structure(
     logger: Logger,
     identity: Option<User>,
-    cache: RedisPool,
     payload: PlaceStructureCommandPayload,
+    channel: lapin::Channel,
 ) -> Result<impl warp::Reply, warp::Rejection> {
     debug!(
         logger,
         "Place structure command {:?} {:?}", identity, payload
     );
-    if identity.is_none() {
-        return Err(warp::reject::custom(CommandError::Unauthorized));
-    }
 
-    let identity = identity.unwrap();
+    let identity = match identity {
+        Some(id) => id,
+        None => {
+            return Err(warp::reject::custom(CommandError::Unauthorized));
+        }
+    };
+
     let msg_id = uuid::Uuid::new_v4();
 
     let mut capmsg = capnp::message::Builder::new_default();
@@ -82,7 +84,7 @@ pub async fn place_structure(
         id.set_data(&msg_id.as_bytes()[..]);
     }
 
-    send_command_to_worker(logger, msg_id, capmsg, cache)
+    send_command_to_worker(logger, msg_id, capmsg, channel)
         .await
         .map(|_| with_status(warp::reply(), StatusCode::NO_CONTENT))
         .map_err(warp::reject::custom)
@@ -92,7 +94,7 @@ pub async fn send_command_to_worker<A>(
     logger: Logger,
     msg_id: Uuid,
     msg: capnp::message::Builder<A>,
-    cache: RedisPool,
+    channel: lapin::Channel,
 ) -> Result<(), CommandError>
 where
     A: capnp::message::Allocator,
@@ -103,31 +105,33 @@ where
 
     let mut payload = Vec::with_capacity(5_000);
     capnp::serialize::write_message(&mut payload, &msg).expect("Failed to serialize msg");
-    {
-        let cache = cache.clone();
-        let l = logger.clone();
-        let _: () = tokio::task::spawn_blocking(move || {
-            let logger = l;
-            let mut conn = cache.get().map_err(|err| {
-                error!(logger, "Failed to get redis conn {:?}", err);
-                CommandError::Internal
-            })?;
 
-            conn.lpush("INPUTS", payload).map_err(|err| {
-                error!(logger, "Failed to push input {:?}", err);
-                CommandError::Internal
-            })?;
-            Ok(())
-        })
+    channel
+        .basic_publish(
+            "",
+            "CAO_COMMANDS",
+            BasicPublishOptions::default(),
+            payload,
+            BasicProperties::default(),
+        )
         .await
         .map_err(|err| {
-            error!(logger, "Failed to send command {:?}", err);
+            error!(logger, "Failed to push command {:?}", err);
             CommandError::Internal
-        })
-        .and_then(|x| x)?; // unwrap the inner error
-    }
+        })?;
 
-    let msg_id = format!("{}", msg_id);
+    let qname = format!("{}", msg_id);
+    let _q = channel
+        .queue_declare(
+            qname.as_str(),
+            QueueDeclareOptions::default(),
+            FieldTable::default(),
+        )
+        .await
+        .map_err(|err| {
+            error!(logger, "Failed to declare response queue {:?}", err);
+            CommandError::Internal
+        })?;
 
     // retry loop
     for i in 0..20 {
@@ -136,23 +140,17 @@ where
         // inrementally wait longer and longer...
         let wait_for = Duration::from_millis(50 * i);
         delay_for(wait_for).await;
-        let cache = cache.clone();
-
-        // get a new connection in each tick to free it at the end and let other threads access
-        // this connection while we wait
-        let mut conn = cache.get().map_err(|err| {
-            error!(logger, "Failed to get redis conn {:?}", err);
-            CommandError::Internal
-        })?;
 
         type ResponseMsg = TypedReader<capnp::serialize::OwnedSegments, command_result::Owned>;
 
-        match conn
-            .get::<_, Option<Vec<u8>>>(&msg_id)
+        match channel
+            .basic_get(qname.as_str(), lapin::options::BasicGetOptions::default())
+            .await
             .map::<Option<ResponseMsg>, _>(|message| {
                 message.and_then(|message| {
+                    let delivery = message.delivery;
                     try_read_message(
-                        message.as_slice(),
+                        delivery.data.as_slice(),
                         ReaderOptions {
                             traversal_limit_in_words: 512,
                             nesting_limit: 64,
@@ -219,7 +217,7 @@ pub async fn set_default_script(
     identity: Option<User>,
     ScriptIdPayload { script_id }: ScriptIdPayload,
     db: PgPool,
-    cache: RedisPool,
+    channel: lapin::Channel,
 ) -> Result<impl warp::Reply, warp::Rejection> {
     let identity = identity.ok_or_else(|| warp::reject::custom(ScriptError::Unauthorized))?;
 
@@ -256,7 +254,7 @@ pub async fn set_default_script(
         let mut id = message.reborrow().init_message_id();
         id.set_data(&msg_id.as_bytes()[..]);
     }
-    send_command_to_worker(logger, msg_id, capmsg, cache)
+    send_command_to_worker(logger, msg_id, capmsg, channel)
         .await
         .map(|_| with_status(warp::reply(), StatusCode::NO_CONTENT))
         .map_err(warp::reject::custom)
@@ -273,7 +271,7 @@ pub async fn commit(
     identity: Option<Identity>,
     payload: SaveScriptPayload,
     db: PgPool,
-    cache: RedisPool,
+    channel: lapin::Channel,
 ) -> Result<impl warp::Reply, warp::Rejection> {
     macro_rules! log_error {
         () => {
@@ -358,7 +356,7 @@ pub async fn commit(
         script_ver.set_patch(cao_lang::version::PATCH);
     }
 
-    send_command_to_worker(logger.clone(), msg_id, capmsg, cache)
+    send_command_to_worker(logger.clone(), msg_id, capmsg, channel)
         .await
         .map_err(ScriptError::CommandError)
         .map_err(warp::reject::custom)?;

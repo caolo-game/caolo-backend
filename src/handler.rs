@@ -26,15 +26,13 @@ use warp::reply::with_status;
 
 pub async fn schema(logger: Logger, pool: PgPool) -> Result<impl warp::Reply, Infallible> {
     struct Foo {
-        schema_message_packed: Vec<u8>,
+        payload: serde_json::Value,
     }
 
-    let Foo {
-        schema_message_packed,
-    } = sqlx::query_as!(
+    let Foo { payload } = sqlx::query_as!(
         Foo,
         r#"
-    SELECT schema_message_packed
+    SELECT payload
     FROM scripting_schema
     ORDER BY id DESC
     LIMIT 1
@@ -44,8 +42,8 @@ pub async fn schema(logger: Logger, pool: PgPool) -> Result<impl warp::Reply, In
     .await
     .expect("read schema from db");
 
-    let cards: Vec<OwnedCard> = rmp_serde::decode::from_slice(&schema_message_packed)
-        .expect("Failed to deserialize schema");
+    let cards: Vec<OwnedCard> =
+        serde_json::from_value(payload).expect("Failed to deserialize schema");
 
     let cards = cards.iter().map(|c| c.as_card()).collect();
 
@@ -66,9 +64,7 @@ pub async fn schema(logger: Logger, pool: PgPool) -> Result<impl warp::Reply, In
     Ok(resp)
 }
 
-pub async fn get_sim_config(
-    state: SharedState,
-) -> Result<impl warp::Reply, Infallible> {
+pub async fn get_sim_config(state: SharedState) -> Result<impl warp::Reply, Infallible> {
     let state = state.read().unwrap();
     let conf = state.0.get("gameConfig");
     let status = if conf.is_some() {

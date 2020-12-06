@@ -9,7 +9,6 @@ pub use config::*;
 use slog::{info, o, warn, Drain};
 use sqlx::postgres::PgPool;
 use std::sync::{Arc, RwLock};
-use tokio_amqp::*;
 use warp::http::Method;
 use warp::Filter;
 
@@ -81,15 +80,11 @@ async fn main() -> Result<(), anyhow::Error> {
     let host = conf.host;
     let port = conf.port;
 
-    let amqp_conn = lapin::Connection::connect(
-        conf.amqp_url.as_str(),
-        lapin::ConnectionProperties::default().with_tokio(),
-    )
-    .await
-    .unwrap();
+    let redis_client =
+        redis::Client::open(conf.redis_url.as_str()).expect("Failed to connect to redis");
 
     info!(logger, "initializing API");
-    let api = filters::api(logger.clone(), conf, db_pool, amqp_conn)
+    let api = filters::api(logger.clone(), conf, db_pool, redis_client)
         .with(
             warp::cors()
                 .allow_any_origin()

@@ -6,7 +6,7 @@ use thiserror::Error;
 #[derive(Clone, Debug)]
 pub struct Config {
     pub db_url: String,
-    pub amqp_url: String,
+    pub redis_url: String,
 
     pub allowed_origins: Vec<String>,
     pub base_url: String,
@@ -46,12 +46,11 @@ impl Config {
                 8000
             });
 
-        let amqp_url = std::env::var("AMQP_ADDR")
-            .or_else(|_| std::env::var("CLOUDAMQP_URL"))
-            .unwrap_or_else(|_| "amqp://127.0.0.1:5672/%2f".to_owned());
+        let redis_url =
+            std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_owned());
 
         let config = Config {
-            amqp_url,
+            redis_url,
             allowed_origins: env::var("ALLOWED_ORIGINS")
                 .map(|origins| origins.split(";").map(|s| s.to_owned()).collect())
                 .unwrap_or_else(|_| vec!["http://localhost:3000".to_owned()]),

@@ -29,7 +29,7 @@ pub fn api(
     logger: Logger,
     conf: Config,
     db_pool: PgPool,
-    amqp_conn: lapin::Connection,
+    redis_client: redis::Client,
 ) -> impl Filter<Extract = impl warp::Reply, Error = Infallible> + Clone {
     let world_state = {
         let tick = tokio::time::Duration::from_millis(500); // TODO: read from conf
@@ -49,17 +49,18 @@ pub fn api(
         move || filter.clone()
     };
 
-    let amqp_channel = {
-        async fn get_channel(
-            channel: impl std::future::Future<Output = Result<lapin::Channel, lapin::Error>>,
-        ) -> Result<lapin::Channel, Infallible> {
+    let redis_conn = {
+        async fn get_connection<E: std::fmt::Debug>(
+            channel: impl std::future::Future<Output = Result<redis::aio::Connection, E>>,
+        ) -> Result<redis::aio::Connection, Infallible> {
             let channel = channel.await.expect("Failed to obtain amqp channel");
             Ok(channel)
         }
-        let amqp_conn = Arc::new(amqp_conn);
+        let client = redis_client;
+        // let client = Arc::new(redis_client);
         let filter = warp::any()
-            .map(move || amqp_conn.create_channel())
-            .and_then(get_channel);
+            .map(move || client.get_async_connection())
+            .and_then(get_connection);
         move || filter.clone()
     };
 
@@ -200,7 +201,7 @@ pub fn api(
         .and(identity())
         .and(warp::filters::body::json())
         .and(db_pool())
-        .and(amqp_channel())
+        .and(redis_conn())
         .and_then(handler::commit);
 
     let set_default_script = warp::post()
@@ -209,7 +210,7 @@ pub fn api(
         .and(current_user())
         .and(warp::filters::body::json())
         .and(db_pool())
-        .and(amqp_channel())
+        .and(redis_conn())
         .and_then(handler::set_default_script);
 
     let register = warp::post()
@@ -250,7 +251,7 @@ pub fn api(
         .and(logger())
         .and(current_user())
         .and(warp::filters::body::json())
-        .and(amqp_channel())
+        .and(redis_conn())
         .and_then(handler::place_structure);
 
     health_check

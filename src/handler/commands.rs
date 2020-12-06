@@ -4,9 +4,6 @@ use crate::PgPool;
 use anyhow::Context;
 use cao_lang::compiler::{self, CompilationUnit};
 use cao_messages::command_capnp::command::input_message;
-use lapin::{
-    options::BasicPublishOptions, options::QueueDeclareOptions, types::FieldTable, BasicProperties,
-};
 use serde::Deserialize;
 use slog::{debug, error, warn, Logger};
 use thiserror::Error;
@@ -48,7 +45,7 @@ pub async fn place_structure(
     logger: Logger,
     identity: Option<User>,
     payload: PlaceStructureCommandPayload,
-    channel: lapin::Channel,
+    conn: redis::aio::Connection,
 ) -> Result<impl warp::Reply, warp::Rejection> {
     debug!(
         logger,
@@ -94,7 +91,7 @@ pub async fn send_command_to_worker<A>(
     logger: Logger,
     msg_id: Uuid,
     msg: capnp::message::Builder<A>,
-    channel: lapin::Channel,
+    conn: redis::aio::Connection,
 ) -> Result<(), CommandError>
 where
     A: capnp::message::Allocator,
@@ -217,7 +214,7 @@ pub async fn set_default_script(
     identity: Option<User>,
     ScriptIdPayload { script_id }: ScriptIdPayload,
     db: PgPool,
-    channel: lapin::Channel,
+    conn: redis::aio::Connection,
 ) -> Result<impl warp::Reply, warp::Rejection> {
     let identity = identity.ok_or_else(|| warp::reject::custom(ScriptError::Unauthorized))?;
 
@@ -271,7 +268,7 @@ pub async fn commit(
     identity: Option<Identity>,
     payload: SaveScriptPayload,
     db: PgPool,
-    channel: lapin::Channel,
+    conn: redis::aio::Connection,
 ) -> Result<impl warp::Reply, warp::Rejection> {
     macro_rules! log_error {
         () => {

@@ -24,7 +24,7 @@ impl left_right::Absorb<WorldStateOps> for WorldState {
         }
     }
 
-    fn absorb_second(&mut self, mut operation: WorldStateOps, other: &Self) {
+    fn absorb_second(&mut self, operation: WorldStateOps, _other: &Self) {
         match operation {
             WorldStateOps::Set(w) => *self = w,
         }

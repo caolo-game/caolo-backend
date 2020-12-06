@@ -4,17 +4,16 @@
 use crate::model::world::{AxialPoint, WorldState};
 use crate::SharedState;
 use serde::Deserialize;
-use slog::{error, warn, Logger};
+use slog::{warn, Logger};
 use std::{
     collections::HashMap,
     convert::Infallible,
     sync::{Arc, RwLock},
 };
 use warp::http::StatusCode;
-use warp::reply::with_status;
 
 pub async fn terrain(
-    logger: Logger,
+    _logger: Logger,
     AxialPoint { q, r }: AxialPoint,
     state: Arc<RwLock<WorldState>>,
 ) -> Result<Box<dyn warp::Reply>, Infallible> {
@@ -47,7 +46,7 @@ pub struct RoomObjectsQuery {
 /// ## Projection:
 /// You can disable sending of certain fields by using the `<field-name>=0` query parameter
 pub async fn get_room_objects(
-    logger: Logger,
+    _logger: Logger,
     RoomObjectsQuery {
         q,
         r,

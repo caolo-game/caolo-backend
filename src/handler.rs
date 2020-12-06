@@ -7,24 +7,21 @@ pub use rooms::*;
 pub use user::*;
 
 use crate::model::script::{Card, OwnedCard, Schema};
-use crate::model::world::{AxialPoint, WorldState};
+use crate::model::world::AxialPoint;
 use crate::model::{Identity, ScriptEntity, ScriptMetadata};
 use crate::PgPool;
-use crate::RedisPool;
 use crate::SharedState;
 use anyhow::Context;
 use cao_lang::compiler::description::get_instruction_descriptions;
 use cao_lang::compiler::{self, CompilationUnit};
-use redis::Commands;
 use slog::{debug, error, trace, Logger};
 use std::convert::Infallible;
-use std::sync::{Arc, RwLock};
 use thiserror::Error;
 use uuid::Uuid;
 use warp::http::StatusCode;
 use warp::reply::with_status;
 
-pub async fn schema(logger: Logger, pool: PgPool) -> Result<impl warp::Reply, Infallible> {
+pub async fn schema(_logger: Logger, pool: PgPool) -> Result<impl warp::Reply, Infallible> {
     struct Foo {
         payload: serde_json::Value,
     }

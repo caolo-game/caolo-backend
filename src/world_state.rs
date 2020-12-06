@@ -23,6 +23,12 @@ impl left_right::Absorb<WorldStateOps> for WorldState {
             WorldStateOps::Set(w) => self.clone_from(w),
         }
     }
+
+    fn absorb_second(&mut self, mut operation: WorldStateOps, other: &Self) {
+        match operation {
+            WorldStateOps::Set(w) => *self = w,
+        }
+    }
 }
 
 pub fn init_state() -> (StateWriter, SharedState) {

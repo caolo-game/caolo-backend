@@ -34,8 +34,8 @@ RUN cargo install --path . --root .
 
 FROM ubuntu:20.04
 WORKDIR /caolo
-RUN apt-get update
-RUN apt-get install curl libpq-dev -y
+RUN apt-get update -y
+RUN apt-get install curl libpq-dev -y --fix-missing
 
 COPY ./migrations/ ./migrations/
 COPY ./release.sh ./

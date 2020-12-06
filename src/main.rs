@@ -2,7 +2,6 @@ mod config;
 mod filters;
 mod handler;
 mod model;
-mod parsers;
 mod world_state;
 
 use crate::model::world::WorldState;

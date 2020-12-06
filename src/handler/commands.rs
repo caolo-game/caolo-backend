@@ -8,7 +8,8 @@ use crate::RedisPool;
 use anyhow::Context;
 use cao_lang::compiler::{self, CompilationUnit};
 use cao_messages::command_capnp::command::input_message;
-use redis::Commands;
+
+use r2d2_redis::redis::Commands;
 use serde::Deserialize;
 use slog::{debug, error, warn, Logger};
 use thiserror::Error;
@@ -55,11 +56,14 @@ pub async fn place_structure(
         logger,
         "Place structure command {:?} {:?}", identity, payload
     );
-    if identity.is_none() {
-        return Err(warp::reject::custom(CommandError::Unauthorized));
-    }
 
-    let identity = identity.unwrap();
+    let identity = match identity {
+        Some(id) => id,
+        None => {
+            return Err(warp::reject::custom(CommandError::Unauthorized));
+        }
+    };
+
     let msg_id = uuid::Uuid::new_v4();
 
     let mut capmsg = capnp::message::Builder::new_default();

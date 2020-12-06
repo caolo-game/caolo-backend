@@ -2,14 +2,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all(serialize = "camelCase"))]
-pub struct WorldState {
-    pub rooms: HashMap<AxialPoint, RoomState>,
-    pub logs: Vec<LogEntry>,
-    /// key = entity id
-    pub script_history: HashMap<u32, ScriptHistoryEntry>,
-}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
+pub struct WorldState(pub serde_json::Value);
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 #[serde(rename_all(serialize = "camelCase"))]

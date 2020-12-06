@@ -33,18 +33,8 @@ pub fn api(
 ) -> impl Filter<Extract = impl warp::Reply, Error = Infallible> + Clone {
     let world_state = {
         let tick = tokio::time::Duration::from_millis(500); // TODO: read from conf
-        let state: SharedState = Arc::new(RwLock::new(WorldState {
-            rooms: Default::default(),
-            logs: Default::default(),
-            script_history: Default::default(),
-        }));
-        let refresh = refresh_state_job(
-            "WORLD_STATE",
-            cache_pool.clone(),
-            logger.clone(),
-            Arc::clone(&state),
-            tick,
-        );
+        let state: SharedState = Arc::new(RwLock::new(WorldState(Default::default())));
+        let refresh = refresh_state_job(db_pool.clone(), logger.clone(), Arc::clone(&state), tick);
         tokio::spawn(refresh);
         let filter = warp::any().map(move || Arc::clone(&state));
         move || filter.clone()
@@ -160,19 +150,19 @@ pub fn api(
     let schema = warp::get()
         .and(warp::path("schema"))
         .and(logger())
-        .and(cache_pool())
+        .and(db_pool())
         .and_then(handler::schema);
 
     let terrain_rooms = warp::get()
         .and(warp::path!("terrain" / "rooms"))
-        .and(db_pool())
+        .and(world_state())
         .and_then(handler::terrain_rooms);
 
     let terrain = warp::get()
         .and(warp::path("terrain"))
         .and(logger())
         .and(warp::query())
-        .and(db_pool())
+        .and(world_state())
         .and_then(handler::terrain);
 
     let compile = warp::post()
@@ -232,12 +222,6 @@ pub fn api(
         .and(world_state())
         .and_then(handler::get_bots);
 
-    let read_bot_history = warp::get()
-        .and(logger())
-        .and(warp::path!("bot-history" / u32))
-        .and(world_state())
-        .and_then(handler::get_bot_history);
-
     let get_room_objects = warp::get()
         .and(warp::path("room-objects"))
         .and(logger())
@@ -247,7 +231,7 @@ pub fn api(
 
     let get_sim_config = warp::get()
         .and(warp::path("sim-config"))
-        .and(cache_pool())
+        .and(world_state())
         .and_then(handler::get_sim_config);
 
     let place_structure = warp::post()
@@ -274,7 +258,6 @@ pub fn api(
         .or(read_bots_by_room)
         .or(get_sim_config)
         .or(place_structure)
-        .or(read_bot_history)
         .recover(handle_rejections)
 }
 

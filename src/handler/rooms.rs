@@ -1,52 +1,36 @@
 //! Room specific handlers
 //!
 
-use crate::model::world::AxialPoint;
-use crate::PgPool;
+use crate::model::world::{AxialPoint, WorldState};
 use crate::SharedState;
 use serde::Deserialize;
 use slog::{error, warn, Logger};
-use std::convert::Infallible;
+use std::{
+    collections::HashMap,
+    convert::Infallible,
+    sync::{Arc, RwLock},
+};
 use warp::http::StatusCode;
 use warp::reply::with_status;
 
 pub async fn terrain(
     logger: Logger,
     AxialPoint { q, r }: AxialPoint,
-    db: PgPool,
-) -> Result<impl warp::Reply, Infallible> {
-    struct Res {
-        payload: serde_json::Value,
-    }
-
-    let res = sqlx::query_as!(
-        Res,
-        "
-        SELECT payload
-        FROM world_map
-        WHERE q=$1 AND r=$2
-        ",
-        q,
-        r
-    )
-    .fetch_one(&db)
-    .await
-    .map(|r| warp::reply::json(&r.payload))
-    .map(|r| with_status(r, StatusCode::OK))
-    .or_else(|e| match e {
-        sqlx::Error::RowNotFound => {
-            let resp = warp::reply::json(&Option::<()>::None);
-            Ok(with_status(resp, StatusCode::NOT_FOUND))
-        }
-        _ => {
-            error!(logger, "Failed to query database {:?}", e);
-            let resp = warp::reply::json(&Option::<()>::None);
-            Ok::<_, Infallible>(with_status(resp, StatusCode::INTERNAL_SERVER_ERROR))
-        }
-    })
-    .unwrap();
-
-    Ok(res)
+    state: Arc<RwLock<WorldState>>,
+) -> Result<Box<dyn warp::Reply>, Infallible> {
+    let state = state.read().unwrap();
+    let res = state
+        .0
+        .get("terrain")
+        .and_then(|t| t.get(&format!("{};{}", q, r)));
+    let response: Box<dyn warp::Reply> = match res {
+        Some(ref t) => Box::new(warp::reply::json(t)),
+        None => Box::new(warp::reply::with_status(
+            warp::reply(),
+            StatusCode::NOT_FOUND,
+        )),
+    };
+    Ok(response)
 }
 
 #[derive(Deserialize)]
@@ -73,28 +57,26 @@ pub async fn get_room_objects(
     }: RoomObjectsQuery,
     state: SharedState,
 ) -> Result<impl warp::Reply, warp::Rejection> {
-    let room = AxialPoint { q, r };
     let state = state.read().unwrap();
-    let room = state.rooms.get(&room).ok_or_else(|| {
-        warn!(logger, "Room {:?} does not exist", room);
-        warp::reject()
-    })?;
-    let mut room = serde_json::to_value(room).expect("Failed to serialize room");
 
-    macro_rules! deproject {
+    let room_id = format!("{};{}", q, r);
+    let mut result = HashMap::new();
+
+    macro_rules! project {
         ($projection: ident, $key: expr) => {
-            if $projection.map(|x| x == 0).unwrap_or(false) {
-                // if projection.$key is 0
-                room[$key].take();
+            if !$projection.map(|x| x == 0).unwrap_or(false) {
+                // if projection.$key is not 0
+                // set the key to the value in state
+                result.insert($key, state.0.get($key).and_then(|t| t.get(&room_id)));
             }
         };
     };
 
-    deproject!(projection_bots, "bots");
-    deproject!(projection_structures, "structures");
-    deproject!(projection_resources, "resources");
+    project!(projection_bots, "bots");
+    project!(projection_structures, "structures");
+    project!(projection_resources, "resources");
 
-    let response = warp::reply::json(&room);
+    let response = warp::reply::json(&result);
 
     Ok(response)
 }
@@ -105,10 +87,14 @@ pub async fn get_bots(
     state: SharedState,
 ) -> Result<impl warp::Reply, warp::Rejection> {
     let state = state.read().unwrap();
-    let room = state.rooms.get(&room).ok_or_else(|| {
-        warn!(logger, "room does not exist {:?}", room);
-        warp::reject()
-    })?;
-    let response = warp::reply::json(&room.bots);
+    let list = state
+        .0
+        .get("bots")
+        .and_then(|bots| bots.get(&format!("{};{}", room.q, room.r)))
+        .ok_or_else(|| {
+            warn!(logger, "room does not exist {:?}", room);
+            warp::reject()
+        })?;
+    let response = warp::reply::json(list);
     Ok(response)
 }

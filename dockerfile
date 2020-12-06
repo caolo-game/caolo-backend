@@ -32,7 +32,7 @@ RUN cargo install --path . --root .
 
 # ---------- Copy the built binary to a scratch container, to minimize the image size ----------
 
-FROM ubuntu:20.04
+FROM ubuntu:18.04
 WORKDIR /caolo
 RUN apt-get update -y
 RUN apt-get install curl libpq-dev -y --fix-missing

@@ -4,12 +4,11 @@ mod handler;
 mod model;
 mod world_state;
 
-use crate::model::world::WorldState;
+pub use world_state::SharedState;
 pub use config::*;
 use r2d2_redis::{r2d2, RedisConnectionManager};
 use slog::{info, o, warn, Drain};
 use sqlx::postgres::PgPool;
-use std::sync::{Arc, RwLock};
 use warp::http::Method;
 use warp::Filter;
 
@@ -17,7 +16,7 @@ use warp::Filter;
 use dotenv::dotenv;
 
 pub type RedisPool = r2d2::Pool<RedisConnectionManager>;
-pub type SharedState = Arc<RwLock<WorldState>>;
+
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {

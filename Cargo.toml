@@ -57,3 +57,4 @@ slog-envlogger = "*"
 arrayvec = { version = "*", features = ["serde"] }
 capnp = "0.13"
 r2d2_redis= "0.13"
+left-right = "0.9"

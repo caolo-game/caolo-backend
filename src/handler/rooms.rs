@@ -1,23 +1,19 @@
 //! Room specific handlers
 //!
 
-use crate::model::world::{AxialPoint, WorldState};
+use crate::model::world::AxialPoint;
 use crate::SharedState;
 use serde::Deserialize;
 use slog::{warn, Logger};
-use std::{
-    collections::HashMap,
-    convert::Infallible,
-    sync::{Arc, RwLock},
-};
+use std::{collections::HashMap, convert::Infallible};
 use warp::http::StatusCode;
 
 pub async fn terrain(
     _logger: Logger,
     AxialPoint { q, r }: AxialPoint,
-    state: Arc<RwLock<WorldState>>,
+    state: SharedState,
 ) -> Result<Box<dyn warp::Reply>, Infallible> {
-    let state = state.read().unwrap();
+    let state = state.0.enter().unwrap();
     let res = state
         .0
         .get("terrain")
@@ -56,7 +52,7 @@ pub async fn get_room_objects(
     }: RoomObjectsQuery,
     state: SharedState,
 ) -> Result<impl warp::Reply, warp::Rejection> {
-    let state = state.read().unwrap();
+    let state = state.0.enter().unwrap();
 
     let room_id = format!("{};{}", q, r);
     let mut result = HashMap::new();
@@ -85,7 +81,7 @@ pub async fn get_bots(
     room: AxialPoint,
     state: SharedState,
 ) -> Result<impl warp::Reply, warp::Rejection> {
-    let state = state.read().unwrap();
+    let state = state.0.enter().unwrap();
     let list = state
         .0
         .get("bots")

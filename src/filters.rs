@@ -3,12 +3,10 @@
 //! Entry point filters will call handlers to execute logic.
 //!
 //!
-use crate::config::*;
 use crate::handler;
 use crate::model;
-use crate::model::world::WorldState;
 use crate::world_state::refresh_state_job;
-use crate::SharedState;
+use crate::{config::*, world_state::init_state};
 use r2d2_redis::{r2d2, RedisConnectionManager};
 use serde_json::json;
 use slog::{o, trace, Logger};
@@ -33,10 +31,10 @@ pub fn api(
 ) -> impl Filter<Extract = impl warp::Reply, Error = Infallible> + Clone {
     let world_state = {
         let tick = tokio::time::Duration::from_millis(500); // TODO: read from conf
-        let state: SharedState = Arc::new(RwLock::new(WorldState(Default::default())));
-        let refresh = refresh_state_job(db_pool.clone(), logger.clone(), Arc::clone(&state), tick);
+        let (w, r) = init_state();
+        let refresh = refresh_state_job(db_pool.clone(), logger.clone(), w, tick);
         tokio::spawn(refresh);
-        let filter = warp::any().map(move || Arc::clone(&state));
+        let filter = warp::any().map(move || r.clone());
         move || filter.clone()
     };
 

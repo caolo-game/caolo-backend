@@ -1,14 +1,39 @@
-use crate::{model::world::WorldState, SharedState};
+use crate::model::world::WorldState;
 
 use crate::PgPool;
 use anyhow::Context;
 use slog::{debug, error, Logger};
 use tokio::time::{self, Duration};
 
+#[derive(Clone)]
+pub struct SharedState(pub left_right::ReadHandle<WorldState>);
+
+unsafe impl Send for SharedState {}
+unsafe impl Sync for SharedState {}
+
+pub struct StateWriter(pub left_right::WriteHandle<WorldState, WorldStateOps>);
+
+pub enum WorldStateOps {
+    Set(WorldState),
+}
+
+impl left_right::Absorb<WorldStateOps> for WorldState {
+    fn absorb_first(&mut self, operation: &mut WorldStateOps, _other: &Self) {
+        match operation {
+            WorldStateOps::Set(w) => self.clone_from(w),
+        }
+    }
+}
+
+pub fn init_state() -> (StateWriter, SharedState) {
+    let (w, r) = left_right::new::<WorldState, WorldStateOps>();
+    (StateWriter(w), SharedState(r))
+}
+
 pub async fn refresh_state_job(
     pool: PgPool,
     logger: Logger,
-    state: SharedState,
+    mut state: StateWriter,
     interval: Duration,
 ) -> anyhow::Result<()> {
     let mut interval = time::interval(interval);
@@ -18,8 +43,8 @@ pub async fn refresh_state_job(
         debug!(logger, "Reading world state");
 
         let new_state = load_state(pool.clone(), logger.clone()).await?;
-        let mut state = state.write().unwrap();
-        *state = new_state;
+        state.0.append(WorldStateOps::Set(new_state));
+        state.0.publish();
 
         debug!(logger, "Reading world state - done");
     }

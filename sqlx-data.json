@@ -15,27 +15,6 @@
       "nullable": []
     }
   },
-  "58ea8f663a484df02f4535837379e76304768d74541f2f16b399ab15711f8737": {
-    "query": "\n        SELECT payload\n        FROM world_map\n        WHERE q=$1 AND r=$2\n        ",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "payload",
-          "type_info": "Json"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Int4",
-          "Int4"
-        ]
-      },
-      "nullable": [
-        false
-      ]
-    }
-  },
   "7060d38efd21022a766c2b909445ddafa656ed188fedb2e6e252aff093414710": {
     "query": "\n        SELECT COUNT(*)\n        FROM user_script\n        WHERE id=$1\n        ",
     "describe": {
@@ -56,22 +35,12 @@
       ]
     }
   },
-  "854e5f5130c5a98f3e4322164028a06386bce963dc81e996432c86bb2def65b5": {
-    "query": "\n        SELECT world_time AS timestamp, queen_tag, payload\n        FROM world_output\n        ORDER BY world_time\n        DESC\n        LIMIT 1\n        ",
+  "778c5d498fcc1c6b3a3322d63445063e809c9316334762768cf20fff5e228c03": {
+    "query": "\n        SELECT t.payload\n        FROM world_output t\n        ORDER BY t.created DESC\n        LIMIT 1\n        ",
     "describe": {
       "columns": [
         {
           "ordinal": 0,
-          "name": "timestamp",
-          "type_info": "Int8"
-        },
-        {
-          "ordinal": 1,
-          "name": "queen_tag",
-          "type_info": "Uuid"
-        },
-        {
-          "ordinal": 2,
           "name": "payload",
           "type_info": "Jsonb"
         }
@@ -80,8 +49,6 @@
         "Left": []
       },
       "nullable": [
-        false,
-        false,
         false
       ]
     }
@@ -151,6 +118,24 @@
       "nullable": []
     }
   },
+  "9fc2e8ae40472a269251380ecbadccafe435f89b75259076c76cbbd83c090efe": {
+    "query": "\n    SELECT payload\n    FROM scripting_schema\n    ORDER BY id DESC\n    LIMIT 1\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "payload",
+          "type_info": "Jsonb"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
   "c3a2fee3094e3d16733a7daa5ce4b7d0b55ee1651ae4c4ca7573429b67b99bbd": {
     "query": "INSERT INTO user_script (program, name, owner_id)\r\nVALUES ($1 , $2 , (SELECT id AS owner_id FROM user_account WHERE auth0_id=$3 LIMIT 1)) ON conflict ON CONSTRAINT name_owner_id_unique DO\r\nUPDATE\r\nSET program=$1 RETURNING id,\r\n                         owner_id\r\n",
     "describe": {
@@ -201,24 +186,6 @@
       },
       "nullable": [
         false,
-        false
-      ]
-    }
-  },
-  "cb395c43f754c261204bdf405b41cffb1e77ad71d954e6b487d4aa27f4eb14c0": {
-    "query": "\n        SELECT schema_message_packed\n        FROM scripting_schema\n        ",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "schema_message_packed",
-          "type_info": "Bytea"
-        }
-      ],
-      "parameters": {
-        "Left": []
-      },
-      "nullable": [
         false
       ]
     }

@@ -63,7 +63,7 @@ pub async fn schema(_logger: Logger, pool: PgPool) -> Result<impl warp::Reply, I
 
 pub async fn get_sim_config(state: SharedState) -> Result<impl warp::Reply, Infallible> {
     let state = state.0.enter().unwrap();
-    let conf = state.0.get("gameConfig");
+    let conf = state.payload.get("gameConfig");
     let status = if conf.is_some() {
         StatusCode::OK
     } else {
@@ -76,7 +76,7 @@ pub async fn get_sim_config(state: SharedState) -> Result<impl warp::Reply, Infa
 pub async fn terrain_rooms(state: SharedState) -> Result<impl warp::Reply, Infallible> {
     let state = state.0.enter().unwrap();
     let keys = state
-        .0
+        .payload
         .get("terrain")
         .and_then(|t| t.as_object())
         .map(|t| t.keys());

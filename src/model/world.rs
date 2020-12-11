@@ -1,7 +1,10 @@
 use serde::{Deserialize, Serialize};
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 #[serde(rename_all(serialize = "camelCase", deserialize = "camelCase"))]
-pub struct WorldState(pub serde_json::Value);
+pub struct WorldState {
+    pub time: i64,
+    pub payload: serde_json::Value,
+}
 
 #[derive(Debug, Copy, Clone, Serialize, Deserialize, Eq, PartialEq, Hash)]
 #[serde(rename_all(serialize = "camelCase"))]

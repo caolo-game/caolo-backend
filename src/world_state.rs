@@ -59,13 +59,14 @@ pub async fn refresh_state_job(
 // TODO queen tag?
 pub async fn load_state(pool: PgPool, logger: Logger) -> anyhow::Result<WorldState> {
     struct Foo {
+        world_time: i64,
         payload: serde_json::Value,
     };
 
     sqlx::query_as!(
         Foo,
         r#"
-        SELECT t.payload
+        SELECT t.world_time, t.payload
         FROM world_output t
         ORDER BY t.created DESC
         LIMIT 1
@@ -73,7 +74,15 @@ pub async fn load_state(pool: PgPool, logger: Logger) -> anyhow::Result<WorldSta
     )
     .fetch_one(&pool)
     .await
-    .map(|Foo { payload }| WorldState(payload))
+    .map(
+        |Foo {
+             world_time,
+             payload,
+         }| WorldState {
+            time: world_time,
+            payload,
+        },
+    )
     .map_err(|err| {
         error!(logger, "Failed to read world state {:?}", err);
         err

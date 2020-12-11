@@ -15,7 +15,7 @@ pub async fn terrain(
 ) -> Result<Box<dyn warp::Reply>, Infallible> {
     let state = state.0.enter().unwrap();
     let res = state
-        .0
+        .payload
         .get("terrain")
         .and_then(|t| t.get(&format!("{};{}", q, r)));
     let response: Box<dyn warp::Reply> = match res {
@@ -62,7 +62,7 @@ pub async fn get_room_objects(
             if !$projection.map(|x| x == 0).unwrap_or(false) {
                 // if projection.$key is not 0
                 // set the key to the value in state
-                result.insert($key, state.0.get($key).and_then(|t| t.get(&room_id)));
+                result.insert($key, state.payload.get($key).and_then(|t| t.get(&room_id)));
             }
         };
     };
@@ -71,8 +71,12 @@ pub async fn get_room_objects(
     project!(projection_structures, "structures");
     project!(projection_resources, "resources");
 
-    let response = warp::reply::json(&result);
+    let result = serde_json::json!({
+        "time": state.time,
+        "payload": result
+    });
 
+    let response = warp::reply::json(&result);
     Ok(response)
 }
 
@@ -83,7 +87,7 @@ pub async fn get_bots(
 ) -> Result<impl warp::Reply, warp::Rejection> {
     let state = state.0.enter().unwrap();
     let list = state
-        .0
+        .payload
         .get("bots")
         .and_then(|bots| bots.get(&format!("{};{}", room.q, room.r)))
         .ok_or_else(|| {

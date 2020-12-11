@@ -1,5 +1,29 @@
 {
   "db": "PostgreSQL",
+  "17cbdb930414671f21535378c851d88629b31a9324185894fb928b037da140e7": {
+    "query": "\n        SELECT t.world_time, t.payload\n        FROM world_output t\n        ORDER BY t.created DESC\n        LIMIT 1\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "world_time",
+          "type_info": "Int8"
+        },
+        {
+          "ordinal": 1,
+          "name": "payload",
+          "type_info": "Jsonb"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false
+      ]
+    }
+  },
   "57bc09d1c766196d9a2732038610b57b5589e92e94a6beacfb924af3744c4f0d": {
     "query": "\n        INSERT INTO user_account\n            (auth0_id, display_name, email, email_verified)\n        VALUES\n            ($1, $2, $3, $4)\n        ON CONFLICT ON CONSTRAINT email_is_unique\n        DO UPDATE\n        SET \n            display_name=$2,\n            email_verified=$4\n        ",
     "describe": {
@@ -32,24 +56,6 @@
       },
       "nullable": [
         null
-      ]
-    }
-  },
-  "778c5d498fcc1c6b3a3322d63445063e809c9316334762768cf20fff5e228c03": {
-    "query": "\n        SELECT t.payload\n        FROM world_output t\n        ORDER BY t.created DESC\n        LIMIT 1\n        ",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "payload",
-          "type_info": "Jsonb"
-        }
-      ],
-      "parameters": {
-        "Left": []
-      },
-      "nullable": [
-        false
       ]
     }
   },

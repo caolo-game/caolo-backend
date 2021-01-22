@@ -12,26 +12,6 @@ pub struct Card<'a> {
     pub constants: Vec<&'a str>,
 }
 
-impl<'a> Card<'a> {
-    pub fn from_str_parts(
-        name: &'a str,
-        description: &'a str,
-        ty: SubProgramType,
-        input: &'a [&'a str],
-        output: &'a [&'a str],
-        constants: &'a [&'a str],
-    ) -> Self {
-        Self {
-            name,
-            description,
-            ty,
-            input: input.iter().map(|x| *x).collect(),
-            output: output.iter().map(|x| *x).collect(),
-            constants: constants.iter().map(|x| *x).collect(),
-        }
-    }
-}
-
 #[derive(Clone, Serialize)]
 #[serde(rename_all(serialize = "camelCase"))]
 pub struct Schema<'a> {

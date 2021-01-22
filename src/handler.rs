@@ -6,13 +6,12 @@ pub use commands::*;
 pub use rooms::*;
 pub use user::*;
 
-use crate::model::script::{Card, OwnedCard, Schema};
+use crate::model::script::{OwnedCard, Schema};
 use crate::model::world::AxialPoint;
 use crate::model::{Identity, ScriptEntity, ScriptMetadata};
 use crate::PgPool;
 use crate::SharedState;
 use anyhow::Context;
-use cao_lang::compiler::description::get_instruction_descriptions;
 use cao_lang::compiler::{self, CompilationUnit};
 use slog::{debug, error, trace, Logger};
 use std::convert::Infallible;
@@ -31,7 +30,7 @@ pub async fn schema(_logger: Logger, pool: PgPool) -> Result<impl warp::Reply, I
         r#"
     SELECT payload
     FROM scripting_schema
-    ORDER BY id DESC
+    ORDER BY created DESC
     LIMIT 1
         "#
     )

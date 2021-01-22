@@ -44,19 +44,8 @@ pub async fn schema(_logger: Logger, pool: PgPool) -> Result<impl warp::Reply, I
 
     let cards = cards.iter().map(|c| c.as_card()).collect();
 
-    let mut schema = Schema { cards };
+    let schema = Schema { cards };
 
-    let basic_schema = get_instruction_descriptions();
-    schema.cards.extend(basic_schema.iter().map(|item| {
-        Card::from_str_parts(
-            item.name,
-            item.description,
-            item.ty.clone(),
-            item.input.as_ref(),
-            item.output.as_ref(),
-            item.constants.as_ref(),
-        )
-    }));
     let resp = with_status(warp::reply::json(&schema), StatusCode::OK);
     Ok(resp)
 }

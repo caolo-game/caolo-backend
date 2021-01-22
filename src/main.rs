@@ -4,19 +4,18 @@ mod handler;
 mod model;
 mod world_state;
 
-pub use world_state::SharedState;
 pub use config::*;
 use r2d2_redis::{r2d2, RedisConnectionManager};
 use slog::{info, o, warn, Drain};
 use sqlx::postgres::PgPool;
 use warp::http::Method;
 use warp::Filter;
+pub use world_state::SharedState;
 
 #[cfg(feature = "web-dotenv")]
 use dotenv::dotenv;
 
 pub type RedisPool = r2d2::Pool<RedisConnectionManager>;
-
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {

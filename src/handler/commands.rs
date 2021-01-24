@@ -285,7 +285,7 @@ pub async fn commit(
                 error!(logger, "Error in commit {:?}", arg);
                 arg
             }
-        }
+        };
     }
 
     let mut tx = db

@@ -10,17 +10,22 @@ use std::fmt::Write;
 use std::{collections::HashMap, convert::Infallible};
 use warp::http::StatusCode;
 
+fn axial_to_string(p: AxialPoint) -> ArrayString<[u8; 16]> {
+    let mut res = ArrayString::new();
+    write!(res, "{};{}", p.q, p.r).expect("Failed to serialize axial");
+    res
+}
+
 pub async fn terrain(
     _logger: Logger,
-    AxialPoint { q, r }: AxialPoint,
+    room_pos: AxialPoint,
     state: SharedState,
 ) -> Result<Box<dyn warp::Reply>, Infallible> {
     let state = state.0.enter().unwrap();
-    let res = state.payload.get("terrain").and_then(|t| {
-        let mut key = ArrayString::<[u8; 32]>::new();
-        write!(key, "{};{}", q, r).expect("Failed to create key str");
-        t.get(key.as_str())
-    });
+    let res = state
+        .payload
+        .get("terrain")
+        .and_then(|t| t.get(axial_to_string(room_pos).as_str()));
     let response: Box<dyn warp::Reply> = match res {
         Some(ref t) => Box::new(warp::reply::json(t)),
         None => Box::new(warp::reply::with_status(
@@ -57,7 +62,7 @@ pub async fn get_room_objects(
 ) -> Result<impl warp::Reply, warp::Rejection> {
     let state = state.0.enter().unwrap();
 
-    let room_id = format!("{};{}", q, r);
+    let room_id = axial_to_string(AxialPoint { q, r });
     let mut result = HashMap::new();
 
     macro_rules! project {
@@ -65,7 +70,13 @@ pub async fn get_room_objects(
             if !$projection.map(|x| x == 0).unwrap_or(false) {
                 // if projection.$key is not 0
                 // set the key to the value in state
-                result.insert($key, state.payload.get($key).and_then(|t| t.get(&room_id)));
+                result.insert(
+                    $key,
+                    state
+                        .payload
+                        .get($key)
+                        .and_then(|t| t.get(room_id.as_str())),
+                );
             }
         };
     }
@@ -92,7 +103,7 @@ pub async fn get_bots(
     let list = state
         .payload
         .get("bots")
-        .and_then(|bots| bots.get(&format!("{};{}", room.q, room.r)))
+        .and_then(|bots| bots.get(axial_to_string(room).as_str()))
         .ok_or_else(|| {
             warn!(logger, "room does not exist {:?}", room);
             warp::reject()

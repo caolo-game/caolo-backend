@@ -64,8 +64,8 @@ pub async fn get_room_objects(
                 // set the key to the value in state
                 result.insert($key, state.payload.get($key).and_then(|t| t.get(&room_id)));
             }
-        };
-    };
+        }
+    }
 
     project!(projection_bots, "bots");
     project!(projection_structures, "structures");

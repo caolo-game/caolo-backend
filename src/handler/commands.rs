@@ -285,8 +285,8 @@ pub async fn commit(
                 error!(logger, "Error in commit {:?}", arg);
                 arg
             }
-        };
-    };
+        }
+    }
 
     let mut tx = db
         .begin()
@@ -302,7 +302,7 @@ pub async fn commit(
         /// script_id
         id: Uuid,
         owner_id: Option<Uuid>,
-    };
+    }
 
     let query = {
         let name = payload.name.as_str();

@@ -61,7 +61,7 @@ pub async fn load_state(pool: PgPool, logger: Logger) -> anyhow::Result<WorldSta
     struct Foo {
         world_time: i64,
         payload: serde_json::Value,
-    };
+    }
 
     sqlx::query_as!(
         Foo,

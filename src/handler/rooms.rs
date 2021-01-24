@@ -3,8 +3,10 @@
 
 use crate::model::world::AxialPoint;
 use crate::SharedState;
+use arrayvec::ArrayString;
 use serde::Deserialize;
 use slog::{warn, Logger};
+use std::fmt::Write;
 use std::{collections::HashMap, convert::Infallible};
 use warp::http::StatusCode;
 
@@ -14,10 +16,11 @@ pub async fn terrain(
     state: SharedState,
 ) -> Result<Box<dyn warp::Reply>, Infallible> {
     let state = state.0.enter().unwrap();
-    let res = state
-        .payload
-        .get("terrain")
-        .and_then(|t| t.get(&format!("{};{}", q, r)));
+    let res = state.payload.get("terrain").and_then(|t| {
+        let mut key = ArrayString::<[u8; 32]>::new();
+        write!(key, "{};{}", q, r).expect("Failed to create key str");
+        t.get(key.as_str())
+    });
     let response: Box<dyn warp::Reply> = match res {
         Some(ref t) => Box::new(warp::reply::json(t)),
         None => Box::new(warp::reply::with_status(
@@ -64,7 +67,7 @@ pub async fn get_room_objects(
                 // set the key to the value in state
                 result.insert($key, state.payload.get($key).and_then(|t| t.get(&room_id)));
             }
-        }
+        };
     }
 
     project!(projection_bots, "bots");

@@ -61,22 +61,30 @@ pub async fn get_sim_config(state: SharedState) -> Result<impl warp::Reply, Infa
     Ok(resp)
 }
 
+#[derive(serde::Serialize)]
+pub struct RoomOverview {
+    pub pos: AxialPoint,
+    pub owner: Option<Uuid>,
+}
 pub async fn terrain_rooms(state: SharedState) -> Result<impl warp::Reply, Infallible> {
     let state = state.0.enter().unwrap();
-    let keys = state
-        .payload
-        .get("terrain")
-        .and_then(|t| t.as_object())
-        .map(|t| t.keys());
+    let keys = state.payload.get("rooms").and_then(|t| t.as_object());
 
     let res = match keys {
         Some(keys) => keys
             .into_iter()
-            .filter_map(|k| {
+            .filter_map(|(k, v)| {
                 let mut segments = k.split(';');
                 let q = segments.next()?.parse().ok()?;
                 let r = segments.next()?.parse().ok()?;
-                Some(AxialPoint { q, r })
+                let pos = AxialPoint { q, r };
+                let owner = v
+                    .as_object()
+                    .unwrap()
+                    .get("owner")
+                    .and_then(|o| o.as_str())
+                    .map(|owner| Uuid::parse_str(owner).expect("failed to parse owner id"));
+                Some(RoomOverview { pos, owner })
             })
             .collect(),
         None => {

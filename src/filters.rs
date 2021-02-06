@@ -271,13 +271,13 @@ async fn handle_rejections(err: warp::Rejection) -> Result<impl warp::Reply, Inf
 
     if let Some(err) = err.find::<handler::UserRegistrationError>() {
         status = err.status();
-        payload = json!({ "message": format!("{}", err) });
+        payload = json!({ "message": err.to_string() });
     } else if let Some(err) = err.find::<handler::CommandError>() {
         status = err.status();
-        payload = json!({ "message": format!("{}", err) });
+        payload = json!({ "message": err.to_string() });
     } else if let Some(err) = err.find::<handler::ScriptError>() {
         status = err.status();
-        payload = json!({ "message": format!("{}", err) });
+        payload = json!({ "message": err.to_string() });
     } else if err.is_not_found() {
         status = warp::http::StatusCode::NOT_FOUND;
         payload = json!({ "message": format!("{:?}", err) });

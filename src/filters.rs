@@ -51,10 +51,7 @@ pub fn api(
     };
 
     let config = {
-        let filter = warp::any().map(move || {
-            let conf = Arc::clone(&conf);
-            conf
-        });
+        let filter = warp::any().map(move || Arc::clone(&conf));
         move || filter.clone()
     };
 
@@ -240,6 +237,14 @@ pub fn api(
         .and(warp::filters::body::json())
         .and_then(handler::place_structure);
 
+    let take_room = warp::post()
+        .and(warp::path!("commands" / "take-room"))
+        .and(logger())
+        .and(current_user())
+        .and(cache_pool())
+        .and(warp::filters::body::json())
+        .and_then(handler::take_room);
+
     health_check
         .or(get_room_objects)
         .or(myself)
@@ -256,6 +261,7 @@ pub fn api(
         .or(read_bots_by_room)
         .or(get_sim_config)
         .or(place_structure)
+        .or(take_room)
         .recover(handle_rejections)
 }
 

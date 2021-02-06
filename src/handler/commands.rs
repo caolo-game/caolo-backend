@@ -1,6 +1,6 @@
 use super::ScriptError;
 use crate::model::{
-    world::{StructureType, WorldPosition},
+    world::{AxialPoint, StructureType, WorldPosition},
     Identity, User,
 };
 use crate::PgPool;
@@ -38,6 +38,47 @@ impl CommandError {
             CommandError::ExecutionError(_) => StatusCode::BAD_REQUEST,
         }
     }
+}
+#[derive(Debug, Deserialize)]
+pub struct TakeCoomCommandPayload {
+    pub room: AxialPoint,
+}
+
+pub async fn take_room(
+    logger: Logger,
+    identity: Option<User>,
+    cache: RedisPool,
+    TakeCoomCommandPayload { room }: TakeCoomCommandPayload,
+) -> Result<impl warp::Reply, warp::Rejection> {
+    debug!(logger, "Take coom command {:?} {:?}", identity, room);
+    let identity = match identity {
+        Some(id) => id,
+        None => {
+            return Err(warp::reject::custom(CommandError::Unauthorized));
+        }
+    };
+    let msg_id = uuid::Uuid::new_v4();
+
+    let mut capmsg = capnp::message::Builder::new_default();
+    {
+        let mut message = capmsg.init_root::<input_message::Builder>();
+        let mut root = message.reborrow().init_take_room();
+
+        let mut room_msg = root.reborrow().init_room_id();
+        room_msg.set_q(room.q);
+        room_msg.set_r(room.r);
+
+        let mut owner = root.reborrow().init_user_id();
+        owner.set_data(&identity.id.as_bytes()[..]);
+
+        let mut id = message.reborrow().init_message_id();
+        id.set_data(&msg_id.as_bytes()[..]);
+    }
+
+    send_command_to_worker(logger, msg_id, capmsg, cache)
+        .await
+        .map(|_| with_status(warp::reply(), StatusCode::NO_CONTENT))
+        .map_err(warp::reject::custom)
 }
 
 #[derive(Debug, Deserialize)]

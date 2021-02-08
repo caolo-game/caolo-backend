@@ -5,8 +5,6 @@ services:
     env_file: docker.env
     depends_on:
       - postgres
-    environment:
-      DATABASE_URL: postgres://postgres:admin@postgres
     # entrypoint:
     #   - /caolo/diesel
     #   - database
@@ -23,8 +21,6 @@ services:
       - postgres
     entrypoint:
       - ./caolo-backend
-    environment:
-      DATABASE_URL: postgres://postgres:admin@postgres
 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/"]

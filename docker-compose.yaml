@@ -22,7 +22,7 @@ services:
       - cache
       - postgres
     entrypoint:
-      - ./caolo-web
+      - ./caolo-backend
     environment:
       DATABASE_URL: postgres://postgres:admin@postgres
 

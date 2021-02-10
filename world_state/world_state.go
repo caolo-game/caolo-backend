@@ -6,12 +6,15 @@ import (
 )
 
 type WorldState struct {
-	Bots       map[string]interface{} `json:"bots"`
-	Structures map[string]interface{} `json:"structures"`
-	Resources  map[string]interface{} `json:"resources"`
-	Rooms      map[string]interface{} `json:"rooms"`
-	GameConfig GameConfig             `json:"gameConfig"`
-	Time       int64
+	Bots           map[string]interface{} `json:"bots"`
+	Structures     map[string]interface{} `json:"structures"`
+	Resources      map[string]interface{} `json:"resources"`
+	Rooms          map[string]interface{} `json:"rooms"`
+	Users          interface{}            `json:"users"`
+	Terrain        interface{}            `json:"terrain"`
+	RoomProperties interface{}            `json:"roomProperties"`
+	GameConfig     GameConfig             `json:"gameConfig"`
+	Time           int64
 }
 
 type GameConfig struct {

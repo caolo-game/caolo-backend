@@ -1,11 +1,11 @@
-package world_state
+package game_state
 
 import (
 	"encoding/json"
 	"github.com/jmoiron/sqlx"
 )
 
-type WorldState struct {
+type GameState struct {
 	Bots           map[string]interface{} `json:"bots"`
 	Structures     map[string]interface{} `json:"structures"`
 	Resources      map[string]interface{} `json:"resources"`
@@ -21,26 +21,26 @@ type GameConfig struct {
 	ExecutionLimit int `json:"execution_limit"`
 }
 
-var WorldStateQuery = `
+var gameStateQuery = `
 SELECT t.payload, t.world_time
 FROM world_output t
 ORDER BY t.created DESC
 LIMIT 1
 `
 
-func GetLatestWorldState(db *sqlx.DB) (*WorldState, error) {
+func GetLatestGameState(db *sqlx.DB) (*GameState, error) {
 
-	type WorldQResult struct {
+	type GameQResult struct {
 		Payload []byte `db:"payload"`
 		Time    int64  `db:"world_time"`
 	}
 
-	results := []WorldQResult{}
-	err := db.Select(&results, WorldStateQuery)
+	results := []GameQResult{}
+	err := db.Select(&results, gameStateQuery)
 	if err != nil {
 		return nil, err
 	}
-	var state WorldState
+	var state GameState
 	err = json.Unmarshal(results[0].Payload, &state)
 	if err != nil {
 		return nil, err

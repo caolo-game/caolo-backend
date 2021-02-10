@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/caolo-game/caolo-backend/world_state"
+	"github.com/caolo-game/caolo-backend/game_state"
 	"github.com/gorilla/mux"
 
 	"github.com/thedevsaddam/renderer"
@@ -54,7 +54,7 @@ func NewApp(config *Config) *App {
 func (a *App) getGameConfig(w http.ResponseWriter, r *http.Request) {
 	logHandlerEnter("game-config", r)
 
-	state, err := world_state.GetLatestWorldState(a.DB)
+	state, err := game_state.GetLatestGameState(a.DB)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -76,7 +76,7 @@ func (a *App) getRoomObjects(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	state, err := world_state.GetLatestWorldState(a.DB)
+	state, err := game_state.GetLatestGameState(a.DB)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -104,7 +104,7 @@ func (a *App) getRoomObjects(w http.ResponseWriter, req *http.Request) {
 
 func (a *App) getRooms(w http.ResponseWriter, req *http.Request) {
 	logHandlerEnter("rooms", req)
-	state, err := world_state.GetLatestWorldState(a.DB)
+	state, err := game_state.GetLatestGameState(a.DB)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

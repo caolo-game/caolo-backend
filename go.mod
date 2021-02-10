@@ -6,4 +6,6 @@ require (
 	github.com/gorilla/mux v1.3.0
 	github.com/jmoiron/sqlx v1.3.1
 	github.com/lib/pq v1.9.0
+	github.com/thedevsaddam/renderer v1.2.0
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 )

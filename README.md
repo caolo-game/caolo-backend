@@ -2,11 +2,11 @@
 
 ### Native builds:
 
-- [Cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html)
-- [AMQP (e.g. RabbitMQ)](hhttps://www.rabbitmq.com/)
 - [Cap'n Proto](https://capnproto.org/)
 - [PostgeSQL](https://www.postgresql.org/)
 - diesel-cli `cargo install diesel_cli --no-default-features --features "postgres"`
+- [Golang]()
+- [Redis]()
 
 ### Docker builds:
 
@@ -21,28 +21,22 @@ diesel database setup
 
 ## Building and running
 
-- Running the worker
-
-  ```
-  cargo run --bin caolo-worker
-  ```
-
 - Running the web service
 
   ```
-  cargo run --bin caolo-web
+  go run main.go
   ```
 
 - Building via Docker
   ```
-  make
+  make web
   ```
 
 ## Deployment
 
 ### Setting up Auth0
 
-TBA
+**TBA**
 
 ### Deploying to [Heroku](https://heroku.com)
 

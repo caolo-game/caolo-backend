@@ -2,11 +2,14 @@ package main // import "github.com/caolo-game/caolo-backend"
 
 import (
 	"fmt"
-	"github.com/caolo-game/caolo-backend/world_state"
-	"github.com/gorilla/mux"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
+	"strings"
+
+	"github.com/caolo-game/caolo-backend/world_state"
+	"github.com/gorilla/mux"
 
 	"github.com/thedevsaddam/renderer"
 
@@ -48,8 +51,8 @@ func NewApp(config *Config) *App {
 	return &App{DB, rnd}
 }
 
-func (a *App) GetGameConfig(w http.ResponseWriter, r *http.Request) {
-	log.Println("game-config")
+func (a *App) getGameConfig(w http.ResponseWriter, r *http.Request) {
+	logHandlerEnter("game-config", r)
 
 	state, err := world_state.GetLatestWorldState(a.DB)
 
@@ -62,8 +65,8 @@ func (a *App) GetGameConfig(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (a *App) GetRoomObjects(w http.ResponseWriter, req *http.Request) {
-	log.Println("room-objects")
+func (a *App) getRoomObjects(w http.ResponseWriter, req *http.Request) {
+	logHandlerEnter("room-objects", req)
 
 	q := req.URL.Query().Get("q")
 	r := req.URL.Query().Get("r")
@@ -99,10 +102,58 @@ func (a *App) GetRoomObjects(w http.ResponseWriter, req *http.Request) {
 	a.rnd.JSON(w, http.StatusOK, resp)
 }
 
+func (a *App) getRooms(w http.ResponseWriter, req *http.Request) {
+	logHandlerEnter("rooms", req)
+	state, err := world_state.GetLatestWorldState(a.DB)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	rooms := state.Rooms
+	var pl []interface{}
+	for roomid, roompl := range rooms {
+		roomqr := strings.Split(roomid, ";")
+		q := roomqr[0]
+		r := roomqr[1]
+		qi, err := strconv.Atoi(q)
+		if err != nil {
+			panic(err)
+		}
+		ri, err := strconv.Atoi(r)
+		if err != nil {
+			panic(err)
+		}
+		rpl := roompl.(map[string]interface{})
+		rpl["pos"] = struct {
+			Q int `json:"q"`
+			R int `json:"r"`
+		}{qi, ri}
+
+		pl = append(pl, rpl)
+	}
+
+	a.rnd.JSON(w, http.StatusOK, pl)
+}
+
+func (a *App) getHealth(w http.ResponseWriter, r *http.Request) {
+	logHandlerEnter("health", r)
+	a.rnd.NoContent(w)
+}
+
+func logHandlerEnter(name string, r *http.Request) {
+	ip := r.RemoteAddr
+	m := r.Method
+
+	log.Printf("%s: [%s] %s", ip, m, name)
+}
+
 func (a *App) InitRouter() *mux.Router {
 	r := mux.NewRouter()
-	r.HandleFunc("/game-config", a.GetGameConfig).Methods("GET")
-	r.HandleFunc("/room-objects", a.GetRoomObjects).Methods("GET")
+	r.HandleFunc("/game-config", a.getGameConfig).Methods("GET")
+	r.HandleFunc("/room-objects", a.getRoomObjects).Methods("GET")
+	r.HandleFunc("/rooms", a.getRooms).Methods("GET")
+	r.HandleFunc("/health", a.getHealth).Methods("GET")
 	return r
 }
 

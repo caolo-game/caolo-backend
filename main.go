@@ -68,8 +68,10 @@ func (a *App) getGameConfig(w http.ResponseWriter, r *http.Request) {
 func (a *App) getRoomObjects(w http.ResponseWriter, req *http.Request) {
 	logHandlerEnter("room-objects", req)
 
-	q := req.URL.Query().Get("q")
-	r := req.URL.Query().Get("r")
+	query := req.URL.Query()
+
+	q := query.Get("q")
+	r := query.Get("r")
 
 	if len(q) == 0 || len(r) == 0 {
 		http.Error(w, "Expected q and r params. (Room id)", http.StatusBadRequest)

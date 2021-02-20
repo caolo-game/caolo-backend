@@ -51,8 +51,7 @@ where
     fn delete(&mut self, id: &Self::Id) -> Option<Self::Row> {
         self.ids.binary_search(id).ok().map(|i| {
             self.ids.remove(i);
-            let res = mem::take(&mut self.default);
-            res
+            mem::take(&mut self.default)
         })
     }
 

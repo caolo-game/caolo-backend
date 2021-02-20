@@ -71,7 +71,7 @@ pub fn take_room(
     if num_rooms > available_rooms as usize {
         return Err(TakeRoomError::MaxRoomsExceeded(available_rooms as usize));
     }
-    let mut rooms = rooms.cloned().unwrap_or_else(|| Rooms::default());
+    let mut rooms = rooms.cloned().unwrap_or_else(Rooms::default);
     rooms.0.push(Room(room_id));
 
     world

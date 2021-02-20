@@ -156,6 +156,9 @@ where
             GroupByRooms::new(&values).collect();
         let groups = &groups;
 
+        // clippy will flag the collect, however we must collect otherwise the &self reference
+        // isn't freed
+        #[allow(clippy::needless_collect)]
         {
             let new_rooms = groups
                 .keys()

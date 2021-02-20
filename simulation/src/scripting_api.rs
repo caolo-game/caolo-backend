@@ -54,9 +54,9 @@ impl TryFrom<Scalar> for OperationResult {
 
 impl AutoByteEncodeProperties for OperationResult {}
 
-impl Into<Scalar> for OperationResult {
-    fn into(self) -> Scalar {
-        Scalar::Integer(self as i32)
+impl From<OperationResult> for Scalar {
+    fn from(opr: OperationResult) -> Self {
+        Scalar::Integer(opr as i32)
     }
 }
 

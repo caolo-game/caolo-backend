@@ -2,17 +2,86 @@ name: Rust
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
   pull_request:
-    branches: [ master ]
-
-env:
-  CARGO_TERM_COLOR: always
+    branches: [master]
 
 jobs:
-  build:
-
+  test:
     runs-on: ubuntu-latest
+    name: Test suite
+
+    strategy:
+      matrix:
+        rust: [stable, nightly]
+        include:
+          - rust: nightly
+            flags: "-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests"
 
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v2
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.rust }}
+
+      - name: Install capnp
+        run: sudo apt-get install capnproto -y
+
+      - name: Install test-all-features
+        run: cargo install cargo-all-features
+
+      - name: Check all features
+        run: |
+          cd worker
+          cargo +${{ matrix.rust }} check-all-features
+        env:
+          SQLX_OFFLINE: true
+
+      - name: Run tests
+        run: |
+          cd worker
+          cargo +${{ matrix.rust }} test --benches
+        env:
+          RUST_LOG: caolo_sim=trace
+          RUST_BACKTRACE: 1
+          CARGO_INCREMENTAL: 0
+          RUSTFLAGS: ${{ matrix.flags }}
+          RUSTDOCFLAGS: "-Cpanic=abort"
+          SQLX_OFFLINE: true
+
+      - name: Install grcov
+        if: ${{ matrix.rust == 'nightly' }}
+        run: curl -L https://github.com/mozilla/grcov/releases/latest/download/grcov-linux-x86_64.tar.bz2 | tar jxf -
+
+      - name: Generate coverage report
+        if: ${{ matrix.rust == 'nightly' }}
+        run: |
+          mkdir ./coverage
+          ./grcov ./target/debug -s . --token ${{ secrets.COVERALLS_TOKEN }} --ignore="/*" > ./coverage/lcov.info
+
+      - name: Coveralls
+        if: ${{ matrix.rust == 'nightly' }}
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  clippy_check:
+    runs-on: ubuntu-latest
+    name: Clippy check
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          components: clippy
+          override: true
+
+      - name: Install capnp
+        run: sudo apt-get install capnproto -y
+      - uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --all-features
+        env:
+          SQLX_OFFLINE: true

@@ -1,0 +1,47 @@
+{
+    "lanes": [
+        {
+            "name": "main",
+            "cards": [
+                {
+                    "ScalarInt": 15
+                },
+                {
+                    "ScalarInt": 18
+                },
+                {
+                    "ScalarInt": 31
+                },
+                {
+                    "ScalarInt": 16
+                },
+                {
+                    "Call": "WorldPosition"
+                },
+                {
+                    "Call": "Move to position"
+                },
+                {
+                    "ScalarInt": 0
+                },
+                {
+                    "Equals": null
+                },
+                {
+                    "JumpIfFalse": "error"
+                }
+            ]
+        },
+        {
+            "name": "error",
+            "cards": [
+                {
+                    "StringLiteral": "Failed to move"
+                },
+                {
+                    "Call": "Console Log"
+                }
+            ]
+        }
+    ]
+}

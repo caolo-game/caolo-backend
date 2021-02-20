@@ -1,0 +1,59 @@
+{
+    "lanes": [
+        {
+            "name": "main",
+            "cards": [
+                {
+                    "ScalarInt": 1
+                },
+                {
+                    "StringLiteral": "Resource"
+                },
+                {
+                    "Call": "Parse Find Constant"
+                },
+                {
+                    "Call": "Find Closest"
+                },
+                {
+                    "ScalarInt": 0
+                },
+                {
+                    "Equals": null
+                },
+                {
+                    "JumpIfFalse": "resource-error"
+                },
+                {
+                    "CopyLast": null
+                },
+                {
+                    "Call": "Approach Entity"
+                },
+                {
+                    "Pop": null
+                },
+                {
+                    "Call": "Mine"
+                },
+                {
+                    "StringLiteral": "We be mining bois"
+                },
+                {
+                    "Call": "Console Log"
+                }
+            ]
+        },
+        {
+            "name": "resource-error",
+            "cards": [
+                {
+                    "StringLiteral": "No resource found"
+                },
+                {
+                    "Call": "Console Log"
+                }
+            ]
+        }
+    ]
+}

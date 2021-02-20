@@ -157,8 +157,8 @@ func handleRequests() {
 	log.Println("Serving requests")
 	recoveryRouter := handlers.RecoveryHandler()(router)
 	compressedRouter := handlers.CompressHandler(recoveryRouter)
-	loggedRouter := handlers.LoggingHandler(os.Stdout, compressedRouter)
-	corsedRouter := handlers.CORS()(loggedRouter)
+	loggedRouter := handlers.CombinedLoggingHandler(os.Stdout, compressedRouter)
+	corsedRouter := handlers.CORS(handlers.AllowCredentials(), handlers.AllowedOrigins([]string{"*"}))(loggedRouter)
 	err := http.ListenAndServe(fmt.Sprintf("%s:%s", config.Host, config.Port), corsedRouter)
 	log.Fatal(err)
 }

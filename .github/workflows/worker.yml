@@ -56,15 +56,13 @@ jobs:
 
       - name: Generate coverage report
         if: ${{ matrix.rust == 'nightly' }}
-        working-directory: worker
         run: |
           mkdir ./coverage
-          ./grcov ./target/debug -s . --token ${{ secrets.COVERALLS_TOKEN }} --ignore="/*" > ./coverage/lcov.info
+          ./grcov .worker/target/debug -s . --token ${{ secrets.COVERALLS_TOKEN }} --ignore="/*" > ./coverage/lcov.info
 
       - name: Coveralls
         if: ${{ matrix.rust == 'nightly' }}
         uses: coverallsapp/github-action@master
-        working-directory: worker
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -85,13 +83,15 @@ jobs:
         working-directory: worker
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features
+          args: --all-features --manifest-path ./worker/Cargo.toml
+          name: clippy-worker
         env:
           SQLX_OFFLINE: true
       - uses: actions-rs/clippy-check@v1
         working-directory: simulation
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features
+          args: --all-features --manifest-path ./simulation/Cargo.toml
+          name: clippy-sim
         env:
           SQLX_OFFLINE: true

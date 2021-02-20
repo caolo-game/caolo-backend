@@ -11,7 +11,7 @@ start: web
 	docker-compose logs -f --tail=100
 
 web:
-	docker build -t frenetiq/caolo-web:latest -f dockerfile .
+	docker build -t frenetiq/caolo-web:latest -f ./web/dockerfile ./web
 
 push: web
 	docker push frenetiq/caolo-web:latest

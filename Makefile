@@ -10,10 +10,10 @@ start: web
 	docker-compose logs -f --tail=100
 
 web:
-	docker build -t frenetiq/caolo-web:bleeding -f ./web/dockerfile .
+	docker build -t frenetiq/caolo-web:bleeding -f ./dockerfile.web .
 
 worker:
-	docker build -t frenetiq/caolo-worker:bleeding -f ./worker/dockerfile .
+	docker build -t frenetiq/caolo-worker:bleeding -f ./dockerfile.worker .
 
 push: web worker
 	docker push frenetiq/caolo-web:bleeding
@@ -21,6 +21,9 @@ push: web worker
 
 release:
 	docker build -t frenetiq/caolo-release:bleeding -f dockerfile.release .
+
+
+all: web worker release
 
 deploy-heroku: web worker release
 	docker tag frenetiq/caolo-web:bleeding registry.heroku.com/$(app)/web

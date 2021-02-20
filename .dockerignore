@@ -12,6 +12,7 @@
 !.cargo
 worker/target
 !simulation
+!release.sh
 **/target
 **/*~
 **/index.node

@@ -1,16 +1,12 @@
 version: "3.7"
 services:
   release:
-    image: frenetiq/caolo-release
+    build: ./dockerfile.release
     env_file: docker.env
     depends_on:
       - postgres
-    # entrypoint:
-    #   - /caolo/diesel
-    #   - database
-    #   - setup
   web:
-    image: frenetiq/caolo-web
+    build: ./dockerfile.web
     env_file: docker.env
     environment:
       HOST: 0.0.0.0
@@ -27,6 +23,12 @@ services:
       timeout: 1s
       retries: 3
       start_period: 5s
+
+  worker:
+    build: ./dockerfile.worker
+    depends_on:
+      - cache
+      - postgres
 
   cache:
     image: eqalpha/keydb:latest

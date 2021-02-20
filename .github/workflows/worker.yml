@@ -33,15 +33,15 @@ jobs:
 
       - name: Check all features
         run: |
-          cd worker
           cargo +${{ matrix.rust }} check-all-features
+        working-directory: worker
         env:
           SQLX_OFFLINE: true
 
       - name: Run tests
         run: |
-          cd worker
           cargo +${{ matrix.rust }} test --benches
+        working-directory: worker
         env:
           RUST_LOG: caolo_sim=trace
           RUST_BACKTRACE: 1
@@ -56,6 +56,7 @@ jobs:
 
       - name: Generate coverage report
         if: ${{ matrix.rust == 'nightly' }}
+        working-directory: worker
         run: |
           mkdir ./coverage
           ./grcov ./target/debug -s . --token ${{ secrets.COVERALLS_TOKEN }} --ignore="/*" > ./coverage/lcov.info
@@ -63,6 +64,7 @@ jobs:
       - name: Coveralls
         if: ${{ matrix.rust == 'nightly' }}
         uses: coverallsapp/github-action@master
+        working-directory: worker
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -80,6 +82,14 @@ jobs:
       - name: Install capnp
         run: sudo apt-get install capnproto -y
       - uses: actions-rs/clippy-check@v1
+        working-directory: worker
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --all-features
+        env:
+          SQLX_OFFLINE: true
+      - uses: actions-rs/clippy-check@v1
+        working-directory: simulation
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --all-features

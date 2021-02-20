@@ -80,7 +80,6 @@ jobs:
       - name: Install capnp
         run: sudo apt-get install capnproto -y
       - uses: actions-rs/clippy-check@v1
-        working-directory: worker
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --all-features --manifest-path ./worker/Cargo.toml
@@ -88,7 +87,6 @@ jobs:
         env:
           SQLX_OFFLINE: true
       - uses: actions-rs/clippy-check@v1
-        working-directory: simulation
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --all-features --manifest-path ./simulation/Cargo.toml

@@ -1,12 +1,16 @@
 version: "3.7"
 services:
   release:
-    build: ./dockerfile.release
+    build: 
+      context: .
+      dockerfile: ./dockerfile.release
     env_file: docker.env
     depends_on:
       - postgres
   web:
-    build: ./dockerfile.web
+    build: 
+      context: .
+      dockerfile: ./dockerfile.web
     env_file: docker.env
     environment:
       HOST: 0.0.0.0
@@ -25,7 +29,10 @@ services:
       start_period: 5s
 
   worker:
-    build: ./dockerfile.worker
+    build: 
+      context: .
+      dockerfile: ./dockerfile.worker
+    env_file: docker.env
     depends_on:
       - cache
       - postgres
@@ -40,6 +47,12 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: admin
+    volumes:
+    - db-data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
 
+
+volumes:
+  db-data:
+    driver: local

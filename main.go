@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"github.com/caolo-game/caolo-backend/game_state"
+
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 
 	"github.com/thedevsaddam/renderer"
@@ -52,7 +54,6 @@ func NewApp(config *Config) *App {
 }
 
 func (a *App) getGameConfig(w http.ResponseWriter, r *http.Request) {
-	logHandlerEnter("game-config", r)
 
 	state, err := game_state.GetLatestGameState(a.DB)
 
@@ -66,7 +67,6 @@ func (a *App) getGameConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) getRoomObjects(w http.ResponseWriter, req *http.Request) {
-	logHandlerEnter("room-objects", req)
 
 	query := req.URL.Query()
 
@@ -105,7 +105,6 @@ func (a *App) getRoomObjects(w http.ResponseWriter, req *http.Request) {
 }
 
 func (a *App) getRooms(w http.ResponseWriter, req *http.Request) {
-	logHandlerEnter("rooms", req)
 	state, err := game_state.GetLatestGameState(a.DB)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -139,15 +138,7 @@ func (a *App) getRooms(w http.ResponseWriter, req *http.Request) {
 }
 
 func (a *App) getHealth(w http.ResponseWriter, r *http.Request) {
-	logHandlerEnter("health", r)
 	a.rnd.NoContent(w)
-}
-
-func logHandlerEnter(name string, r *http.Request) {
-	ip := r.RemoteAddr
-	m := r.Method
-
-	log.Printf("%s: [%s] %s", ip, m, name)
 }
 
 func (a *App) InitRouter() *mux.Router {
@@ -164,7 +155,11 @@ func handleRequests() {
 	app := NewApp(config)
 	router := app.InitRouter()
 	log.Println("Serving requests")
-	err := http.ListenAndServe(fmt.Sprintf("%s:%s", config.Host, config.Port), router)
+	recoveryRouter := handlers.RecoveryHandler()(router)
+	compressedRouter := handlers.CompressHandler(recoveryRouter)
+	loggedRouter := handlers.LoggingHandler(os.Stdout, compressedRouter)
+	corsedRouter := handlers.CORS()(loggedRouter)
+	err := http.ListenAndServe(fmt.Sprintf("%s:%s", config.Host, config.Port), corsedRouter)
 	log.Fatal(err)
 }
 

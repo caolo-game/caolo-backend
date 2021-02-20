@@ -5,6 +5,7 @@
 !go.mod
 !migrations
 !diesel.toml
+!game_state
 **/target
 **/*~
 **/index.node

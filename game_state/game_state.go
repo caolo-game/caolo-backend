@@ -19,6 +19,7 @@ type GameState struct {
 
 type GameConfig struct {
 	ExecutionLimit int `json:"execution_limit"`
+	TargetTickMs   int `json:"target_tick_ms"`
 }
 
 var gameStateQuery = `

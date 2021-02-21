@@ -29,12 +29,10 @@ ORDER BY t.created DESC
 `
 
 func GetLatestGameState(db *sqlx.DB) (*GameState, error) {
-	type GameQResult struct {
+	result := struct {
 		Payload []byte `db:"payload"`
 		Time    int64  `db:"world_time"`
-	}
-
-	result := GameQResult{}
+	}{}
 	err := db.Get(&result, gameStateQuery)
 	if err != nil {
 		return nil, err

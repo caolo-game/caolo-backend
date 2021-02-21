@@ -84,11 +84,11 @@ func (a *App) getRoomObjects(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	id := fmt.Sprintf("%s;%s", q, r)
+	roomId := fmt.Sprintf("%s;%s", q, r)
 
-	bots := state.Bots[id]
-	structures := state.Structures[id]
-	resources := state.Resources[id]
+	bots := state.Bots[roomId]
+	structures := state.Structures[roomId]
+	resources := state.Resources[roomId]
 
 	pl := struct {
 		Bots       interface{} `json:"bots"`
@@ -149,17 +149,15 @@ func (a *App) getRoomTerrain(w http.ResponseWriter, req *http.Request) {
 
 	const getRoomQuery = `
 SELECT objects.value AS room
-FROM public.world_output t, jsonb_each(payload -> 'terrain') objects
+FROM public.world_output t, jsonb_each(t.payload->'terrain') objects
 WHERE objects.key::text = $1
 ORDER BY t.created DESC
 `
 
-	type QResult struct {
+	roomId := fmt.Sprintf("%s;%s", q, r)
+	var result struct {
 		Room []byte `db:"room"`
 	}
-
-	roomId := fmt.Sprintf("%s;%s", q, r)
-	var result QResult
 	err := a.DB.Get(&result, getRoomQuery, roomId)
 	if err != nil {
 		if err.Error() == "sql: no rows in result set" {
@@ -171,7 +169,7 @@ ORDER BY t.created DESC
 	}
 	w.WriteHeader(http.StatusOK)
 	w.Write(result.Room)
-	w.Header().Add("content-type", "applcation/json")
+	w.Header().Add(renderer.ContentType, renderer.ContentJSON)
 }
 
 func (a *App) InitRouter() *mux.Router {

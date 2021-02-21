@@ -22,30 +22,28 @@ type GameConfig struct {
 	TargetTickMs   int `json:"target_tick_ms"`
 }
 
-var gameStateQuery = `
+const gameStateQuery = `
 SELECT t.payload, t.world_time
 FROM world_output t
 ORDER BY t.created DESC
-LIMIT 1
 `
 
 func GetLatestGameState(db *sqlx.DB) (*GameState, error) {
-
 	type GameQResult struct {
 		Payload []byte `db:"payload"`
 		Time    int64  `db:"world_time"`
 	}
 
-	results := []GameQResult{}
-	err := db.Select(&results, gameStateQuery)
+	result := GameQResult{}
+	err := db.Get(&result, gameStateQuery)
 	if err != nil {
 		return nil, err
 	}
 	var state GameState
-	err = json.Unmarshal(results[0].Payload, &state)
+	err = json.Unmarshal(result.Payload, &state)
 	if err != nil {
 		return nil, err
 	}
-	state.Time = results[0].Time
+	state.Time = result.Time
 	return &state, nil
 }

@@ -1,4 +1,4 @@
-package main // import "github.com/caolo-game/caolo-backend"
+package main // import "github.com/caolo-game/caolo-backend/web"
 
 import (
 	"fmt"
@@ -27,14 +27,14 @@ type App struct {
 type Config struct {
 	Port  string
 	Host  string
-	DbURI string
+	DbUri string
 }
 
 func NewConfig() *Config {
 	return &Config{
 		Port:  getEnv("PORT", "8000"),
 		Host:  getEnv("HOST", "127.0.0.1"),
-		DbURI: getEnv("DATABASE_URL", "postgres://postgres:admin@localhost:5432/caolo?sslmode=disable"),
+		DbUri: getEnv("DATABASE_URL", "postgres://postgres:admin@localhost:5432/caolo?sslmode=disable"),
 	}
 }
 
@@ -48,7 +48,7 @@ func getEnv(key string, defaultVal string) string {
 func NewApp(config *Config) *App {
 	log.Println("Connecting to database")
 
-	DB := sqlx.MustConnect("postgres", config.DbURI)
+	DB := sqlx.MustConnect("postgres", config.DbUri)
 	rnd := renderer.New()
 	return &App{DB, rnd}
 }
@@ -141,12 +141,48 @@ func (a *App) getHealth(w http.ResponseWriter, r *http.Request) {
 	a.rnd.NoContent(w)
 }
 
+func (a *App) getRoomTerrain(w http.ResponseWriter, req *http.Request) {
+	query := req.URL.Query()
+
+	q := query.Get("q")
+	r := query.Get("r")
+
+	const getRoomQuery = `
+SELECT objects.value AS room
+FROM public.world_output t, jsonb_each(payload -> 'terrain') objects
+WHERE objects.key::text = $1
+ORDER BY t.created DESC
+`
+
+	type QResult struct {
+		Room []byte `db:"room"`
+	}
+
+	roomId := fmt.Sprintf("%s;%s", q, r)
+	var result QResult
+	err := a.DB.Get(&result, getRoomQuery, roomId)
+	// TODO: this might just indicate that the room does not exists
+	// return 404 in this case
+	if err != nil {
+		if err.Error() == "sql: no rows in result set" {
+			http.Error(w, "Room not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	w.Write(result.Room)
+	w.Header().Add("content-type", "applcation/json")
+}
+
 func (a *App) InitRouter() *mux.Router {
 	r := mux.NewRouter()
 	r.HandleFunc("/game-config", a.getGameConfig).Methods("GET")
 	r.HandleFunc("/room-objects", a.getRoomObjects).Methods("GET")
 	r.HandleFunc("/rooms", a.getRooms).Methods("GET")
 	r.HandleFunc("/health", a.getHealth).Methods("GET")
+	r.HandleFunc("/terrain", a.getRoomTerrain).Methods("GET")
 	return r
 }
 

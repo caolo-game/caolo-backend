@@ -1,42 +1,23 @@
-## Prerequisites
+# Cao-Lo backend
 
-### Native builds:
+This repository contains the back-end code of the game Cao-Lo.
 
-- [Cap'n Proto](https://capnproto.org/)
-- [PostgeSQL](https://www.postgresql.org/)
-- diesel-cli `cargo install diesel_cli --no-default-features --features "postgres"`
-- [Golang]()
-- [Redis]()
+Code layout:
 
-### Docker builds:
-
-- [Docker](https://www.docker.com/)
-- [Make](https://www.gnu.org/software/make/) (Optional)
-
-## Setting up
-
-```
-diesel database setup
+```txt
+|+ cao-storage-derive/ # Derive macro for the storage of the simulation/
+|+ migrations/         # SQL schema migrations
+|+ simulation/         # Library for running the game world
+|+ web/                # Webservice bridging remote clients and the worker
+|+ worker/             # Executable code running the simulation
 ```
 
-## Building and running
 
-- Running the web service
+## Building via Docker
 
-  ```
-  go run main.go
-  ```
-
-- Building via Docker
-  ```
-  make web
-  ```
-
-## Deployment
-
-### Setting up Auth0
-
-**TBA**
+```
+make all
+```
 
 ### Deploying to [Heroku](https://heroku.com)
 

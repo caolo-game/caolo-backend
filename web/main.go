@@ -161,8 +161,6 @@ ORDER BY t.created DESC
 	roomId := fmt.Sprintf("%s;%s", q, r)
 	var result QResult
 	err := a.DB.Get(&result, getRoomQuery, roomId)
-	// TODO: this might just indicate that the room does not exists
-	// return 404 in this case
 	if err != nil {
 		if err.Error() == "sql: no rows in result set" {
 			http.Error(w, "Room not found", http.StatusNotFound)

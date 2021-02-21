@@ -167,9 +167,9 @@ ORDER BY t.created DESC
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	w.Header().Add(renderer.ContentType, renderer.ContentJSON)
 	w.WriteHeader(http.StatusOK)
 	w.Write(result.Room)
-	w.Header().Add(renderer.ContentType, renderer.ContentJSON)
 }
 
 func (a *App) InitRouter() *mux.Router {

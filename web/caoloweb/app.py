@@ -42,17 +42,17 @@ async def terrain(
 ):
     room_id = f"{q};{r}"
 
-    statement = await req.state.db.prepare(
+    res_encoded = await req.state.db.fetchval(
         """
 SELECT objects.value AS room
 FROM public.world_output t, jsonb_each(t.payload->'terrain') objects
 WHERE objects.key::text = $1
 ORDER BY t.created DESC
-"""
+""",
+        room_id,
     )
 
-    # returned dat is already json encoded string
-    res_encoded = await statement.fetchval(room_id)
+    # returned data is already json encoded string
     # TODO: just write the already encoded response...
     if not res_encoded:
         return []
@@ -90,7 +90,7 @@ async def room_objects(
     """
 
     room_id = f"{q};{r}"
-    stmt = await req.state.db.prepare(
+    res = await req.state.db.fetchrow(
         """
 SELECT botobj.value AS bots
     , structobj.value as structures
@@ -104,10 +104,15 @@ WHERE botobj.key::text = $1
     AND structobj.key::text = $1
     AND resobj.key::text = $1
 ORDER BY t.created DESC
-        """
+        """,
+        room_id,
     )
+    if not res:
+        return {
+            "payload": {"bots": [], "structures": [], "resources": []},
+            "time": None,
+        }
 
-    res = await stmt.fetchrow(room_id)
     return {
         "payload": {
             "bots": json.loads(res["bots"]),

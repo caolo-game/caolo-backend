@@ -78,7 +78,7 @@ LIMIT 1
     data: Dict[str, Dict] = json.loads(res_encoded)
     # keys are 'q;r', so split them and insert them into a 'pos' object, then put the rest of the values next to it
     return (
-        {"pos": Axial(q, r), **v}
+        {"pos": {"q": q, "r": r}, **v}
         for q, r, v in ((*k.split(";"), v) for k, v in data.items())
     )
 

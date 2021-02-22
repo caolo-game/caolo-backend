@@ -15,15 +15,16 @@ web:
 worker:
 	docker build -t frenetiq/caolo-worker:bleeding -f ./dockerfile.worker .
 
-push: web worker
-	docker push frenetiq/caolo-web:bleeding
-	docker push frenetiq/caolo-worker:bleeding
-
 release:
 	docker build -t frenetiq/caolo-release:bleeding -f dockerfile.release .
 
-
 all: web worker release
+
+push: all
+	docker push frenetiq/caolo-web:bleeding
+	docker push frenetiq/caolo-release:bleeding
+	docker push frenetiq/caolo-worker:bleeding
+
 
 deploy-heroku: web worker release
 	docker tag frenetiq/caolo-web:bleeding registry.heroku.com/$(app)/web

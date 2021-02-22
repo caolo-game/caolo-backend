@@ -14,6 +14,7 @@ services:
     env_file: docker.env
     environment:
       HOST: 0.0.0.0
+      PORT: 8000
     ports:
       - "8000:8000"
     depends_on:

@@ -1,10 +1,12 @@
-from typing import Dict
+from typing import Dict, List
 from fastapi import FastAPI, Response, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 import asyncpg
 import json
 import os
+
+
+from .api_schema import RoomObjects
 
 app = FastAPI()
 
@@ -36,7 +38,7 @@ async def health():
     return Response(status_code=204)
 
 
-@app.get("/terrain")
+@app.get("/terrain", response_model=List[Dict])
 async def terrain(
     req: Request, q: str = Query(None, max_length=5), r: str = Query(None, max_length=5)
 ):
@@ -59,7 +61,7 @@ ORDER BY t.created DESC
     return json.loads(res_encoded)
 
 
-@app.get("/rooms")
+@app.get("/rooms", response_model=List[Dict])
 async def rooms(req: Request):
     res = await req.state.db.fetch(
         """
@@ -76,12 +78,12 @@ LIMIT 1
     data: Dict[str, Dict] = json.loads(res_encoded)
     # keys are 'q;r', so split them and insert them into a 'pos' object, then put the rest of the values next to it
     return (
-        {"pos": {"q": q, "r": r}, **v}
+        {"pos": Axial(q, r), **v}
         for q, r, v in ((*k.split(";"), v) for k, v in data.items())
     )
 
 
-@app.get("/room-objects")
+@app.get("/room-objects", response_model=RoomObjects)
 async def room_objects(
     req: Request, q: str = Query(None, max_length=5), r: str = Query(None, max_length=5)
 ):
@@ -107,17 +109,15 @@ ORDER BY t.created DESC
         """,
         room_id,
     )
+    payload = RoomObjects()
     if not res:
-        return {
-            "payload": {"bots": [], "structures": [], "resources": []},
-            "time": None,
-        }
+        return payload
 
-    return {
-        "payload": {
-            "bots": json.loads(res["bots"]),
-            "structures": json.loads(res["structures"]),
-            "resources": json.loads(res["resources"]),
-        },
-        "time": res["time"],
+    payload.payload = {
+        "bots": json.loads(res["bots"]),
+        "structures": json.loads(res["structures"]),
+        "resources": json.loads(res["resources"]),
     }
+    payload.time = res["time"]
+
+    return payload

@@ -2,10 +2,10 @@
 
 ### Native builds:
 
+- [Python]()
 - [Cap'n Proto](https://capnproto.org/)
 - [PostgeSQL](https://www.postgresql.org/)
 - diesel-cli `cargo install diesel_cli --no-default-features --features "postgres"`
-- [Golang]()
 - [Redis]()
 
 ### Docker builds:
@@ -17,6 +17,10 @@
 
 ```
 diesel database setup
+
+python -m venv env
+source env/scripts/activate
+pip install -r requirements.txt
 ```
 
 ## Building and running
@@ -24,5 +28,5 @@ diesel database setup
 - Running the web service
 
   ```
-  go run main.go
+  uvicorn caoloweb.app:app --reload
   ```

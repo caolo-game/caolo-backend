@@ -20,8 +20,6 @@ services:
     depends_on:
       - cache
       - postgres
-    entrypoint:
-      - ./caolo-backend
 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/"]

@@ -1,23 +1,12 @@
-FROM golang:latest AS build
+FROM python:3.9-alpine
 
-RUN apt-get update
-RUN apt-get install capnproto -y
+RUN apk add gcc musl-dev postgresql-dev
 
 WORKDIR /caolo
+
+COPY ./web/requirements.txt .
+RUN pip install -r requirements.txt
 
 COPY ./web .
 
-RUN go build
-
-# ---------- Copy the built binary to a scratch container, to minimize the image size ----------
-
-FROM ubuntu:18.04
-WORKDIR /caolo
-RUN apt-get update -y
-RUN apt-get install curl libpq-dev -y --fix-missing
-
-COPY --from=build /caolo/caolo-backend ./
-
-RUN ls -al /caolo
-
-ENTRYPOINT ["./caolo-backend"]
+ENTRYPOINT [ "sh", "./start.sh"]

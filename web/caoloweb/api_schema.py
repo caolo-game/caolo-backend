@@ -10,4 +10,17 @@ class RoomObjectsPayload(BaseModel):
 
 class RoomObjects(BaseModel):
     payload: RoomObjectsPayload = RoomObjectsPayload()
-    time: int = 0
+    time: int = -1
+
+
+class Axial(BaseModel):
+    q: int
+    r: int
+
+
+def parse_room_id(room_id: str):
+    return room_id.split(";")
+
+
+def make_room_id(q: int, r: int):
+    return f"{q};{r}"

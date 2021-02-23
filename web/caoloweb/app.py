@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Tuple
 from fastapi import FastAPI, Response, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 import asyncpg
@@ -6,7 +6,7 @@ import json
 import os
 
 
-from .api_schema import RoomObjects
+from .api_schema import RoomObjects, Axial, make_room_id
 
 app = FastAPI()
 
@@ -38,11 +38,11 @@ async def health():
     return Response(status_code=204)
 
 
-@app.get("/terrain", response_model=List[Dict])
+@app.get("/terrain", response_model=List[Tuple[Axial, str]])
 async def terrain(
     req: Request, q: str = Query(None, max_length=5), r: str = Query(None, max_length=5)
 ):
-    room_id = f"{q};{r}"
+    room_id = make_room_id(q, r)
 
     res_encoded = await req.state.db.fetchval(
         """
@@ -90,29 +90,30 @@ async def room_objects(
     return a list of each type of entity in the given room
     """
 
-    room_id = f"{q};{r}"
+    room_id = make_room_id(q, r)
+
+    # Turns out that loading the entire game state into memory,
+    # parsing the json and filtering it is about 3x faster than doing this filtering in Postgres
     res = await req.state.db.fetchrow(
         """
 SELECT
-    t.payload->'bots'->$1 as bots
-    , t.payload->'structures'->$1 as structures
-    , t.payload->'resources'->$1 as resources
+    t.payload as payload
     , t.world_time as time
 FROM public.world_output t
 ORDER BY t.created DESC
 LIMIT 1
         """,
-        room_id,
     )
     payload = RoomObjects()
-    if not res:
-        return payload
 
-    payload.payload = {
-        "bots": json.loads(res["bots"]),
-        "structures": json.loads(res["structures"]),
-        "resources": json.loads(res["resources"]),
-    }
-    payload.time = res["time"]
-
+    try:
+        pl = json.loads(res["payload"])
+        payload.time = res["time"]
+        payload.payload = {
+            "bots": pl["bots"][room_id],
+            "structures": pl["structures"][room_id],
+            "resources": pl["resources"][room_id],
+        }
+    except KeyError:
+        pass
     return payload

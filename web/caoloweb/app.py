@@ -46,9 +46,8 @@ async def terrain(
 
     res_encoded = await req.state.db.fetchval(
         """
-SELECT objects.value AS room
-FROM public.world_output t, jsonb_each(t.payload->'terrain') objects
-WHERE objects.key::text = $1
+SELECT t.payload->'terrain'->$1 AS room
+FROM public.world_output t
 ORDER BY t.created DESC
 """,
         room_id,
@@ -94,18 +93,14 @@ async def room_objects(
     room_id = f"{q};{r}"
     res = await req.state.db.fetchrow(
         """
-SELECT botobj.value AS bots
-    , structobj.value as structures
-    , resobj.value as resources
+SELECT
+    t.payload->'bots'->$1 as bots
+    , t.payload->'structures'->$1 as structures
+    , t.payload->'resources'->$1 as resources
     , t.world_time as time
 FROM public.world_output t
-    , jsonb_each(t.payload->'bots') botobj
-    , jsonb_each(t.payload->'structures') structobj
-    , jsonb_each(t.payload->'resources') resobj
-WHERE botobj.key::text = $1
-    AND structobj.key::text = $1
-    AND resobj.key::text = $1
 ORDER BY t.created DESC
+LIMIT 1
         """,
         room_id,
     )

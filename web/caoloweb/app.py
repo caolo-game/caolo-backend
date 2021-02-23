@@ -6,7 +6,7 @@ import json
 import os
 
 
-from .api_schema import RoomObjects, Axial, make_room_id
+from .api_schema import RoomObjects, Axial, make_room_id, parse_room_id
 
 app = FastAPI()
 
@@ -46,10 +46,10 @@ async def terrain(
 
     res_encoded = await req.state.db.fetchval(
         """
-SELECT t.payload->'terrain'->$1 AS room
-FROM public.world_output t
-ORDER BY t.created DESC
-""",
+        SELECT t.payload->'terrain'->$1 AS room
+        FROM public.world_output t
+        ORDER BY t.created DESC
+        """,
         room_id,
     )
 
@@ -62,29 +62,30 @@ ORDER BY t.created DESC
 
 @app.get("/rooms", response_model=List[Dict])
 async def rooms(req: Request):
-    res = await req.state.db.fetch(
+    res = await req.state.db.fetchrow(
         """
-SELECT t.payload->'rooms' AS rooms
-FROM public.world_output t
-ORDER BY t.created DESC
-LIMIT 1
+        SELECT t.payload->'rooms' AS rooms
+        FROM public.world_output t
+        ORDER BY t.created DESC
         """
     )
 
     assert res, "No results returned"
 
-    res_encoded = res[0]["rooms"]
+    res_encoded = res["rooms"]
     data: Dict[str, Dict] = json.loads(res_encoded)
     # keys are 'q;r', so split them and insert them into a 'pos' object, then put the rest of the values next to it
     return (
-        {"pos": {"q": q, "r": r}, **v}
-        for q, r, v in ((*k.split(";"), v) for k, v in data.items())
+        {"pos": room_id, **v}
+        for room_id, v in ((parse_room_id(k), v) for k, v in data.items())
     )
 
 
 @app.get("/room-objects", response_model=RoomObjects)
 async def room_objects(
-    req: Request, q: str = Query(None, max_length=5), r: str = Query(None, max_length=5)
+    req: Request,
+    q: str = Query(None, max_length=5),
+    r: str = Query(None, max_length=5),
 ):
     """
     return a list of each type of entity in the given room
@@ -96,12 +97,11 @@ async def room_objects(
     # parsing the json and filtering it is about 3x faster than doing this filtering in Postgres
     res = await req.state.db.fetchrow(
         """
-SELECT
-    t.payload as payload
-    , t.world_time as time
-FROM public.world_output t
-ORDER BY t.created DESC
-LIMIT 1
+        SELECT
+            t.payload as payload
+            , t.world_time as time
+        FROM public.world_output t
+        ORDER BY t.created DESC
         """,
     )
     payload = RoomObjects()

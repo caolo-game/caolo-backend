@@ -14,12 +14,18 @@ class RoomObjects(BaseModel):
 
 
 class Axial(BaseModel):
-    q: int
-    r: int
+    q: int = 0
+    r: int = 0
+
+    def __init__(self, q=0, r=0):
+        super().__init__()
+        self.q = q
+        self.r = r
 
 
-def parse_room_id(room_id: str):
-    return room_id.split(";")
+def parse_room_id(room_id: str) -> Axial:
+    q, r = room_id.split(";")
+    return Axial(q, r)
 
 
 def make_room_id(q: int, r: int):

@@ -2,6 +2,7 @@
 mod json_impl;
 
 use crate::components::*;
+use crate::diagnostics::Diagnostics;
 use crate::indices::*;
 use crate::intents::*;
 use crate::storage;
@@ -74,7 +75,9 @@ storage!(
     table Intents<MutPathCacheIntent> = mut_path_cache_intents,
     table Intents<MeleeIntent> = melee_intents,
     table Intents<ScriptHistoryEntry> = script_history_intents,
-    table Intents<DeleteEntityIntent> = delete_entity_intents
+    table Intents<DeleteEntityIntent> = delete_entity_intents,
+
+    table Diagnostics = diagnostics
 );
 
 storage!(
@@ -305,6 +308,7 @@ impl World {
             "roomProperties",
             "gameConfig",
             "users",
+            "diagnostics",
             "rooms",
         ]
         .par_iter()
@@ -323,6 +327,9 @@ impl World {
                     }
                     "gameConfig" => serde_json::to_value(&self.config.game_config.value).unwrap(),
                     "rooms" => json_impl::json_serialize_rooms(&self),
+                    "diagnostics" => {
+                        serde_json::to_value(&self.resources.diagnostics.value).unwrap()
+                    }
                     _ => unreachable!(),
                 };
                 output.insert(key.to_string(), value);

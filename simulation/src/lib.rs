@@ -2,6 +2,7 @@ use prelude::{Component, World};
 use tables::{unique::UniqueTable, TableId};
 
 pub mod components;
+pub mod diagnostics;
 pub mod executor;
 pub mod geometry;
 pub mod indices;

@@ -3,12 +3,19 @@ use std::{convert::Infallible, fmt::Debug, pin::Pin};
 use slog::{debug, info, o, Logger};
 
 use crate::{
-    components::EntityScript, intents, map_generation::generate_full_map,
-    map_generation::overworld::OverworldGenerationParams,
-    map_generation::room::RoomGenerationParams, map_generation::MapGenError, prelude::EntityId,
-    prelude::FromWorldMut, world::init_inmemory_storage, world::World,
+    components::EntityScript,
+    diagnostics::Diagnostics,
+    intents,
+    map_generation::room::RoomGenerationParams,
+    map_generation::MapGenError,
+    map_generation::{generate_full_map, overworld::OverworldGenerationParams},
+    prelude::EntityId,
+    prelude::{EmptyKey, FromWorldMut},
+    profile,
+    systems::{execute_world_update, script_execution::execute_scripts},
+    world::init_inmemory_storage,
+    world::World,
 };
-use crate::{profile, systems::execute_world_update, systems::script_execution::execute_scripts};
 
 #[derive(Debug, Clone)]
 pub struct GameConfig {
@@ -39,11 +46,19 @@ impl Executor for SimpleExecutor {
     type Error = Infallible;
 
     fn forward(&mut self, world: &mut World) -> Result<(), Self::Error> {
+        let start = chrono::Utc::now();
         profile!("world_forward");
 
         let logger = world.logger.new(o!("tick" => world.time()));
 
         info!(logger, "Tick starting");
+
+        // reset diagnostics
+        {
+            let mut diag = world.unsafe_view::<EmptyKey, Diagnostics>();
+            let diag = diag.unwrap_mut_or_default();
+            diag.clear();
+        }
 
         let scripts_table = world.view::<EntityId, EntityScript>();
         let executions: Vec<(EntityId, EntityScript)> =
@@ -61,7 +76,16 @@ impl Executor for SimpleExecutor {
         debug!(logger, "Executing post-processing");
         world.post_process();
 
-        info!(logger, "Tick done");
+        let end = chrono::Utc::now();
+        let duration = end - start;
+
+        let mut diag = world.unsafe_view::<EmptyKey, Diagnostics>();
+        let diag: &mut Diagnostics = diag.unwrap_mut_or_default();
+        diag.tick_latency_ms = duration.num_milliseconds();
+        diag.tick_start = start;
+        diag.tick_end = end;
+        info!(logger, "Tick done\n{:#?}", diag);
+
         Ok(())
     }
 

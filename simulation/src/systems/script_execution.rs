@@ -1,15 +1,14 @@
-use crate::storage::views::FromWorld;
 use crate::{
     components::{
         game_config::GameConfig, EntityScript, OwnedEntity, ScriptComponent, ScriptHistoryEntry,
     },
-    prelude::World,
-};
-use crate::{
+    diagnostics::Diagnostics,
     indices::{ConfigKey, EntityId, ScriptId, UserId},
-    storage::views::UnwrapView,
+    intents::*,
+    prelude::{EmptyKey, World},
+    profile,
+    storage::views::{FromWorld, UnwrapView},
 };
-use crate::{intents::*, profile};
 use cao_lang::prelude::*;
 use rayon::prelude::*;
 use slog::{debug, o, trace, warn};
@@ -55,11 +54,22 @@ pub fn execute_scripts(
         "Executing {} scripts on {} threads in chunks of {}", n_scripts, n_threads, chunk_size
     );
 
-    let intents: Option<Vec<BotIntents>> = workload
+    #[derive(Default)]
+    struct RunResult {
+        intents: Vec<BotIntents>,
+        num_scripts_ran: i64,
+        num_scripts_errored: i64,
+    }
+
+    let run_result: Option<RunResult> = workload
         .par_chunks(chunk_size)
         .fold(
-            || Vec::with_capacity(chunk_size),
-            |mut intents, entity_scripts| {
+            || RunResult {
+                intents: Vec::with_capacity(chunk_size),
+                num_scripts_ran: 0,
+                num_scripts_errored: 0,
+            },
+            |mut results, entity_scripts| {
                 let data = ScriptExecutionData::unsafe_default(logger.clone());
 
                 let conf = UnwrapView::<ConfigKey, GameConfig>::new(storage);
@@ -78,30 +88,47 @@ pub fn execute_scripts(
                     match execute_single_script(
                         &logger, *entity_id, script.0, owner_id, storage, &mut vm,
                     ) {
-                        Ok(ints) => intents.push(ints),
+                        Ok(ints) => results.intents.push(ints),
                         Err(err) => {
+                            results.num_scripts_errored += 1;
                             warn!(
                                 logger,
                                 "Execution failure in {:?} of {:?}:\n{:?}", script, entity_id, err
                             );
                         }
                     }
+                    results.num_scripts_ran += 1;
                 }
-                intents
+                results
             },
         )
         .reduce_with(|mut res, intermediate| {
-            res.extend(intermediate);
+            res.intents.extend(intermediate.intents);
+            res.num_scripts_ran += intermediate.num_scripts_ran;
+            res.num_scripts_errored += intermediate.num_scripts_errored;
             res
         });
 
     debug!(
         logger,
         "Executing scripts done. Returning {:?} intents",
-        intents.as_ref().map(|i| i.len())
+        run_result.as_ref().map(|i| i.intents.len())
     );
-    trace!(logger, "Intents {:#?}", intents);
-    intents.unwrap_or_else(Vec::default)
+
+    let mut diag = storage.unsafe_view::<EmptyKey, Diagnostics>();
+    let diag: &mut Diagnostics = diag.unwrap_mut_or_default();
+
+    diag.number_of_intents = run_result
+        .as_ref()
+        .map(|i| i.intents.len() as i64)
+        .unwrap_or(0);
+    diag.number_of_scripts_ran = run_result.as_ref().map(|i| i.num_scripts_ran).unwrap_or(0);
+    diag.number_of_scripts_errored = run_result
+        .as_ref()
+        .map(|i| i.num_scripts_errored)
+        .unwrap_or(0);
+
+    run_result.map(|i| i.intents).unwrap_or_else(Vec::default)
 }
 
 fn prepare_script_data(

@@ -27,6 +27,16 @@ where
         self.value.as_mut().unwrap()
     }
 
+    pub fn unwrap_mut_or_default(&mut self) -> &mut Row
+    where
+        Row: Default,
+    {
+        if self.value.is_none() {
+            self.value = Some(Default::default());
+        }
+        self.value.as_mut().unwrap()
+    }
+
     pub fn update(&mut self, value: Option<Row>) {
         self.value = value;
     }

@@ -1,5 +1,5 @@
 from typing import Dict, List, Tuple
-from fastapi import APIRouter, Response, Query, Request
+from fastapi import APIRouter, Response, Query, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 import asyncpg
 import json
@@ -87,9 +87,9 @@ async def room_objects(
         pl = json.loads(res["payload"])
         payload.time = res["time"]
         payload.payload = {
-            "bots": pl["bots"][room_id],
-            "structures": pl["structures"][room_id],
-            "resources": pl["resources"][room_id],
+            "bots": pl["bots"].get(room_id, []),
+            "structures": pl["structures"].get(room_id, []),
+            "resources": pl["resources"].get(room_id, []),
         }
     except KeyError:
         pass

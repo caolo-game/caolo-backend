@@ -2,13 +2,15 @@ from typing import Dict, List, Tuple
 from fastapi import FastAPI, Response, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 import asyncpg
+
 import json
 import os
+import asyncio
 
 
 from .api_schema import RoomObjects, Axial, make_room_id, parse_room_id
 
-from .handler import world, scripting, admin
+from .handler import world, scripting, admin, world_ws
 
 app = FastAPI()
 
@@ -49,3 +51,17 @@ async def health():
 app.include_router(world.router)
 app.include_router(scripting.router)
 app.include_router(admin.router)
+app.include_router(world_ws.router)
+
+
+async def _broadcast_gamestate():
+    pool = await db_pool()
+
+    r = world_ws.manager.run(pool)
+    while 1:
+        await r.__anext__()
+
+
+@app.on_event("startup")
+async def on_start():
+    asyncio.create_task(_broadcast_gamestate())

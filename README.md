@@ -1,48 +1,22 @@
-## Prerequisites
+# Cao-Lo backend
 
-### Native builds:
+This repository contains the back-end code of the game Cao-Lo.
 
-- [Cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html)
-- [AMQP (e.g. RabbitMQ)](hhttps://www.rabbitmq.com/)
-- [Cap'n Proto](https://capnproto.org/)
-- [PostgeSQL](https://www.postgresql.org/)
-- diesel-cli `cargo install diesel_cli --no-default-features --features "postgres"`
+Code layout:
 
-### Docker builds:
-
-- [Docker](https://www.docker.com/)
-- [Make](https://www.gnu.org/software/make/) (Optional)
-
-## Setting up
-
-```
-diesel database setup
+```txt
+|- cao-storage-derive/ # Derive macro for the storage of the simulation/
+|- migrations/         # SQL schema migrations
+|- simulation/         # Library for running the game world
+|- web/                # Webservice bridging remote clients and the worker
+|- worker/             # Executable code running the simulation
 ```
 
-## Building and running
+## Building via Docker
 
-- Running the worker
-
-  ```
-  cargo run --bin caolo-worker
-  ```
-
-- Running the web service
-
-  ```
-  cargo run --bin caolo-web
-  ```
-
-- Building via Docker
-  ```
-  make
-  ```
-
-## Deployment
-
-### Setting up Auth0
-
-TBA
+```
+make all
+```
 
 ### Deploying to [Heroku](https://heroku.com)
 

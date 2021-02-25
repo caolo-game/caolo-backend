@@ -1,27 +1,36 @@
 .DEFAULT_GOAL := buildall
-.PHONY: web
+.PHONY: web worker
 
-test:
-	cargo check
-	cargo clippy
-	cargo test --benches
+test-worker:
+	cd worker && cargo clippy
+	cd worker && cargo test --benches
 
 start: web
 	docker-compose up -d 
 	docker-compose logs -f --tail=100
 
 web:
-	docker build -t frenetiq/caolo-web:latest -f dockerfile .
+	docker build -t frenetiq/caolo-web:bleeding -f ./dockerfile.web .
 
-push: web
-	docker push frenetiq/caolo-web:latest
+worker:
+	docker build -t frenetiq/caolo-worker:bleeding -f ./dockerfile.worker .
 
 release:
-	docker build -t frenetiq/caolo-release:latest -f dockerfile.release .
+	docker build -t frenetiq/caolo-release:bleeding -f dockerfile.release .
 
-deploy-heroku: web release
-	docker tag frenetiq/caolo-web:latest registry.heroku.com/$(app)/web
-	docker tag frenetiq/caolo-release:latest registry.heroku.com/$(app)/release
+all: web worker release
+
+push: all
+	docker push frenetiq/caolo-web:bleeding
+	docker push frenetiq/caolo-release:bleeding
+	docker push frenetiq/caolo-worker:bleeding
+
+
+deploy-heroku: web worker release
+	docker tag frenetiq/caolo-web:bleeding registry.heroku.com/$(app)/web
+	docker tag frenetiq/caolo-release:bleeding registry.heroku.com/$(app)/release
+	docker tag frenetiq/caolo-worker:bleeding registry.heroku.com/$(app)/worker
 	docker push registry.heroku.com/$(app)/web
+	docker push registry.heroku.com/$(app)/worker
 	docker push registry.heroku.com/$(app)/release
-	heroku container:release web release -a=$(app)
+	heroku container:release web release worker -a=$(app)

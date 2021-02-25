@@ -1,12 +1,6 @@
 FROM rust:latest AS build
 
 WORKDIR /caolo
-
-COPY ./rust-toolchain ./rust-toolchain
-# cache the toolchain
-RUN cargo --version
-
-WORKDIR /caolo/web
 RUN cargo install diesel_cli --root . --no-default-features --features="postgres"
 # ---------- Copy the built binary to a scratch container, to minimize the image size ----------
 
@@ -17,6 +11,6 @@ RUN apt-get install libpq-dev -y
 
 COPY ./migrations/ ./migrations/
 COPY ./release.sh ./
-COPY --from=build /caolo/web/bin/ ./
+COPY --from=build /caolo/bin/ ./
 
 ENTRYPOINT ["./release.sh"]

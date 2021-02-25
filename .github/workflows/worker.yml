@@ -1,18 +1,76 @@
-name: Rust
+name: Worker
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
   pull_request:
-    branches: [ master ]
-
-env:
-  CARGO_TERM_COLOR: always
+    branches: [master]
 
 jobs:
-  build:
-
+  test:
     runs-on: ubuntu-latest
+    name: Test suite
+
+    strategy:
+      matrix:
+        rust: [stable, nightly]
 
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v2
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.rust }}
+
+      - name: Install capnp
+        run: sudo apt-get install capnproto -y
+
+      - name: Install test-all-features
+        run: cargo install cargo-all-features
+
+      - name: Check all features
+        run: |
+          cargo +${{ matrix.rust }} check-all-features
+        working-directory: worker
+        env:
+          SQLX_OFFLINE: true
+
+      - name: Run tests
+        run: |
+          cargo +${{ matrix.rust }} test --benches
+        working-directory: worker
+        env:
+          RUST_LOG: caolo_sim=trace
+          RUST_BACKTRACE: 1
+          CARGO_INCREMENTAL: 0
+          RUSTDOCFLAGS: "-Cpanic=abort"
+          SQLX_OFFLINE: true
+
+  clippy_check:
+    runs-on: ubuntu-latest
+    name: Clippy check
+    strategy:
+      matrix:
+        name: [clippy-sim, clippy-worker]
+        include:
+          - name: clippy-sim
+            manifest: ./simulation/Cargo.toml
+          - name: clippy-worker
+            manifest: ./worker/Cargo.toml
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          components: clippy
+          override: true
+
+      - name: Install capnp
+        run: sudo apt-get install capnproto -y
+      - uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --all-features --manifest-path ${{matrix.manifest}}
+          name: ${{matrix.name}}
+        env:
+          SQLX_OFFLINE: true

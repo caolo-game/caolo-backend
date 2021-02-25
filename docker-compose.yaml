@@ -1,36 +1,43 @@
 version: "3.7"
 services:
   release:
-    image: frenetiq/caolo-release
+    build: 
+      context: .
+      dockerfile: ./dockerfile.release
+    image: frenetiq/caolo-release:bleeding
     env_file: docker.env
     depends_on:
       - postgres
-    environment:
-      DATABASE_URL: postgres://postgres:admin@postgres
-    # entrypoint:
-    #   - /caolo/diesel
-    #   - database
-    #   - setup
   web:
-    image: frenetiq/caolo-web
+    build: 
+      context: .
+      dockerfile: ./dockerfile.web
+    image: frenetiq/caolo-web:bleeding
     env_file: docker.env
     environment:
       HOST: 0.0.0.0
+      PORT: 8000
     ports:
       - "8000:8000"
     depends_on:
       - cache
       - postgres
-    entrypoint:
-      - ./caolo-web
-    environment:
-      DATABASE_URL: postgres://postgres:admin@postgres
 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/"]
       timeout: 1s
       retries: 3
       start_period: 5s
+
+  worker:
+    build: 
+      context: .
+      dockerfile: ./dockerfile.worker
+    image: frenetiq/caolo-worker:bleeding
+    env_file: docker.env
+    depends_on:
+      - cache
+      - postgres
 
   cache:
     image: eqalpha/keydb:latest
@@ -42,6 +49,12 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: admin
+    volumes:
+    - db-data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
 
+
+volumes:
+  db-data:
+    driver: local

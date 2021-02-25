@@ -1,23 +1,18 @@
-from typing import Dict, List, Tuple
 from fastapi import (
     APIRouter,
-    Response,
-    Query,
-    Request,
     WebSocket,
     Depends,
     WebSocketDisconnect,
 )
-from fastapi.middleware.cors import CORSMiddleware
-import asyncpg
 import json
-import os
+import logging
 import asyncio
 import datetime as dt
 
 from dataclasses import dataclass
 
 from ..api_schema import RoomObjects, Axial, make_room_id, parse_room_id
+from ..model.game_state import load_latest_game_state, get_room_objects
 
 router = APIRouter(prefix="/world")
 
@@ -26,21 +21,7 @@ router = APIRouter(prefix="/world")
 class WorldClient:
     ws: WebSocket
     room_id: str = None
-
-
-async def load_game_state(db):
-
-    row = await db.fetchrow(
-        """
-        SELECT t.payload AS pl, t.world_time as time
-        FROM public.world_output t
-        ORDER BY t.created DESC
-        """,
-    )
-
-    state = json.loads(row["pl"])
-    state["time"] = row["time"]
-    return state
+    last_seen: int = -1
 
 
 class WorldMessenger:
@@ -60,25 +41,24 @@ class WorldMessenger:
         # figure out how much we need to sleep
         # formula: expected_next - now
         # expected_next = end of last tick + target latency + actual latency for bias
-        end = state["diagnostics"]["tick_end"]
+        try:
+            end = state["diagnostics"]["tick_end"]
+            end = dt.datetime.strptime(end[:-4], "%Y-%m-%dT%H:%M:%S.%f")
+        except Exception as err:
+            logging.warn(f"Failed to parse end timestamp {err}")
+            end = dt.datetime.now()
         latency = state["diagnostics"]["tick_latency_ms"]
         target_lat = state["gameConfig"]["target_tick_ms"]
-        expected_next = dt.datetime.strptime(
-            end[:-4], "%Y-%m-%dT%H:%M:%S.%f"
-        ) + dt.timedelta(milliseconds=target_lat + latency)
+        expected_next = end + dt.timedelta(milliseconds=target_lat + latency)
         now = dt.datetime.utcnow()
         delta = expected_next - now
-        print(f"sleeping for {delta.total_seconds()} seconds")
+        logging.debug(f"sleeping for {delta.total_seconds()} seconds")
         await asyncio.sleep(max(delta.total_seconds(), 0.01))
 
     async def send_to(self, client):
         state = self.game_state
-        pl = RoomObjects()
-        pl.payload.bots = state["bots"].get(client.room_id, [])
-        pl.payload.structures = state["structures"].get(client.room_id, [])
-        pl.payload.resources = state["resources"].get(client.room_id, [])
-        pl.time = state["time"]
-
+        client.last_seen = state["time"]
+        pl = get_room_objects(state, client.room_id)
         pl = json.dumps(pl, default=lambda o: o.__dict__)
         await client.ws.send_text(pl)
 
@@ -89,7 +69,7 @@ class WorldMessenger:
         try:
             while 1:
                 async with pool.acquire() as con:
-                    state = await load_game_state(con)
+                    state = await load_latest_game_state(con)
                     self.game_state = state
 
                 if state["time"] == self.last_sent:
@@ -99,7 +79,8 @@ class WorldMessenger:
                 dc = []
                 for client in self.connections:
                     try:
-                        await self.send_to(client)
+                        if state["time"] != client.last_seen:
+                            await self.send_to(client)
                     except WebSocketDisconnect:
                         dc.append(client)
                 # disconnected clients
@@ -114,14 +95,12 @@ class WorldMessenger:
 manager = WorldMessenger()
 
 
-async def get_messenger():
-    return manager
-
-
 @router.websocket("/object-stream")
-async def object_stream(ws: WebSocket, manager=Depends(get_messenger)):
+async def object_stream(ws: WebSocket, manager=Depends(lambda: manager)):
     """
-    send in the room_id in the form 'q;r'
+    Streams game objects of a room.
+
+    Send in the room_id in the form 'q;r' to receive objects of the given room
     """
     await ws.accept()
     client = WorldClient(ws=ws, room_id=None)
@@ -132,7 +111,7 @@ async def object_stream(ws: WebSocket, manager=Depends(get_messenger)):
             client.room_id = room_id
             # on new room_id send a state immediately
             await manager.send_to(client)
-    except:
+    except WebSocketDisconnect:
         pass
     finally:
         await manager.disconnect(client)

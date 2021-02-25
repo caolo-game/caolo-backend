@@ -1,11 +1,9 @@
 from typing import Dict, List, Tuple
-from fastapi import APIRouter, Response, Query, Request, WebSocket
-from fastapi.middleware.cors import CORSMiddleware
-import asyncpg
+from fastapi import APIRouter, Query, Request
 import json
-import os
 
 from ..api_schema import RoomObjects, Axial, make_room_id, parse_room_id
+from ..model.game_state import load_latest_game_state, get_room_objects
 
 
 router = APIRouter(prefix="/world")
@@ -70,30 +68,8 @@ async def room_objects(
 
     # Turns out that loading the entire game state into memory,
     # parsing the json and filtering it is about 3x faster than doing this filtering in Postgres
-    res = await req.state.db.fetchrow(
-        """
-        SELECT
-            t.payload as payload
-            , t.world_time as time
-        FROM public.world_output t
-        ORDER BY t.created DESC
-        """,
-    )
-    payload = RoomObjects()
-    if not res:
-        return payload
-
-    try:
-        pl = json.loads(res["payload"])
-        payload.time = res["time"]
-        payload.payload = {
-            "bots": pl["bots"].get(room_id, []),
-            "structures": pl["structures"].get(room_id, []),
-            "resources": pl["resources"].get(room_id, []),
-        }
-    except KeyError:
-        pass
-    return payload
+    pl = await load_latest_game_state(req.state.db)
+    return get_room_objects(pl, room_id)
 
 
 @router.get("/diagnostics", response_model=Dict)

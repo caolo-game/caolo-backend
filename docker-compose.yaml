@@ -4,6 +4,7 @@ services:
     build: 
       context: .
       dockerfile: ./dockerfile.release
+    image: frenetiq/caolo-release:bleeding
     env_file: docker.env
     depends_on:
       - postgres
@@ -11,6 +12,7 @@ services:
     build: 
       context: .
       dockerfile: ./dockerfile.web
+    image: frenetiq/caolo-web:bleeding
     env_file: docker.env
     environment:
       HOST: 0.0.0.0
@@ -31,6 +33,7 @@ services:
     build: 
       context: .
       dockerfile: ./dockerfile.worker
+    image: frenetiq/caolo-worker:bleeding
     env_file: docker.env
     depends_on:
       - cache

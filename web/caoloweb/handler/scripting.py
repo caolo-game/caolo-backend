@@ -9,13 +9,11 @@ router = APIRouter(prefix="/scripting")
 async def get_schema(req: Request):
     res_encoded = await req.state.db.fetchval(
         """
-SELECT t.payload
-FROM public.scripting_schema t
-ORDER BY t.created DESC
-"""
+        SELECT t.payload
+        FROM public.scripting_schema t
+        ORDER BY t.created DESC
+        """
     )
     # returned data is already json encoded string
-    # TODO: just write the already encoded response...
-    if not res_encoded:
-        return []
-    return json.loads(res_encoded)
+    # just write the already encoded response...
+    return Response(res_encoded, media_type="application/json")

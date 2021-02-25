@@ -1,5 +1,5 @@
 from typing import Dict, List, Tuple
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, Query, Request, Response
 import json
 
 from ..api_schema import RoomObjects, Axial, make_room_id, parse_room_id
@@ -27,10 +27,8 @@ async def terrain(
     )
 
     # returned data is already json encoded string
-    # TODO: just write the already encoded response...
-    if not res_encoded:
-        return []
-    return json.loads(res_encoded)
+    # just write the already encoded response...
+    return Response(res_encoded, media_type="application/json")
 
 
 @router.get("/rooms", response_model=List[Dict])

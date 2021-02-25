@@ -37,18 +37,18 @@ class WorldMessenger:
         self.connections.remove(ws)
 
     async def _onsendfinish(self, state):
-        self.last_sent = state["time"]
+        self.last_sent = state.created
         # figure out how much we need to sleep
         # formula: expected_next - now
         # expected_next = end of last tick + target latency + actual latency for bias
         try:
-            end = state["diagnostics"]["tick_end"]
+            end = state.payload["diagnostics"]["tick_end"]
             end = dt.datetime.strptime(end[:-4], "%Y-%m-%dT%H:%M:%S.%f")
         except Exception as err:
             logging.warn(f"Failed to parse end timestamp {err}")
             end = dt.datetime.now()
-        latency = state["diagnostics"]["tick_latency_ms"]
-        target_lat = state["gameConfig"]["target_tick_ms"]
+        latency = state.payload["diagnostics"]["tick_latency_ms"]
+        target_lat = state.payload["gameConfig"]["target_tick_ms"]
         expected_next = end + dt.timedelta(milliseconds=target_lat + latency)
         now = dt.datetime.utcnow()
         delta = expected_next - now
@@ -57,7 +57,7 @@ class WorldMessenger:
 
     async def send_to(self, client):
         state = self.game_state
-        client.last_seen = state["time"]
+        client.last_seen = state.created
         pl = get_room_objects(state, client.room_id)
         pl = json.dumps(pl, default=lambda o: o.__dict__)
         await client.ws.send_text(pl)
@@ -72,14 +72,14 @@ class WorldMessenger:
                     state = await load_latest_game_state(con)
                     self.game_state = state
 
-                if state["time"] == self.last_sent:
+                if state.created == self.last_sent:
                     await self._onsendfinish(state)
                     continue
 
                 dc = []
                 for client in self.connections:
                     try:
-                        if state["time"] != client.last_seen:
+                        if state.created != client.last_seen:
                             await self.send_to(client)
                     except WebSocketDisconnect:
                         dc.append(client)

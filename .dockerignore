@@ -1,17 +1,9 @@
 *
-!world_state
-!*.go
-!go.sum
-!go.mod
 !migrations
 !diesel.toml
-!game_state
 !web
 !worker
-!cao-storage-derive
 !.cargo
-worker/target
-!simulation
 !release.sh
 **/target
 **/*~

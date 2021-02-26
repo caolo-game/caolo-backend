@@ -49,14 +49,6 @@ jobs:
   clippy_check:
     runs-on: ubuntu-latest
     name: Clippy check
-    strategy:
-      matrix:
-        name: [clippy-sim, clippy-worker]
-        include:
-          - name: clippy-sim
-            manifest: ./simulation/Cargo.toml
-          - name: clippy-worker
-            manifest: ./worker/Cargo.toml
     steps:
       - uses: actions/checkout@v1
       - uses: actions-rs/toolchain@v1
@@ -70,7 +62,6 @@ jobs:
       - uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features --manifest-path ${{matrix.manifest}}
-          name: ${{matrix.name}}
+          args: --all-features --manifest-path ./worker/Cargo.toml
         env:
           SQLX_OFFLINE: true

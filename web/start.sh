@@ -1,3 +1,3 @@
 #!/usr/bin/sh
 
-uvicorn caoloweb.app:app --host 0.0.0.0 --port ${PORT:-8000} --workers ${WEB_CONCURRENCY:-8}
+gunicorn -w ${WEB_CONCURRENCY:-8} -k uvicorn.workers.UvicornWorker caoloweb.app:app --log-level=info

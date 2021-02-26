@@ -9,6 +9,7 @@ import asyncio
 
 
 from .api_schema import RoomObjects, Axial, make_room_id, parse_room_id
+from .model import game_state
 
 from .handler import world, scripting, admin, world_ws
 
@@ -57,7 +58,7 @@ app.include_router(world_ws.router)
 async def _broadcast_gamestate():
     pool = await db_pool()
 
-    r = world_ws.manager.run(pool)
+    r = game_state.manager.run(pool)
     while 1:
         await r.__anext__()
 

@@ -12,7 +12,7 @@ import datetime as dt
 from dataclasses import dataclass
 
 from ..api_schema import RoomObjects, Axial, make_room_id, parse_room_id
-from ..model.game_state import load_latest_game_state, get_room_objects
+from ..model.game_state import manager as game_state_manager, get_room_objects
 
 router = APIRouter()
 
@@ -39,25 +39,6 @@ class WorldMessenger:
         except ValueError:
             pass
 
-    async def _onsendfinish(self, state):
-        self.last_sent = state.created
-        # figure out how much we need to sleep
-        # formula: expected_next - now
-        # expected_next = end of last tick + target latency + actual latency for bias
-        try:
-            end = state.payload["diagnostics"]["tick_end"]
-            end = dt.datetime.strptime(end[:-4], "%Y-%m-%dT%H:%M:%S.%f")
-        except Exception as err:
-            logging.warn(f"Failed to parse end timestamp {err}")
-            end = dt.datetime.now()
-        latency = state.payload["diagnostics"]["tick_latency_ms"]
-        target_lat = state.payload["gameConfig"]["target_tick_ms"]
-        expected_next = end + dt.timedelta(milliseconds=target_lat + latency)
-        now = dt.datetime.utcnow()
-        delta = expected_next - now
-        logging.debug(f"sleeping for {delta.total_seconds()} seconds")
-        await asyncio.sleep(max(delta.total_seconds(), 0.01))
-
     async def send_to(self, client):
         state = self.game_state
         client.last_seen = state.created
@@ -65,24 +46,25 @@ class WorldMessenger:
         pl = json.dumps(pl, default=lambda o: o.__dict__)
         await client.ws.send_text(pl)
 
-    async def run(self, pool):
+    def on_new_state(self, state):
+        self.game_state = state
+        asyncio.create_task(_broadcast_gamestate(self))
+
+    async def run(self):
+        if self.running:
+            return
         assert not self.running
         self.running = True
         self.last_sent = -1
         try:
             while 1:
-                async with pool.acquire() as con:
-                    state = await load_latest_game_state(con)
-                    self.game_state = state
-
-                if state.created == self.last_sent:
-                    await self._onsendfinish(state)
+                if self.game_state.created == self.last_sent:
                     continue
 
                 dc = []
                 for client in self.connections:
                     try:
-                        if state.created != client.last_seen:
+                        if self.game_state.created != client.last_seen:
                             await self.send_to(client)
                     except WebSocketDisconnect:
                         dc.append(client)
@@ -92,13 +74,20 @@ class WorldMessenger:
                 # disconnected clients
                 for c in dc:
                     await self.disconnect(c)
-                await self._onsendfinish(state)
                 yield
         finally:
             self.running = False
 
 
 manager = WorldMessenger()
+
+
+game_state_manager.on_new_state(manager.on_new_state)
+
+
+async def _broadcast_gamestate(manager):
+    r = manager.run()
+    await r.__anext__()
 
 
 # NOTE:

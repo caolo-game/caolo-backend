@@ -3,7 +3,7 @@ from fastapi import APIRouter, Query, Request, Response
 import json
 
 from ..api_schema import RoomObjects, Axial, make_room_id, parse_room_id
-from ..model.game_state import load_latest_game_state, get_room_objects
+from ..model.game_state import get_room_objects, manager
 
 
 router = APIRouter(prefix="/world")
@@ -16,39 +16,18 @@ async def terrain(
     r: str = Query(None, max_length=5),
 ):
     room_id = make_room_id(q, r)
-
-    res_encoded = await req.state.db.fetchval(
-        """
-        SELECT t.payload->'terrain'->$1 AS room
-        FROM public.world_output t
-        ORDER BY t.created DESC
-        """,
-        room_id,
-    )
-
-    # returned data is already json encoded string
-    # just write the already encoded response...
-    return Response(res_encoded, media_type="application/json")
+    return manager.game_state.payload["terrain"].get(room_id)
 
 
 @router.get("/rooms", response_model=List[Dict])
 async def rooms(req: Request):
-    res = await req.state.db.fetchrow(
-        """
-        SELECT t.payload->'rooms' AS rooms
-        FROM public.world_output t
-        ORDER BY t.created DESC
-        """
-    )
-
-    assert res, "No results returned"
-
-    res_encoded = res["rooms"]
-    data: Dict[str, Dict] = json.loads(res_encoded)
     # keys are 'q;r', so split them and insert them into a 'pos' object, then put the rest of the values next to it
     return (
         {"pos": room_id, **v}
-        for room_id, v in ((parse_room_id(k), v) for k, v in data.items())
+        for room_id, v in (
+            (parse_room_id(k), v)
+            for k, v in manager.game_state.payload["rooms"].items()
+        )
     )
 
 
@@ -61,37 +40,13 @@ async def room_objects(
     """
     return a list of each type of entity in the given room
     """
-
     room_id = make_room_id(q, r)
-
-    # Turns out that loading the entire game state into memory,
-    # parsing the json and filtering it is about 3x faster than doing this filtering in Postgres
-    pl = await load_latest_game_state(req.state.db)
-    return get_room_objects(pl, room_id)
+    return get_room_objects(manager.game_state, room_id)
 
 
 @router.get("/diagnostics", response_model=Dict)
-async def diagnostics(req: Request):
+async def diagnostics():
     """
     returns internal engine diagnostics
     """
-
-    row = await req.state.db.fetchrow(
-        """
-        SELECT
-            t.payload->'diagnostics' as pl
-            , t.world_time as time
-        FROM public.world_output t
-        ORDER BY t.created DESC
-        """,
-    )
-
-    if not row:
-        return None
-    pl = None
-    try:
-        pl = json.loads(row["pl"])
-        pl["tick"] = row.get("time", -1)
-    except KeyError:
-        pass
-    return pl
+    return manager.game_state.payload["diagnostics"]

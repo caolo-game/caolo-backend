@@ -4,7 +4,7 @@ RUN apt-get update
 RUN apt-get install curl gcc libpq-dev capnproto -y --fix-missing
 
 WORKDIR /caolo
-RUN curl -LJO https://github.com/caolo-game/cao-lang/releases/download/v0.1.9/caoc-ubuntu
+RUN curl -LJO https://github.com/caolo-game/cao-lang/releases/download/v0.1.10/caoc-ubuntu
 RUN mv caoc-ubuntu /usr/bin/caoc
 RUN chmod +x /usr/bin/caoc
 

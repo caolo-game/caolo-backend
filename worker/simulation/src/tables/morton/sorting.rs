@@ -23,27 +23,32 @@ pub fn sort<T: Clone>(keys: &mut Vec<MortonKey>, values: &mut [T]) {
 /// The first bit set to 1
 #[inline]
 fn sort_radix<T: Clone>(keys: &mut Vec<MortonKey>, values: &mut [T]) {
-    let mut buffa: Vec<_> = keys.iter().cloned().enumerate().collect();
-    let mut buffb = vec![Default::default(); keys.len()];
+    debug_assert_eq!(keys.len(), values.len());
+    let mut tmp = vec![Default::default(); keys.len() * 2];
+    let (mut tmp_a, mut tmp_b) = tmp.as_mut_slice().split_at_mut(keys.len());
+    debug_assert_eq!(tmp_a.len(), tmp_b.len());
+    for (i, k) in keys.iter().enumerate() {
+        tmp_a[i] = (i, *k);
+    }
     let mut swapbuffs = false;
 
     for k in (0..=size_of::<MortonKey>() * 8 - RADIX_MASK_LEN).step_by(RADIX_MASK_LEN) {
-        radix_pass(k as u8, &buffa[..], &mut buffb);
-        debug_assert_eq!(buffa.len(), buffb.len());
-        swap(&mut buffa, &mut buffb);
+        debug_assert!(k <= std::u8::MAX as usize);
+        radix_pass(k as u8, tmp_a, tmp_b);
+        swap(&mut tmp_a, &mut tmp_b);
         swapbuffs = !swapbuffs;
     }
 
     if swapbuffs {
-        swap(&mut buffa, &mut buffb);
+        swap(&mut tmp_a, &mut tmp_b);
     }
 
     let mut vs = Vec::with_capacity(keys.len());
 
     keys.clear();
-    for (i, key) in buffa.into_iter() {
-        keys.push(key);
-        vs.push(values[i].clone());
+    for (i, key) in tmp_a {
+        keys.push(*key);
+        vs.push(values[*i].clone());
     }
 
     vs.swap_with_slice(values);

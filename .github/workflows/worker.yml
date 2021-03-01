@@ -22,8 +22,10 @@ jobs:
         with:
           toolchain: ${{ matrix.rust }}
 
-      - name: Install capnp
-        run: sudo apt-get install capnproto -y
+      - name: Install protoc
+        run: |
+          sudo apt-get install protobuf-compiler -y
+          protoc --version
 
       - name: Install test-all-features
         run: cargo install cargo-all-features
@@ -57,8 +59,11 @@ jobs:
           components: clippy
           override: true
 
-      - name: Install capnp
-        run: sudo apt-get install capnproto -y
+      - name: Install protoc
+        run: |
+          sudo apt-get install protobuf-compiler -y
+          protoc --version
+
       - uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}

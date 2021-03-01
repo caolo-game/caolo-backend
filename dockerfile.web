@@ -1,7 +1,8 @@
 FROM python:3.9-slim
 
 RUN apt-get update
-RUN apt-get install curl gcc libpq-dev capnproto -y --fix-missing
+RUN apt-get install curl gcc libpq-dev protobuf-compiler -y --fix-missing
+RUN protoc --version
 
 WORKDIR /caolo
 RUN curl -LJO https://github.com/caolo-game/cao-lang/releases/download/v0.1.10/caoc-ubuntu
@@ -12,7 +13,10 @@ COPY ./web/requirements.txt .
 RUN pip install -r requirements.txt
 RUN pip install gunicorn
 
-COPY ./web .
+COPY ./protos/ ./protos/
+COPY ./web/ ./web/
+
+WORKDIR /caolo/web
 
 RUN caoc --version
 

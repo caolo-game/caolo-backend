@@ -1,0 +1,67 @@
+syntax = "proto3";
+package commands;
+
+import "cao_common.proto";
+import "cao_script.proto";
+
+enum StructureType {
+    SPAWN = 0;
+}
+
+message PlaceStructureCommand
+{
+    cao_common.WorldPosition position = 1;
+    cao_common.Uuid ownerId = 2;
+    StructureType ty = 3;
+}
+
+message UpdateEntityScriptCommand
+{
+    cao_common.Uuid userId = 1;
+    uint32 entityId = 2;
+    cao_common.Uuid scriptId = 3;
+}
+
+message UpdateScriptCommand
+{
+    cao_common.Uuid userId = 1;
+    cao_common.Uuid scriptId = 2;
+    cao_script.CompilationUnit compilationUnit = 3;
+}
+
+message SetDefaultScriptCommand
+{
+    cao_common.Uuid userId = 1;
+    cao_common.Uuid scriptId = 2;
+}
+
+message CommandResult
+{
+    string error = 1;
+}
+
+message TakeRoom
+{
+    cao_common.Uuid userId = 1;
+    cao_common.Axial roomId = 2;
+}
+
+message RegisterUser
+{
+    cao_common.Uuid userId = 1;
+    uint32 level = 2;
+}
+
+message InputMessage
+{
+    cao_common.Uuid messageId = 1;
+    oneof payload
+    {
+        PlaceStructureCommand placeStructure = 2;
+        UpdateEntityScriptCommand updateEntityScript = 3;
+        UpdateScriptCommand updateScript = 4;
+        SetDefaultScriptCommand setDefaultScript = 5;
+        TakeRoom takeRoom = 6;
+        RegisterUser registerUser = 7;
+    }
+}

@@ -5,7 +5,7 @@ Game simulation/back-end of Cao-Lo.
 ## Build dependencies
 
 - [Rust](https://rustup.rs/)
-- [Cap'n Proto](https://capnproto.org/)
+- [Protoc](https://grpc.io/docs/protoc-installation/)
 
 ## Deploy dependencies
 

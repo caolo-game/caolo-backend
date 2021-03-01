@@ -1,0 +1,61 @@
+syntax = "proto3";
+package cao_script;
+
+message Card
+{
+    string name = 1;
+    string description = 2;
+    Inputs input = 3;
+    Outputs output = 4;
+    Constants constants = 5;
+    string ty = 6;
+
+    message Inputs
+    {
+        repeated string values = 1;
+    }
+    message Outputs
+    {
+        repeated string values = 1;
+    }
+    message Constants
+    {
+        repeated string values = 1;
+    }
+}
+
+message Schema
+{
+    repeated Card cards = 1;
+}
+
+message Json
+{
+    bytes value = 1;
+}
+
+message CompilerVersion
+{
+    uint32 major = 1;
+    uint32 minor = 2;
+    uint32 patch = 3;
+}
+
+message CompilationUnit
+{
+    Json compilationUnit = 1;
+
+    CompilerVersion verifiedBy = 2;
+}
+
+message ScriptHistoryEntry
+{
+    uint32 entityId = 1;
+    repeated ScriptNodeId payload = 2;
+}
+
+message ScriptNodeId
+{
+    uint32 lane = 1;
+    uint32 pos = 2;
+}

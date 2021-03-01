@@ -1,7 +1,5 @@
-use cao_messages::command_capnp::{place_structure_command, StructureType};
-use caolo_sim::prelude::*;
-use caolo_sim::tables::JoinIterator;
-use caolo_sim::{join, query};
+use crate::protos::cao_commands::{PlaceStructureCommand, StructureType};
+use caolo_sim::{join, prelude::*, query, tables::JoinIterator};
 use slog::{error, Logger};
 use thiserror::Error;
 use uuid::Uuid;
@@ -17,9 +15,6 @@ pub enum PlaceStructureError {
     #[error("position {0:?} is taken!")]
     TakenPosition(WorldPosition),
 
-    #[error("Failed to parse Cap'n Proto message {0:?}")]
-    CapnError(capnp::Error),
-
     #[error("Failed to parse owner id")]
     OwnerIdError,
 }
@@ -27,26 +22,18 @@ pub enum PlaceStructureError {
 pub fn place_structure(
     logger: Logger,
     storage: &mut World,
-    command: &place_structure_command::Reader,
+    command: &PlaceStructureCommand,
 ) -> Result<(), PlaceStructureError> {
     let entity_id = storage.insert_entity();
 
-    let position = command
-        .reborrow()
-        .get_position()
-        .map_err(PlaceStructureError::CapnError)?;
+    let position = command.get_position();
 
-    let pos = position
-        .get_room_pos()
-        .map_err(PlaceStructureError::CapnError)?;
+    let pos = position.get_pos();
     let q = pos.get_q();
     let r = pos.get_r();
-
     let pos = Axial::new(q, r);
 
-    let room = position
-        .get_room_pos()
-        .map_err(PlaceStructureError::CapnError)?;
+    let room = position.get_room();
     let q = room.get_q();
     let r = room.get_r();
     let room = Axial::new(q, r);
@@ -72,25 +59,14 @@ pub fn place_structure(
         return Err(PlaceStructureError::TakenPosition(position));
     }
 
-    let ty = command.reborrow().get_ty().map_err(|err| {
-        PlaceStructureError::CapnError(capnp::Error::failed(format!(
-            "failed to get StructureType {:?}",
-            err
-        )))
-    })?;
-
-    let owner = command
-        .reborrow()
-        .get_owner()
-        .map_err(PlaceStructureError::CapnError)?
-        .get_data()
-        .map_err(PlaceStructureError::CapnError)?;
+    let ty = command.get_ty();
+    let owner = command.get_ownerId().get_data();
     let owner = uuid::Uuid::from_slice(owner).map_err(|err| {
         error!(logger, "Failed to parse owner id {:?}", err);
         PlaceStructureError::OwnerIdError
     })?;
     match ty {
-        StructureType::Spawn => {
+        StructureType::SPAWN => {
             // a player may only have 1 spawn atm
             let has_spawn = join!(
                 storage

@@ -3,6 +3,7 @@ name = "caolo-worker"
 version = "0.1.0"
 authors = ["Daniel Kiss <littlesnorrboy@gmail.com>"]
 edition = "2018"
+build = "build.rs"
 
 [[bin]]
 name = "caolo-worker"
@@ -15,7 +16,6 @@ default = ["dotenv"]
 [dependencies]
 caolo-sim = { path = "../simulation" } # , features=["cao-profile"] }
 cao-lang = { git = "https://github.com/caolo-game/cao-lang.git" }
-cao-messages = { git = "https://github.com/caolo-game/cao-messages.git" }
 redis = { version = "0.18", features = ["aio", "async-std-comp"] }
 slog = { version = "2", features = [
     "max_level_trace",
@@ -43,12 +43,15 @@ sqlx = { version = "0.4.1", features = [
     "runtime-async-std-native-tls",
     "offline"
 ] }
-dotenv = { version = "0.14", optional = true  }
+dotenv = { version = "0.14", optional = true }
 uuid = { version = "0.8", features = ["v4"] }
-capnp = "0.13"
+protobuf = { version = "2" }
 
 [target.'cfg(not(target_env = "msvc"))'.dependencies]
 jemallocator = "0.3.2"
 
 [dev-dependencies]
 env_logger = { version = "*", default-features = false }
+
+[build-dependencies]
+protoc-rust = "2"

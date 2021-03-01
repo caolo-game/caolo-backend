@@ -3,6 +3,7 @@
 !diesel.toml
 !web
 !worker
+!protos
 !.cargo
 !release.sh
 **/target

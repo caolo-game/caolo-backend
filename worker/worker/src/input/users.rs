@@ -1,8 +1,8 @@
 use super::parse_uuid;
-use anyhow::Context;
-use cao_messages::command_capnp::register_user;
+use crate::protos::cao_commands::RegisterUser;
 use caolo_sim::{prelude::*, query};
 use slog::{debug, Logger};
+use std::{convert::TryFrom, num::TryFromIntError};
 use thiserror::Error;
 use uuid::Uuid;
 
@@ -12,24 +12,21 @@ pub enum RegisterUserError {
     BadMessage(anyhow::Error),
     #[error("User by id {0} has been registered already")]
     AlreadyRegistered(Uuid),
+    #[error("{0} is not a valid level")]
+    BadLevel(TryFromIntError),
 }
 
 pub fn register_user(
     logger: Logger,
     world: &mut World,
-    msg: &register_user::Reader,
+    msg: &RegisterUser,
 ) -> Result<(), RegisterUserError> {
     debug!(logger, "Register user");
 
-    let user_id = parse_uuid(
-        &msg.reborrow()
-            .get_user_id()
-            .with_context(|| "Failed to get user id")
-            .map_err(RegisterUserError::BadMessage)?,
-    )
-    .map_err(RegisterUserError::BadMessage)?;
+    let user_id = parse_uuid(msg.get_userId()).map_err(RegisterUserError::BadMessage)?;
 
-    let level = msg.reborrow().get_level();
+    let level = msg.get_level();
+    let level = u16::try_from(level).map_err(RegisterUserError::BadLevel)?;
 
     if world
         .view::<UserId, UserProperties>()

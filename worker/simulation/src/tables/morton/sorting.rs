@@ -20,19 +20,20 @@ pub fn sort<T: Clone>(keys: &mut Vec<MortonKey>, values: &mut [T]) {
     sort_radix(keys, values);
 }
 
-/// The first bit set to 1
 #[inline]
 fn sort_radix<T: Clone>(keys: &mut Vec<MortonKey>, values: &mut [T]) {
     debug_assert_eq!(keys.len(), values.len());
     let mut tmp = vec![Default::default(); keys.len() * 2];
+    // double buffer (index, key) pairs
     let (mut tmp_a, mut tmp_b) = tmp.as_mut_slice().split_at_mut(keys.len());
     debug_assert_eq!(tmp_a.len(), tmp_b.len());
     for (i, k) in keys.iter().enumerate() {
         tmp_a[i] = (i, *k);
     }
-    let mut swapbuffs = false;
 
-    for k in (0..=size_of::<MortonKey>() * 8 - RADIX_MASK_LEN).step_by(RADIX_MASK_LEN) {
+    let mut swapbuffs = false;
+    const MORTON_BITS: usize = size_of::<MortonKey>() * 8;
+    for k in (0..=MORTON_BITS - RADIX_MASK_LEN).step_by(RADIX_MASK_LEN) {
         debug_assert!(k <= std::u8::MAX as usize);
         radix_pass(k as u8, tmp_a, tmp_b);
         swap(&mut tmp_a, &mut tmp_b);

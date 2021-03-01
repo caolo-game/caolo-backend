@@ -3,23 +3,20 @@ mod rooms;
 mod script_update;
 mod structures;
 mod users;
+use crate::protos;
 use anyhow::Context;
-use cao_messages::command_capnp::command::input_message::{self, Which as InputPayload};
-use cao_messages::command_capnp::command_result;
 use caolo_sim::prelude::*;
 
-use capnp::message::{ReaderOptions, TypedReader};
-use capnp::serialize::try_read_message;
+use protobuf::Message;
 use redis::AsyncCommands;
 use redis::Client;
 use slog::{error, info, o, trace, warn, Logger};
 use uuid::Uuid;
 
-type InputMsg = TypedReader<capnp::serialize::OwnedSegments, input_message::Owned>;
+type InputMsg = protos::cao_commands::InputMessage;
 
-fn parse_uuid(id: &cao_messages::command_capnp::uuid::Reader) -> anyhow::Result<uuid::Uuid> {
-    let id = id.get_data().with_context(|| "Failed to get msg id data")?;
-    uuid::Uuid::from_slice(id).with_context(|| "Failed to parse uuid")
+fn parse_uuid(id: &protos::cao_common::Uuid) -> anyhow::Result<uuid::Uuid> {
+    uuid::Uuid::from_slice(id.data.as_slice()).with_context(|| "Failed to parse uuid")
 }
 
 /// Write the response and return the msg id
@@ -27,58 +24,50 @@ fn handle_single_message(
     logger: &Logger,
     message: InputMsg,
     storage: &mut World,
-    response: &mut Vec<u8>,
+    response: &mut protos::cao_commands::CommandResult,
 ) -> anyhow::Result<Uuid> {
-    let message = message.get().with_context(|| "Failed to get typed msg")?;
     let msg_id = message
-        .get_message_id()
-        .with_context(|| "Failed to get message id")?
-        .get_data()
-        .with_context(|| "Failed to get message id data")?;
-    let msg_id = Uuid::from_slice(msg_id).with_context(|| "Failed to parse msg id")?;
+        .messageId
+        .as_ref()
+        .with_context(|| "Failed to get message id")?;
+    let msg_id = parse_uuid(msg_id)?;
     let logger = logger.new(o!("msg_id" => format!("{:?}",msg_id)));
     trace!(logger, "Handling message");
     let res = match message
-        .which()
+        .payload
         .with_context(|| format!("Failed to get msg body of message {:?}", msg_id))?
     {
-        InputPayload::PlaceStructure(cmd) => {
-            let cmd = cmd.with_context(|| "Failed to get PlaceStructure message")?;
+        protos::cao_commands::InputMessage_oneof_payload::placeStructure(cmd) => {
             structures::place_structure(logger.clone(), storage, &cmd).map_err(|e| {
                 warn!(logger, "Structure placement failed {:?}", e);
                 e.to_string()
             })
         }
-        InputPayload::UpdateScript(update) => {
-            let update = update.with_context(|| "Failed to get UpdateScript message")?;
+        protos::cao_commands::InputMessage_oneof_payload::updateScript(update) => {
             script_update::update_program(logger.clone(), storage, &update).map_err(|e| {
                 warn!(logger, "Script update failed {:?}", e);
                 e.to_string()
             })
         }
-        InputPayload::UpdateEntityScript(update) => {
-            let update = update.with_context(|| "Failed to get UpdateEntityScript message")?;
+        protos::cao_commands::InputMessage_oneof_payload::updateEntityScript(update) => {
             script_update::update_entity_script(storage, &update).map_err(|e| {
                 warn!(logger, "Entity script update failed {:?}", e);
                 e.to_string()
             })
         }
-        InputPayload::SetDefaultScript(update) => {
-            let update = update.with_context(|| "Failed to get SetDefaultScript message")?;
+        protos::cao_commands::InputMessage_oneof_payload::setDefaultScript(update) => {
             script_update::set_default_script(storage, &update).map_err(|e| {
                 warn!(logger, "Setting dewfault script failed {:?}", e);
                 e.to_string()
             })
         }
-        InputPayload::TakeRoom(cmd) => {
-            let cmd = cmd.with_context(|| "Failed to get TakeRoom message")?;
+        protos::cao_commands::InputMessage_oneof_payload::takeRoom(cmd) => {
             rooms::take_room(logger.clone(), storage, &cmd).map_err(|e| {
                 warn!(logger, "Failed to take room {:?}", e);
                 e.to_string()
             })
         }
-        InputPayload::RegisterUser(cmd) => {
-            let cmd = cmd.with_context(|| "Failed to get RegisterUser message")?;
+        protos::cao_commands::InputMessage_oneof_payload::registerUser(cmd) => {
             users::register_user(logger.clone(), storage, &cmd).map_err(|e| {
                 warn!(logger, "Failed to register user {:?}", e);
                 e.to_string()
@@ -86,20 +75,11 @@ fn handle_single_message(
         }
     };
 
-    let mut msg = capnp::message::Builder::new_default();
-    let mut root = msg.init_root::<command_result::Builder>();
-
     match res {
-        Ok(_) => {
-            root.set_ok(());
-        }
-        Err(err) => {
-            let mut msg = root.init_error(err.bytes().len() as u32);
-            msg.push_str(err.as_str());
-        }
+        Ok(_) => {}
+        Err(err) => response.set_error(err),
     };
 
-    capnp::serialize::write_message(response, &msg)?;
     Ok(msg_id)
 }
 
@@ -115,6 +95,7 @@ pub async fn handle_messages<'a>(
         .await
         .with_context(|| "Failed to get Redis connection")?;
 
+    let mut response_payload = Vec::new();
     while let Ok(Some(message)) = queue
         .rpop("CAO_COMMANDS")
         .await
@@ -123,25 +104,24 @@ pub async fn handle_messages<'a>(
         })
         .map::<Option<InputMsg>, _>(|message: Option<Vec<u8>>| {
             message.and_then(|message| {
-                try_read_message(
-                    message.as_slice(),
-                    ReaderOptions {
-                        traversal_limit_in_words: 512,
-                        nesting_limit: 64,
-                    },
-                )
-                .map_err(|err| {
-                    error!(logger, "Failed to parse capnp message {:?}", err);
-                })
-                .ok()?
-                .map(|x| x.into_typed())
+                Message::parse_from_bytes(message.as_slice())
+                    .map_err(|err| {
+                        error!(logger, "Failed to parse protobuf message {:?}", err);
+                    })
+                    .ok()
             })
         })
     {
-        let mut response = Vec::with_capacity(1_000_000);
+        let mut response = protos::cao_commands::CommandResult::new();
         match handle_single_message(&logger, message, storage, &mut response) {
             Ok(msg_id) => {
-                queue.set_ex(format!("{}", msg_id), response, 10).await?;
+                response_payload.clear();
+                response
+                    .write_to_vec(&mut response_payload)
+                    .with_context(|| "Failed to write response to byte vector")?;
+                queue
+                    .set_ex(format!("{}", msg_id), response_payload.as_slice(), 10)
+                    .await?;
                 info!(logger, "Message {:?} response sent!", msg_id);
             }
             Err(err) => {

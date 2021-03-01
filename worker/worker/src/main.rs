@@ -2,6 +2,8 @@ mod config;
 mod init;
 mod input;
 
+mod protos;
+
 use anyhow::Context;
 use caolo_sim::{executor::Executor, executor::SimpleExecutor, prelude::*};
 use slog::{debug, error, info, o, warn, Drain, Logger};

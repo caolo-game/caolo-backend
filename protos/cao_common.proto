@@ -1,0 +1,19 @@
+syntax = "proto3";
+package cao_common;
+
+message Axial
+{
+  int32 q = 1;
+  int32 r = 2;
+}
+
+message WorldPosition
+{
+  Axial room = 1;
+  Axial pos = 2;
+}
+
+message Uuid
+{
+  bytes data = 1;
+}

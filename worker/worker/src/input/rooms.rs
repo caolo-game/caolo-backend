@@ -1,6 +1,6 @@
 use super::parse_uuid;
+use crate::protos::cao_commands::TakeRoom;
 use anyhow::Context;
-use cao_messages::command_capnp::take_room;
 use caolo_sim::prelude::*;
 use slog::{debug, Logger};
 use thiserror::Error;
@@ -20,27 +20,12 @@ pub enum TakeRoomError {
     NotRegistered(Uuid),
 }
 
-pub fn take_room(
-    logger: Logger,
-    world: &mut World,
-    msg: &take_room::Reader,
-) -> Result<(), TakeRoomError> {
+pub fn take_room(logger: Logger, world: &mut World, msg: &TakeRoom) -> Result<(), TakeRoomError> {
     debug!(logger, "Taking room");
 
-    let user_id = parse_uuid(
-        &msg.reborrow()
-            .get_user_id()
-            .with_context(|| "Failed to get user id")
-            .map_err(TakeRoomError::BadMessage)?,
-    )
-    .map_err(TakeRoomError::BadMessage)?;
+    let user_id = parse_uuid(msg.get_userId()).map_err(TakeRoomError::BadMessage)?;
 
-    let room_id = msg
-        .reborrow()
-        .get_room_id()
-        .with_context(|| "Failed to get room id")
-        .map_err(TakeRoomError::BadMessage)?;
-
+    let room_id = msg.get_roomId();
     let room_id = Axial::new(room_id.get_q(), room_id.get_r());
 
     let has_owner = world

@@ -6,6 +6,7 @@ Code layout:
 
 ```txt
 |- migrations/          # SQL schema migrations
+|- protos/              # Protobuf messages used in communications between web and worker services
 |- web/                 # Webservice bridging remote clients and the worker
 |- worker/
  |+ cao-storage-derive/ # Derive macro for the storage of the simulation/

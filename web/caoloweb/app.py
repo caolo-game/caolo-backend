@@ -24,14 +24,14 @@ app.add_middleware(
 )
 
 DB_STR = os.getenv("DATABASE_URL", "postgres://postgres:admin@localhost:5432/caolo")
-DB_POOL = None
+_DB_POOL = None
 
 
 async def db_pool():
-    global DB_POOL
-    if not DB_POOL:
-        DB_POOL = await asyncpg.create_pool(DB_STR)
-    return DB_POOL
+    global _DB_POOL
+    if not _DB_POOL:
+        _DB_POOL = await asyncpg.create_pool(DB_STR)
+    return _DB_POOL
 
 
 @app.middleware("http")

@@ -9,15 +9,16 @@ RUN curl -LJO https://github.com/caolo-game/cao-lang/releases/download/v0.1.10/c
 RUN mv caoc-ubuntu /usr/bin/caoc
 RUN chmod +x /usr/bin/caoc
 
-COPY ./web/requirements.txt .
-RUN pip install -r requirements.txt
 RUN pip install gunicorn
 
 COPY ./protos/ ./protos/
 COPY ./web/ ./web/
 
+ENV CAO_PROTOS_PATH=/caolo/protos
 WORKDIR /caolo/web
 
+RUN pip install .
 RUN caoc --version
+RUN chmod +x start.sh
 
 ENTRYPOINT [ "sh", "./start.sh"]

@@ -2,11 +2,11 @@
 
 ### Native builds:
 
-- [Python]()
-- [Cap'n Proto](https://capnproto.org/)
+- [Python](https://python.org/)
+- [Protoc](https://grpc.io/docs/protoc-installation/)
 - [PostgeSQL](https://www.postgresql.org/)
 - diesel-cli `cargo install diesel_cli --no-default-features --features "postgres"`
-- [Redis]()
+- [Redis](https://keydb.dev/)
 
 ### Docker builds:
 
@@ -20,10 +20,10 @@ diesel database setup
 
 python -m venv env
 source env/scripts/activate
-pip install -r requirements.txt
+pip install -e.
 ```
 
-## Building and running
+## Running
 
 - Running the web service
 

@@ -59,5 +59,6 @@ setup(
         "uvicorn[standard]",
         "pydantic",
         "protobuf",
+        "aioredis",
     ],
 )

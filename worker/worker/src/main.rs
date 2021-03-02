@@ -6,6 +6,7 @@ mod protos;
 
 use anyhow::Context;
 use caolo_sim::{executor::Executor, executor::SimpleExecutor, prelude::*};
+use redis::AsyncCommands;
 use slog::{debug, error, info, o, warn, Drain, Logger};
 use std::{
     env,
@@ -41,7 +42,7 @@ fn tick(logger: Logger, exc: &mut impl Executor, storage: &mut World) {
 async fn send_schema<'a>(
     logger: Logger,
     connection: impl sqlx::Executor<'a, Database = sqlx::Postgres>,
-    queen_tag: Uuid,
+    queen_tag: &'a str,
 ) -> anyhow::Result<()> {
     debug!(logger, "Sending schema");
     let schema = caolo_sim::scripting_api::make_import();
@@ -100,24 +101,59 @@ async fn send_schema<'a>(
     Ok(())
 }
 
-async fn output<'a>(
-    world: &'a World,
-    connection: impl sqlx::Executor<'a, Database = sqlx::Postgres>,
-    queen_tag: Uuid,
+/// Publish the world to {queen_tag}-world
+async fn output_to_redis<'a>(
+    payload: &'a serde_json::Value,
+    client: &'a redis::Client,
+    queen_tag: &'a str,
 ) -> anyhow::Result<()> {
-    let payload = world.as_json();
+    let payload = serde_json::to_vec(payload).unwrap();
+
+    let mut conn = client
+        .get_async_connection()
+        .await
+        .with_context(|| "Failed to acquire redis connection")?;
+
+    conn.publish(format!("{}-world", queen_tag), payload)
+        .await
+        .with_context(|| "Failed to send world payload")?;
+
+    Ok(())
+}
+
+async fn output_to_db<'a>(
+    time: i64,
+    payload: &'a serde_json::Value,
+    connection: impl sqlx::Executor<'a, Database = sqlx::Postgres>,
+    queen_tag: &'a str,
+) -> anyhow::Result<()> {
     sqlx::query!(
         r#"
         INSERT INTO world_output (queen_tag, world_time, payload)
         VALUES ($1, $2, $3);
         "#,
         queen_tag,
-        world.time() as i64,
+        time,
         payload
     )
     .execute(connection)
     .await
     .with_context(|| "Failed to insert current world state")?;
+    Ok(())
+}
+
+async fn output<'a>(
+    time: i64,
+    payload: &'a serde_json::Value,
+    queen_tag: &'a str,
+    db: impl sqlx::Executor<'a, Database = sqlx::Postgres>,
+    redis: &'a redis::Client,
+) -> anyhow::Result<()> {
+    let db = output_to_db(time, payload, db, queen_tag);
+    let red = output_to_redis(payload, redis, queen_tag);
+
+    db.await.with_context(|| "Failed to send to database")?;
+    red.await.with_context(|| "Failed to send to redis")?;
     Ok(())
 }
 
@@ -169,9 +205,9 @@ fn main() {
         .block_on(sqlx::PgPool::connect(database_url.as_str()))
         .expect("failed to connect to database");
 
-    let tag = uuid::Uuid::new_v4();
+    let tag = env::var("CAO_QUEEN_TAG").unwrap_or_else(|_| Uuid::new_v4().to_string());
 
-    info!(logger, "Creating cao executor");
+    info!(logger, "Creating cao executor with tag {}", tag);
     let mut executor = SimpleExecutor;
     info!(logger, "Init storage");
     let mut storage = executor
@@ -180,6 +216,8 @@ fn main() {
             caolo_sim::executor::GameConfig {
                 world_radius: game_conf.world_radius,
                 room_radius: game_conf.room_radius,
+                queen_tag: tag,
+                ..Default::default()
             },
         )
         .expect("Initialize executor");
@@ -191,14 +229,18 @@ fn main() {
     info!(logger, "Starting with {} actors", game_conf.n_actors);
 
     sim_rt
-        .block_on(send_schema(logger.clone(), &db_pool, tag))
+        .block_on(send_schema(
+            logger.clone(),
+            &db_pool,
+            storage.queen_tag().unwrap(),
+        ))
         .expect("Failed to send schema");
     init::init_storage(logger.clone(), &mut storage, &game_conf);
 
     sentry::capture_message(
         format!(
             "Caolo Worker {} initialization complete! Starting the game loop",
-            tag
+            storage.queen_tag().unwrap()
         )
         .as_str(),
         sentry::Level::Info,
@@ -209,8 +251,15 @@ fn main() {
 
         tick(logger.clone(), &mut executor, &mut storage);
 
+        let world_json = storage.as_json();
         sim_rt
-            .block_on(output(&*storage, &db_pool, tag))
+            .block_on(output(
+                storage.time() as i64,
+                &world_json,
+                storage.queen_tag().unwrap(),
+                &db_pool,
+                &redis_client,
+            ))
             .map_err(|err| {
                 error!(logger, "Failed to send world output to storage {:?}", err);
             })

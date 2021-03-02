@@ -83,6 +83,7 @@ fn handle_single_message(
     Ok(msg_id)
 }
 
+/// read commands from {queen_tag}-commands
 pub async fn handle_messages<'a>(
     logger: Logger,
     storage: &'a mut World,
@@ -97,7 +98,7 @@ pub async fn handle_messages<'a>(
 
     let mut response_payload = Vec::new();
     while let Ok(Some(message)) = queue
-        .rpop("CAO_COMMANDS")
+        .rpop(format!("{}-commands", storage.queen_tag().unwrap()))
         .await
         .map_err(|e| {
             error!(logger, "Failed to GET message {:?}", e);

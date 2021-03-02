@@ -1,19 +1,27 @@
 from typing import Dict, List, Tuple
+import aioredis
 from fastapi import FastAPI, Response, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 import asyncpg
 
+import logging
 import json
 import os
 import asyncio
-import aioredis
 
 
 from .api_schema import RoomObjects, Axial, make_room_id, parse_room_id
 from .model import game_state
 
-from .handler import world, scripting, admin, world_ws, commands
+from . import handler
+
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv()
+except:
+    pass
 
 app = FastAPI()
 
@@ -40,6 +48,13 @@ async def db_pool():
 REDIS_STR = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 _REDIS_POOL = None
 
+try:
+    QUEEN_TAG = os.getenv("CAO_QUEEN_TAG")
+    assert QUEEN_TAG is not None
+except:
+    logging.exception("Failed to find my queen :(")
+    raise
+
 
 async def redis_pool():
     global _REDIS_POOL
@@ -58,6 +73,27 @@ async def db_session(req, call_next):
     return resp
 
 
+# middlewares seem to be called in opposite order, so register rate_limit before last, after redis
+@app.middleware("http")
+async def rate_limit(req, call_next):
+    redis = req.state.cache
+    tr = redis.multi_exec()
+
+    host = req.client.host
+    key = f"cao-access-{host}"
+    tr.setnx(key, 0)
+    tr.incr(key)
+    tr.expire(key, 1)
+
+    res = await tr.execute()
+    res = res[1]
+
+    if res > 50:
+        return Response(status_code=429)
+
+    return await call_next(req)
+
+
 @app.middleware("http")
 async def redis_session(req, call_next):
     resp = Response(status_code=500)
@@ -71,54 +107,30 @@ async def redis_session(req, call_next):
     return resp
 
 
-@app.middleware("http")
-async def rate_limit(req, call_next):
-    pool = await redis_pool()
-    cache = await pool.acquire()
-    redis = aioredis.Redis(cache)
-    try:
-        tr = redis.multi_exec()
-
-        host = req.client.host
-        key = f"cao-access-{host}"
-        tr.setnx(key, 0)
-        tr.incr(key)
-        tr.expire(key, 1)
-
-        res = await tr.execute()
-        res = res[1]
-
-        if res > 50:
-            return Response(status_code=429)
-    finally:
-        pool.release(cache)
-
-    return await call_next(req)
-
-
 @app.get("/health")
 async def health():
     return Response(status_code=204)
 
 
-app.include_router(world.router)
-app.include_router(scripting.router)
-app.include_router(admin.router)
-app.include_router(world_ws.router)
-app.include_router(commands.router)
+app.include_router(handler.world.router)
+app.include_router(handler.scripting.router)
+app.include_router(handler.admin.router)
+app.include_router(handler.world_ws.router)
+app.include_router(handler.commands.router)
+app.include_router(handler.users.router)
 
 
 async def _broadcast_gamestate():
-    pool = await db_pool()
-
-    r = game_state.manager.run(pool)
-    while 1:
-        await r.__anext__()
+    pool = await redis_pool()
+    cache = await pool.acquire()
+    redis = aioredis.Redis(cache)
+    await game_state.manager.start(QUEEN_TAG, redis)
+    # Do not release this redis instance, game_state manager needs to hold it for pubsub
 
 
 @app.on_event("startup")
 async def on_start():
-    asyncio.create_task(_broadcast_gamestate())
     # force connections on startup instead of at the first request
     await redis_pool()
     await db_pool()
+    asyncio.create_task(_broadcast_gamestate())

@@ -17,11 +17,7 @@ use crate::{
     world::World,
 };
 
-#[derive(Debug, Clone)]
-pub struct GameConfig {
-    pub world_radius: u32,
-    pub room_radius: u32,
-}
+pub use crate::components::game_config::GameConfig;
 
 /// Execute world state updates
 pub trait Executor {
@@ -98,6 +94,8 @@ impl Executor for SimpleExecutor {
 
         execute_map_generation(world.logger.clone(), &mut *world, &config)
             .expect("Failed to generate world map");
+
+        world.config.game_config.value = Some(config);
 
         Ok(world)
     }

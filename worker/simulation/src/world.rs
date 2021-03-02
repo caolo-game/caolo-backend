@@ -272,6 +272,14 @@ impl World {
         res
     }
 
+    pub fn queen_tag(&self) -> Option<&str> {
+        self.config
+            .game_config
+            .value
+            .as_ref()
+            .map(|conf| conf.queen_tag.as_str())
+    }
+
     /// # Safety
     /// This function is safe to call if no references obtained via UnsafeView are held.
     pub unsafe fn reset_world_storage(&mut self) -> Result<&mut Self, ExtendFailure> {
@@ -310,6 +318,8 @@ impl World {
             "users",
             "diagnostics",
             "rooms",
+            "time",
+            "queenTag",
         ]
         .par_iter()
         .cloned()
@@ -330,6 +340,11 @@ impl World {
                     "diagnostics" => {
                         serde_json::to_value(&self.resources.diagnostics.value).unwrap()
                     }
+                    "time" => self.time().into(),
+                    "queenTag" => match self.queen_tag() {
+                        Some(tag) => tag.into(),
+                        None => serde_json::Value::Null,
+                    },
                     _ => unreachable!(),
                 };
                 output.insert(key.to_string(), value);

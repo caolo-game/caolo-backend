@@ -16,6 +16,7 @@
 /// let mut store = SimpleExecutor.initialize(None, caolo_sim::executor::GameConfig {
 ///     world_radius: 1,
 ///     room_radius: 10,
+///     ..Default::default()
 /// },
 /// ).unwrap();
 ///
@@ -71,6 +72,7 @@ macro_rules! query {
 /// let mut store = SimpleExecutor.initialize(None, caolo_sim::executor::GameConfig {
 ///     world_radius: 1,
 ///     room_radius: 10,
+///     ..Default::default()
 /// },
 /// ).unwrap();
 ///
@@ -134,6 +136,7 @@ macro_rules! query {
 /// let mut store = SimpleExecutor.initialize(None, caolo_sim::executor::GameConfig {
 ///     world_radius: 1,
 ///     room_radius: 10,
+///     ..Default::default()
 /// },
 /// ).unwrap();
 ///

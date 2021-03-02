@@ -366,6 +366,7 @@ mod tests {
                 caolo_sim::executor::GameConfig {
                     world_radius: 2,
                     room_radius: 10,
+                    ..Default::default()
                 },
             )
             .unwrap();

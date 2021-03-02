@@ -48,46 +48,27 @@ class WorldMessenger:
 
     def on_new_state(self, state):
         self.game_state = state
-        asyncio.create_task(_broadcast_gamestate(self))
+        asyncio.create_task(self.broadcast())
 
-    async def run(self):
-        if self.running:
-            return
-        assert not self.running
-        self.running = True
-        self.last_sent = -1
-        try:
-            while 1:
-                if self.game_state.created == self.last_sent:
-                    continue
-
-                dc = []
-                for client in self.connections:
-                    try:
-                        if self.game_state.created != client.last_seen:
-                            await self.send_to(client)
-                    except WebSocketDisconnect:
-                        dc.append(client)
-                    except Exception as exc:
-                        logging.exception("Sending game state failed")
-                        dc.append(client)
-                # disconnected clients
-                for c in dc:
-                    await self.disconnect(c)
-                yield
-        finally:
-            self.running = False
+    async def broadcast(self):
+        dc = []
+        for client in self.connections:
+            try:
+                await self.send_to(client)
+            except WebSocketDisconnect:
+                dc.append(client)
+            except Exception as exc:
+                logging.exception("Sending game state failed")
+                dc.append(client)
+        # disconnected clients
+        for c in dc:
+            await self.disconnect(c)
 
 
 manager = WorldMessenger()
 
 
 game_state_manager.on_new_state(manager.on_new_state)
-
-
-async def _broadcast_gamestate(manager):
-    r = manager.run()
-    await r.__anext__()
 
 
 # NOTE:

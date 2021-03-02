@@ -6,7 +6,7 @@ test-worker:
 	cd worker && cargo test --benches
 
 start: web
-	docker-compose up -d 
+	docker-compose up -d
 	docker-compose logs -f --tail=100
 
 web:
@@ -20,17 +20,28 @@ release:
 
 all: web worker release
 
-push: all
+push-web:web
 	docker push frenetiq/caolo-web:bleeding
+
+push-worker:worker
 	docker push frenetiq/caolo-release:bleeding
+
+push-release:release
 	docker push frenetiq/caolo-worker:bleeding
 
+push: push-web push-worker push-release
 
-deploy-heroku: web worker release
+deploy-heroku-web:web
 	docker tag frenetiq/caolo-web:bleeding registry.heroku.com/$(app)/web
-	docker tag frenetiq/caolo-release:bleeding registry.heroku.com/$(app)/release
-	docker tag frenetiq/caolo-worker:bleeding registry.heroku.com/$(app)/worker
 	docker push registry.heroku.com/$(app)/web
+
+deploy-heroku-worker:worker
+	docker tag frenetiq/caolo-release:bleeding registry.heroku.com/$(app)/release
 	docker push registry.heroku.com/$(app)/worker
+
+deploy-heroku-release:release
+	docker tag frenetiq/caolo-worker:bleeding registry.heroku.com/$(app)/worker
 	docker push registry.heroku.com/$(app)/release
+
+deploy-heroku: deploy-heroku-web deploy-heroku-worker deploy-heroku-release
 	heroku container:release web release worker -a=$(app)

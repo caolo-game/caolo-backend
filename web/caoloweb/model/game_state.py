@@ -67,14 +67,11 @@ class GameStateManager:
             self.game_state = GameState(
                 world_time=msg["time"], created=dt.datetime.now(), payload=msg
             )
-            dc = []  # to disconnect clients
             for cb in self.on_new_state_callbacks:
                 try:
                     cb(self.game_state)
                 except:
-                    dc.append(cb)
-            for cb in dc:
-                self.deregister_cb(cb)
+                    logging.exception("Callback failed")
 
     async def start(self, queen_tag: str, redis: Redis):
         ch = await redis.subscribe(f"{queen_tag}-world")

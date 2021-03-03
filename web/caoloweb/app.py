@@ -124,8 +124,12 @@ async def _broadcast_gamestate():
     pool = await redis_pool()
     cache = await pool.acquire()
     redis = aioredis.Redis(cache)
-    await game_state.manager.start(QUEEN_TAG, redis)
+
+    pool = await db_pool()
     # Do not release this redis instance, game_state manager needs to hold it for pubsub
+    # db is only needed for initialization
+    async with pool.acquire() as con:
+        await game_state.manager.start(QUEEN_TAG, redis, con)
 
 
 @app.on_event("startup")
@@ -133,4 +137,4 @@ async def on_start():
     # force connections on startup instead of at the first request
     await redis_pool()
     await db_pool()
-    asyncio.create_task(_broadcast_gamestate())
+    await _broadcast_gamestate()

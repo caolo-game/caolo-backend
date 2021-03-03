@@ -29,7 +29,11 @@ def get_room_objects(game_state: GameState, room_id: str):
     return payload
 
 
-async def load_latest_game_state(db) -> GameState:
+async def load_latest_game_state(db, queen_tag=None) -> GameState:
+    from ..app import QUEEN_TAG
+
+    if queen_tag is None:
+        queen_tag = QUEEN_TAG
     row = await db.fetchrow(
         """
         SELECT
@@ -37,8 +41,10 @@ async def load_latest_game_state(db) -> GameState:
             , t.world_time as world_time
             , t.created as created
         FROM public.world_output t
+        WHERE t.queen_tag=$1
         ORDER BY t.created DESC
         """,
+        queen_tag,
     )
     return GameState(
         world_time=row["world_time"],
@@ -61,6 +67,9 @@ class GameStateManager:
         except ValueError:
             pass
 
+    async def _load_from_db(self, db):
+        self.game_state = await load_latest_game_state(db)
+
     async def _listener(self, ch):
         while await ch.wait_message():
             msg = await ch.get_json()
@@ -73,9 +82,10 @@ class GameStateManager:
                 except:
                     logging.exception("Callback failed")
 
-    async def start(self, queen_tag: str, redis: Redis):
+    async def start(self, queen_tag: str, redis: Redis, db):
         ch = await redis.subscribe(f"{queen_tag}-world")
         ch = ch[0]
+        await self._load_from_db(db)
         asyncio.create_task(self._listener(ch))
 
 

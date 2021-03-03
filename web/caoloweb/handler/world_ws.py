@@ -40,7 +40,10 @@ class WorldMessenger:
             pass
 
     async def send_to(self, client):
-        state = self.game_state
+        state = self.game_state or game_state_manager.game_state
+        if not state:
+            logging.error("No GameState is available")
+            return
         client.last_seen = state.created
         pl = get_room_objects(state, client.room_id)
         pl = json.dumps(pl, default=lambda o: o.__dict__)
@@ -91,7 +94,10 @@ async def object_stream(ws: WebSocket, manager=Depends(lambda: manager)):
             client.room_id = room_id
             # on new room_id send a state immediately
             await manager.send_to(client)
+    except WebSocketDisconnect:
+        pass
     except:
+        logging.exception("Error in object streaming to client")
         pass
     finally:
         await manager.disconnect(client)

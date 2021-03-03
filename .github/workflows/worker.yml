@@ -11,9 +11,15 @@ jobs:
     runs-on: ubuntu-latest
     name: Test suite
 
+    continue-on-error: ${{ matrix.experimental}}
     strategy:
+      fail-fast: false
       matrix:
         rust: [stable, nightly]
+        experimental: [false]
+        include:
+          - rust: nightly
+            experimental: true
 
     steps:
       - uses: actions/checkout@v2

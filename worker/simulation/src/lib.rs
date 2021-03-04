@@ -22,13 +22,6 @@ pub mod world;
 #[derive(Clone, Debug, Default, Copy, serde::Serialize, serde::Deserialize)]
 pub struct Time(pub u64);
 
-#[cfg(feature = "mp_executor")]
-#[allow(unknown_lints)]
-#[allow(clippy::all)]
-pub mod job_capnp {
-    include!(concat!(env!("OUT_DIR"), "/cpnp/job_capnp.rs"));
-}
-
 impl<'a> storage::views::FromWorld<'a> for Time {
     fn new(w: &'a World) -> Self {
         Time(w.time())

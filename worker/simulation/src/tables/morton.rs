@@ -36,7 +36,7 @@ pub const MORTON_POS_MAX: i32 = 0b0111_1111_1111_1111;
 // Instead let's speculate if we need a split or if it more beneficial to just scan the
 // range
 // The number I picked is more or less arbitrary, I ran the basic benchmarks to probe a few numbers.
-const MAX_BRUTE_ITERS: usize = 24;
+const MAX_BRUTE_ITERS: usize = 16;
 
 #[derive(Debug, Clone, Error)]
 pub enum ExtendFailure {

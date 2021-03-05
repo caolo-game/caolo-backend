@@ -32,28 +32,21 @@ unsafe fn find_key_partition_sse2(skiplist: &SkipList, key: MortonKey) -> usize 
     let keys4 = _mm_set_epi32(key, key, key, key);
 
     // set every 32 bits to 0xFFFF if key > skip else sets it to 0x0000
-    let results = [
-        _mm_cmpgt_epi32(keys4, skiplist.0[0]),
-        _mm_cmpgt_epi32(keys4, skiplist.0[1]),
-        _mm_cmpgt_epi32(keys4, skiplist.0[2]),
-        _mm_cmpgt_epi32(keys4, skiplist.0[3]),
-    ];
+    let cmp0 = _mm_cmpgt_epi32(keys4, skiplist.0[0]);
+    let cmp1 = _mm_cmpgt_epi32(keys4, skiplist.0[1]);
+    let cmp2 = _mm_cmpgt_epi32(keys4, skiplist.0[2]);
+    let cmp3 = _mm_cmpgt_epi32(keys4, skiplist.0[3]);
 
     // create a mask from the most significant bit of each 8bit element
-    let masks = [
-        _mm_movemask_epi8(results[0]),
-        _mm_movemask_epi8(results[1]),
-        _mm_movemask_epi8(results[2]),
-        _mm_movemask_epi8(results[3]),
-    ];
+    let mask0 = _mm_movemask_epi8(cmp0);
+    let mask1 = _mm_movemask_epi8(cmp1);
+    let mask2 = _mm_movemask_epi8(cmp2);
+    let mask3 = _mm_movemask_epi8(cmp3);
 
-    let mut index = 0;
-    for mask in &masks {
-        // count the number of bits set to 1
-        index += _popcnt32(*mask);
-    }
+    // count the number of bits set to 1
+    let index4 = _popcnt32(mask0) + _popcnt32(mask1) + _popcnt32(mask2) + _popcnt32(mask3);
 
     // because the mask was created from 8 bit wide items every key in skip list is counted
     // 4 times.
-    index as usize / 4
+    index4 as usize / 4
 }

@@ -651,7 +651,9 @@ fn calculate_plain_chunks(logger: &Logger, terrain: View<Axial, TerrainComponent
         let mut chunk = HashSet::new();
 
         while let Some(current) = todo.pop_front() {
-            visited.insert(current);
+            if !visited.insert(current) {
+                continue;
+            }
             chunk.insert(current);
             terrain.query_range(current, 1, &mut |p, t| {
                 let TerrainComponent(t) = t;

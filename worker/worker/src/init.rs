@@ -54,9 +54,9 @@ pub fn init_storage(logger: Logger, storage: &mut World, config: &GameConfig) {
         .table
         .extend(
             storage
-                .view::<Room, RoomComponent>()
+                .view::<Axial, RoomComponent>()
                 .iter()
-                .map(|(Room(roomid), _)| (roomid, Default::default())),
+                .map(|(roomid, _)| (roomid, Default::default())),
         )
         .expect("entities_by_pos init");
     let bounds = Hexagon {
@@ -64,7 +64,7 @@ pub fn init_storage(logger: Logger, storage: &mut World, config: &GameConfig) {
         radius: radius as i32,
     };
     let rooms = storage
-        .view::<Room, RoomComponent>()
+        .view::<Axial, RoomComponent>()
         .iter()
         .map(|a| a.0)
         .collect::<Vec<_>>();
@@ -86,7 +86,7 @@ pub fn init_storage(logger: Logger, storage: &mut World, config: &GameConfig) {
             &bounds,
             spawnid,
             user_id,
-            room,
+            Room(room),
             &mut rng,
             FromWorldMut::new(storage),
             FromWorld::new(storage),
@@ -125,7 +125,7 @@ pub fn init_storage(logger: Logger, storage: &mut World, config: &GameConfig) {
             &logger,
             &bounds,
             id,
-            room,
+            Room(room),
             &mut rng,
             FromWorldMut::new(storage),
             FromWorld::new(storage),
@@ -194,7 +194,7 @@ fn init_bot(
     positions.insert_or_update(id, PositionComponent(pos));
     entities_by_pos
         .table
-        .get_by_id_mut(&pos.room)
+        .at_mut(pos.room)
         .expect("expected bot pos to be in the table")
         .insert(pos.pos, EntityComponent(id))
         .expect("entities_by_pos insert");
@@ -259,7 +259,7 @@ fn init_spawn(
     positions.insert_or_update(id, PositionComponent(pos));
     entities_by_pos
         .table
-        .get_by_id_mut(&room.0)
+        .at_mut(room.0)
         .expect("expected room to be in entities_by_pos table")
         .insert(pos.pos, EntityComponent(id))
         .expect("entities_by_pos insert");
@@ -298,7 +298,7 @@ fn init_resource(
     positions_table.insert_or_update(id, PositionComponent(pos));
     entities_by_pos
         .table
-        .get_by_id_mut(&room.0)
+        .at_mut(room.0)
         .expect("expected room to be in entities_by_pos table")
         .insert(pos.pos, EntityComponent(id))
         .expect("entities_by_pos insert");

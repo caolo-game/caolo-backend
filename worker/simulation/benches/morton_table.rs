@@ -31,7 +31,7 @@ fn contains_rand(c: &mut Criterion) {
                     q: rng.gen_range(0, 8000),
                     r: rng.gen_range(0, 8000),
                 };
-                table.contains_key(&p)
+                table.contains_key(p)
             })
         });
     }
@@ -62,7 +62,7 @@ fn get_entities_in_range_sparse(c: &mut Criterion) {
                     r: rng.gen_range(0, 3900 * 2),
                 };
                 let mut entities = Vec::with_capacity(512 * 512);
-                table.find_by_range(&p, radius, &mut entities);
+                table.find_by_range(p, radius, &mut entities);
                 entities
             });
         });
@@ -94,7 +94,7 @@ fn get_entities_in_range_dense(c: &mut Criterion) {
                     r: rng.gen_range(0, 200 * 2),
                 };
                 let mut entities = Vec::with_capacity(50 * 50);
-                table.find_by_range(&p, radius, &mut entities);
+                table.find_by_range(p, radius, &mut entities);
                 entities
             });
         });
@@ -157,8 +157,8 @@ fn rebuild_morton_table(c: &mut Criterion) {
     group.finish();
 }
 
-fn get_by_id_rand(c: &mut Criterion) {
-    let mut group = c.benchmark_group("morton table get_by_id random");
+fn at_rand(c: &mut Criterion) {
+    let mut group = c.benchmark_group("morton table at random");
     for size in 8..16 {
         let size = 1 << size;
         group.bench_with_input(BenchmarkId::from_parameter(size), &size, |b, &len| {
@@ -178,16 +178,15 @@ fn get_by_id_rand(c: &mut Criterion) {
                     q: rng.gen_range(0, 3900 * 2),
                     r: rng.gen_range(0, 3900 * 2),
                 };
-                table.get_by_id(&pos)
+                table.at(pos)
             });
         });
     }
     group.finish();
 }
 
-fn get_by_id_in_table_rand(c: &mut Criterion) {
-    let mut group =
-        c.benchmark_group("morton table get_by_id, all queried elements are in the table");
+fn at_in_table_rand(c: &mut Criterion) {
+    let mut group = c.benchmark_group("morton table at, all queried elements are in the table");
     for size in 8..16 {
         let size = 1 << size;
         group.bench_with_input(BenchmarkId::from_parameter(size), &size, |b, &len| {
@@ -207,7 +206,7 @@ fn get_by_id_in_table_rand(c: &mut Criterion) {
             b.iter(|| {
                 let i = rng.gen_range(0, points.len());
                 let pos = &points[i];
-                table.get_by_id(pos)
+                table.at(*pos)
             });
         });
     }
@@ -220,7 +219,7 @@ fn random_insert(c: &mut Criterion) {
         let size = 1 << size;
         group.bench_with_input(BenchmarkId::from_parameter(size), &size, |b, &size| {
             let mut rng = get_rand();
-            let mut table = MortonTable::<Axial, usize>::new();
+            let mut table = MortonTable::<usize>::new();
 
             for _ in 0..size {
                 let q = rng.gen_range(0, 29000);
@@ -248,7 +247,7 @@ fn random_update(c: &mut Criterion) {
         let size = 1 << size;
         group.bench_with_input(BenchmarkId::from_parameter(size), &size, |b, &size| {
             let mut rng = get_rand();
-            let mut table = MortonTable::<Axial, u32>::new();
+            let mut table = MortonTable::<u32>::new();
             let mut memory = Vec::new();
 
             for _ in 0..size {
@@ -266,7 +265,7 @@ fn random_update(c: &mut Criterion) {
             b.iter(move || {
                 let i = rng.gen_range(0, memory.len());
                 let p = memory[i].clone();
-                let mut updated = table.update(&p, rng.next_u32());
+                let mut updated = table.update(p, rng.next_u32());
                 black_box(&mut updated);
                 debug_assert!(updated.is_some());
             });
@@ -283,7 +282,7 @@ criterion_group!(
     make_morton_table,
     random_insert,
     rebuild_morton_table,
-    get_by_id_in_table_rand,
-    get_by_id_rand,
+    at_in_table_rand,
+    at_rand,
     random_update,
 );

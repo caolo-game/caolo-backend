@@ -2,7 +2,7 @@
 //!
 use crate::empty_key;
 use crate::geometry::Axial;
-use crate::tables::{SerialId, SpatialKey2d};
+use crate::tables::SerialId;
 use cao_lang::{prelude::Scalar, traits::AutoByteEncodeProperties};
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
@@ -91,20 +91,20 @@ impl AutoByteEncodeProperties for RoomPosition {}
 pub struct Room(pub Axial);
 impl AutoByteEncodeProperties for Room {}
 
-impl SpatialKey2d for Room {
-    fn as_array(&self) -> [i32; 2] {
+impl Room {
+    pub fn as_array(self) -> [i32; 2] {
         self.0.as_array()
     }
 
-    fn get_axis(&self, axis: u8) -> i32 {
+    pub fn get_axis(self, axis: u8) -> i32 {
         self.0.get_axis(axis)
     }
 
-    fn new(x: i32, y: i32) -> Self {
+    pub fn new(x: i32, y: i32) -> Self {
         Self(Axial::new(x, y))
     }
 
-    fn dist(&self, Room(ref other): &Self) -> u32 {
+    pub fn dist(self, Room(other): Self) -> u32 {
         self.0.dist(other)
     }
 }

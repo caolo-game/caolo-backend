@@ -28,9 +28,7 @@ pub fn take_room(logger: Logger, world: &mut World, msg: &TakeRoom) -> Result<()
     let room_id = msg.get_roomId();
     let room_id = Axial::new(room_id.get_q(), room_id.get_r());
 
-    let has_owner = world
-        .view::<Room, OwnedEntity>()
-        .contains_key(&Room(room_id));
+    let has_owner = world.view::<Axial, OwnedEntity>().contains_key(room_id);
     if has_owner {
         return Err(TakeRoomError::Owned);
     }
@@ -60,9 +58,9 @@ pub fn take_room(logger: Logger, world: &mut World, msg: &TakeRoom) -> Result<()
     rooms.0.push(Room(room_id));
 
     world
-        .unsafe_view::<Room, OwnedEntity>()
+        .unsafe_view::<Axial, OwnedEntity>()
         .insert_or_update(
-            Room(room_id),
+            room_id,
             OwnedEntity {
                 owner_id: UserId(user_id),
             },

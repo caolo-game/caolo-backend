@@ -30,10 +30,11 @@ def get_room_objects(game_state: GameState, room_id: str):
 
 
 async def load_latest_game_state(db, queen_tag=None) -> GameState:
-    from ..app import QUEEN_TAG
-
     if queen_tag is None:
+        from ..app import QUEEN_TAG
+
         queen_tag = QUEEN_TAG
+
     row = await db.fetchrow(
         """
         SELECT
@@ -74,7 +75,9 @@ class GameStateManager:
         while await ch.wait_message():
             msg = await ch.get_json()
             self.game_state = GameState(
-                world_time=msg["time"], created=dt.datetime.now(), payload=msg
+                world_time=msg["time"],
+                created=dt.datetime.now(),
+                payload=msg,
             )
             for cb in self.on_new_state_callbacks:
                 try:

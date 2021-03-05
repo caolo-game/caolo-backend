@@ -9,9 +9,10 @@ pub use rooms::*;
 
 use crate::{
     indices::{EntityId, Room, UserId, WorldPosition},
+    prelude::Axial,
     tables::{
         btree::BTreeTable, dense::DenseVecTable, flag::SparseFlagTable, morton::MortonTable,
-        Component, RoomMortonTable, SpatialKey2d, TableId,
+        Component, RoomMortonTable, TableId,
     },
 };
 use cao_lang::{prelude::CompiledProgram, vm::HistoryEntry};
@@ -35,8 +36,8 @@ impl Component<EntityId> for ScriptHistory {
 #[derive(Debug, Clone, Serialize, Deserialize, Copy, Default, Ord, PartialOrd, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct EntityComponent(pub EntityId);
-impl<Id: SpatialKey2d + Send + Sync> Component<Id> for EntityComponent {
-    type Table = MortonTable<Id, Self>;
+impl Component<Axial> for EntityComponent {
+    type Table = MortonTable<Self>;
 }
 impl Component<WorldPosition> for EntityComponent {
     type Table = RoomMortonTable<Self>;
@@ -60,8 +61,8 @@ impl Component<EntityId> for OwnedEntity {
     type Table = DenseVecTable<EntityId, Self>;
 }
 
-impl Component<Room> for OwnedEntity {
-    type Table = MortonTable<Room, Self>;
+impl Component<Axial> for OwnedEntity {
+    type Table = MortonTable<Self>;
 }
 
 #[derive(Default, Debug, Clone, Copy, Ord, PartialOrd, PartialEq, Eq, Serialize, Deserialize)]

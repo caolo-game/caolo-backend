@@ -153,7 +153,7 @@ where
     let WorldPosition { room, pos } = position;
     let entities_by_pos = storage.view::<WorldPosition, EntityComponent>();
 
-    let room = entities_by_pos.table.get_by_id(&room).ok_or_else(|| {
+    let room = entities_by_pos.table.at(room).ok_or_else(|| {
         warn!(
             logger,
             "find_closest_resource_by_range called on invalid room {:?}", position
@@ -162,7 +162,7 @@ where
     })?;
 
     // search the whole room
-    let candidate = room.find_closest_by_filter(&pos, |_, entity| filter(entity.0));
+    let candidate = room.find_closest_by_filter(pos, |_, entity| filter(entity.0));
     let candidate = candidate.map(|(_, _, id)| id.0);
     Ok(candidate)
 }

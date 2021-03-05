@@ -11,11 +11,11 @@ fn merge_simple() {
     lhs.merge(&rhs, |_, l, r| l + r).unwrap();
 
     for i in 0..8 {
-        let j = lhs.get_by_id(&Axial::new(42, i)).unwrap();
+        let j = lhs.at(Axial::new(42, i)).unwrap();
         assert_eq!(*j, 3);
     }
     for i in 8..16 {
-        let j = lhs.get_by_id(&Axial::new(42, i)).unwrap();
+        let j = lhs.at(Axial::new(42, i)).unwrap();
         assert_eq!(*j, 2);
     }
 }
@@ -93,7 +93,7 @@ fn test_range_query_all_by_rng(rng: &mut impl rand::Rng) {
 
     let mut res = Vec::new();
     table.find_by_range(
-        &center,
+        center,
         Axial::new(0, 0).hex_distance(center) as u32 + 1,
         &mut res,
     );
@@ -141,7 +141,7 @@ fn test_range_query_all() {
     }
 }
 #[test]
-fn regression_get_by_id_bug1() {
+fn regression_at_bug1() {
     let points = [
         Axial { q: 3, r: 10 },
         Axial { q: 5, r: 11 },
@@ -214,19 +214,19 @@ fn regression_get_by_id_bug1() {
         .map(|(i, p)| (p, i))
         .collect();
 
-    let table = MortonTable::<Axial, usize>::from_iterator(points.iter().cloned()).unwrap();
+    let table = MortonTable::<usize>::from_iterator(points.iter().cloned()).unwrap();
 
     dbg!(&table);
 
     for p in points {
-        let found = table.get_by_id(&p.0);
+        let found = table.at(p.0);
         let key = MortonKey::new(p.0.q as u16, p.0.r as u16);
         assert_eq!(found, Some(&p.1), "{:?} {:?}", p.0, key);
     }
 }
 
 #[test]
-fn get_by_id_few_items() {
+fn at_few_items() {
     let mut rng = rand::thread_rng();
 
     let mut points = HashSet::with_capacity(64);
@@ -242,13 +242,13 @@ fn get_by_id_few_items() {
             let i = 1000 * p.q + p.r;
             points.insert((p, i as usize));
         }
-        let table = MortonTable::<Axial, usize>::from_iterator(points.iter().cloned())
-            .expect("table build");
+        let table =
+            MortonTable::<usize>::from_iterator(points.iter().cloned()).expect("table build");
 
         println!("{:?}\n{:?}", table.skiplist, table.keys);
 
         for p in points.iter() {
-            let found = table.get_by_id(&p.0);
+            let found = table.at(p.0);
             let key = MortonKey::new(p.0.q as u16, p.0.r as u16);
             assert_eq!(found, Some(&p.1), "{:?} {:?}", p.0, key);
         }
@@ -256,7 +256,7 @@ fn get_by_id_few_items() {
 }
 
 #[test]
-fn get_by_id() {
+fn at() {
     let mut rng = rand::thread_rng();
 
     let mut points = HashSet::with_capacity(64);
@@ -270,13 +270,12 @@ fn get_by_id() {
         points.insert((p, i as usize));
     }
 
-    let table =
-        MortonTable::<Axial, usize>::from_iterator(points.iter().cloned()).expect("table build");
+    let table = MortonTable::<usize>::from_iterator(points.iter().cloned()).expect("table build");
 
     println!("{:?}\n{:?}", table.skiplist, table.keys);
 
     for p in points {
-        let found = table.get_by_id(&p.0);
+        let found = table.at(p.0);
         let key = MortonKey::new(p.0.q as u16, p.0.r as u16);
         assert_eq!(found, Some(&p.1), "{:?} {:?}", p.0, key);
     }
@@ -319,7 +318,7 @@ fn from_iterator_inserts_correctly() {
     .unwrap();
 
     for (pos, val) in points {
-        let v = *table.get_by_id(&pos).expect("to find the value");
+        let v = *table.at(pos).expect("to find the value");
         assert_eq!(val, v);
     }
 }

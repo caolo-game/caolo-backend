@@ -82,7 +82,7 @@ pub fn json_serialize_rooms(world: &World) -> serde_json::Value {
         .iterby_rooms()
         .fold(HashMap::new(), |mut map, payload| {
             map.insert(
-                pos_to_string(payload.__id.0),
+                pos_to_string(payload.__id),
                 json!({
                     "owner": &payload.owner
                 }),

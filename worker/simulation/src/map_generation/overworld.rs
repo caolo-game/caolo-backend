@@ -5,7 +5,7 @@ pub use params::*;
 
 use crate::components::{RoomComponent, RoomConnection, RoomConnections, RoomProperties};
 use crate::geometry::{Axial, Hexagon};
-use crate::indices::{ConfigKey, Room};
+use crate::indices::ConfigKey;
 use crate::storage::views::UnsafeView;
 use crate::tables::morton::{ExtendFailure, MortonTable};
 use rand::Rng;
@@ -18,10 +18,10 @@ pub enum OverworldGenerationError {
     BadRadius { number_of_rooms: u32, radius: u32 },
 
     #[error("Failed to build Room table: {0:?}")]
-    ExtendFail(ExtendFailure<Room>),
+    ExtendFail(ExtendFailure),
 
     #[error("Failed to build Room weight table: {0:?}")]
-    WeightMapInitFail(ExtendFailure<Axial>),
+    WeightMapInitFail(ExtendFailure),
 }
 
 /// Insert the given number of rooms in the given radius (where the unit is a room).
@@ -39,9 +39,9 @@ pub fn generate_room_layout(
         max_bridge_len,
     }: &OverworldGenerationParams,
     rng: &mut impl Rng,
-    (mut rooms, mut connections, mut room_props): (
-        UnsafeView<Room, RoomComponent>,
-        UnsafeView<Room, RoomConnections>,
+    (mut rooms, mut room_connections, mut room_props): (
+        UnsafeView<Axial, RoomComponent>,
+        UnsafeView<Axial, RoomConnections>,
         UnsafeView<ConfigKey, RoomProperties>,
     ),
 ) -> Result<(), OverworldGenerationError> {
@@ -57,15 +57,15 @@ pub fn generate_room_layout(
     });
     rooms.clear();
     rooms
-        .extend(bounds.iter_points().map(|p| (Room(p), RoomComponent)))
+        .extend(bounds.iter_points().map(|p| (p, RoomComponent)))
         .map_err(OverworldGenerationError::ExtendFail)?;
 
-    connections.clear();
-    connections
-        .extend(bounds.iter_points().map(|p| (Room(p), Default::default())))
+    room_connections.clear();
+    room_connections
+        .extend(bounds.iter_points().map(|p| (p, Default::default())))
         .map_err(OverworldGenerationError::ExtendFail)?;
 
-    debug!(logger, "Building connections");
+    debug!(logger, "Building room_connections");
 
     // loosely running the Erdos - Runyi model
     let connection_weights = MortonTable::from_iterator(bounds.iter_points().map(|p| {
@@ -83,12 +83,12 @@ pub fn generate_room_layout(
             point,
             &connection_weights,
             rng,
-            connections,
+            room_connections,
         );
     }
-    debug!(logger, "Building connections done");
+    debug!(logger, "Building room_connections done");
 
-    // TODO: insert more connections if the graph is not fully connected
+    // TODO: insert more room_connections if the graph is not fully connected
 
     Ok(())
 }
@@ -102,13 +102,13 @@ fn update_room_connections(
     min_bridge_len: u32,
     max_bridge_len: u32,
     point: Axial,
-    connection_weights: &MortonTable<Axial, f32>,
+    connection_weights: &MortonTable<f32>,
     rng: &mut impl Rng,
-    mut connections: UnsafeView<Room, RoomConnections>,
+    mut room_connections: UnsafeView<Axial, RoomConnections>,
 ) {
     let w = rng.gen_range(0.0, std::f32::consts::PI).sin().abs();
     let mut to_connect = [None; 6];
-    connection_weights.query_range(&point, 3, &mut |p, weight| {
+    connection_weights.query_range(point, 3, &mut |p, weight| {
         if w <= *weight {
             let n = p - point;
             if let Some(i) = Axial::neighbour_index(n) {
@@ -118,9 +118,9 @@ fn update_room_connections(
     });
 
     if to_connect.iter().find(|c| c.is_some()).is_none() {
-        // if this room has no connections insert 1 at random
+        // if this room has no room_connections insert 1 at random
         let mut weights = [0.0; 6];
-        connection_weights.query_range(&point, 3, &mut |p, _| {
+        connection_weights.query_range(point, 3, &mut |p, _| {
             let n = p - point;
             if let Some(i) = Axial::neighbour_index(n) {
                 weights[i] = rng.gen_range(0.5, 1.0);
@@ -137,7 +137,7 @@ fn update_room_connections(
 
     let current_connections = {
         let to_connect = &mut to_connect[..];
-        connections.update_with(&Room(point), |RoomConnections(ref mut conn)| {
+        room_connections.update_with(point, |RoomConnections(ref mut conn)| {
             for (i, c) in to_connect.iter_mut().enumerate() {
                 if conn[i].is_none() && c.is_some() {
                     let bridge_len = rng.gen_range(min_bridge_len, max_bridge_len);
@@ -169,7 +169,7 @@ fn update_room_connections(
         .filter_map(|n| n.as_ref())
         .cloned()
     {
-        connections.update_with(&Room(point + neighbour.direction), |conn| {
+        room_connections.update_with(point + neighbour.direction, |conn| {
             let inverse = neighbour.direction * -1;
             let i = Axial::neighbour_index(inverse)
                 .expect("expected neighbour inverse to be a valid neighbour posision");
@@ -200,7 +200,7 @@ mod tests {
         let logger = test_logger();
 
         let mut rooms = MortonTable::new();
-        let mut connections = MortonTable::new();
+        let mut room_connections = MortonTable::new();
         let mut props = UniqueTable::default();
 
         let params = OverworldGenerationParams::builder()
@@ -216,7 +216,7 @@ mod tests {
             &mut rand::thread_rng(),
             (
                 UnsafeView::from_table(&mut rooms),
-                UnsafeView::from_table(&mut connections),
+                UnsafeView::from_table(&mut room_connections),
                 UnsafeView::from_table(&mut props),
             ),
         )
@@ -226,15 +226,15 @@ mod tests {
             props.value.map(|RoomProperties { radius, .. }| radius),
             Some(16)
         );
-        assert_eq!(rooms.len(), connections.len());
+        assert_eq!(rooms.len(), room_connections.len());
 
         // for each connection of the room test if the corresponding connection of the neighbour
         // is valid.
-        for (Room(room), RoomConnections(ref room_conn)) in connections.iter() {
+        for (room, RoomConnections(ref room_conn)) in room_connections.iter() {
             for conn in room_conn.iter().filter_map(|x| x.as_ref()) {
-                let RoomConnections(ref conn_pairs) = connections
-                    .get_by_id(&Room(room + conn.direction))
-                    .expect("Expected the neighbour to be in the connections table");
+                let RoomConnections(ref conn_pairs) = room_connections
+                    .at(room + conn.direction)
+                    .expect("Expected the neighbour to be in the room_connections table");
 
                 let i = Axial::neighbour_index(conn.direction * -1).unwrap();
                 let conn_pair = conn_pairs[i]

@@ -7,10 +7,13 @@ pub mod room;
 
 use self::overworld::{generate_room_layout, OverworldGenerationError, OverworldGenerationParams};
 use self::room::{generate_room, RoomGenerationError, RoomGenerationParams};
-use crate::components::{RoomComponent, RoomConnections, RoomProperties, TerrainComponent};
 use crate::indices::{ConfigKey, Room, WorldPosition};
 use crate::storage::views::UnsafeView;
 use crate::tables::morton::MortonTable;
+use crate::{
+    components::{RoomComponent, RoomConnections, RoomProperties, TerrainComponent},
+    prelude::Axial,
+};
 use arrayvec::ArrayVec;
 use rand::{rngs::SmallRng, thread_rng, RngCore, SeedableRng};
 use slog::{o, Logger};
@@ -30,9 +33,9 @@ pub enum MapGenError {
 
 pub type MapGenerationTables = (
     UnsafeView<WorldPosition, TerrainComponent>,
-    UnsafeView<Room, RoomComponent>,
+    UnsafeView<Axial, RoomComponent>,
     UnsafeView<ConfigKey, RoomProperties>,
-    UnsafeView<Room, RoomConnections>,
+    UnsafeView<Axial, RoomConnections>,
 );
 
 pub fn generate_full_map(
@@ -40,7 +43,7 @@ pub fn generate_full_map(
     overworld_params: &OverworldGenerationParams,
     room_params: &RoomGenerationParams,
     seed: Option<[u8; 16]>,
-    (mut terrain, rooms, room_props, connections): MapGenerationTables,
+    (mut terrain, rooms, room_props, room_connections): MapGenerationTables,
 ) -> Result<(), MapGenError> {
     let seed = seed.unwrap_or_else(|| {
         let mut bytes = [0; 16];
@@ -52,7 +55,7 @@ pub fn generate_full_map(
         logger.clone(),
         overworld_params,
         &mut rng,
-        (rooms, connections, room_props),
+        (rooms, room_connections, room_props),
     )
     .map_err(|err| MapGenError::OverworldGenerationError { err })?;
 
@@ -61,27 +64,30 @@ pub fn generate_full_map(
         |mut terrain_tables, (room, _)| {
             // TODO: do this in parallel?
             let mut terrain_table = MortonTable::new();
-            let connections = connections
-                .get_by_id(&room)
-                .expect("Expected just built room to have connections");
-            let connections = connections
+            let room_connections = room_connections
+                .at(room)
+                .expect("Expected just built room to have room_connections");
+            let room_connections = room_connections
                 .0
                 .iter()
                 .filter_map(|c| c.as_ref())
                 .cloned()
                 .collect::<ArrayVec<[_; 6]>>();
             generate_room(
-                logger.new(o!("room.q" => room.0.q,"room.r" => room.0.r)),
+                logger.new(o!("room.q" => room.q,"room.r" => room.r)),
                 room_params,
-                connections.as_slice(),
+                room_connections.as_slice(),
                 &mut rng,
                 (UnsafeView::from_table(&mut terrain_table),),
             )
-            .map_err(|err| MapGenError::RoomGenerationError { err, room })?;
+            .map_err(|err| MapGenError::RoomGenerationError {
+                err,
+                room: Room(room),
+            })?;
 
             terrain_table.dedupe();
 
-            terrain_tables.push((room.0, terrain_table));
+            terrain_tables.push((room, terrain_table));
             Ok(terrain_tables)
         },
     )?;

@@ -21,6 +21,7 @@ use self::litmax_bigmin::round_down_to_one_less_than_pow_two;
 pub use self::morton_key::*;
 pub use self::serde::*;
 use super::*;
+use crate::geometry::Axial;
 use litmax_bigmin::litmax_bigmin;
 use rayon::prelude::*;
 use skiplist::*;
@@ -38,27 +39,25 @@ pub const MORTON_POS_MAX: i32 = 0b0111_1111_1111_1111;
 const MAX_BRUTE_ITERS: usize = 24;
 
 #[derive(Debug, Clone, Error)]
-pub enum ExtendFailure<Id: SpatialKey2d> {
+pub enum ExtendFailure {
     #[error("Position {0:?} is out of bounds!")]
-    OutOfBounds(Id),
+    OutOfBounds(Axial),
 }
 
 #[derive(Clone)]
-pub struct MortonTable<Pos, Row>
+pub struct MortonTable<Row>
 where
-    Pos: SpatialKey2d,
     Row: TableRow,
 {
     keys: Vec<MortonKey>,
-    values: Vec<(Pos, Row)>,
+    values: Vec<(Axial, Row)>,
     // SkipList contains the last item of every bucket
     skiplist: SkipList,
     bucket_size: u32,
 }
 
-impl<Pos, Row> std::fmt::Debug for MortonTable<Pos, Row>
+impl<Row> std::fmt::Debug for MortonTable<Row>
 where
-    Pos: SpatialKey2d,
     Row: TableRow,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -68,9 +67,8 @@ where
     }
 }
 
-impl<Pos, Row> Default for MortonTable<Pos, Row>
+impl<Row> Default for MortonTable<Row>
 where
-    Pos: SpatialKey2d,
     Row: TableRow,
 {
     fn default() -> Self {
@@ -83,21 +81,19 @@ where
     }
 }
 
-impl<'a, Pos, Row> MortonTable<Pos, Row>
+impl<'a, Row> MortonTable<Row>
 where
-    Pos: SpatialKey2d + Send,
     Row: TableRow + Send,
-    (Pos, Row): Send,
+    (Axial, Row): Send,
     // if the underlying vector implements par_iter_mut...
 {
-    pub fn par_iter_mut(&'a mut self) -> impl ParallelIterator<Item = (Pos, &'a mut Row)> + 'a {
+    pub fn par_iter_mut(&'a mut self) -> impl ParallelIterator<Item = (Axial, &'a mut Row)> + 'a {
         self.values[..].par_iter_mut().map(move |(k, v)| (*k, v))
     }
 }
 
-impl<Pos, Row> MortonTable<Pos, Row>
+impl<Row> MortonTable<Row>
 where
-    Pos: SpatialKey2d,
     Row: TableRow,
 {
     pub fn new() -> Self {
@@ -109,10 +105,10 @@ where
         }
     }
 
-    pub fn from_vec(values: Vec<(Pos, Row)>) -> Result<Self, ExtendFailure<Pos>> {
+    pub fn from_vec(values: Vec<(Axial, Row)>) -> Result<Self, ExtendFailure> {
         let mut keys = Vec::with_capacity(values.len());
         for (pos, _) in values.iter() {
-            if !Self::is_valid_pos(pos) {
+            if !Self::is_valid_pos(*pos) {
                 return Err(ExtendFailure::OutOfBounds(*pos));
             }
             let [x, y] = pos.as_array();
@@ -146,17 +142,17 @@ where
         self.keys.len()
     }
 
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = (Pos, &mut Row)> {
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = (Axial, &mut Row)> {
         self.values.iter_mut().map(|(p, v)| (*p, v))
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (Pos, &Row)> {
+    pub fn iter(&self) -> impl Iterator<Item = (Axial, &Row)> {
         self.values.iter().map(|(p, v)| (*p, v))
     }
 
-    pub fn from_iterator<It>(it: It) -> Result<Self, ExtendFailure<Pos>>
+    pub fn from_iterator<It>(it: It) -> Result<Self, ExtendFailure>
     where
-        It: Iterator<Item = (Pos, Row)>,
+        It: Iterator<Item = (Axial, Row)>,
     {
         let mut res = Self::new();
         res.extend(it)?;
@@ -170,12 +166,12 @@ where
     }
 
     /// Extend the map by the items provided.
-    pub fn extend<It>(&mut self, it: It) -> Result<(), ExtendFailure<Pos>>
+    pub fn extend<It>(&mut self, it: It) -> Result<(), ExtendFailure>
     where
-        It: Iterator<Item = (Pos, Row)>,
+        It: Iterator<Item = (Axial, Row)>,
     {
         for (id, value) in it {
-            if !self.intersects(&id) {
+            if !self.intersects(id) {
                 return Err(ExtendFailure::OutOfBounds(id));
             }
             let [x, y] = id.as_array();
@@ -191,7 +187,7 @@ where
 
     /// Extend the map by the items provided.
     /// Note that `Row`s are cloned!
-    pub fn extend_from_slice(&mut self, items: &[(Pos, Row)]) -> Result<(), ExtendFailure<Pos>> {
+    pub fn extend_from_slice(&mut self, items: &[(Axial, Row)]) -> Result<(), ExtendFailure> {
         self.extend(items.iter().map(|(pos, row)| (*pos, row.clone())))
     }
 
@@ -228,8 +224,8 @@ where
     }
 
     /// If applicable prefer `extend` and insert many keys at once.
-    pub fn insert(&mut self, id: Pos, row: Row) -> Result<(), ExtendFailure<Pos>> {
-        if !self.intersects(&id) {
+    pub fn insert(&mut self, id: Axial, row: Row) -> Result<(), ExtendFailure> {
+        if !self.intersects(id) {
             return Err(ExtendFailure::OutOfBounds(id));
         }
         let [x, y] = id.as_array();
@@ -246,7 +242,7 @@ where
     }
 
     /// Return false if id is not in the map, otherwise override the first instance found
-    pub fn update<'a>(&'a mut self, id: &Pos, row: Row) -> Option<&'a Row> {
+    pub fn update<'a>(&'a mut self, id: Axial, row: Row) -> Option<&'a Row> {
         self.find_key(id)
             .map(move |ind| {
                 self.values[ind].1 = row;
@@ -256,7 +252,7 @@ where
     }
 
     /// Return a reference to the new Row if it's in the map or None otherwise
-    pub fn update_with<'a, F>(&'a mut self, id: &Pos, f: F) -> Option<&'a Row>
+    pub fn update_with<'a, F>(&'a mut self, id: Axial, f: F) -> Option<&'a Row>
     where
         F: FnOnce(&mut Row),
     {
@@ -269,11 +265,11 @@ where
     }
 
     /// Return a reference to the new Row if it's in the map or None otherwise
-    pub fn insert_or_update(&mut self, id: Pos, row: Row) -> Result<(), ExtendFailure<Pos>> {
-        if !self.intersects(&id) {
+    pub fn insert_or_update(&mut self, id: Axial, row: Row) -> Result<(), ExtendFailure> {
+        if !self.intersects(id) {
             return Err(ExtendFailure::OutOfBounds(id));
         }
-        match self.find_key(&id) {
+        match self.find_key(id) {
             Ok(ind) => {
                 self.values[ind].1 = row;
             }
@@ -289,8 +285,8 @@ where
     }
 
     /// Returns the first item with given id, if any
-    pub fn get_by_id<'a>(&'a self, id: &Pos) -> Option<&'a Row> {
-        if !self.intersects(&id) {
+    pub fn at<'a>(&'a self, id: Axial) -> Option<&'a Row> {
+        if !self.intersects(id) {
             return None;
         }
 
@@ -298,8 +294,8 @@ where
     }
 
     /// Returns the first item with given id, if any
-    pub fn get_by_id_mut<'a>(&'a mut self, id: &Pos) -> Option<&'a mut Row> {
-        if !self.intersects(&id) {
+    pub fn at_mut<'a>(&'a mut self, id: Axial) -> Option<&'a mut Row> {
+        if !self.intersects(id) {
             return None;
         }
 
@@ -308,8 +304,8 @@ where
             .ok()
     }
 
-    pub fn contains_key(&self, id: &Pos) -> bool {
-        if !self.intersects(&id) {
+    pub fn contains_key(&self, id: Axial) -> bool {
+        if !self.intersects(id) {
             return false;
         }
         self.find_key(id).is_ok()
@@ -317,7 +313,7 @@ where
 
     /// Find the position of `id` or the position where it needs to be inserted to keep the
     /// container sorted
-    fn find_key(&self, id: &Pos) -> Result<usize, usize> {
+    fn find_key(&self, id: Axial) -> Result<usize, usize> {
         let [x, y] = id.as_array();
         let key = MortonKey::new(x as u16, y as u16);
 
@@ -352,23 +348,28 @@ where
     }
 
     /// For each id returns the first item with given id, if any
-    pub fn get_by_ids<'a>(&'a self, ids: &[Pos]) -> Vec<(Pos, &'a Row)> {
+    pub fn get_by_ids<'a>(&'a self, ids: &[Axial]) -> Vec<(Axial, &'a Row)> {
         ids.iter()
-            .filter_map(|id| self.get_by_id(id).map(|row| (*id, row)))
+            .filter_map(|id| self.at(*id).map(|row| (*id, row)))
             .collect()
     }
 
-    /// Filter all in Pos'(P) in Circle (C,r) where ||C-P|| < r
+    /// Filter all in Axial'(P) in Circle (C,r) where ||C-P|| < r
     /// This is a simplfication of `query_range`, mainly here for backwards compatibility
-    pub fn find_by_range<'a>(&'a self, center: &Pos, radius: u32, out: &mut Vec<(Pos, &'a Row)>) {
+    pub fn find_by_range<'a>(
+        &'a self,
+        center: Axial,
+        radius: u32,
+        out: &mut Vec<(Axial, &'a Row)>,
+    ) {
         self.query_range(center, radius, &mut |id, v| {
             out.push((id, v));
         });
     }
 
-    pub fn query_range<'a, Op>(&'a self, center: &Pos, radius: u32, op: &mut Op)
+    pub fn query_range<'a, Op>(&'a self, center: Axial, radius: u32, op: &mut Op)
     where
-        Op: FnMut(Pos, &'a Row),
+        Op: FnMut(Axial, &'a Row),
     {
         debug_assert!(
             radius & 0xefff == radius,
@@ -389,11 +390,11 @@ where
 
     fn query_range_impl<'a>(
         &'a self,
-        center: &Pos,
+        center: Axial,
         radius: u32,
         min: MortonKey,
         max: MortonKey,
-        op: &mut impl FnMut(Pos, &'a Row),
+        op: &mut impl FnMut(Axial, &'a Row),
     ) {
         let (imin, pmin) = self
             .find_key_morton(min)
@@ -448,7 +449,7 @@ where
         }
 
         for (id, val) in self.values[imin..imax].iter() {
-            if center.dist(id) <= radius {
+            if center.dist(*id) <= radius {
                 op(*id, val);
             }
         }
@@ -456,47 +457,47 @@ where
 
     /// If any found return the closest one to `center` and the distance to it.
     // TODO: try spiraling out from center to find a match faster
-    pub fn find_closest_by_filter<F>(&self, center: &Pos, filter: F) -> Option<(u32, Pos, &Row)>
+    pub fn find_closest_by_filter<F>(&self, center: Axial, filter: F) -> Option<(u32, Axial, &Row)>
     where
-        F: Fn(&Pos, &Row) -> bool,
+        F: Fn(Axial, &Row) -> bool,
     {
         self.values
             .iter()
-            .filter(|(id, row)| filter(id, row))
+            .filter(|(id, row)| filter(*id, row))
             .map(|(id, row)| (id.dist(center), *id, row))
             .min_by_key(|t| t.0)
     }
 
     /// Count in AABB
-    pub fn count_in_range(&self, center: &Pos, radius: u32) -> u32 {
+    pub fn count_in_range(&self, center: Axial, radius: u32) -> u32 {
         let r = i32::try_from(radius).expect("radius to fit into 31 bits");
-        let min = *center + Pos::new(-r, -r);
-        let max = *center + Pos::new(r, r);
+        let min = center + Axial::new(-r, -r);
+        let max = center + Axial::new(r, r);
 
-        let [min, max] = self.morton_min_max(&min, &max);
+        let [min, max] = self.morton_min_max(min, max);
 
         self.values[min..max]
             .iter()
-            .filter(move |(id, _)| center.dist(&id) < radius)
+            .filter(move |(id, _)| center.dist(*id) < radius)
             .count()
             .try_into()
             .expect("count to fit into 32 bits")
     }
 
     /// Count in AABB
-    pub fn count_in_range_if<Query>(&self, center: &Pos, radius: u32, query: Query) -> u32
+    pub fn count_in_range_if<Query>(&self, center: Axial, radius: u32, query: Query) -> u32
     where
-        Query: Fn(&Pos, &Row) -> bool,
+        Query: Fn(Axial, &Row) -> bool,
     {
         let r = i32::try_from(radius).expect("radius to fit into 31 bits");
-        let min = *center + Pos::new(-r, -r);
-        let max = *center + Pos::new(r, r);
+        let min = center + Axial::new(-r, -r);
+        let max = center + Axial::new(r, r);
 
-        let [min, max] = self.morton_min_max(&min, &max);
+        let [min, max] = self.morton_min_max(min, max);
 
         self.values[min..max]
             .iter()
-            .filter(move |(id, val)| query(id, val))
+            .filter(move |(id, val)| query(*id, val))
             .count()
             .try_into()
             .expect("count to fit into 32 bits")
@@ -504,45 +505,45 @@ where
 
     /// Turn AABB min-max to from-to indices
     /// Clamps `min` and `max` to intersect `self`
-    fn morton_min_max(&self, min: &Pos, max: &Pos) -> [usize; 2] {
+    fn morton_min_max(&self, min: Axial, max: Axial) -> [usize; 2] {
         let min: usize = {
-            if !self.intersects(&min) {
+            if !self.intersects(min) {
                 0
             } else {
-                self.find_key(&min).unwrap_or_else(|i| i)
+                self.find_key(min).unwrap_or_else(|i| i)
             }
         };
         let max: usize = {
-            if !self.intersects(&max) {
+            if !self.intersects(max) {
                 (self.keys.len() as i64 - 1).max(0) as usize
             } else {
-                self.find_key(&max).unwrap_or_else(|i| i)
+                self.find_key(max).unwrap_or_else(|i| i)
             }
         };
         [min, max]
     }
 
-    pub fn is_valid_pos(point: &Pos) -> bool {
+    pub fn is_valid_pos(point: Axial) -> bool {
         let [x, y] = point.as_array();
         (x & MORTON_POS_MAX) == x && (y & MORTON_POS_MAX) == y
     }
 
     /// Return wether point is within the bounds of this node
-    pub fn intersects(&self, point: &Pos) -> bool {
+    pub fn intersects(&self, point: Axial) -> bool {
         Self::is_valid_pos(point)
     }
 
     /// Return [min, max) of the bounds of this table
-    pub fn bounds(&self) -> (Pos, Pos) {
+    pub fn bounds(&self) -> (Axial, Axial) {
         (
-            Pos::new(0, 0),
-            Pos::new(MORTON_POS_MAX + 1, MORTON_POS_MAX + 1),
+            Axial::new(0, 0),
+            Axial::new(MORTON_POS_MAX + 1, MORTON_POS_MAX + 1),
         )
     }
 
     /// Compute the minimum and maximum positions for this table's AABB.
     /// Note that this might be (a lot) larger than the minimum bounding box that might hold this table!
-    pub fn aabb(&self) -> Option<[Pos; 2]> {
+    pub fn aabb(&self) -> Option<[Axial; 2]> {
         let min = self.keys.get(0)?;
         let [minx, miny] = self.values[0].0.as_array();
         let min_loc = round_down_to_one_less_than_pow_two(min.0) + 1;
@@ -556,7 +557,7 @@ where
         let [bx, by] = max.as_point();
         let [maxx, maxy] = [maxx.max(bx as i32), maxy.max(by as i32)];
 
-        let res = [Pos::new(minx, miny), Pos::new(maxx, maxy)];
+        let res = [Axial::new(minx, miny), Axial::new(maxx, maxy)];
         Some(res)
     }
 
@@ -576,9 +577,9 @@ where
 
     /// Merge two `MortonTable`s by inserting all points that are in `other` but not in `self` and
     /// calling `update` with all points that are present in both tables.
-    pub fn merge<F>(&mut self, other: &Self, mut update: F) -> Result<(), ExtendFailure<Pos>>
+    pub fn merge<F>(&mut self, other: &Self, mut update: F) -> Result<(), ExtendFailure>
     where
-        F: FnMut(&Pos, &Row, &Row) -> Row,
+        F: FnMut(Axial, &Row, &Row) -> Row,
     {
         let inserts = {
             let mut lhs = self.iter_mut();
@@ -602,7 +603,7 @@ where
                         current_left = lhs.next();
                     }
                 } else {
-                    **v1 = update(&p1, v1, v2);
+                    **v1 = update(*p1, v1, v2);
                     current_left = lhs.next();
                     current_right = rhs.next();
                 }
@@ -618,22 +619,21 @@ where
     }
 }
 
-impl<Pos, Row> Table for MortonTable<Pos, Row>
+impl<Row> Table for MortonTable<Row>
 where
-    Pos: SpatialKey2d,
     Row: TableRow,
 {
-    type Id = Pos;
+    type Id = Axial;
     type Row = Row;
 
     /// delete all values at id and return the first one, if any
-    fn delete(&mut self, id: &Pos) -> Option<Row> {
-        if !self.intersects(id) {
+    fn delete(&mut self, id: &Axial) -> Option<Row> {
+        if !self.intersects(*id) {
             return None;
         }
 
         let val = self
-            .find_key(&id)
+            .find_key(*id)
             .map(|ind| {
                 self.keys.remove(ind);
                 self.values.remove(ind)
@@ -641,7 +641,7 @@ where
             .ok()?
             .1;
 
-        while let Ok(ind) = self.find_key(&id) {
+        while let Ok(ind) = self.find_key(*id) {
             self.keys.remove(ind);
             self.values.remove(ind);
         }
@@ -651,7 +651,7 @@ where
         Some(val)
     }
 
-    fn get_by_id(&self, id: &Pos) -> Option<&Row> {
-        MortonTable::get_by_id(self, id)
+    fn get_by_id(&self, id: &Axial) -> Option<&Row> {
+        MortonTable::at(self, *id)
     }
 }

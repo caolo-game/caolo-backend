@@ -64,6 +64,7 @@ pub fn litmax_bigmin(
 }
 
 /// `diff_msb`: position of the most significant bit that's different between `a` and `b`
+#[inline]
 fn impl_litmax_bigmin(a: u32, b: u32, diff_msb: u32) -> [u32; 2] {
     debug_assert!(a < b);
 

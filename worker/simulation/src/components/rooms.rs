@@ -1,9 +1,7 @@
 use crate::geometry::Axial;
 use crate::indices::ConfigKey;
 use crate::indices::WorldPosition;
-use crate::tables::{
-    morton::MortonTable, unique::UniqueTable, Component, RoomMortonTable, SpatialKey2d,
-};
+use crate::tables::{morton::MortonTable, unique::UniqueTable, Component, RoomMortonTable};
 use crate::terrain::TileTerrainType;
 use serde::{Deserialize, Serialize};
 
@@ -23,8 +21,8 @@ pub struct RoomConnection {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct RoomConnections(pub [Option<RoomConnection>; 6]);
-impl<Id: SpatialKey2d + Send + Sync> Component<Id> for RoomConnections {
-    type Table = MortonTable<Id, Self>;
+impl Component<Axial> for RoomConnections {
+    type Table = MortonTable<Self>;
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, Default)]
@@ -33,8 +31,8 @@ pub struct TerrainComponent(pub TileTerrainType);
 impl Component<WorldPosition> for TerrainComponent {
     type Table = RoomMortonTable<Self>;
 }
-impl<Id: SpatialKey2d + Send + Sync> Component<Id> for TerrainComponent {
-    type Table = MortonTable<Id, Self>;
+impl Component<Axial> for TerrainComponent {
+    type Table = MortonTable<Self>;
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -51,6 +49,6 @@ impl Component<ConfigKey> for RoomProperties {
 #[serde(rename_all = "camelCase")]
 pub struct RoomComponent;
 
-impl<Id: SpatialKey2d + Send + Sync> Component<Id> for RoomComponent {
-    type Table = MortonTable<Id, Self>;
+impl Component<Axial> for RoomComponent {
+    type Table = MortonTable<Self>;
 }

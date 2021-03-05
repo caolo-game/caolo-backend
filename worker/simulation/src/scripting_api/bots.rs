@@ -488,8 +488,8 @@ mod tests {
                 mutate
                 storage
                 {
-                    Room, RoomConnections,
-                        .insert( Room(from.room), connections )
+                    Axial, RoomConnections,
+                        .insert(from.room, connections )
                         .expect("Failed to add room connections");
                 }
             );
@@ -505,8 +505,8 @@ mod tests {
                 mutate
                 storage
                 {
-                Room, RoomConnections,
-                    .insert( Room(room), connections )
+                Axial, RoomConnections,
+                    .insert( room, connections )
                     .expect("Failed to add room connections");
                 }
             );

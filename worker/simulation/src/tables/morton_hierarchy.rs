@@ -9,7 +9,7 @@ use thiserror::Error;
 #[derive(Debug, Clone, Error)]
 pub enum ExtendFailure {
     #[error("Failed to extend the room level {0:?}")]
-    RoomExtendFailure(super::morton::ExtendFailure<Axial>),
+    RoomExtendFailure(super::morton::ExtendFailure),
     #[error("Failed to insert poision {0:?}")]
     InvalidPosition(WorldPosition),
     #[error("Room {0:?} does not exist")]
@@ -17,7 +17,7 @@ pub enum ExtendFailure {
     #[error("Extending room {room:?} failed with error {error}")]
     InnerExtendFailure {
         room: Axial,
-        error: super::morton::ExtendFailure<Axial>,
+        error: super::morton::ExtendFailure,
     },
 }
 
@@ -26,7 +26,7 @@ pub struct RoomMortonTable<Row>
 where
     Row: TableRow,
 {
-    pub table: MortonTable<Axial, MortonTable<Axial, Row>>,
+    pub table: MortonTable<MortonTable<Row>>,
 }
 
 impl<Row> RoomMortonTable<Row>
@@ -60,7 +60,7 @@ where
         })
     }
 
-    pub fn iter_rooms(&self) -> impl Iterator<Item = (Room, &MortonTable<Axial, Row>)> {
+    pub fn iter_rooms(&self) -> impl Iterator<Item = (Room, &MortonTable<Row>)> {
         self.table.iter().map(|(room, table)| (Room(room), table))
     }
 
@@ -78,24 +78,24 @@ where
     }
 
     pub fn contains_room(&self, id: Room) -> bool {
-        self.table.contains_key(&id.0)
+        self.table.contains_key(id.0)
     }
 
     pub fn contains_key(&self, id: &WorldPosition) -> bool {
         self.table
-            .get_by_id(&id.room)
-            .map(|room| room.contains_key(&id.pos))
+            .at(id.room)
+            .map(|room| room.contains_key(id.pos))
             .unwrap_or(false)
     }
 
     /// Inserts the item at the given position. Creates a table for the room if it's not found
     pub fn insert(&mut self, id: WorldPosition, val: Row) -> Result<(), ExtendFailure> {
-        let mut room = self.table.get_by_id_mut(&id.room);
+        let mut room = self.table.at_mut(id.room);
         if room.is_none() {
             self.table
                 .insert(id.room, MortonTable::new())
                 .map_err(ExtendFailure::RoomExtendFailure)?;
-            room = self.table.get_by_id_mut(&id.room);
+            room = self.table.at_mut(id.room);
         }
         room.unwrap()
             .insert(id.pos, val)
@@ -105,16 +105,14 @@ where
             })
     }
 
-    pub fn get_by_id_mut<'a>(&'a mut self, id: &WorldPosition) -> Option<&'a mut Row> {
+    pub fn at_mut<'a>(&'a mut self, id: &WorldPosition) -> Option<&'a mut Row> {
         self.table
-            .get_by_id_mut(&id.room)
-            .and_then(|room| room.get_by_id_mut(&id.pos))
+            .at_mut(id.room)
+            .and_then(|room| room.at_mut(id.pos))
     }
 
     pub fn get_by_id<'a>(&'a self, id: &WorldPosition) -> Option<&'a Row> {
-        self.table
-            .get_by_id(&id.room)
-            .and_then(|room| room.get_by_id(&id.pos))
+        self.table.at(id.room).and_then(|room| room.at(id.pos))
     }
 
     pub fn extend_rooms<It>(&mut self, iter: It) -> Result<&mut Self, ExtendFailure>
@@ -266,7 +264,7 @@ where
     /// delete all values at id and return the first one, if any
     fn delete(&mut self, id: &Self::Id) -> Option<Row> {
         let WorldPosition { room, pos } = id;
-        let room = self.table.get_by_id_mut(&room)?;
+        let room = self.table.at_mut(*room)?;
         room.delete(&pos)
     }
 

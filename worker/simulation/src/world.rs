@@ -16,7 +16,7 @@ use slog::{debug, o, Drain};
 use std::{hash::Hasher, pin::Pin};
 
 storage!(
-    module room_store key Room,
+    module pos2_store key Axial,
     table RoomConnections = room_connections,
     table RoomComponent = rooms,
     table OwnedEntity = owner
@@ -97,7 +97,7 @@ storage!(
 #[derive(Debug, Serialize)]
 pub struct World {
     pub entities: entity_store::Storage,
-    pub room: room_store::Storage,
+    pub room: pos2_store::Storage,
     pub user: user_store::Storage,
     pub config: config_store::Storage,
     pub resources: resource_store::Storage,
@@ -132,7 +132,7 @@ macro_rules! impl_hastable {
 }
 
 impl_hastable!(entity_store, entities);
-impl_hastable!(room_store, room);
+impl_hastable!(pos2_store, room);
 impl_hastable!(user_store, user);
 impl_hastable!(config_store, config);
 impl_hastable!(positions_store, positions);
@@ -182,9 +182,9 @@ impl World {
             config.game_config.value = Some(Default::default());
 
             let mut res = Box::pin(World {
+                config,
                 entities: Default::default(),
                 room: Default::default(),
-                config,
                 resources: Default::default(),
                 entity_logs: Default::default(),
                 scripts: Default::default(),
@@ -284,16 +284,16 @@ impl World {
     /// This function is safe to call if no references obtained via UnsafeView are held.
     pub unsafe fn reset_world_storage(&mut self) -> Result<&mut Self, ExtendFailure> {
         let rooms = self
-            .view::<Room, RoomComponent>()
+            .view::<Axial, RoomComponent>()
             .iter()
             .map(|(r, _)| r)
-            .collect::<Vec<_>>();
+            .collect::<Vec<Axial>>();
 
         macro_rules! clear_table {
             ($component: ty) => {
                 let mut table = self.unsafe_view::<WorldPosition, $component>();
                 table.clear();
-                table.extend_rooms(rooms.iter().cloned())?;
+                table.extend_rooms(rooms.iter().map(|ax| Room(*ax)))?;
             };
         }
 

@@ -1,13 +1,13 @@
 use super::MortonTable;
-use super::{SpatialKey2d, TableRow};
+use super::TableRow;
+use crate::prelude::Axial;
 use serde::de::{self, Deserialize, Deserializer, MapAccess, Visitor};
 use serde::ser::{Serialize, SerializeStruct, Serializer};
 use std::fmt;
 use std::marker::PhantomData;
 
-impl<Pos, Row> Serialize for MortonTable<Pos, Row>
+impl<Row> Serialize for MortonTable<Row>
 where
-    Pos: SpatialKey2d + Serialize,
     Row: TableRow + Serialize,
 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -20,23 +20,21 @@ where
     }
 }
 
-struct MortonVisitor<K, V>
+struct MortonVisitor<V>
 where
-    K: SpatialKey2d,
     V: TableRow,
 {
-    _m: PhantomData<(K, V)>,
+    _m: PhantomData<(Axial, V)>,
 }
 
-impl<'de, Pos, Row> Visitor<'de> for MortonVisitor<Pos, Row>
+impl<'de, Row> Visitor<'de> for MortonVisitor<Row>
 where
-    Pos: SpatialKey2d + Deserialize<'de>,
     Row: TableRow + Deserialize<'de>,
 {
-    type Value = MortonTable<Pos, Row>;
+    type Value = MortonTable<Row>;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a single 'values' field containing a list of [Pos, Row] tuples")
+        formatter.write_str("a single 'values' field containing a list of [Axial, Row] tuples")
     }
 
     fn visit_map<V>(self, mut seq: V) -> Result<Self::Value, V::Error>
@@ -44,7 +42,7 @@ where
         V: MapAccess<'de>,
     {
         use std::borrow::Cow;
-        let mut values: Option<Vec<(Pos, Row)>> = None;
+        let mut values: Option<Vec<(Axial, Row)>> = None;
         'a: while let Some(key) = seq.next_key::<Cow<String>>()? {
             if key == Cow::Borrowed("values") {
                 let value = seq.next_value()?;
@@ -63,9 +61,8 @@ where
     }
 }
 
-impl<'de, Pos, Row> Deserialize<'de> for MortonTable<Pos, Row>
+impl<'de, Row> Deserialize<'de> for MortonTable<Row>
 where
-    Pos: SpatialKey2d + Deserialize<'de>,
     Row: TableRow + Deserialize<'de>,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -76,7 +73,7 @@ where
         deserializer.deserialize_struct(
             "MortonTable",
             FIELDS,
-            MortonVisitor::<Pos, Row> {
+            MortonVisitor::<Row> {
                 _m: Default::default(),
             },
         )
@@ -105,7 +102,7 @@ mod tests {
 
         let s = serde_json::to_string(&table).unwrap();
         dbg!(&s);
-        let res: MortonTable<Axial, f32> = serde_json::from_str(s.as_str()).unwrap();
+        let res: MortonTable<f32> = serde_json::from_str(s.as_str()).unwrap();
 
         table
             .keys
@@ -114,8 +111,8 @@ mod tests {
             .for_each(|(a, b)| assert_eq!(a.0, b.0));
 
         for (p, v) in points.iter() {
-            let a = table.get_by_id(&p).unwrap();
-            let b = res.get_by_id(&p).unwrap();
+            let a = table.at(*p).unwrap();
+            let b = res.at(*p).unwrap();
 
             assert_eq!(a, b);
             assert_eq!(a, v);

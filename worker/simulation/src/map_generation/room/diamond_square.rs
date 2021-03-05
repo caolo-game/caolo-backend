@@ -1,6 +1,6 @@
 use super::GradientMap;
 use crate::geometry::Axial;
-use crate::tables::{SpatialKey2d, Table};
+use crate::tables::Table;
 use rand::Rng;
 use slog::{debug, Logger};
 
@@ -76,14 +76,14 @@ pub fn square(
         Axial::new(x + radius, y + radius),
     ]
     .iter()
-    .filter_map(|point| gradient.get_by_id(point))
+    .filter_map(|point| gradient.at(*point))
     {
         sum += grad;
         num += 1;
     }
 
     let grad = fheight(&gradient, p, radius, sum / num as f32);
-    gradient.update(&p, grad);
+    gradient.update(p, grad);
     grad
 }
 
@@ -106,13 +106,13 @@ pub fn diamond(
         Axial::new(x, y + radius),
     ]
     .iter()
-    .filter_map(|point| gradient.get_by_id(point))
+    .filter_map(|point| gradient.at(*point))
     {
         sum += grad;
         num += 1;
     }
 
     let grad = fheight(&gradient, p, radius, sum / num as f32);
-    gradient.update(&p, grad);
+    gradient.update(p, grad);
     grad
 }

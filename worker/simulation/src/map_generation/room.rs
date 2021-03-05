@@ -19,14 +19,14 @@ use crate::terrain::TileTerrainType;
 use rand::Rng;
 use slog::{debug, error, trace, Logger};
 use std::cmp::Ordering;
-use std::collections::HashSet;
+use std::collections::{HashSet, VecDeque};
 
 #[derive(Debug, Clone, thiserror::Error)]
 pub enum RoomGenerationError {
     #[error("Can not generate room with the given parameters: {radius}")]
     BadArguments { radius: u32 },
     #[error("Failed to generate the initial layout: {0}")]
-    TerrainExtendFailure(ExtendFailure<Axial>),
+    TerrainExtendFailure(ExtendFailure),
     #[error("A room may only have up to 6 neihgbours, got: {0}")]
     TooManyNeighbours(usize),
     #[error("Got an invlid neighbour {0:?}")]
@@ -44,7 +44,7 @@ pub enum RoomGenerationError {
 
 type MapTables = (UnsafeView<Axial, TerrainComponent>,);
 
-type GradientMap = MortonTable<Axial, f32>;
+type GradientMap = MortonTable<f32>;
 
 /// find the smallest power of two that can hold `size`
 fn pot(size: u32) -> u32 {
@@ -324,12 +324,12 @@ fn dilate(
     .iter_points();
     for p in points.filter(|p| {
         !terrain_in
-            .get_by_id(p)
+            .at(*p)
             .map(|TerrainComponent(t)| t.is_walkable())
             .unwrap_or(false)
     }) {
         let mut neighbours_on = -1; // account for p
-        terrain_in.query_range(&p, kernel_width, &mut |_, TerrainComponent(t)| {
+        terrain_in.query_range(p, kernel_width, &mut |_, TerrainComponent(t)| {
             neighbours_on += t.is_walkable() as i32;
         });
 
@@ -434,7 +434,7 @@ fn coastline(
         .iter()
         .filter(|(p, TerrainComponent(t))| bounds.contains(*p) && *t == TileTerrainType::Wall)
     {
-        let count = terrain.count_in_range(&p, 2);
+        let count = terrain.count_in_range(p, 2);
         // 7 == 1 + 6 neighbours
         if count < 7 {
             // at least 1 neighbour tile is empty
@@ -443,7 +443,7 @@ fn coastline(
     }
     trace!(logger, "Changing walls to plains {:#?}", changeset);
     for p in changeset.iter() {
-        terrain.update(p, TerrainComponent(TileTerrainType::Plain));
+        terrain.update(*p, TerrainComponent(TileTerrainType::Plain));
     }
     debug!(logger, "Building coastline done");
 }
@@ -469,7 +469,7 @@ fn transform_heightmap_into_terrain(
         chance_plain,
         chance_wall,
     }: HeightMapTransformParams,
-    gradient: &MortonTable<Axial, f32>,
+    gradient: &MortonTable<f32>,
     mut terrain: UnsafeView<Axial, TerrainComponent>,
 ) -> Result<HeightMapProperties, RoomGenerationError> {
     debug!(logger, "Building terrain from height-map");
@@ -493,7 +493,7 @@ fn transform_heightmap_into_terrain(
     terrain
         .extend(points.filter_map(|p| {
             trace!(logger, "Computing terrain of gradient point: {:?}", p);
-            let mut grad = *gradient.get_by_id(&p).or_else(|| {
+            let mut grad = *gradient.at(p).or_else(|| {
                 error!(logger, "{:?} has no gradient", p);
                 debug_assert!(false);
                 None
@@ -628,7 +628,7 @@ struct ChunkMeta {
 fn calculate_plain_chunks(logger: &Logger, terrain: View<Axial, TerrainComponent>) -> ChunkMeta {
     debug!(logger, "calculate_plain_chunks");
     let mut visited = HashSet::new();
-    let mut todo = HashSet::new();
+    let mut todo = VecDeque::new();
     let mut startind = 0;
     let mut chunk_id = 0;
 
@@ -640,31 +640,23 @@ fn calculate_plain_chunks(logger: &Logger, terrain: View<Axial, TerrainComponent
             .iter()
             .enumerate()
             .skip(startind)
-            .find_map(|(i, (p, t))| {
-                if t.0.is_walkable() && !visited.contains(&p) {
-                    Some((i, p))
-                } else {
-                    None
-                }
-            });
+            .find_map(|(i, (p, t))| (t.0.is_walkable() && !visited.contains(&p)).then(|| (i, p)));
         if current.is_none() {
             break 'a;
         }
         let (i, current) = current.unwrap();
         startind = i;
         todo.clear();
-        todo.insert(current);
+        todo.push_back(current);
         let mut chunk = HashSet::new();
 
-        while !todo.is_empty() {
-            let current = todo.iter().next().cloned().unwrap();
-            todo.remove(&current);
+        while let Some(current) = todo.pop_front() {
             visited.insert(current);
             chunk.insert(current);
-            terrain.query_range(&current, 1, &mut |p, t| {
+            terrain.query_range(current, 1, &mut |p, t| {
                 let TerrainComponent(t) = t;
                 if t.is_walkable() && !visited.contains(&p) {
-                    todo.insert(p);
+                    todo.push_back(p);
                 }
             });
         }
@@ -706,7 +698,7 @@ fn print_terrain(from: Axial, to: Axial, terrain: View<Axial, TerrainComponent>)
 
     for y in (from.r..=to.r) {
         for x in (from.q..=to.q) {
-            match terrain.get_by_id(&Axial::new(x, y)) {
+            match terrain.at(Axial::new(x, y)) {
                 Some(TerrainComponent(TileTerrainType::Wall)) => print!("#"),
                 Some(TerrainComponent(TileTerrainType::Plain)) => print!("."),
                 Some(TerrainComponent(TileTerrainType::Bridge)) => print!("x"),
@@ -767,7 +759,7 @@ mod tests {
         let center = Axial::new(8, 8);
         let points = Hexagon { center, radius: 7 }.iter_points();
         for point in points {
-            match terrain.get_by_id(&point) {
+            match terrain.at(point) {
                 None => seen_empty = true,
                 Some(TerrainComponent(TileTerrainType::Plain))
                 | Some(TerrainComponent(TileTerrainType::Bridge)) => seen_plain = true,
@@ -815,7 +807,7 @@ mod tests {
 
         print_terrain(from, to, View::from_table(&terrain));
 
-        let positions = MortonTable::<Axial, EntityComponent>::new();
+        let positions = MortonTable::<EntityComponent>::new();
         let mut path = Vec::with_capacity(1024);
 
         let first = plains.iter().next().expect("at least 1 plain");

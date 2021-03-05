@@ -54,11 +54,11 @@ pub fn update(
 
             let position_entities = position_entities
                 .table
-                .get_by_id(&position.0.room)
+                .at(position.0.room)
                 .expect("get room entities table");
             let terrain_table = terrain_table
                 .table
-                .get_by_id(&position.0.room)
+                .at(position.0.room)
                 .expect("get room terrain table");
 
             let position_entities = View::from_table(position_entities);
@@ -137,10 +137,10 @@ fn random_uncontested_pos_in_range(
         let pos = Axial { q, r };
 
         if terrain_table
-            .get_by_id(&pos)
+            .at(pos)
             .map(|comp::TerrainComponent(t)| t.is_walkable())
             .unwrap_or(false)
-            && position_entities_table.count_in_range(&pos, 1) == 0
+            && position_entities_table.count_in_range(pos, 1) == 0
         {
             result = Some(pos);
             break;

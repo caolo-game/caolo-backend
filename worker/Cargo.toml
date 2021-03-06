@@ -2,5 +2,4 @@
 members = ["cao-storage-derive", "simulation", "worker"]
 
 [profile.release]
-debug = 1
 lto = true

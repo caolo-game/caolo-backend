@@ -36,14 +36,13 @@ unsafe fn find_key_partition_sse2(skiplist: &SkipList, key: MortonKey) -> usize 
     let cmp3 = _mm_cmpgt_epi32(keys4, skiplist.0[3]);
 
     // create a mask from the most significant bit of each 8bit element
-    let mask0 = _mm_movemask_epi8(cmp0);
-    let mask1 = _mm_movemask_epi8(cmp1);
-    let mask2 = _mm_movemask_epi8(cmp2);
-    let mask3 = _mm_movemask_epi8(cmp3);
+    let mask0 = _mm_movemask_epi8(cmp0) as i64;
+    let mask1 = _mm_movemask_epi8(cmp1) as i64;
+    let mask2 = _mm_movemask_epi8(cmp2) as i64;
+    let mask3 = _mm_movemask_epi8(cmp3) as i64;
 
     // count the number of bits set to 1
-    let index4 = _popcnt64(((mask0 as i64) << 32) | mask1 as i64)
-        + _popcnt64(((mask2 as i64) << 32) | mask3 as i64);
+    let index4 = _popcnt64(((mask0) << 32) | mask1) + _popcnt64(((mask2) << 32) | mask3);
 
     // every key in skip list is counted 4 times.
     (index4 as usize) >> 2

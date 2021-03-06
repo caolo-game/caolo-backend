@@ -26,7 +26,7 @@ impl GameConfig {
         let n_actors = env::var("N_ACTORS")
             .ok()
             .and_then(|s| s.parse::<u32>().ok())
-            .unwrap_or(100);
+            .unwrap_or(1000);
         Self {
             n_actors,
             room_radius: std::env::var("CAO_ROOM_RADIUS")

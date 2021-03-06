@@ -329,20 +329,16 @@ pub fn find_path_in_room(
     while current.pos != end && !open_set.is_empty() && max_steps > 0 {
         current = open_set.pop().unwrap();
         closed_set.insert(current.pos, current.clone());
-        for point in current
-            .pos
-            .hex_neighbours()
-            .iter()
-            .cloned()
-            .filter(|pos| !closed_set.contains_key(pos))
-            .filter(|neighbour_pos| {
-                // Filter only the free neighbours
-                // End may be in the either tables!
-                *neighbour_pos == end
-                    || (!positions.contains_key(*neighbour_pos)
-                        && is_walkable(*neighbour_pos, terrain))
-            })
-        {
+
+        for point in &current.pos.hex_neighbours() {
+            let point = *point;
+            // Filter only the free neighbours
+            // End may be in the either tables!
+            if (point != end && (positions.contains_key(point) || !is_walkable(point, terrain)))
+                || closed_set.contains_key(&point)
+            {
+                continue;
+            }
             let node = Node::new(
                 point,
                 current.pos,

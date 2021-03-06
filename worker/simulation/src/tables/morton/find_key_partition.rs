@@ -2,18 +2,16 @@
 //! This is the index of the first item in the `skiplist` that is greater than the `key`
 //!
 use super::*;
-#[cfg(target_arch = "x86")]
-use std::arch::x86::*;
 #[cfg(target_arch = "x86_64")]
-use std::arch::x86_64::*;
+use std::arch::x86_64::{_mm_cmpgt_epi32, _mm_movemask_epi8, _mm_set_epi32, _popcnt64};
 
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-#[inline(always)]
+#[cfg(target_arch = "x86_64")]
+#[inline]
 pub fn find_key_partition(skiplist: &SkipList, key: MortonKey) -> usize {
     unsafe { find_key_partition_sse2(&skiplist, key) }
 }
 
-#[cfg(not(any(target_arch = "x86", target_arch = "x86_64")))]
+#[cfg(not(target_arch = "x86_64"))]
 #[inline(always)]
 pub fn find_key_partition(skiplist: &SkipList, key: MortonKey) -> usize {
     let key = key.0 as i32;
@@ -25,8 +23,8 @@ pub fn find_key_partition(skiplist: &SkipList, key: MortonKey) -> usize {
     SKIP_LEN
 }
 
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-#[inline]
+#[cfg(target_arch = "x86_64")]
+#[inline(always)]
 unsafe fn find_key_partition_sse2(skiplist: &SkipList, key: MortonKey) -> usize {
     let key = key.0 as i32;
     let keys4 = _mm_set_epi32(key, key, key, key);
@@ -44,9 +42,9 @@ unsafe fn find_key_partition_sse2(skiplist: &SkipList, key: MortonKey) -> usize 
     let mask3 = _mm_movemask_epi8(cmp3);
 
     // count the number of bits set to 1
-    let index4 = _popcnt32(mask0) + _popcnt32(mask1) + _popcnt32(mask2) + _popcnt32(mask3);
+    let index4 = _popcnt64(((mask0 as i64) << 32) | mask1 as i64)
+        + _popcnt64(((mask2 as i64) << 32) | mask3 as i64);
 
-    // because the mask was created from 8 bit wide items every key in skip list is counted
-    // 4 times.
-    index4 as usize / 4
+    // every key in skip list is counted 4 times.
+    (index4 as usize) >> 2
 }

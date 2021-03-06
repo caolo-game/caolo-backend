@@ -27,6 +27,7 @@ mod sse {
 
     impl SkipList {
         pub fn set(&mut self, i: usize, val: i32) {
+            debug_assert!(i < SKIP_LEN);
             unsafe {
                 let ind = i / 4;
                 let vals: &mut [i32; 4] = &mut *(&mut self.0[ind] as *mut _ as *mut [i32; 4]);
@@ -45,9 +46,7 @@ mod normal {
     pub struct SkipList(pub [i32; SKIP_LEN]);
     impl Default for SkipList {
         fn default() -> Self {
-            Self([
-                MAX, MAX, MAX, MAX, MAX, MAX, MAX, MAX, MAX, MAX, MAX, MAX, MAX, MAX, MAX, MAX,
-            ])
+            Self([MAX; SKIP_LEN])
         }
     }
     impl SkipList {

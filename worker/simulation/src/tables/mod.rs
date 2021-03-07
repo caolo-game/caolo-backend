@@ -1,5 +1,5 @@
 //! The game state is represented by a relational model.
-//! Tables are generic collections that store game data split by (shape) components.
+//! Tables are generic collections that store game data split by [shape] components.
 //!
 pub mod btree;
 pub mod dense;

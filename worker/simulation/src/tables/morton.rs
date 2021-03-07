@@ -526,7 +526,8 @@ where
 
     pub fn is_valid_pos(point: Axial) -> bool {
         let [x, y] = point.as_array();
-        (x & MORTON_POS_MAX) == x && (y & MORTON_POS_MAX) == y
+
+        0 <= x && (x & MORTON_POS_MAX) == x && 0 <= y && (y & MORTON_POS_MAX) == y
     }
 
     /// Return wether point is within the bounds of this node

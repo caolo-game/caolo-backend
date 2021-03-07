@@ -243,7 +243,7 @@ where
     }
 
     /// Return false if id is not in the map, otherwise override the first instance found
-    pub fn update<'a>(&'a mut self, id: Axial, row: Row) -> Option<&'a Row> {
+    pub fn update(&mut self, id: Axial, row: Row) -> Option<&Row> {
         self.find_key(id)
             .map(move |ind| {
                 self.values[ind].1 = row;
@@ -253,7 +253,7 @@ where
     }
 
     /// Return a reference to the new Row if it's in the map or None otherwise
-    pub fn update_with<'a, F>(&'a mut self, id: Axial, f: F) -> Option<&'a Row>
+    pub fn update_with<F>(&mut self, id: Axial, f: F) -> Option<&Row>
     where
         F: FnOnce(&mut Row),
     {
@@ -286,7 +286,7 @@ where
     }
 
     /// Returns the first item with given id, if any
-    pub fn at<'a>(&'a self, id: Axial) -> Option<&'a Row> {
+    pub fn at(&self, id: Axial) -> Option<&Row> {
         if !self.intersects(id) {
             return None;
         }
@@ -295,7 +295,7 @@ where
     }
 
     /// Returns the first item with given id, if any
-    pub fn at_mut<'a>(&'a mut self, id: Axial) -> Option<&'a mut Row> {
+    pub fn at_mut(&mut self, id: Axial) -> Option<&mut Row> {
         if !self.intersects(id) {
             return None;
         }

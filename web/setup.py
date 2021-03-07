@@ -60,5 +60,7 @@ setup(
         "pydantic",
         "protobuf",
         "aioredis",
+        "python-multipart",
+        "passlib[bcrypt]",
     ],
 )

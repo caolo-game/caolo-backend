@@ -35,29 +35,29 @@ pub fn check_melee_intent(
     trace!(logger, "check_melee_intent");
 
     if owner_table
-        .get_by_id(&intent.attacker)
+        .get_by_id(intent.attacker)
         .map(|o| o.owner_id != user_id)
         .unwrap_or(true)
     {
         // if not owner or the bot has no owner
         return OperationResult::NotOwner;
     }
-    if !melee_table.contains(&intent.attacker) {
+    if !melee_table.contains(intent.attacker) {
         debug!(logger, "attacker has no MeleeAttackComponent");
         return OperationResult::InvalidInput;
     }
-    if !hp_table.contains_id(&intent.defender) {
+    if !hp_table.contains_id(intent.defender) {
         debug!(logger, "defender has no HpComponent");
         return OperationResult::InvalidTarget;
     }
-    let attack_pos = match pos_table.get_by_id(&intent.attacker) {
+    let attack_pos = match pos_table.get_by_id(intent.attacker) {
         Some(x) => x,
         None => {
             debug!(logger, "attacker has no PositionComponent");
             return OperationResult::InvalidInput;
         }
     };
-    let defend_pos = match pos_table.get_by_id(&intent.defender) {
+    let defend_pos = match pos_table.get_by_id(intent.defender) {
         Some(x) => x,
         None => {
             debug!(logger, "defender has no PositionComponent");

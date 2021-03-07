@@ -25,6 +25,6 @@ pub fn update(mut logs: Mut, time: Const) {
     // we delete in the same table we iterated on above
     // so we can't actually call delete before collecting
     for id in changeset {
-        logs.delete(&id);
+        logs.delete(id);
     }
 }

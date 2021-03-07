@@ -21,14 +21,14 @@ pub fn update((mut energy_table, mut carry_table): Mut, (intents, WorldLogger(lo
         let logger = logger.new(o!("entity"=>intent.bot.0));
         trace!(logger, "Executing dropoff intent {:?}", intent);
         // dropoff amount = min(bot carry , amount , structure capacity)
-        let carry_component = match carry_table.get_by_id_mut(&intent.bot) {
+        let carry_component = match carry_table.get_by_id_mut(intent.bot) {
             Some(x) => x,
             None => {
                 warn!(logger, "Bot has no carry");
                 continue;
             }
         };
-        let store_component = match energy_table.get_by_id_mut(&intent.structure) {
+        let store_component = match energy_table.get_by_id_mut(intent.structure) {
             Some(x) => x,
             None => {
                 warn!(logger, "Structure has no energy");

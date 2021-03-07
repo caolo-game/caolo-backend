@@ -18,7 +18,7 @@ pub fn create_noise(
 
     // init corners
     for edge in [from, Axial::new(to.q, from.r), Axial::new(from.q, to.r), to].iter() {
-        gradient.delete(&edge);
+        gradient.delete(*edge);
         gradient
             .insert(*edge, fheight(&gradient, from, 16, 0.0))
             .unwrap();

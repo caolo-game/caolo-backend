@@ -105,13 +105,13 @@ where
             })
     }
 
-    pub fn at_mut<'a>(&'a mut self, id: &WorldPosition) -> Option<&'a mut Row> {
+    pub fn at_mut(&mut self, id: WorldPosition) -> Option<&mut Row> {
         self.table
             .at_mut(id.room)
             .and_then(|room| room.at_mut(id.pos))
     }
 
-    pub fn get_by_id<'a>(&'a self, id: &WorldPosition) -> Option<&'a Row> {
+    pub fn get_by_id(&self, id: WorldPosition) -> Option<&Row> {
         self.table.at(id.room).and_then(|room| room.at(id.pos))
     }
 
@@ -262,13 +262,13 @@ where
     type Row = Row;
 
     /// delete all values at id and return the first one, if any
-    fn delete(&mut self, id: &Self::Id) -> Option<Row> {
+    fn delete(&mut self, id: Self::Id) -> Option<Row> {
         let WorldPosition { room, pos } = id;
-        let room = self.table.at_mut(*room)?;
-        room.delete(&pos)
+        let room = self.table.at_mut(room)?;
+        room.delete(pos)
     }
 
-    fn get_by_id(&self, id: &Self::Id) -> Option<&Row> {
+    fn get_by_id(&self, id: Self::Id) -> Option<&Row> {
         RoomMortonTable::get_by_id(self, id)
     }
 }
@@ -335,7 +335,7 @@ mod tests {
             .unwrap();
         table.extend_from_slice(&mut pts).unwrap();
 
-        assert_eq!(table.table.get_by_id(&Axial::new(69, 69)).unwrap().len(), 2);
-        assert_eq!(table.table.get_by_id(&Axial::new(42, 69)).unwrap().len(), 4);
+        assert_eq!(table.table.get_by_id(Axial::new(69, 69)).unwrap().len(), 2);
+        assert_eq!(table.table.get_by_id(Axial::new(42, 69)).unwrap().len(), 4);
     }
 }

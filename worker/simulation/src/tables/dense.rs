@@ -183,7 +183,7 @@ where
         true
     }
 
-    pub fn get_by_id<'a>(&'a self, id: &Id) -> Option<&'a Row> {
+    pub fn get_by_id(&self, id: Id) -> Option<&Row> {
         let ind = id.as_usize();
         if ind < self.offset {
             return None;
@@ -194,7 +194,7 @@ where
             .and_then(|id| id.map(|_| unsafe { &*self.data[ind].as_ptr() }))
     }
 
-    pub fn get_by_id_mut<'a>(&'a mut self, id: &Id) -> Option<&'a mut Row> {
+    pub fn get_by_id_mut(&mut self, id: Id) -> Option<&mut Row> {
         let ind = id.as_usize();
         if ind < self.offset {
             return None;
@@ -237,7 +237,7 @@ where
             })
     }
 
-    pub fn contains_id(&self, id: &Id) -> bool {
+    pub fn contains_id(&self, id: Id) -> bool {
         let i = id.as_usize();
         if i < self.offset {
             return false;
@@ -268,7 +268,7 @@ where
     type Id = Id;
     type Row = Row;
 
-    fn delete(&mut self, id: &Id) -> Option<Row> {
+    fn delete(&mut self, id: Id) -> Option<Row> {
         if !self.contains_id(id) {
             return None;
         }
@@ -281,7 +281,7 @@ where
         Some(res)
     }
 
-    fn get_by_id(&self, id: &Id) -> Option<&Row> {
+    fn get_by_id(&self, id: Id) -> Option<&Row> {
         DenseVecTable::get_by_id(self, id)
     }
 }

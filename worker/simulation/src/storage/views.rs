@@ -96,7 +96,7 @@ where
     /// threads have access to it at this time!
     pub unsafe fn delete_entity(&mut self, id: EntityId) {
         let storage = &mut self.storage.as_mut().entities;
-        storage.delete(&id);
+        storage.delete(id);
     }
 }
 

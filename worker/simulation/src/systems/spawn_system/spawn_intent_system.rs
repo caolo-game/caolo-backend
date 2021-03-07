@@ -24,7 +24,7 @@ pub fn update(
         let logger = logger.new(o!("spawn_id"=> intent.spawn_id.0));
         trace!(logger, "Spawning bot from structure");
 
-        let spawn = match spawn_queue.get_by_id_mut(&intent.spawn_id) {
+        let spawn = match spawn_queue.get_by_id_mut(intent.spawn_id) {
             Some(x) => x,
             None => {
                 debug!(logger, "structure does not have spawn queue component");

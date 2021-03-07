@@ -148,7 +148,7 @@ pub fn approach_entity(
     let targetpos = match storage
         .view::<EntityId, components::PositionComponent>()
         .reborrow()
-        .get_by_id(&target)
+        .get_by_id(target)
     {
         Some(x) => x,
         None => {
@@ -244,7 +244,7 @@ fn move_to_pos(
     let botpos = storage
         .view::<EntityId, components::PositionComponent>()
         .reborrow()
-        .get_by_id(&bot)
+        .get_by_id(bot)
         .ok_or_else(|| {
             warn!(logger, "entity {:?} does not have position component!", bot);
             OperationResult::InvalidInput
@@ -255,7 +255,7 @@ fn move_to_pos(
     match storage
         .view::<EntityId, PathCacheComponent>()
         .reborrow()
-        .get_by_id(&bot)
+        .get_by_id(bot)
     {
         Some(cache) if cache.target == to => {
             if let Some(position) = cache.path.last().cloned() {
@@ -351,7 +351,7 @@ fn move_to_pos(
                 Some(to_room) => {
                     let is_bridge = storage
                         .view::<WorldPosition, TerrainComponent>()
-                        .get_by_id(&botpos.0)
+                        .get_by_id(botpos.0)
                         .map(|TerrainComponent(t)| *t == TileTerrainType::Bridge)
                         .unwrap_or_else(|| {
                             error!(

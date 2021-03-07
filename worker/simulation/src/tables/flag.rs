@@ -48,14 +48,14 @@ where
     type Id = Id;
     type Row = Row;
 
-    fn delete(&mut self, id: &Self::Id) -> Option<Self::Row> {
-        self.ids.binary_search(id).ok().map(|i| {
+    fn delete(&mut self, id: Self::Id) -> Option<Self::Row> {
+        self.ids.binary_search(&id).ok().map(|i| {
             self.ids.remove(i);
             mem::take(&mut self.default)
         })
     }
 
-    fn get_by_id(&self, id: &Self::Id) -> Option<&Self::Row> {
-        self.ids.binary_search(id).map(|_| &self.default).ok()
+    fn get_by_id(&self, id: Self::Id) -> Option<&Self::Row> {
+        self.ids.binary_search(&id).map(|_| &self.default).ok()
     }
 }

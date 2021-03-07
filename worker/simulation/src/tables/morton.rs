@@ -176,6 +176,7 @@ where
                 return Err(ExtendFailure::OutOfBounds(id));
             }
             let [x, y] = id.as_array();
+            // if the id is in bounds this transformation is safe
             let [x, y] = [x as u16, y as u16];
             let key = MortonKey::new(x, y);
             self.keys.push(key);
@@ -629,13 +630,13 @@ where
     type Row = Row;
 
     /// delete all values at id and return the first one, if any
-    fn delete(&mut self, id: &Axial) -> Option<Row> {
-        if !self.intersects(*id) {
+    fn delete(&mut self, id: Axial) -> Option<Row> {
+        if !self.intersects(id) {
             return None;
         }
 
         let val = self
-            .find_key(*id)
+            .find_key(id)
             .map(|ind| {
                 self.keys.remove(ind);
                 self.values.remove(ind)
@@ -643,7 +644,7 @@ where
             .ok()?
             .1;
 
-        while let Ok(ind) = self.find_key(*id) {
+        while let Ok(ind) = self.find_key(id) {
             self.keys.remove(ind);
             self.values.remove(ind);
         }
@@ -653,7 +654,7 @@ where
         Some(val)
     }
 
-    fn get_by_id(&self, id: &Axial) -> Option<&Row> {
-        MortonTable::at(self, *id)
+    fn get_by_id(&self, id: Axial) -> Option<&Row> {
+        MortonTable::at(self, id)
     }
 }

@@ -47,15 +47,15 @@ where
         self.data.iter_mut().map(|(id, row)| (*id, row))
     }
 
-    pub fn get_by_id<'a>(&'a self, id: &Id) -> Option<&'a Row> {
-        self.data.get(id)
+    pub fn get_by_id(&self, id: Id) -> Option<&Row> {
+        self.data.get(&id)
     }
 
-    pub fn get_by_id_mut<'a>(&'a mut self, id: &Id) -> Option<&'a mut Row> {
-        self.data.get_mut(id)
+    pub fn get_by_id_mut(&mut self, id: Id) -> Option<&mut Row> {
+        self.data.get_mut(&id)
     }
 
-    pub fn get_by_ids<'a>(&'a self, ids: &[Id]) -> Vec<(Id, &'a Row)> {
+    pub fn get_by_ids(&self, ids: &[Id]) -> Vec<(Id, &Row)> {
         self.data
             .iter()
             .filter(move |(i, _)| ids.iter().any(|x| *i == x))
@@ -63,8 +63,8 @@ where
             .collect()
     }
 
-    pub fn contains(&self, id: &Id) -> bool {
-        self.data.get(id).is_some()
+    pub fn contains(&self, id: Id) -> bool {
+        self.data.get(&id).is_some()
     }
 
     pub fn insert_or_update(&mut self, id: Id, row: Row) -> bool {
@@ -89,11 +89,11 @@ where
     type Id = Id;
     type Row = Row;
 
-    fn delete(&mut self, id: &Id) -> Option<Row> {
-        self.data.remove(id)
+    fn delete(&mut self, id: Id) -> Option<Row> {
+        self.data.remove(&id)
     }
 
-    fn get_by_id(&self, id: &Id) -> Option<&Row> {
+    fn get_by_id(&self, id: Id) -> Option<&Row> {
         BTreeTable::get_by_id(self, id)
     }
 }

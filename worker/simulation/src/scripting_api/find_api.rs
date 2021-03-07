@@ -79,7 +79,7 @@ pub fn find_closest_by_range(
         .get_aux()
         .storage()
         .view::<EntityId, PositionComponent>()
-        .get_by_id(&entity_id)
+        .get_by_id(entity_id)
     {
         Some(p) => p.0,
         None => {
@@ -107,14 +107,14 @@ impl FindConstant {
         let candidate = match self {
             FindConstant::Resource => {
                 let resources = storage.view::<EntityId, components::ResourceComponent>();
-                find_closest_entity_impl(&logger, storage, position, |id| resources.contains(&id))
+                find_closest_entity_impl(&logger, storage, position, |id| resources.contains(id))
             }
             FindConstant::Spawn => {
                 let owner = storage.view::<EntityId, components::OwnedEntity>();
                 let spawns = storage.view::<EntityId, components::SpawnComponent>();
                 find_closest_entity_impl(&logger, storage, position, |id| {
-                    spawns.contains(&id)
-                        && owner.get_by_id(&id).map(|owner_id| owner_id.owner_id) == user_id
+                    spawns.contains(id)
+                        && owner.get_by_id(id).map(|owner_id| owner_id.owner_id) == user_id
                 })
             }
             FindConstant::EnemyBot => {
@@ -122,7 +122,7 @@ impl FindConstant {
                 let bots = storage.view::<EntityId, components::Bot>();
                 find_closest_entity_impl(&logger, storage, position, |id| {
                     bots.contains_id(&id)
-                        && owner.get_by_id(&id).map(|owner_id| owner_id.owner_id) != user_id
+                        && owner.get_by_id(id).map(|owner_id| owner_id.owner_id) != user_id
                 })
             }
         }?;

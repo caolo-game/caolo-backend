@@ -81,7 +81,7 @@ pub fn execute_scripts(
 
                 for (entity_id, script) in entity_scripts {
                     let owner_id = owners_table
-                        .get_by_id(&entity_id)
+                        .get_by_id(*entity_id)
                         .map(|OwnedEntity { owner_id }| *owner_id);
 
                     vm.clear();
@@ -156,7 +156,7 @@ pub fn execute_single_script<'a>(
     let program = storage
         .view::<ScriptId, ScriptComponent>()
         .reborrow()
-        .get_by_id(&script_id)
+        .get_by_id(script_id)
         .ok_or_else(|| {
             warn!(logger, "Script by ID {:?} does not exist", script_id);
             ExecutionError::ScriptNotFound(script_id)

@@ -97,7 +97,7 @@ pub fn init_storage(logger: Logger, storage: &mut World, config: &GameConfig) {
             .insert_or_update(UserId(user_id), EntityScript(center_walking_script_id));
         let spawn_pos = storage
             .view::<EntityId, PositionComponent>()
-            .get_by_id(&spawnid)
+            .get_by_id(spawnid)
             .expect("spawn should have position")
             .0;
         for _ in 0..3 {
@@ -330,7 +330,7 @@ fn uncontested_pos<T: caolo_sim::tables::TableRow + Send + Sync>(
 
         let pos = WorldPosition { room: room.0, pos };
 
-        if let Some(TerrainComponent(terrain)) = terrain_table.get_by_id(&pos) {
+        if let Some(TerrainComponent(terrain)) = terrain_table.get_by_id(pos) {
             if terrain.is_walkable() && !positions_table.contains_key(&pos) {
                 return pos;
             }

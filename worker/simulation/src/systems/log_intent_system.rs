@@ -22,7 +22,7 @@ pub fn update((mut log_table, mut intents): Mut, WorldLogger(logger): WorldLogge
         let id = EntityTime(intent.entity, intent.time);
         // use delete to move out of the data structure, then we'll move it back in
         // this should be cheaper than cloning all the time, because of the inner vectors
-        match log_table.delete(&id) {
+        match log_table.delete(id) {
             Some(mut entry) => {
                 entry.payload.extend_from_slice(intent.payload.as_slice());
                 log_table.insert_or_update(id, entry);

@@ -46,7 +46,7 @@ fn update_all_iter_2pow14_sparse(c: &mut Criterion) {
         let mut table = DenseVecTable::<EntityId, usize>::with_capacity(LEN);
         for i in 0..LEN {
             let mut id = Default::default();
-            while table.contains_id(&id) {
+            while table.contains_id(id) {
                 id = EntityId(rng.gen_range(
                     0,
                     u32::try_from(LEN * 6 / 5).expect("max len to fit into u32"),
@@ -90,7 +90,7 @@ fn get_by_id_random_2_pow_16(c: &mut Criterion) {
         let mut ids = Vec::with_capacity(LEN);
         for i in 0..LEN {
             let mut id = Default::default();
-            while table.contains_id(&id) {
+            while table.contains_id(id) {
                 id = EntityId(
                     rng.gen_range(0, u32::try_from(LEN * 2).expect("max len to fit into u32")),
                 );
@@ -101,7 +101,7 @@ fn get_by_id_random_2_pow_16(c: &mut Criterion) {
         b.iter(|| {
             let ind = rng.gen_range(0, LEN);
             let (id, x) = ids[ind];
-            let res = table.get_by_id(&id);
+            let res = table.get_by_id(id);
             debug_assert_eq!(*res.expect("result to be found"), x);
             res
         });
@@ -116,7 +116,7 @@ fn override_update_random(c: &mut Criterion) {
         let mut ids = Vec::with_capacity(LEN);
         for i in 0..LEN {
             let mut id = Default::default();
-            while table.contains_id(&id) {
+            while table.contains_id(id) {
                 id = EntityId(
                     rng.gen_range(0, u32::try_from(LEN * 2).expect("max len to fit into u32")),
                 );
@@ -154,7 +154,7 @@ fn delete_by_id_random(c: &mut Criterion) {
         b.iter(|| {
             i = (i + 1) & mask;
             let id = ids[i];
-            let res = table.delete(&id);
+            let res = table.delete(id);
             debug_assert!(res.is_some());
             table.insert_or_update(id, 123);
             res

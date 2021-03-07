@@ -23,7 +23,7 @@ pub fn update(
     for intent in cache_intents.into_iter() {
         let entity_id = intent.bot;
         // check if bot is still alive
-        if bot_table.get_by_id(&entity_id).is_none() {
+        if bot_table.get_by_id(entity_id).is_none() {
             continue;
         }
         path_cache_table.insert_or_update(entity_id, intent.cache);
@@ -32,12 +32,12 @@ pub fn update(
         let entity_id = intent.bot;
         match intent.action {
             PathCacheIntentAction::Pop => {
-                if let Some(cache) = path_cache_table.get_by_id_mut(&entity_id) {
+                if let Some(cache) = path_cache_table.get_by_id_mut(entity_id) {
                     cache.path.pop();
                 }
             }
             PathCacheIntentAction::Del => {
-                path_cache_table.delete(&entity_id);
+                path_cache_table.delete(entity_id);
             }
         }
     }

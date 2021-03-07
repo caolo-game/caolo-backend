@@ -10,7 +10,7 @@ pub trait HasTable<Id: TableId, Row: Component<Id>> {
 }
 
 pub trait DeleteById<Id> {
-    fn delete(&mut self, key: &Id);
+    fn delete(&mut self, key: Id);
 }
 
 pub trait DeferredDeleteById<Id> {

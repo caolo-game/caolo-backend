@@ -110,7 +110,7 @@ fn spawn_bot(
         "spawn_bot spawn_id: {:?} entity_id: {:?}", spawn_id, entity_id
     );
 
-    match spawn_bots.delete(&entity_id) {
+    match spawn_bots.delete(entity_id) {
         Some(_) => (),
         None => {
             warn!(logger, "Spawning bot {:?} was not found", entity_id);
@@ -143,14 +143,14 @@ fn spawn_bot(
     );
 
     let pos = positions
-        .get_by_id(&spawn_id)
+        .get_by_id(spawn_id)
         .cloned()
         .expect("Spawn should have position");
     positions.insert_or_update(entity_id, pos);
 
-    let owner = owned.get_by_id(&spawn_id).cloned();
+    let owner = owned.get_by_id(spawn_id).cloned();
     if let Some(owner) = owner {
-        if let Some(script) = user_default_scripts.get_by_id(&owner.owner_id) {
+        if let Some(script) = user_default_scripts.get_by_id(owner.owner_id) {
             script_table.insert_or_update(entity_id, *script);
         }
 

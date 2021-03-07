@@ -43,9 +43,9 @@ mod tests {
             t2.insert_or_update(i, Row2(i.try_into().unwrap()));
         }
 
-        t2.delete(&0);
-        t1.delete(&3);
-        t1.delete(&4);
+        t2.delete(0);
+        t1.delete(3);
+        t1.delete(4);
 
         for (id, r1, r2) in expected.iter() {
             t1.insert_or_update(*id, *r1);

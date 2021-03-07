@@ -26,9 +26,9 @@ pub fn update(
     for intent in intents.iter() {
         let logger = logger.new(o!("bot" => intent.bot.0));
         trace!(logger, "Bot is mining [{:?}]", intent.resource);
-        match resource_table.get_by_id(&intent.resource) {
+        match resource_table.get_by_id(intent.resource) {
             Some(ResourceComponent(Resource::Energy)) => {
-                let resource_energy = match energy_table.get_by_id_mut(&intent.resource) {
+                let resource_energy = match energy_table.get_by_id_mut(intent.resource) {
                     Some(resource_energy) => {
                         if resource_energy.energy == 0 {
                             trace!(logger, "Mineral is empty!");
@@ -41,7 +41,7 @@ pub fn update(
                         continue;
                     }
                 };
-                let carry = match carry_table.get_by_id_mut(&intent.bot) {
+                let carry = match carry_table.get_by_id_mut(intent.bot) {
                     Some(x) => x,
                     None => {
                         warn!(logger, "MineIntent bot has no carry component");

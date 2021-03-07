@@ -29,12 +29,12 @@ pub fn update((mut positions, mut intents): Mut, (bots, pos_entities, WorldLogge
             intent.position
         );
 
-        if bots.get_by_id(&intent.bot).is_none() {
+        if bots.get_by_id(intent.bot).is_none() {
             trace!(logger, "Bot by id {:?} does not exist", intent.bot);
             continue;
         }
 
-        if pos_entities.get_by_id(&intent.position).is_some() {
+        if pos_entities.get_by_id(intent.position).is_some() {
             trace!(logger, "Occupied {:?} ", intent.position);
             continue;
         }

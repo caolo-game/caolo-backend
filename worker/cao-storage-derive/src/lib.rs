@@ -69,7 +69,7 @@ fn impl_tables(
                 fn execute<Store: DeleteById<#ty>>(&mut self, store: &mut Store) {
                     let deletes = std::mem::take(&mut self.#k);
                     for id in deletes.into_iter() {
-                        store.delete(&id);
+                        store.delete(id);
                     }
                 }
             }
@@ -128,7 +128,7 @@ fn impl_tables(
 
             quote! {
                 impl <#impl_generics> DeleteById<#key_token> for #name #ty_generics #where_clause {
-                    fn delete(&mut self, id: &#key_token) {
+                    fn delete(&mut self, id: #key_token) {
                         #(#deletes)*
                     }
                 }
@@ -164,7 +164,7 @@ fn impl_iterators<'a>(
             });
             let gets = fields.iter().map(|f| {
                 quote! {
-                    let #f = self.#f.get_by_id(&id)
+                    let #f = self.#f.get_by_id(id)
                 }
             });
             quote! {

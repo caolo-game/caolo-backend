@@ -225,7 +225,7 @@ pub fn generate_room(
         .map(|(p, _)| p)
         .collect();
     debug!(logger, "Deleting {} items from the room", delegates.len());
-    for p in delegates.iter() {
+    for p in delegates {
         terrain.delete(p);
     }
     debug!(logger, "Cutting outliers done");

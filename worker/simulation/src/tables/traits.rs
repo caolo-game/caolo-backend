@@ -46,8 +46,9 @@ pub trait Table {
     type Id: TableId;
     type Row: TableRow;
 
-    fn delete(&mut self, id: &Self::Id) -> Option<Self::Row>;
-    fn get_by_id(&self, id: &Self::Id) -> Option<&Self::Row>;
+    // Id is Copy
+    fn delete(&mut self, id: Self::Id) -> Option<Self::Row>;
+    fn get_by_id(&self, id: Self::Id) -> Option<&Self::Row>;
 
     fn name() -> &'static str {
         use std::any::type_name;

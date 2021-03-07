@@ -18,14 +18,14 @@ pub fn update((mut hp_table, mut intents): Mut, (attack_table, WorldLogger(logge
     pre_process(&logger, &mut intents.0);
 
     for intent in intents.iter() {
-        let attack = match attack_table.get_by_id(&intent.attacker) {
+        let attack = match attack_table.get_by_id(intent.attacker) {
             Some(s) => s,
             None => {
                 error!(logger, "Attacker has no attack component. {:?}", intent);
                 continue;
             }
         };
-        let hp = match hp_table.get_by_id_mut(&intent.defender) {
+        let hp = match hp_table.get_by_id_mut(intent.defender) {
             Some(s) => s,
             None => {
                 error!(logger, "Defender has no hp component. {:?}", intent);

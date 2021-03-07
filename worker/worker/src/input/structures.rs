@@ -42,7 +42,7 @@ pub fn place_structure(
 
     let is_valid_terrain = storage
         .view::<WorldPosition, TerrainComponent>()
-        .get_by_id(&position)
+        .get_by_id(position)
         .map(|TerrainComponent(t)| t.is_walkable())
         .unwrap_or(false);
 
@@ -52,7 +52,7 @@ pub fn place_structure(
 
     let is_free = storage
         .view::<WorldPosition, EntityComponent>()
-        .get_by_id(&position)
+        .get_by_id(position)
         .is_none();
 
     if !is_free {

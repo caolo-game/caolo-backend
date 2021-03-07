@@ -38,9 +38,9 @@ pub fn check_dropoff_intent(
     (bots, owners, positions, carry, energy): CheckInput,
 ) -> OperationResult {
     let id = intent.bot;
-    match bots.get_by_id(&id) {
+    match bots.get_by_id(id) {
         Some(_) => {
-            let owner_id = owners.get_by_id(&id);
+            let owner_id = owners.get_by_id(id);
             if owner_id.map(|id| id.owner_id != userid).unwrap_or(true) {
                 return OperationResult::NotOwner;
             }
@@ -49,7 +49,7 @@ pub fn check_dropoff_intent(
     };
 
     if carry
-        .get_by_id(&id)
+        .get_by_id(id)
         .map(|carry| carry.carry == 0)
         .unwrap_or(true)
     {
@@ -57,8 +57,8 @@ pub fn check_dropoff_intent(
     }
 
     let target = intent.structure;
-    let nearby = positions.get_by_id(&id).and_then(|botpos| {
-        positions.get_by_id(&target).map(|targetpos| {
+    let nearby = positions.get_by_id(id).and_then(|botpos| {
+        positions.get_by_id(target).map(|targetpos| {
             targetpos.0.room == botpos.0.room
                 && targetpos.0.pos.hex_distance(botpos.0.pos) <= DROPOFF_RANGE
         })
@@ -73,7 +73,7 @@ pub fn check_dropoff_intent(
         }
         Some(false) => OperationResult::NotInRange,
         Some(true) => {
-            let capacity = energy.get_by_id(&target);
+            let capacity = energy.get_by_id(target);
             if capacity.is_none() {
                 debug!(logger, "Target has no energy component {:?}", intent);
                 return OperationResult::InvalidInput;

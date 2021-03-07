@@ -122,9 +122,9 @@ mod tests {
             .zip(res.iter())
             .for_each(|(a, b)| assert_eq!(a.0, b.0));
 
-        for (p, v) in points.iter() {
-            let a = table.get_by_id(&p).unwrap();
-            let b = res.get_by_id(&p).unwrap();
+        for (p, v) in points {
+            let a = *table.get_by_id(p).unwrap();
+            let b = *res.get_by_id(p).unwrap();
 
             assert_eq!(a, b);
             assert_eq!(a, v);

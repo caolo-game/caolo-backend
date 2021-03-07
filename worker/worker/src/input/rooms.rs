@@ -36,13 +36,13 @@ pub fn take_room(logger: Logger, world: &mut World, msg: &TakeRoom) -> Result<()
     let rooms = world
         .view::<UserId, Rooms>()
         .reborrow()
-        .get_by_id(&UserId(user_id));
+        .get_by_id(UserId(user_id));
     let num_rooms = rooms.map(|x| x.0.len()).unwrap_or(0);
 
     let props = world
         .view::<UserId, UserProperties>()
         .reborrow()
-        .get_by_id(&UserId(user_id));
+        .get_by_id(UserId(user_id));
 
     let available_rooms = match props.map(|p| p.level) {
         Some(l) => l,

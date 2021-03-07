@@ -31,7 +31,7 @@ pub fn register_user(
     if world
         .view::<UserId, UserProperties>()
         .reborrow()
-        .contains(&UserId(user_id))
+        .contains(UserId(user_id))
     {
         return Err(RegisterUserError::AlreadyRegistered(user_id));
     }

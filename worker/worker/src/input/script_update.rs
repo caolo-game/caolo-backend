@@ -88,7 +88,7 @@ pub fn update_entity_script(storage: &mut World, msg: &UpdateEntityScriptCommand
     let owned_entities_table: View<EntityId, OwnedEntity> = storage.view();
 
     owned_entities_table
-        .get_by_id(&entity_id)
+        .get_by_id(entity_id)
         .ok_or(UpdateProgramError::Unauthorized)
         .and_then(|owner| {
             if owner.owner_id.0 != user_id {

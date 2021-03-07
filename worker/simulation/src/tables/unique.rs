@@ -49,11 +49,11 @@ where
     type Id = Id;
     type Row = Row;
 
-    fn delete(&mut self, _id: &Self::Id) -> Option<Row> {
+    fn delete(&mut self, _id: Self::Id) -> Option<Row> {
         mem::replace(&mut self.value, None)
     }
 
-    fn get_by_id(&self, _id: &Self::Id) -> Option<&Row> {
+    fn get_by_id(&self, _id: Self::Id) -> Option<&Row> {
         self.value.as_ref()
     }
 }

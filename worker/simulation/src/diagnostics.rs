@@ -7,6 +7,8 @@ pub struct Diagnostics {
     pub tick_latency_ms: i64,
     pub tick_start: DateTime<Utc>,
     pub tick_end: DateTime<Utc>,
+    pub scripts_execution_ms: i64,
+    pub systems_update_ms: i64,
     pub number_of_scripts_ran: i64,
     pub number_of_scripts_errored: i64,
     pub number_of_intents: i64,
@@ -22,6 +24,8 @@ impl Default for Diagnostics {
             number_of_intents: 0,
             tick_start: now,
             tick_end: now,
+            systems_update_ms: 0,
+            scripts_execution_ms: 0,
         }
     }
 }

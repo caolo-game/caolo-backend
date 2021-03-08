@@ -207,9 +207,9 @@ where
     }
 
     /// This table might have 'gaps' in the storage
-    /// Meaning that a `len` method has to count the non-null elements.
     ///
-    pub fn count_set(&self) -> usize {
+    /// This only counts the 'set' values
+    pub fn count(&self) -> usize {
         self.count
     }
 
@@ -317,7 +317,7 @@ mod tests {
             // leave gaps
             next_entity.0 += 2;
         }
-        assert_eq!(table.count_set(), 128);
+        assert_eq!(table.count(), 128);
 
         for f in foos.iter() {
             assert_eq!(*f, 0);
@@ -330,7 +330,7 @@ mod tests {
             next_entity.0 += 2;
         }
 
-        assert_eq!(table.count_set(), 128);
+        assert_eq!(table.count(), 128);
 
         for f in foos.iter() {
             assert_eq!(*f, 1);

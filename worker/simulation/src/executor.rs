@@ -49,34 +49,43 @@ impl Executor for SimpleExecutor {
 
         info!(logger, "Tick starting");
 
-        // reset diagnostics
-        {
-            let mut diag = world.unsafe_view::<EmptyKey, Diagnostics>();
-            let diag = diag.unwrap_mut_or_default();
-            diag.clear();
-        }
+        let mut diag = world.unsafe_view::<EmptyKey, Diagnostics>();
+        let diag: &mut Diagnostics = diag.unwrap_mut_or_default();
+        diag.clear();
 
         let scripts_table = world.view::<EntityId, EntityScript>();
         let executions: Vec<(EntityId, EntityScript)> =
             scripts_table.iter().map(|(id, x)| (id, *x)).collect();
 
-        debug!(logger, "Executing scripts");
-        let intents = execute_scripts(executions.as_slice(), world);
+        let intents = {
+            debug!(logger, "Executing scripts");
+            let start = chrono::Utc::now();
+            let intents = execute_scripts(executions.as_slice(), world);
+            let end = chrono::Utc::now();
+            let duration = end - start;
+            diag.scripts_execution_ms = duration.num_milliseconds();
+            debug!(logger, "Executing scripts Done");
+            intents
+        };
+        {
+            let start = chrono::Utc::now();
 
-        debug!(logger, "Got {} intents", intents.len());
-        intents::move_into_storage(world, intents);
+            debug!(logger, "Got {} intents", intents.len());
+            intents::move_into_storage(world, intents);
 
-        debug!(logger, "Executing systems update");
-        execute_world_update(world);
+            debug!(logger, "Executing systems update");
+            execute_world_update(world);
 
-        debug!(logger, "Executing post-processing");
-        world.post_process();
+            debug!(logger, "Executing post-processing");
+            world.post_process();
 
+            let end = chrono::Utc::now();
+            let duration = end - start;
+            diag.systems_update_ms = duration.num_milliseconds();
+        }
         let end = chrono::Utc::now();
         let duration = end - start;
 
-        let mut diag = world.unsafe_view::<EmptyKey, Diagnostics>();
-        let diag: &mut Diagnostics = diag.unwrap_mut_or_default();
         diag.tick_latency_ms = duration.num_milliseconds();
         diag.tick_start = start;
         diag.tick_end = end;

@@ -29,18 +29,15 @@ async def get_myself(current_user=Depends(get_current_user)):
     return current_user
 
 
-def __verify(pw, salt, hashed):
-    for i in range(*PEPPER_RANGE):
-        if verifypw(pw, salt, i, hashed):
+def __verify_pw(pw, salt, hashed):
+    for pep in range(*PEPPER_RANGE):
+        if verifypw(pw, salt, pep, hashed):
             return True
     return False
 
 
 @router.post("/token")
-async def login(
-    req: Request,
-    form_data: OAuth2PasswordRequestForm = Depends(),
-):
+async def login(req: Request, form_data: OAuth2PasswordRequestForm = Depends()):
     db = req.state.db
 
     user_in_db = await db.fetchrow(
@@ -55,7 +52,7 @@ async def login(
     if not user_in_db:
         raise HTTPException(status_code=400, detail="Incorrect username or password")
 
-    if not __verify(form_data.password, user_in_db["salt"], user_in_db["pw"]):
+    if not __verify_pw(form_data.password, user_in_db["salt"], user_in_db["pw"]):
         raise HTTPException(status_code=400, detail="Incorrect username or password")
 
     # TODO:

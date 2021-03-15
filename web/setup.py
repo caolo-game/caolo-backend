@@ -62,5 +62,6 @@ setup(
         "aioredis",
         "python-multipart",
         "passlib[bcrypt]",
+        "jose",
     ],
 )

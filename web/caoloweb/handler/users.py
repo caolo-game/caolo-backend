@@ -16,7 +16,7 @@ from fastapi import (
 )
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel, Field, EmailStr
-from jose import jwt
+from jose import jwt, JWTError
 
 
 from asyncpg.exceptions import UniqueViolationError
@@ -53,7 +53,7 @@ async def get_current_user_id(token: str = Depends(oauth2_scheme)):
 
     try:
         payload = decode_access_token(token)
-    except (AssertionError, jose.JWTError):
+    except (AssertionError, JWTError):
         logging.exception("Failed to validate JWT")
         raise credentials_exception()
     return payload.get("sub")
@@ -136,6 +136,9 @@ async def register(req: Request, form_data: RegisterForm = Body(...)):
 
 
 async def _update_access_token(userid, db):
+    """
+    generate a new access token for the given user and store it in the database
+    """
     token = create_access_token({"sub": str(userid)})
 
     await db.execute(

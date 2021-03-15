@@ -57,7 +57,7 @@ setup(
         "fastapi",
         "asyncpg",
         "uvicorn[standard]",
-        "pydantic",
+        "pydantic[email]",
         "protobuf",
         "aioredis",
         "python-multipart",

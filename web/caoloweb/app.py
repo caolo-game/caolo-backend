@@ -34,14 +34,14 @@ app.add_middleware(
 )
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-DB_STR = os.getenv("DATABASE_URL", "postgres://postgres:admin@localhost:5432/caolo")
+DB_URL = os.getenv("DATABASE_URL", "postgres://postgres:admin@localhost:5432/caolo")
 _DB_POOL = None
 
 
 async def db_pool():
     global _DB_POOL
     if not _DB_POOL:
-        _DB_POOL = await asyncpg.create_pool(DB_STR)
+        _DB_POOL = await asyncpg.create_pool(DB_URL)
     return _DB_POOL
 
 

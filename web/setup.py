@@ -63,5 +63,6 @@ setup(
         "python-multipart",
         "passlib[bcrypt]",
         "python-jose>=3.2.0",
+        "cao-lang @ https://github.com/caolo-game/cao-lang/tarball/master#egg=cao-lang-0.1.0",
     ],
 )

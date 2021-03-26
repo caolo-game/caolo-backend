@@ -32,8 +32,15 @@ impl<Id: TableId> Component<Id> for Time {
     type Table = UniqueTable<Id, Time>;
 }
 
-#[derive(Clone)]
-pub struct RuntimeGuard;
+// use phantomdata member to disallow crate users the creation of runtimes directly
+#[derive(Clone, Default)]
+pub struct RuntimeGuard(std::marker::PhantomData<()>);
+
+impl RuntimeGuard {
+    pub fn new() -> RuntimeGuard {
+        RuntimeGuard(Default::default())
+    }
+}
 
 #[cfg(feature = "async-std")]
 impl RuntimeGuard {
@@ -43,11 +50,4 @@ impl RuntimeGuard {
     {
         async_std::task::block_on(f)
     }
-}
-
-/// ```
-/// let _cao_rt = caolo_sim::init_runtime();
-/// ```
-pub fn init_runtime() -> RuntimeGuard {
-    RuntimeGuard
 }

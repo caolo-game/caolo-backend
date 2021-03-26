@@ -72,7 +72,7 @@ pub fn generate_full_map(
                 .iter()
                 .filter_map(|c| c.as_ref())
                 .cloned()
-                .collect::<ArrayVec<[_; 6]>>();
+                .collect::<ArrayVec<_, 6>>();
             generate_room(
                 logger.new(o!("room.q" => room.q,"room.r" => room.r)),
                 room_params,

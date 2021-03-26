@@ -4,16 +4,16 @@
             "name": "main",
             "cards": [
                 {
-                    "ScalarInt": 15
+                    "ScalarInt": 24
                 },
                 {
-                    "ScalarInt": 18
+                    "ScalarInt": 9
                 },
                 {
-                    "ScalarInt": 31
+                    "ScalarInt": 2
                 },
                 {
-                    "ScalarInt": 16
+                    "ScalarInt": 5
                 },
                 {
                     "Call": "WorldPosition"
@@ -28,7 +28,7 @@
                     "Equals": null
                 },
                 {
-                    "JumpIfFalse": "error"
+                    "JumpIfFalse": { "LaneName": "error" }
                 }
             ]
         },

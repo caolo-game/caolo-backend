@@ -22,7 +22,7 @@
                     "Equals": null
                 },
                 {
-                    "JumpIfFalse": "resource-error"
+                    "JumpIfFalse": { "LaneName": "resource-error" }
                 },
                 {
                     "CopyLast": null

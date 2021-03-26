@@ -73,7 +73,7 @@ pub fn execute_scripts(
                 let data = ScriptExecutionData::unsafe_default(logger.clone());
 
                 let conf = UnwrapView::<ConfigKey, GameConfig>::new(storage);
-                let mut vm = Vm::new(logger.clone(), data);
+                let mut vm = Vm::new(data);
                 vm.history.reserve(conf.execution_limit as usize);
                 vm.max_iter = i32::try_from(conf.execution_limit)
                     .expect("Expected execution_limit to fit into 31 bits");
@@ -162,7 +162,6 @@ pub fn execute_single_script<'a>(
             ExecutionError::ScriptNotFound(script_id)
         })?;
 
-    vm.logger = logger.clone();
     let data = prepare_script_data(&logger, entity_id, user_id, storage);
     vm.auxiliary_data = data;
 

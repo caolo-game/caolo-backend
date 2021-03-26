@@ -48,7 +48,7 @@ async fn send_schema<'a>(
     let schema = caolo_sim::scripting_api::make_import();
     let imports = schema.imports();
 
-    let basic_descs = cao_lang::compiler::description::get_instruction_descriptions();
+    let basic_descs = cao_lang::compiler::card_description::get_instruction_descriptions();
 
     #[derive(serde::Serialize)]
     struct Card<'a> {
@@ -159,7 +159,7 @@ async fn output<'a>(
 
 fn main() {
     init();
-    let sim_rt = caolo_sim::init_runtime();
+    let sim_rt = caolo_sim::RuntimeGuard::new();
 
     let game_conf = config::GameConfig::load();
 

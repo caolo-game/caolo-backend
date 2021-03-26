@@ -4,12 +4,15 @@ RUN apt-get update
 RUN apt-get install curl gcc libpq-dev protobuf-compiler -y --fix-missing
 RUN protoc --version
 
-WORKDIR /caolo
-RUN curl -LJO https://github.com/caolo-game/cao-lang/releases/download/v0.1.10/caoc-ubuntu
-RUN mv caoc-ubuntu /usr/bin/caoc
-RUN chmod +x /usr/bin/caoc
-
 RUN pip install gunicorn
+
+WORKDIR /caolo
+# install Rust compiler
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+RUN rustup update
+RUN rustc --version
+RUN cargo --version
 
 COPY ./protos/ ./protos/
 COPY ./web/ ./web/
@@ -18,7 +21,6 @@ ENV CAO_PROTOS_PATH=/caolo/protos
 WORKDIR /caolo/web
 
 RUN pip install .
-RUN caoc --version
 RUN chmod +x start.sh
 
 ENTRYPOINT [ "sh", "./start.sh"]

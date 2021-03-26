@@ -1,4 +1,4 @@
-FROM rust:1.50 AS deps
+FROM rust:1.51 AS deps
 
 RUN apt-get update
 RUN apt-get install lld clang libc-dev pkgconf -y
@@ -39,7 +39,7 @@ RUN cargo build --release --all-features
 
 # ==============================================================================================
 
-FROM rust:1.50 AS build
+FROM rust:1.51 AS build
 COPY ./.cargo/ ./.cargo/
 RUN cargo --version
 

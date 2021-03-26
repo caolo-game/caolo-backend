@@ -2,6 +2,9 @@
 //!
 //! Methods that may fail return an OperationResult
 //!
+#[cfg(test)]
+mod tests;
+
 pub mod bots;
 pub mod find_api;
 use crate::components;
@@ -9,7 +12,6 @@ use crate::geometry::point::Axial;
 use crate::indices::{EntityId, WorldPosition};
 use crate::profile;
 use crate::systems::script_execution::ScriptExecutionData;
-use arrayvec::ArrayString;
 use cao_lang::{prelude::*, scalar::Scalar, traits::AutoByteEncodeProperties};
 use find_api::FindConstant;
 use serde::{Deserialize, Serialize};
@@ -63,14 +65,11 @@ impl From<OperationResult> for Scalar {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Script {
-    pub compiled: Option<CompiledProgram>,
+    pub compiled: Option<CaoProgram>,
     pub script: CompilationUnit,
 }
 
-pub fn make_point(
-    vm: &mut Vm<ScriptExecutionData>,
-    (x, y): (i32, i32),
-) -> Result<(), ExecutionError> {
+pub fn make_point(vm: &mut Vm<ScriptExecutionData>, x: i32, y: i32) -> Result<(), ExecutionError> {
     let point = Axial::new(x, y);
     vm.set_value(point)?;
     Ok(())
@@ -78,7 +77,10 @@ pub fn make_point(
 
 pub fn world_position(
     vm: &mut Vm<ScriptExecutionData>,
-    [rx, ry, x, y]: [i32; 4],
+    rx: i32,
+    ry: i32,
+    x: i32,
+    y: i32,
 ) -> Result<(), ExecutionError> {
     let room = Axial::new(rx, ry);
     let pos = Axial::new(x, y);
@@ -124,7 +126,7 @@ pub fn log_scalar(vm: &mut Vm<ScriptExecutionData>, value: Scalar) -> Result<(),
 /// Holds data about a function
 pub struct FunctionRow {
     pub desc: SubProgram<'static>,
-    pub fo: Procedure<ScriptExecutionData>,
+    pub fo: Box<dyn VmFunction<ScriptExecutionData>>,
 }
 
 impl std::fmt::Debug for FunctionRow {
@@ -149,7 +151,7 @@ impl Schema {
 
     pub fn execute_imports(self, vm: &mut Vm<ScriptExecutionData>) {
         for fr in self.imports {
-            vm.register_function_obj(fr.desc.name, fr.fo);
+            vm.register_function(fr.desc.name, move |vm: &mut Vm<_>| fr.fo.call(vm));
         }
     }
 }
@@ -167,10 +169,7 @@ pub fn make_import() -> Schema {
                     [],
                     []
                 ),
-                fo: Procedure::new(
-                    ArrayString::from("console_log").unwrap(),
-                    FunctionWrapper::new(console_log),
-                ),
+                fo: Box::new(into_f1(console_log)),
             },
             FunctionRow {
                 desc: subprogram_description!(
@@ -181,10 +180,7 @@ pub fn make_import() -> Schema {
                     [],
                     []
                 ),
-                fo: Procedure::new(
-                    ArrayString::from("log_scalar").unwrap(),
-                    FunctionWrapper::new(log_scalar),
-                ),
+                fo: Box::new(into_f1(log_scalar)),
             },
             FunctionRow {
                 desc: subprogram_description!(
@@ -195,10 +191,7 @@ pub fn make_import() -> Schema {
                     [OperationResult],
                     []
                 ),
-                fo: Procedure::new(
-                    ArrayString::from("bots::mine_resource").unwrap(),
-                    FunctionWrapper::new(bots::mine_resource),
-                ),
+                fo: Box::new(into_f1(bots::mine_resource)),
             },
             FunctionRow {
                 desc: subprogram_description!(
@@ -209,10 +202,7 @@ pub fn make_import() -> Schema {
                     [OperationResult],
                     []
                 ),
-                fo: Procedure::new(
-                    ArrayString::from("bots::approach_entity").unwrap(),
-                    FunctionWrapper::new(bots::approach_entity),
-                ),
+                fo: Box::new(into_f1(bots::approach_entity)),
             },
             FunctionRow {
                 desc: subprogram_description!(
@@ -223,10 +213,7 @@ pub fn make_import() -> Schema {
                     [OperationResult],
                     []
                 ),
-                fo: Procedure::new(
-                    ArrayString::from("bots::move_bot_to_position").unwrap(),
-                    FunctionWrapper::new(bots::move_bot_to_position),
-                ),
+                fo: Box::new(into_f1(bots::move_bot_to_position)),
             },
             FunctionRow {
                 desc: subprogram_description!(
@@ -237,10 +224,7 @@ pub fn make_import() -> Schema {
                     [Axial],
                     []
                 ),
-                fo: Procedure::new(
-                    ArrayString::from("make_point").unwrap(),
-                    FunctionWrapper::new(make_point),
-                ),
+                fo: Box::new(into_f2(make_point)),
             },
             FunctionRow {
                 desc: subprogram_description!(
@@ -251,10 +235,7 @@ pub fn make_import() -> Schema {
                     [Axial],
                     []
                 ),
-                fo: Procedure::new(
-                    ArrayString::from("world_position").unwrap(),
-                    FunctionWrapper::new(world_position),
-                ),
+                fo: Box::new(into_f4(world_position)),
             },
             FunctionRow {
                 desc: subprogram_description!(
@@ -265,10 +246,7 @@ pub fn make_import() -> Schema {
                     [OperationResult, EntityId],
                     []
                 ),
-                fo: Procedure::new(
-                    ArrayString::from("find_api::find_closest_by_range").unwrap(),
-                    FunctionWrapper::new(find_api::find_closest_by_range),
-                ),
+                fo: Box::new(into_f1(find_api::find_closest_by_range)),
             },
             FunctionRow {
                 desc: subprogram_description!(
@@ -279,10 +257,7 @@ pub fn make_import() -> Schema {
                     [OperationResult],
                     []
                 ),
-                fo: Procedure::new(
-                    ArrayString::from("bots::unload").unwrap(),
-                    FunctionWrapper::new(bots::unload),
-                ),
+                fo: Box::new(into_f3(bots::unload)),
             },
             FunctionRow {
                 desc: subprogram_description!(
@@ -293,10 +268,7 @@ pub fn make_import() -> Schema {
                     [FindConstant],
                     []
                 ),
-                fo: Procedure::new(
-                    ArrayString::from("find_api::parse_find_constant").unwrap(),
-                    FunctionWrapper::new(find_api::parse_find_constant),
-                ),
+                fo: Box::new(into_f1(find_api::parse_find_constant)),
             },
             FunctionRow {
                 desc: subprogram_description!(
@@ -307,10 +279,7 @@ pub fn make_import() -> Schema {
                     [OperationResult],
                     []
                 ),
-                fo: Procedure::new(
-                    ArrayString::from("bots::melee_attack").unwrap(),
-                    FunctionWrapper::new(bots::melee_attack),
-                ),
+                fo: Box::new(into_f1(bots::melee_attack)),
             },
         ],
     }

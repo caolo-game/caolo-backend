@@ -2,7 +2,6 @@
 .PHONY: web worker
 
 test-worker:
-	cd worker && cargo clippy
 	cd worker && cargo test --benches
 
 start: web

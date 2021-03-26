@@ -66,7 +66,7 @@ pub const PATH_CACHE_LEN: usize = 64;
 #[serde(rename_all = "camelCase")]
 pub struct PathCacheComponent {
     pub target: WorldPosition,
-    pub path: ArrayVec<[RoomPosition; PATH_CACHE_LEN]>,
+    pub path: ArrayVec<RoomPosition, PATH_CACHE_LEN>,
 }
 impl<Id: TableId> Component<Id> for PathCacheComponent {
     type Table = BTreeTable<Id, Self>;

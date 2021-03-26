@@ -30,7 +30,7 @@ slog-envlogger = "*"
 rand = { version = "0.7", features = ["small_rng"] }
 chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "0.8", features = ["serde", "v4"] }
-arrayvec = { version = "0.5", features = ["serde", "array-sizes-33-128"] }
+arrayvec = { version = "0.6", features = ["serde"] }
 serde = "1"
 serde_derive = "1"
 thiserror = "1"
@@ -42,6 +42,7 @@ async-std = { version = "1", optional = true }
 async-std = { version = "*", features = ["attributes"] }
 criterion = "0.3"
 serde_json = "*"
+serde_yaml = "*"
 # env_logger needs to be compiled without default features so the test suite can capture the logs
 env_logger = { version = "0.7", default-features = false }
 slog-stdlog = "3"

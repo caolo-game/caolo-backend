@@ -15,7 +15,7 @@ use crate::{
         Component, RoomMortonTable, TableId,
     },
 };
-use cao_lang::{prelude::CompiledProgram, vm::HistoryEntry};
+use cao_lang::{prelude::CaoProgram, vm::HistoryEntry};
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 
@@ -147,7 +147,7 @@ impl<Id: TableId> Component<Id> for LogEntry {
 /// Entities with Scripts
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
-pub struct ScriptComponent(pub CompiledProgram);
+pub struct ScriptComponent(pub CaoProgram);
 impl<Id: TableId> Component<Id> for ScriptComponent {
     type Table = BTreeTable<Id, Self>;
 }

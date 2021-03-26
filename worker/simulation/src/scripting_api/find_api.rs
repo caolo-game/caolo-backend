@@ -266,7 +266,7 @@ mod tests {
             entity_id,
             None,
         );
-        let mut vm = Vm::new(logger, data);
+        let mut vm = Vm::new(data);
 
         let constant = FindConstant::Resource;
 
@@ -311,7 +311,7 @@ mod tests {
             entity_id,
             Default::default(),
         );
-        let mut vm = Vm::new(logger.clone(), data);
+        let mut vm = Vm::new(data);
 
         let constant = FindConstant::Resource;
 

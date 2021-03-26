@@ -183,7 +183,7 @@ fn find_path_multiroom(
             })
             .filter(|p| !positions.contains_key(*p)) // consider only empty spots
             .take(MAX_BRIDGE_LEN)
-            .collect::<ArrayVec<[_; MAX_BRIDGE_LEN]>>()
+            .collect::<ArrayVec<_, MAX_BRIDGE_LEN>>()
     };
     if is_bot_on_bridge {
         // bot is standing on the bridge
@@ -396,7 +396,7 @@ pub fn get_valid_transits(
         View<WorldPosition, EntityComponent>,
         View<ConfigKey, RoomProperties>,
     ),
-) -> Result<ArrayVec<[WorldPosition; 3]>, TransitError> {
+) -> Result<ArrayVec<WorldPosition, 3>, TransitError> {
     trace!(
         logger,
         "get_valid_transits {:?} {:?}",
@@ -429,7 +429,7 @@ pub fn get_valid_transits(
         props.center
     );
 
-    let mut candidates: ArrayVec<[_; 16]> = ArrayVec::default();
+    let mut candidates: ArrayVec<_, 16> = ArrayVec::default();
     terrain
         .table
         .at(target_room.0)
@@ -461,7 +461,7 @@ pub fn get_valid_transits(
         return Err(TransitError::NotFound);
     }
 
-    let candidates: ArrayVec<[_; 3]> = candidates
+    let candidates: ArrayVec<_, 3> = candidates
         .into_iter()
         .filter(|p| !entities.contains_key(p))
         .take(3)

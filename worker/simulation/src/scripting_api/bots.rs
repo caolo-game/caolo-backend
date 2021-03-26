@@ -49,7 +49,9 @@ pub fn melee_attack(
 
 pub fn unload(
     vm: &mut Vm<ScriptExecutionData>,
-    (amount, ty, target): (i32, Resource, Pointer),
+    amount: i32,
+    ty: Resource,
+    target: Pointer,
 ) -> Result<(), ExecutionError> {
     profile!("unload");
     let aux = vm.get_aux();

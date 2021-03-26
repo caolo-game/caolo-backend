@@ -42,7 +42,7 @@ pub fn update_program(
         .with_context(|| "Failed to deserialize CU")
         .map_err(UpdateProgramError::BadMessage)?;
 
-    let program = cao_lang::prelude::compile(logger.clone(), compilation_unit, None)
+    let program = cao_lang::prelude::compile(compilation_unit, None)
         .with_context(|| "Failed to compile script")
         .map_err(UpdateProgramError::BadMessage)?;
 

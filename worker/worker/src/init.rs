@@ -15,7 +15,7 @@ pub fn init_storage(logger: Logger, storage: &mut World, config: &GameConfig) {
         serde_json::from_str(include_str!("./programs/mining_program.json"))
             .expect("deserialize example program");
     debug!(logger, "compiling default program");
-    let compiled = compile(None, script, CompileOptions::new().with_breadcrumbs(false))
+    let compiled = compile(script, CompileOptions::new().with_breadcrumbs(false))
         .expect("failed to compile example program");
     debug!(logger, "compilation done");
 
@@ -33,7 +33,7 @@ pub fn init_storage(logger: Logger, storage: &mut World, config: &GameConfig) {
         serde_json::from_str(include_str!("./programs/center_walking_program.json"))
             .expect("deserialize example program");
     debug!(logger, "compiling default program");
-    let compiled = compile(None, script, CompileOptions::new().with_breadcrumbs(false))
+    let compiled = compile(script, CompileOptions::new().with_breadcrumbs(false))
         .expect("failed to compile example program");
     debug!(logger, "compilation done");
 

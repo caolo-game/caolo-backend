@@ -4,6 +4,7 @@ use serde_derive::{Deserialize, Serialize};
 #[repr(u8)]
 #[serde(rename_all = "camelCase")]
 pub enum TileTerrainType {
+    Empty,
     Plain,
     /// allows teleporting to new rooms
     Bridge,
@@ -12,7 +13,7 @@ pub enum TileTerrainType {
 
 impl Default for TileTerrainType {
     fn default() -> Self {
-        TileTerrainType::Plain
+        TileTerrainType::Empty
     }
 }
 

@@ -704,7 +704,7 @@ fn print_terrain(from: Axial, to: Axial, terrain: View<Axial, TerrainComponent>)
                 Some(TerrainComponent(TileTerrainType::Wall)) => print!("#"),
                 Some(TerrainComponent(TileTerrainType::Plain)) => print!("."),
                 Some(TerrainComponent(TileTerrainType::Bridge)) => print!("x"),
-                None => print!(" "),
+                Some(TerrainComponent(TileTerrainType::Empty)) | None => print!(" "),
             }
         }
         println!();
@@ -762,7 +762,7 @@ mod tests {
         let points = Hexagon { center, radius: 7 }.iter_points();
         for point in points {
             match terrain.at(point) {
-                None => seen_empty = true,
+                Some(TerrainComponent(TileTerrainType::Empty)) | None => seen_empty = true,
                 Some(TerrainComponent(TileTerrainType::Plain))
                 | Some(TerrainComponent(TileTerrainType::Bridge)) => seen_plain = true,
                 Some(TerrainComponent(TileTerrainType::Wall)) => seen_wall = true,

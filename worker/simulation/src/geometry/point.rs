@@ -187,6 +187,14 @@ pub struct Hexagon {
 }
 
 impl Hexagon {
+    pub fn from_radius(radius: i32) -> Self {
+        debug_assert!(radius >= 0);
+        Self {
+            radius,
+            center: Axial::new(radius, radius),
+        }
+    }
+
     pub fn contains(&self, point: Axial) -> bool {
         let point = point - self.center;
         let [x, y, z] = point.hex_axial_to_cube();

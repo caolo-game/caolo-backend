@@ -167,7 +167,6 @@ fn override_update_all_serial(c: &mut Criterion) {
     group.finish();
 }
 
-
 fn override_update_all_parallel(c: &mut Criterion) {
     let mut group = c.benchmark_group("vec_table override_update_all_parallel");
     for size in (8..20).step_by(2) {

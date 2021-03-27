@@ -174,7 +174,7 @@ async def fetch_program(
     program_id: UUID = Query(...),
     current_user_id=Depends(get_current_user_id),
 ):
-    return await req.state.db.fetchrow(
+    res = await req.state.db.fetchrow(
         """
         SELECT id,name,program,created,updated
         FROM user_script
@@ -183,3 +183,24 @@ async def fetch_program(
         current_user_id,
         program_id,
     )
+    if res is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Program not found")
+    return res
+
+
+@router.delete("/program")
+async def fetch_program(
+    req: Request,
+    program_id: UUID = Query(...),
+    current_user_id=Depends(get_current_user_id),
+):
+    await req.state.db.execute(
+        """
+        DELETE
+        FROM user_script
+        WHERE owner_id=$1 AND id=$2
+        """,
+        current_user_id,
+        program_id,
+    )
+    return {"status": "ok"}

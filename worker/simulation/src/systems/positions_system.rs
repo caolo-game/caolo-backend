@@ -8,11 +8,11 @@ type Mut = UnsafeView<WorldPosition, EntityComponent>;
 type Const<'a> = (View<'a, EntityId, PositionComponent>, WorldLogger);
 
 /// Reset the entity positions table
-pub fn update(mut position_entities: Mut, (positions, WorldLogger(logger)): Const) {
+pub fn update(mut position_entities: Mut, (entity_positions, WorldLogger(logger)): Const) {
     profile!("PositionSystem update");
     debug!(logger, "update positions system called");
 
-    let mut positions = positions
+    let mut positions = entity_positions
         .iter()
         .map(|(id, PositionComponent(pos))| (*pos, EntityComponent(id)))
         .collect::<Vec<_>>();

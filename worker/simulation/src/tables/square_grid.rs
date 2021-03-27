@@ -44,6 +44,22 @@ impl<T> SquareGrid<T> {
     }
 
     #[inline]
+    pub unsafe fn get_unchecked(&self, Axial { q, r }: Axial) -> &T {
+        let diameter = self.radius * 2 + 1;
+        let ind = r as usize * diameter as usize + q as usize;
+
+        self.values.get_unchecked(ind)
+    }
+
+    #[inline]
+    pub unsafe fn get_unchecked_mut(&mut self, Axial { q, r }: Axial) -> &T {
+        let diameter = self.radius * 2 + 1;
+        let ind = r as usize * diameter as usize + q as usize;
+
+        self.values.get_unchecked_mut(ind)
+    }
+
+    #[inline]
     pub fn get_mut(&mut self, pos: Axial) -> Option<&mut T> {
         let ind = self.get_index(pos)?;
         self.values.get_mut(ind)

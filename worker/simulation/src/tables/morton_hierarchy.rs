@@ -1,6 +1,7 @@
 use super::morton::{MortonKey, MortonTable};
 use super::*;
 use crate::geometry::Axial;
+use rayon::prelude::*;
 use crate::indices::{Room, WorldPosition};
 use serde_derive::{Deserialize, Serialize};
 use std::convert::TryFrom;
@@ -129,7 +130,11 @@ where
     pub fn extend_from_slice(
         &mut self,
         values: &mut [(WorldPosition, Row)],
-    ) -> Result<(), ExtendFailure> {
+    ) -> Result<(), ExtendFailure>
+    where
+        MortonTable<Row>: Send,
+        Row: Sync
+    {
         {
             // produce a key list from the rooms of the values
             let mut keys = values
@@ -167,25 +172,25 @@ where
             self.extend_rooms(new_rooms.into_iter())?;
         }
 
-        // TODO invidual extends can run in parallel
-        let mut iter = self.table.iter_mut();
-        iter.try_for_each(move |(room_id, ref mut room)| {
-            let items = match groups.get(&room_id) {
-                Some(i) => i,
-                // no inserts in this room
-                None => return Ok(()),
-            };
-            // extend each group by their corresponding values
-            room.extend(
-                items
-                    .iter()
-                    .map(|(WorldPosition { pos, .. }, row)| (*pos, row.clone())),
-            )
-            .map_err(|error| ExtendFailure::InnerExtendFailure {
-                room: room_id,
-                error,
-            })
-        })?;
+        self.table
+            .par_iter_mut()
+            .try_for_each(move |(room_id, room)| {
+                let items = match groups.get(&room_id) {
+                    Some(i) => i,
+                    // no inserts in this room
+                    None => return Ok(()),
+                };
+                // extend each group by their corresponding values
+                room.extend(
+                    items
+                        .iter()
+                        .map(|(WorldPosition { pos, .. }, row)| (*pos, row.clone())),
+                )
+                .map_err(|error| ExtendFailure::InnerExtendFailure {
+                    room: room_id,
+                    error,
+                })
+            })?;
 
         Ok(())
     }

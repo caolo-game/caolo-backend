@@ -132,10 +132,10 @@ async def init_new_script(
     try:
         res = await db.fetchrow(
             """
-INSERT INTO user_script (program,owner_id,name)
-VALUES($1,$2,$3)
-RETURNING id
-""",
+            INSERT INTO user_script (program,owner_id,name)
+            VALUES($1,$2,$3)
+            RETURNING id
+            """,
             json.dumps(None),
             current_user,
             body.name,
@@ -159,10 +159,27 @@ async def list_my_programs(req: Request, current_user_id=Depends(get_current_use
     db = req.state.db
     res = await db.fetch(
         """
-        SELECT id,name 
+        SELECT id,name,created,updated
         FROM user_script
         WHERE owner_id=$1
         """,
         current_user_id,
     )
     return res
+
+
+@router.get("/program")
+async def fetch_program(
+    req: Request,
+    program_id: UUID = Query(...),
+    current_user_id=Depends(get_current_user_id),
+):
+    return await req.state.db.fetchrow(
+        """
+        SELECT id,name,program,created,updated
+        FROM user_script
+        WHERE owner_id=$1 AND id=$2
+        """,
+        current_user_id,
+        program_id,
+    )

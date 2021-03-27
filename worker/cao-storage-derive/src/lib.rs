@@ -100,7 +100,7 @@ fn impl_tables(
             pub fn clear(&mut self) {
                 #(#clears);*;
             }
-            pub fn execute_all(&mut self, store: &mut Storage) {
+            pub fn execute_all(&mut self, store: &mut Archetype) {
                 #(#executes);*;
             }
         }

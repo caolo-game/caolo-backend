@@ -89,7 +89,7 @@ unsafe impl Sync for DeleteEntityView {}
 
 impl DeleteEntityView
 where
-    crate::world::entity_store::Storage: super::DeleteById<EntityId>,
+    crate::world::entity_store::Archetype: super::DeleteById<EntityId>,
 {
     /// # Safety
     /// This function should only be called if the pointed to Storage is in memory and no other

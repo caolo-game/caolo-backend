@@ -293,7 +293,7 @@ macro_rules! join {
 ///
 /// This is mostly here for serialization, when communicating with clients.
 #[macro_export(local_inner_macros)]
-macro_rules! storage {
+macro_rules! archetype {
     (
         module $module: ident
         key $id: ty,
@@ -320,15 +320,15 @@ macro_rules! storage {
             $(
                 #[cao_storage_iterby($it, $id)]
             )*
-            pub struct Storage {
+            pub struct Archetype {
                 $( $(#[ $attr ] )*
                 pub(crate) $name: <$row as crate::tables::Component<$id>>::Table ),
                 +,
             }
 
-            storage!(@implement_tables $($name, $id,  $row )*);
+            archetype!(@implement_tables $($name, $id,  $row )*);
 
-            impl Storage {
+            impl Archetype {
                 #[allow(unused)]
                 #[allow(clippy::too_many_arguments)]
                 pub fn new(
@@ -349,7 +349,7 @@ macro_rules! storage {
         $($name: ident, $id: ty,  $row: ty )*
     ) => {
         $(
-            impl HasTable<$id, $row> for Storage {
+            impl HasTable<$id, $row> for Archetype {
                 fn view(&'_ self) -> View<'_, $id, $row>{
                     View::from_table(&self.$name)
                 }

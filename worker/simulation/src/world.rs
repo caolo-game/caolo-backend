@@ -1,11 +1,14 @@
 mod json_impl;
 
+use crate::archetype;
 use crate::components::*;
 use crate::diagnostics::Diagnostics;
 use crate::indices::*;
 use crate::intents::*;
-use crate::storage;
-use crate::storage::views::{UnsafeView, View};
+use crate::storage::{
+    self,
+    views::{UnsafeView, View},
+};
 use crate::tables::morton_hierarchy::ExtendFailure;
 use crate::tables::{Component, TableId};
 use crate::Time;
@@ -14,7 +17,7 @@ use serde::Serialize;
 use slog::{o, Drain};
 use std::{hash::Hasher, pin::Pin};
 
-storage!(
+archetype!(
     module pos2_store key Axial,
     table RoomConnections = room_connections,
     table RoomComponent = rooms,
@@ -23,7 +26,7 @@ storage!(
     iterby rooms
 );
 
-storage!(
+archetype!(
     module entity_store key EntityId,
 
     table Bot = bot,
@@ -50,7 +53,7 @@ storage!(
     iterby resource
 );
 
-storage!(
+archetype!(
     module user_store key UserId,
 
     table UserComponent = user,
@@ -61,7 +64,7 @@ storage!(
     iterby user
 );
 
-storage!(
+archetype!(
     module resource_store key EmptyKey,
 
     table Time = time,
@@ -79,14 +82,14 @@ storage!(
     table Diagnostics = diagnostics
 );
 
-storage!(
+archetype!(
     module config_store key ConfigKey,
 
     table RoomProperties = room_properties,
     table GameConfig = game_config
 );
 
-storage!(
+archetype!(
     module positions_store key WorldPosition,
     // don't forget to implement these in `reset_world_storage`
     table TerrainComponent = point_terrain,
@@ -95,14 +98,14 @@ storage!(
 
 #[derive(Debug, Serialize)]
 pub struct World {
-    pub entities: entity_store::Storage,
-    pub room: pos2_store::Storage,
-    pub user: user_store::Storage,
-    pub config: config_store::Storage,
-    pub resources: resource_store::Storage,
+    pub entities: entity_store::Archetype,
+    pub room: pos2_store::Archetype,
+    pub user: user_store::Archetype,
+    pub config: config_store::Archetype,
+    pub resources: resource_store::Archetype,
     pub entity_logs: <LogEntry as Component<EntityTime>>::Table,
     pub scripts: <ScriptComponent as Component<ScriptId>>::Table,
-    pub positions: positions_store::Storage,
+    pub positions: positions_store::Archetype,
 
     #[serde(skip)]
     pub deferred_deletes: entity_store::DeferredDeletes,
@@ -117,7 +120,7 @@ macro_rules! impl_hastable {
     ($module: ident, $field: ident) => {
         impl<C: Component<$module::Key>> storage::HasTable<$module::Key, C> for World
         where
-            $module::Storage: storage::HasTable<$module::Key, C>,
+            $module::Archetype: storage::HasTable<$module::Key, C>,
         {
             fn view(&self) -> View<$module::Key, C> {
                 self.$field.view()
@@ -162,7 +165,7 @@ impl World {
     /// happen.
     pub fn new(logger: impl Into<Option<slog::Logger>>) -> Pin<Box<Self>> {
         fn _new(logger: slog::Logger) -> Pin<Box<World>> {
-            let mut config: config_store::Storage = Default::default();
+            let mut config: config_store::Archetype = Default::default();
             config.game_config.value = Some(Default::default());
 
             let mut res = Box::pin(World {

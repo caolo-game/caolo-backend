@@ -43,6 +43,9 @@ impl<T> SquareGrid<T> {
         self.values.get(ind)
     }
 
+    /// ## Safety
+    ///
+    /// The point must be inside the squared grid radius Х radius
     #[inline]
     pub unsafe fn get_unchecked(&self, Axial { q, r }: Axial) -> &T {
         let diameter = self.radius * 2 + 1;
@@ -51,6 +54,9 @@ impl<T> SquareGrid<T> {
         self.values.get_unchecked(ind)
     }
 
+    /// ## Safety
+    ///
+    /// The point must be inside the squared grid radius Х radius
     #[inline]
     pub unsafe fn get_unchecked_mut(&mut self, Axial { q, r }: Axial) -> &T {
         let diameter = self.radius * 2 + 1;

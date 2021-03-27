@@ -6,6 +6,7 @@ pub mod diagnostics;
 pub mod executor;
 pub mod geometry;
 pub mod indices;
+pub mod init;
 pub mod map_generation;
 pub mod pathfinding;
 pub mod prelude;

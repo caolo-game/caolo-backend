@@ -1,5 +1,4 @@
 mod config;
-mod init;
 mod input;
 
 mod protos;
@@ -235,7 +234,7 @@ fn main() {
             storage.queen_tag().unwrap(),
         ))
         .expect("Failed to send schema");
-    init::init_storage(logger.clone(), &mut storage, &game_conf);
+    caolo_sim::init::init_world_entities(logger.clone(), &mut storage, game_conf.n_actors as usize);
 
     sentry::capture_message(
         format!(

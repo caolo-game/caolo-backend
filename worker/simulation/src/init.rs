@@ -1,11 +1,11 @@
-use crate::config::GameConfig;
+use crate::prelude::*;
 use cao_lang::{compiler::CompileOptions, prelude::*};
-use caolo_sim::prelude::*;
 use rand::Rng;
 use slog::{debug, trace, Logger};
 use uuid::Uuid;
 
-pub fn init_storage(logger: Logger, storage: &mut World, config: &GameConfig) {
+/// World should be already initialized with a GameConfig
+pub fn init_world_entities(logger: Logger, storage: &mut World, n_fake_users: usize) {
     debug!(logger, "initializing world");
 
     let mut rng = rand::thread_rng();
@@ -19,7 +19,7 @@ pub fn init_storage(logger: Logger, storage: &mut World, config: &GameConfig) {
         .expect("failed to compile example program");
     debug!(logger, "compilation done");
 
-    caolo_sim::query!(
+    crate::query!(
         mutate
         storage
         {
@@ -37,7 +37,7 @@ pub fn init_storage(logger: Logger, storage: &mut World, config: &GameConfig) {
         .expect("failed to compile example program");
     debug!(logger, "compilation done");
 
-    caolo_sim::query!(
+    crate::query!(
         mutate
         storage
         {
@@ -45,6 +45,8 @@ pub fn init_storage(logger: Logger, storage: &mut World, config: &GameConfig) {
                 .insert_or_update(center_walking_script_id, ScriptComponent(compiled));
         }
     );
+
+    let config = UnwrapView::<ConfigKey, GameConfig>::new(storage);
 
     let radius = config.room_radius;
     debug!(logger, "Reset position storage");
@@ -69,13 +71,12 @@ pub fn init_storage(logger: Logger, storage: &mut World, config: &GameConfig) {
         .map(|a| a.0)
         .collect::<Vec<_>>();
 
-    let n_fake_users = config.n_actors;
     let mut taken_rooms = Vec::with_capacity(n_fake_users as usize);
     for i in 0..n_fake_users {
         trace!(logger, "initializing room #{}", i);
         let spawnid = storage.insert_entity();
 
-        let room = rng.gen_range(0..rooms.len());
+        let room = rng.gen_range(0, rooms.len());
         let room = rooms[room];
         taken_rooms.push(room);
 
@@ -133,19 +134,7 @@ pub fn init_storage(logger: Logger, storage: &mut World, config: &GameConfig) {
         trace!(logger, "initializing room #{} done", i);
     }
 
-    init_config(&logger, &config, FromWorldMut::new(storage));
-
     debug!(logger, "init done");
-}
-
-fn init_config(
-    logger: &Logger,
-    conf: &GameConfig,
-    mut game_conf: UnwrapViewMut<ConfigKey, caolo_sim::components::game_config::GameConfig>,
-) {
-    trace!(logger, "initializing config");
-    game_conf.target_tick_ms = conf.target_tick_ms;
-    trace!(logger, "initializing config done");
 }
 
 type InitBotMuts = (
@@ -304,20 +293,20 @@ fn init_resource(
         .expect("entities_by_pos insert");
 }
 
-fn uncontested_pos<T: caolo_sim::tables::TableRow + Send + Sync>(
+fn uncontested_pos<T: crate::tables::TableRow + Send + Sync>(
     logger: &Logger,
     room: Room,
     bounds: &Hexagon,
-    positions_table: &caolo_sim::tables::morton_hierarchy::RoomMortonTable<T>,
-    terrain_table: &caolo_sim::tables::morton_hierarchy::RoomMortonTable<TerrainComponent>,
+    positions_table: &crate::tables::morton_hierarchy::RoomMortonTable<T>,
+    terrain_table: &crate::tables::morton_hierarchy::RoomMortonTable<TerrainComponent>,
     rng: &mut impl Rng,
 ) -> WorldPosition {
     const TRIES: usize = 10_000;
     let from = bounds.center - Axial::new(bounds.radius, bounds.radius);
     let to = bounds.center + Axial::new(bounds.radius, bounds.radius);
     for _ in 0..TRIES {
-        let x = rng.gen_range(from.q..to.q);
-        let y = rng.gen_range(from.r..to.r);
+        let x = rng.gen_range(from.q, to.q);
+        let y = rng.gen_range(from.r, to.r);
 
         let pos = Axial::new(x, y);
 
@@ -363,7 +352,7 @@ mod tests {
         let mut world = exc
             .initialize(
                 Some(logger.clone()),
-                caolo_sim::executor::GameConfig {
+                crate::executor::GameConfig {
                     world_radius: 2,
                     room_radius: 10,
                     ..Default::default()
@@ -372,6 +361,6 @@ mod tests {
             .unwrap();
 
         // smoke test: can the game be even initialized?
-        init_storage(logger, &mut *world, &Default::default());
+        init_world_entities(logger, &mut *world, 12);
     }
 }

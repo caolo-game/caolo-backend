@@ -1,4 +1,3 @@
-#[cfg(feature = "serde_json")]
 mod json_impl;
 
 use crate::components::*;
@@ -303,7 +302,6 @@ impl World {
         Ok(self)
     }
 
-    #[cfg(feature = "serde_json")]
     pub fn as_json(&self) -> serde_json::Value {
         use rayon::prelude::*;
 

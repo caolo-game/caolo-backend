@@ -1,4 +1,4 @@
-use crate::{prelude::World, world::init_inmemory_storage};
+use crate::prelude::World;
 use cao_lang::prelude::*;
 
 use super::*;
@@ -6,7 +6,7 @@ use super::*;
 fn init_basic_storage() -> std::pin::Pin<Box<World>> {
     crate::utils::setup_testing();
 
-    init_inmemory_storage(crate::utils::test_logger())
+    World::new(crate::utils::test_logger())
 }
 
 #[test]

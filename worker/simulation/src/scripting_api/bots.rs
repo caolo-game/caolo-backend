@@ -406,17 +406,17 @@ fn move_to_pos(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::map_generation::room::iter_edge;
     use crate::prelude::*;
     use crate::query;
     use crate::terrain::TileTerrainType;
-    use crate::{map_generation::room::iter_edge, world::init_inmemory_storage};
 
     #[test]
     fn can_move_to_another_room() {
         crate::utils::setup_testing();
 
         let logger = crate::utils::test_logger();
-        let mut storage = init_inmemory_storage(logger);
+        let mut storage = World::new(logger);
 
         let bot_id = storage.insert_entity();
         let room_radius = 3;

@@ -41,7 +41,7 @@ pub fn update(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{intents, query, world::init_inmemory_storage};
+    use crate::{intents, query, world::World};
     use crate::{
         storage::views::FromWorld,
         storage::views::FromWorldMut,
@@ -51,7 +51,7 @@ mod tests {
     #[test]
     fn can_kill_or_delete_entity_multiple_times() {
         setup_testing();
-        let mut store = init_inmemory_storage(test_logger());
+        let mut store = World::new(test_logger());
 
         let entity_1 = store.insert_entity();
         query!(
@@ -98,7 +98,7 @@ mod tests {
     #[test]
     fn test_dead_entity_is_deleted() {
         setup_testing();
-        let mut store = init_inmemory_storage(test_logger());
+        let mut store = World::new(test_logger());
 
         let entity_1 = store.insert_entity();
         let entity_2 = store.insert_entity();

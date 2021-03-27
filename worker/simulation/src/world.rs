@@ -11,7 +11,7 @@ use crate::tables::{Component, TableId};
 use crate::Time;
 use crate::{components::game_config::GameConfig, prelude::Axial};
 use serde::Serialize;
-use slog::{debug, o, Drain};
+use slog::{o, Drain};
 use std::{hash::Hasher, pin::Pin};
 
 storage!(
@@ -155,21 +155,6 @@ impl storage::HasTable<ScriptId, ScriptComponent> for World {
     fn unsafe_view(&mut self) -> UnsafeView<ScriptId, ScriptComponent> {
         UnsafeView::from_table(&mut self.scripts)
     }
-}
-
-pub fn init_inmemory_storage(logger: impl Into<Option<slog::Logger>>) -> Pin<Box<World>> {
-    fn _init(logger: Option<slog::Logger>) -> Pin<Box<World>> {
-        match logger {
-            Some(ref logger) => debug!(logger, "Init Storage"),
-            None => println!("Init Storage"),
-        }
-        let world = World::new(logger);
-        debug!(world.logger, "Init Storage done");
-        world
-    }
-
-    let logger = logger.into();
-    _init(logger)
 }
 
 impl World {
@@ -385,13 +370,13 @@ mod tests {
     #[test]
     fn check_world_sanity() {
         setup_testing();
-        let _world = init_inmemory_storage(None);
+        let _world = World::new(None);
     }
 
     #[test]
     fn test_bot_serialization() {
         setup_testing();
-        let mut world = init_inmemory_storage(None);
+        let mut world = World::new(None);
 
         for _ in 0..4 {
             let _entity = world.insert_entity(); // produce gaps

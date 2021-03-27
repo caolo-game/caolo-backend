@@ -170,7 +170,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::world::{init_inmemory_storage, World};
+    use crate::world::World;
     use rand::{rngs::SmallRng, thread_rng, Rng, SeedableRng};
     use slog::{o, Drain};
 
@@ -186,7 +186,7 @@ mod tests {
         thread_rng().fill(&mut seed);
         let mut rng = SmallRng::from_seed(seed);
 
-        let mut storage = init_inmemory_storage(crate::utils::test_logger());
+        let mut storage = World::new(crate::utils::test_logger());
 
         let mut entity_positions = storage.unsafe_view::<EntityId, PositionComponent>();
         let mut position_entities = storage.unsafe_view::<WorldPosition, EntityComponent>();

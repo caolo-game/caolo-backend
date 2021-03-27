@@ -279,9 +279,7 @@ fn main() {
                     &mut storage,
                     &redis_client,
                 ))
-                .map_err(|err| {
-                    error!(logger, "Failed to handle inputs {:?}", err);
-                })
+                .map_err(|err| error!(logger, "Failed to handle inputs {:?}", err))
                 .unwrap_or(());
             sleep_duration = sleep_duration
                 .checked_sub(Instant::now() - start)

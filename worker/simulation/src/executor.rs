@@ -13,7 +13,6 @@ use crate::{
     prelude::{EmptyKey, FromWorldMut},
     profile,
     systems::{execute_world_update, script_execution::execute_scripts},
-    world::init_inmemory_storage,
     world::World,
 };
 
@@ -99,7 +98,7 @@ impl Executor for SimpleExecutor {
         logger: Option<Logger>,
         config: GameConfig,
     ) -> Result<Pin<Box<World>>, Self::Error> {
-        let mut world = init_inmemory_storage(logger);
+        let mut world = World::new(logger);
 
         execute_map_generation(world.logger.clone(), &mut *world, &config)
             .expect("Failed to generate world map");

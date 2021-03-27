@@ -2,7 +2,7 @@
 .PHONY: web worker
 
 test-worker:
-	cd worker && cargo test --benches
+	${MAKE} -C worker test
 
 start: web
 	docker-compose up -d

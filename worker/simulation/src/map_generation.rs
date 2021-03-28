@@ -7,12 +7,14 @@ pub mod room;
 
 use self::overworld::{generate_room_layout, OverworldGenerationError, OverworldGenerationParams};
 use self::room::{generate_room, RoomGenerationError, RoomGenerationParams};
-use crate::indices::{ConfigKey, Room, WorldPosition};
 use crate::storage::views::UnsafeView;
-use crate::tables::morton::MortonTable;
 use crate::{
     components::{RoomComponent, RoomConnections, RoomProperties, TerrainComponent},
     prelude::Axial,
+};
+use crate::{
+    indices::{ConfigKey, Room, WorldPosition},
+    tables::square_grid::HexGrid,
 };
 use arrayvec::ArrayVec;
 use rand::{rngs::SmallRng, thread_rng, RngCore, SeedableRng};
@@ -59,11 +61,13 @@ pub fn generate_full_map(
     )
     .map_err(|err| MapGenError::OverworldGenerationError { err })?;
 
+    let radius = room_params.radius as usize;
+
     let terrain_tables = rooms.iter().try_fold(
         Vec::with_capacity(rooms.len()),
         |mut terrain_tables, (room, _)| {
             // TODO: do this in parallel?
-            let mut terrain_table = MortonTable::new();
+            let mut terrain_table = HexGrid::new(radius as usize);
             let room_connections = room_connections
                 .at(room)
                 .expect("Expected just built room to have room_connections");
@@ -84,8 +88,6 @@ pub fn generate_full_map(
                 err,
                 room: Room(room),
             })?;
-
-            terrain_table.dedupe();
 
             terrain_tables.push((room, terrain_table));
             Ok(terrain_tables)

@@ -209,7 +209,8 @@ impl Hexagon {
         let point = point - self.center;
         let [x, y, z] = point.hex_axial_to_cube();
         let r = self.radius;
-        -r <= x && x <= r && -r <= y && y <= r && -r <= z && z <= r
+        debug_assert!(r >= 0);
+        x.abs() <= r && y.abs() <= r && z.abs() <= r
     }
 
     pub fn iter_points(&self) -> impl Iterator<Item = Axial> {
@@ -263,6 +264,15 @@ mod tests {
         for (i, n) in neighbours.iter().cloned().enumerate() {
             let j = Axial::neighbour_index(n - p);
             assert_eq!(j, Some(i));
+        }
+    }
+
+    #[test]
+    fn hex_iter_points_are_inside_itself() {
+        let hex = Hexagon::from_radius(12);
+
+        for p in hex.iter_points() {
+            assert!(hex.contains(p));
         }
     }
 }

@@ -1,7 +1,7 @@
 use serde_json::json;
 
 use super::World;
-use crate::prelude::Axial;
+use crate::{indices::WorldPosition, prelude::Axial};
 use std::collections::HashMap;
 
 fn pos_to_string(pos: Axial) -> String {
@@ -23,11 +23,22 @@ pub fn json_serialize_resources(world: &World) -> serde_json::Value {
 }
 
 pub fn json_serialize_terrain(world: &World) -> serde_json::Value {
-    let terrain = world
-        .positions
-        .point_terrain
-        .iter()
-        .map(|(pos, terrain)| (pos_to_string(pos.room), (pos.pos, terrain)))
+    let terrain = &world.positions.point_terrain;
+    let terrain = terrain
+        .iter_rooms()
+        .flat_map(|(room_id, room)| {
+            room.iter()
+                .map(move |(pos, t)| {
+                    (
+                        WorldPosition {
+                            room: room_id.0,
+                            pos,
+                        },
+                        t,
+                    )
+                })
+                .map(|(pos, terrain)| (pos_to_string(pos.room), (pos.pos, terrain)))
+        })
         .fold(HashMap::new(), |mut map, (room, payload)| {
             map.entry(room).or_insert_with(Vec::new).push(payload);
             map

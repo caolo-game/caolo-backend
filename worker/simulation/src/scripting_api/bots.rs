@@ -464,9 +464,13 @@ mod tests {
                 WorldPosition, EntityComponent,
                     .extend_rooms([Room(from.room),Room(Axial::new(0,1)), Room(to.room)].iter().cloned())
                     .expect("Failed to add rooms");
+
+
                 WorldPosition, TerrainComponent,
                     .extend_rooms([Room(from.room),Room(Axial::new(0,1)), Room(to.room)].iter().cloned())
                     .expect("Failed to add rooms");
+                WorldPosition, TerrainComponent,
+                    .iter_rooms_mut().for_each(|(_, room)|room.resize(3));
                 WorldPosition, TerrainComponent,
                     .extend_from_slice(&mut [
                         ( from, TerrainComponent(TileTerrainType::Bridge) ),

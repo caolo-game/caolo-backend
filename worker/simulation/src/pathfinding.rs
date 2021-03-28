@@ -551,29 +551,35 @@ pub fn mirrored_room_position(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tables::morton::MortonTable;
+    use crate::{prelude::Hexagon, tables::morton::MortonTable};
+    use crate::tables::morton_hierarchy::SpacialStorage;
+    use crate::tables::square_grid::HexGrid;
     use crate::terrain::TileTerrainType;
     use slog::{o, Drain};
 
     #[test]
     fn test_simple_wall() {
-        let from = Axial::new(0, 2);
+        let from = Axial::new(2, 1);
         let to = Axial::new(5, 2);
 
         let logger = slog::Logger::root(slog_stdlog::StdLog.fuse(), o!());
         let positions = MortonTable::new();
-        let terrain = MortonTable::from_iterator((0..25).flat_map(|x| {
-            (0..25).map(move |y| {
-                let ty = if x == 3 && y <= 5 {
-                    TileTerrainType::Wall
-                } else {
-                    TileTerrainType::Plain
-                };
+        let mut terrain = HexGrid::new(3);
+        terrain
+            .extend(
+                Hexagon::from_radius(3)
+                    .iter_points()
+                    .map(|Axial { q: x, r: y }| {
+                        let ty = if x == 3 && y <= 4 {
+                            TileTerrainType::Wall
+                        } else {
+                            TileTerrainType::Plain
+                        };
 
-                (Axial::new(x, y), TerrainComponent(ty))
-            })
-        }))
-        .unwrap();
+                        (Axial::new(x, y), TerrainComponent(ty))
+                    }),
+            )
+            .unwrap();
 
         let mut path = vec![];
         find_path_in_room(
@@ -592,7 +598,7 @@ mod tests {
             let point = point.0;
             assert_eq!(point.hex_distance(current), 1);
             if point.q == 3 {
-                assert!(point.r > 5, "{:?}", point);
+                assert!(point.r > 4, "{:?}", point);
             }
             current = point;
         }
@@ -605,15 +611,11 @@ mod tests {
         let to = Axial::new(7, 16);
 
         let positions = MortonTable::new();
-        let mut terrain = MortonTable::new();
+        let mut terrain = HexGrid::new(12);
 
-        for x in 0..25 {
-            for y in 0..25 {
-                terrain
-                    .insert(Axial::new(x, y), TerrainComponent(TileTerrainType::Plain))
-                    .unwrap();
-            }
-        }
+        terrain.iter_mut().for_each(|(_, t)| {
+            *t = TerrainComponent(TileTerrainType::Plain);
+        });
 
         let mut path = vec![];
         let logger = slog::Logger::root(slog_stdlog::StdLog.fuse(), o!());

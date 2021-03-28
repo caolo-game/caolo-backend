@@ -1,7 +1,9 @@
 use crate::geometry::Axial;
 use crate::indices::ConfigKey;
 use crate::indices::WorldPosition;
-use crate::tables::{morton::MortonTable, unique::UniqueTable, Component, MortonMortonTable};
+use crate::tables::{
+    morton::MortonTable, square_grid::HexGrid, unique::UniqueTable, Component, MortonGridTable,
+};
 use crate::terrain::TileTerrainType;
 use serde::{Deserialize, Serialize};
 
@@ -29,10 +31,10 @@ impl Component<Axial> for RoomConnections {
 #[serde(rename_all = "camelCase")]
 pub struct TerrainComponent(pub TileTerrainType);
 impl Component<WorldPosition> for TerrainComponent {
-    type Table = MortonMortonTable<Self>;
+    type Table = MortonGridTable<Self>;
 }
 impl Component<Axial> for TerrainComponent {
-    type Table = MortonTable<Self>;
+    type Table = HexGrid<Self>;
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

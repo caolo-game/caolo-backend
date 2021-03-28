@@ -1,6 +1,5 @@
 use super::GradientMap;
 use crate::geometry::Axial;
-use crate::tables::Table;
 use rand::Rng;
 use slog::{debug, Logger};
 
@@ -18,10 +17,9 @@ pub fn create_noise(
 
     // init corners
     for edge in [from, Axial::new(to.q, from.r), Axial::new(from.q, to.r), to].iter() {
-        gradient.delete(*edge);
         gradient
             .insert(*edge, fheight(&gradient, from, 16, 0.0))
-            .unwrap();
+            .unwrap_or_default(); // don't care about failures
     }
 
     let mut d = dsides / 2;
@@ -83,7 +81,7 @@ pub fn square(
     }
 
     let grad = fheight(&gradient, p, radius, sum / num as f32);
-    gradient.update(p, grad);
+    gradient.insert(p, grad).unwrap_or_default();
     grad
 }
 
@@ -113,6 +111,6 @@ pub fn diamond(
     }
 
     let grad = fheight(&gradient, p, radius, sum / num as f32);
-    gradient.update(p, grad);
+    gradient.insert(p, grad).unwrap_or_default(); // don't care about failures (?)
     grad
 }

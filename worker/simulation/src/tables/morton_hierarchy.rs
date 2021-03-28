@@ -1,4 +1,5 @@
 use super::morton::{MortonKey, MortonTable};
+use super::square_grid::HexGrid;
 use super::*;
 use crate::geometry::Axial;
 use crate::indices::{Room, WorldPosition};
@@ -20,6 +21,7 @@ pub enum ExtendFailure {
 }
 
 pub type MortonMortonTable<T> = RoomMortonTable<MortonTable<T>, T>;
+pub type MortonGridTable<T> = RoomMortonTable<HexGrid<T>, T>;
 
 pub trait SpacialStorage<Row: TableRow>:
     Table<Id = Axial, Row = Row> + Clone + std::fmt::Debug + 'static + Default
@@ -75,15 +77,14 @@ where
         self.len() == 0
     }
 
-    // pub fn iter(&self) -> impl Iterator<Item = (WorldPosition, &Row)> {
-    //     self.table.iter().flat_map(|(room, t)| {
-    //         t.iter()
-    //             .map(move |(pos, value)| (WorldPosition { room, pos }, value))
-    //     })
-    // }
-
     pub fn iter_rooms(&self) -> impl Iterator<Item = (Room, &InnerTable)> {
         self.table.iter().map(|(room, table)| (Room(room), table))
+    }
+
+    pub fn iter_rooms_mut(&mut self) -> impl Iterator<Item = (Room, &mut InnerTable)> {
+        self.table
+            .iter_mut()
+            .map(|(room, table)| (Room(room), table))
     }
 
     /// Shallow clear,

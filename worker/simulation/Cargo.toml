@@ -40,7 +40,7 @@ async-std = { version = "1", optional = true }
 
 [dev-dependencies]
 async-std = { version = "*", features = ["attributes"] }
-criterion = "0.3"
+criterion = { version = "0.3", features = ["html_reports"] }
 serde_yaml = "*"
 # env_logger needs to be compiled without default features so the test suite can capture the logs
 env_logger = { version = "0.7", default-features = false }

@@ -658,3 +658,35 @@ where
         MortonTable::at(self, id)
     }
 }
+
+impl<Row> SpacialStorage<Row> for MortonTable<Row>
+where
+    Row: TableRow,
+{
+    type ExtendFailure = ExtendFailure;
+    fn clear(&mut self) {
+        MortonTable::clear(self);
+    }
+
+    fn contains_key(&self, pos: Axial) -> bool {
+        MortonTable::contains_key(self, pos)
+    }
+
+    fn insert(&mut self, id: Axial, row: Row) -> Result<(), Self::ExtendFailure> {
+        MortonTable::insert(self, id, row)
+    }
+
+    fn extend<It>(&mut self, it: It) -> Result<(), Self::ExtendFailure>
+    where
+        It: Iterator<Item = (Axial, Row)>,
+    {
+        MortonTable::extend(self, it)
+    }
+
+    fn at(&self, pos: Axial) -> Option<&Row> {
+        MortonTable::at(self, pos)
+    }
+    fn at_mut(&mut self, pos: Axial) -> Option<&mut Row> {
+        MortonTable::at_mut(self, pos)
+    }
+}

@@ -297,8 +297,8 @@ fn uncontested_pos<T: crate::tables::TableRow + Send + Sync>(
     logger: &Logger,
     room: Room,
     bounds: &Hexagon,
-    positions_table: &crate::tables::morton_hierarchy::RoomMortonTable<T>,
-    terrain_table: &crate::tables::morton_hierarchy::RoomMortonTable<TerrainComponent>,
+    positions_table: &crate::tables::morton_hierarchy::MortonMortonTable<T>,
+    terrain_table: &<TerrainComponent as Component<WorldPosition>>::Table,
     rng: &mut impl Rng,
 ) -> WorldPosition {
     const TRIES: usize = 10_000;

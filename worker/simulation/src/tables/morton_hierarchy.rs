@@ -1,10 +1,10 @@
 use super::morton::{MortonKey, MortonTable};
 use super::*;
 use crate::geometry::Axial;
-use rayon::prelude::*;
 use crate::indices::{Room, WorldPosition};
+use rayon::prelude::*;
 use serde_derive::{Deserialize, Serialize};
-use std::convert::TryFrom;
+use std::{convert::TryFrom, marker::PhantomData};
 use thiserror::Error;
 
 #[derive(Debug, Clone, Error)]
@@ -16,33 +16,54 @@ pub enum ExtendFailure {
     #[error("Room {0:?} does not exist")]
     RoomNotExists(Axial),
     #[error("Extending room {room:?} failed with error {error}")]
-    InnerExtendFailure {
-        room: Axial,
-        error: super::morton::ExtendFailure,
-    },
+    InnerExtendFailure { room: Axial, error: String },
 }
 
+pub type MortonMortonTable<T> = RoomMortonTable<MortonTable<T>, T>;
+
+pub trait SpacialStorage<Row: TableRow>:
+    Table<Id = Axial, Row = Row> + Clone + std::fmt::Debug + 'static + Default
+{
+    type ExtendFailure: std::fmt::Display;
+
+    fn clear(&mut self);
+    fn contains_key(&self, pos: Axial) -> bool;
+    fn at(&self, pos: Axial) -> Option<&Row>;
+    fn at_mut(&mut self, pos: Axial) -> Option<&mut Row>;
+    fn insert(&mut self, id: Axial, row: Row) -> Result<(), Self::ExtendFailure>;
+    fn extend<It>(&mut self, it: It) -> Result<(), Self::ExtendFailure>
+    where
+        It: Iterator<Item = (Axial, Row)>;
+}
+
+/// Holds an inner morton_table that holds other spacial data structures for hierarchycal spacial
+/// storage
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
-pub struct RoomMortonTable<Row>
+pub struct RoomMortonTable<InnerTable, Row>
 where
+    InnerTable: SpacialStorage<Row>,
     Row: TableRow,
 {
-    pub table: MortonTable<MortonTable<Row>>,
+    pub table: MortonTable<InnerTable>,
+    _m: PhantomData<Row>,
 }
 
-impl<Row> RoomMortonTable<Row>
+impl<InnerTable, Row> RoomMortonTable<InnerTable, Row>
 where
+    InnerTable: SpacialStorage<Row>,
     Row: TableRow,
 {
     pub fn new() -> Self {
         Self {
             table: MortonTable::new(),
+            _m: Default::default(),
         }
     }
 
     pub fn with_capacity(cap: usize) -> Self {
         Self {
             table: MortonTable::with_capacity(cap),
+            _m: Default::default(),
         }
     }
 
@@ -54,14 +75,14 @@ where
         self.len() == 0
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (WorldPosition, &Row)> {
-        self.table.iter().flat_map(|(room, t)| {
-            t.iter()
-                .map(move |(pos, value)| (WorldPosition { room, pos }, value))
-        })
-    }
+    // pub fn iter(&self) -> impl Iterator<Item = (WorldPosition, &Row)> {
+    //     self.table.iter().flat_map(|(room, t)| {
+    //         t.iter()
+    //             .map(move |(pos, value)| (WorldPosition { room, pos }, value))
+    //     })
+    // }
 
-    pub fn iter_rooms(&self) -> impl Iterator<Item = (Room, &MortonTable<Row>)> {
+    pub fn iter_rooms(&self) -> impl Iterator<Item = (Room, &InnerTable)> {
         self.table.iter().map(|(room, table)| (Room(room), table))
     }
 
@@ -94,14 +115,14 @@ where
         let mut room = self.table.at_mut(id.room);
         if room.is_none() {
             self.table
-                .insert(id.room, MortonTable::new())
+                .insert(id.room, InnerTable::default())
                 .map_err(ExtendFailure::RoomExtendFailure)?;
             room = self.table.at_mut(id.room);
         }
         room.unwrap()
             .insert(id.pos, val)
             .map_err(|error| ExtendFailure::InnerExtendFailure {
-                error,
+                error: error.to_string(),
                 room: id.room,
             })
     }
@@ -132,8 +153,8 @@ where
         values: &mut [(WorldPosition, Row)],
     ) -> Result<(), ExtendFailure>
     where
-        MortonTable<Row>: Send,
-        Row: Sync
+        InnerTable: Send,
+        Row: Sync,
     {
         {
             // produce a key list from the rooms of the values
@@ -188,7 +209,7 @@ where
                 )
                 .map_err(|error| ExtendFailure::InnerExtendFailure {
                     room: room_id,
-                    error,
+                    error: error.to_string(),
                 })
             })?;
 
@@ -259,8 +280,9 @@ impl<'a, Row> GroupByRooms<'a, Row> {
     }
 }
 
-impl<Row> Table for RoomMortonTable<Row>
+impl<InnerTable, Row> Table for RoomMortonTable<InnerTable, Row>
 where
+    InnerTable: SpacialStorage<Row>,
     Row: TableRow,
 {
     type Id = WorldPosition;
@@ -275,6 +297,25 @@ where
 
     fn get_by_id(&self, id: Self::Id) -> Option<&Row> {
         RoomMortonTable::get_by_id(self, id)
+    }
+}
+
+impl<Row> MortonMortonTable<Row>
+where
+    Row: TableRow,
+{
+    pub fn iter(&self) -> impl Iterator<Item = (WorldPosition, &Row)> {
+        self.iter_rooms().flat_map(|(room_id, room)| {
+            room.iter().map(move |(pos, item)| {
+                (
+                    WorldPosition {
+                        room: room_id.0,
+                        pos,
+                    },
+                    item,
+                )
+            })
+        })
     }
 }
 
@@ -329,7 +370,7 @@ mod tests {
             ),
         ];
 
-        let mut table = RoomMortonTable::new();
+        let mut table = MortonMortonTable::new();
         table
             .extend_rooms(
                 [Axial::new(69, 69), Axial::new(42, 69)]

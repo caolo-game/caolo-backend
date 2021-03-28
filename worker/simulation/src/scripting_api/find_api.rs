@@ -219,7 +219,17 @@ mod tests {
         }
 
         // make every one of these a resource
-        for (_, entity_id) in position_entities.iter() {
+        for (_, entity_id) in position_entities.iter_rooms().flat_map(|(room_id, room)| {
+            room.iter().map(move |(pos, item)| {
+                (
+                    WorldPosition {
+                        room: room_id.0,
+                        pos,
+                    },
+                    item,
+                )
+            })
+        }) {
             storage
                 .unsafe_view::<EntityId, components::ResourceComponent>()
                 .insert_or_update(

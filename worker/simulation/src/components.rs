@@ -12,7 +12,7 @@ use crate::{
     prelude::Axial,
     tables::{
         btree::BTreeTable, dense::DenseVecTable, flag::SparseFlagTable, morton::MortonTable,
-        Component, RoomMortonTable, TableId,
+        Component, MortonMortonTable, TableId,
     },
 };
 use cao_lang::{prelude::CaoProgram, vm::HistoryEntry};
@@ -40,7 +40,7 @@ impl Component<Axial> for EntityComponent {
     type Table = MortonTable<Self>;
 }
 impl Component<WorldPosition> for EntityComponent {
-    type Table = RoomMortonTable<Self>;
+    type Table = MortonMortonTable<Self>;
 }
 
 /// Has a body so it's not `null` when serializing

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { promisified } from "tauri/api/tauri";
 
 async function generateWorld({ world_radius, room_radius }) {
+    // list of json serialized rooms
     const res = await promisified({
         cmd: "generateWorld",
         world_radius,

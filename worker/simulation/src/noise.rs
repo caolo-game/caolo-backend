@@ -37,33 +37,33 @@ pub fn perlin(x: f32, y: f32, z: f32) -> f32 {
     let bb = P[b as usize + 1] + z0;
 
     interpolate(
-        w,
         interpolate(
             v,
             interpolate(
-                u,
                 grad(P[aa as usize], x, y, z),
                 grad(P[ba as usize], x - 1.0, y, z),
+                u,
             ),
             interpolate(
-                u,
                 grad(P[ab as usize], x, y - 1.0, z),
                 grad(P[bb as usize], x - 1.0, y - 1.0, z),
+                u,
             ),
         ),
         interpolate(
-            v,
             interpolate(
-                u,
                 grad(P[aa as usize + 1], x, y, z - 1.0),
                 grad(P[ba as usize + 1], x - 1.0, y, z - 1.0),
+                u,
             ),
             interpolate(
-                u,
                 grad(P[ab as usize + 1], x, y - 1.0, z - 1.0),
                 grad(P[bb as usize + 1], x - 1.0, y - 1.0, z - 1.0),
+                u,
             ),
+            v,
         ),
+        w,
     )
 }
 

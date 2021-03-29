@@ -22,3 +22,4 @@ google_secret
 
 /simulation/Cargo.lock
 /web/web/protos
+/worker/debug/out

@@ -390,6 +390,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "631ae5198c9be5e753e5cc215e1bd73c2b466a3565173db433f52bb9d3e66dba"
 
 [[package]]
+name = "cao-debug"
+version = "0.1.0"
+dependencies = [
+ "caolo-sim",
+ "slog",
+ "slog-async",
+ "slog-envlogger",
+ "slog-term",
+ "svg",
+]
+
+[[package]]
 name = "cao-lang"
 version = "0.1.14"
 source = "git+https://github.com/caolo-game/cao-lang.git#9b0c91ca9cdbc3a635af228b9b5677904f41de4c"
@@ -2780,6 +2792,12 @@ name = "subtle"
 version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1e81da0851ada1f3e9d4312c704aa4f8806f0f9d69faaf8df2f3464b4a9437c2"
+
+[[package]]
+name = "svg"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a95656b5b37251de210aa2751d538b6f31ce375bacf725a32223bfa6344e0776"
 
 [[package]]
 name = "syn"

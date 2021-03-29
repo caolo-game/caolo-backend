@@ -25,7 +25,7 @@ impl Component<Axial> for RoomConnections {
     type Table = MortonTable<Self>;
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, Default, Copy)]
 #[serde(rename_all = "camelCase")]
 pub struct TerrainComponent(pub TileTerrainType);
 impl Component<WorldPosition> for TerrainComponent {

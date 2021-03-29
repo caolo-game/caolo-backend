@@ -1,5 +1,5 @@
 [workspace]
-members = ["cao-storage-derive", "simulation", "worker"]
+members = ["cao-storage-derive", "simulation", "worker", "debug"]
 
 [profile.release]
 lto = true

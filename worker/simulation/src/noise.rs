@@ -3,59 +3,65 @@ use crate::indices::WorldPosition;
 pub fn world_perlin(pos: WorldPosition, room_size: f32) -> f32 {
     let WorldPosition { room, pos } = pos;
 
+    let [_, _, z] = pos.hex_axial_to_cube();
+    let z = z as f32;
+
     let [x, y] = pos.to_pixel_pointy(2.0);
     let [rx, ry] = room.to_pixel_pointy(room_size * 4.0);
 
     let [x, y] = [rx + x, ry + y];
 
-    perlin(x, y)
+    perlin(x, y, z)
 }
 
-pub fn perlin(x: f32, y: f32) -> f32 {
+pub fn perlin(x: f32, y: f32, z: f32) -> f32 {
     use self::perlin::*;
 
     let x0 = x as i32 & 255;
     let y0 = y as i32 & 255;
+    let z0 = z as i32 & 255;
 
     let x = x.fract();
     let y = y.fract();
+    let z = z.fract();
 
     let u = fade(x);
     let v = fade(y);
+    let w = fade(z);
 
     let a = P[x0 as usize] + y0;
-    let aa = P[a as usize];
-    let ab = P[a as usize + 1];
+    let aa = P[a as usize] + z0;
+    let ab = P[a as usize + 1] + z0;
     let b = P[x0 as usize + 1] + y0;
-    let ba = P[b as usize];
-    let bb = P[b as usize + 1];
+    let ba = P[b as usize] + z0;
+    let bb = P[b as usize + 1] + z0;
 
     interpolate(
-        0.0,
+        w,
         interpolate(
             v,
             interpolate(
                 u,
-                grad(P[aa as usize], x, y),
-                grad(P[ba as usize], x - 1.0, y),
+                grad(P[aa as usize], x, y, z),
+                grad(P[ba as usize], x - 1.0, y, z),
             ),
             interpolate(
                 u,
-                grad(P[ab as usize], x, y - 1.0),
-                grad(P[bb as usize], x - 1.0, y - 1.0),
+                grad(P[ab as usize], x, y - 1.0, z),
+                grad(P[bb as usize], x - 1.0, y - 1.0, z),
             ),
         ),
         interpolate(
             v,
             interpolate(
                 u,
-                grad(P[aa as usize + 1], x, y),
-                grad(P[ba as usize + 1], x - 1.0, y),
+                grad(P[aa as usize + 1], x, y, z - 1.0),
+                grad(P[ba as usize + 1], x - 1.0, y, z - 1.0),
             ),
             interpolate(
                 u,
-                grad(P[ab as usize + 1], x, y - 1.0),
-                grad(P[bb as usize + 1], x - 1.0, y - 1.0),
+                grad(P[ab as usize + 1], x, y - 1.0, z - 1.0),
+                grad(P[bb as usize + 1], x - 1.0, y - 1.0, z - 1.0),
             ),
         ),
     )
@@ -91,7 +97,7 @@ mod perlin {
         138, 236, 205, 93, 222, 114, 67, 29, 24, 72, 243, 141, 128, 195, 78, 66, 215, 61, 156, 180,
     ];
 
-    pub fn grad(hash: i32, x: f32, y: f32) -> f32 {
+    pub fn grad(hash: i32, x: f32, y: f32, z: f32) -> f32 {
         let h = hash & 15;
         let u = if h < 8 { x } else { y };
         let v = if h < 4 {
@@ -99,7 +105,7 @@ mod perlin {
         } else if h == 12 || h == 14 {
             x
         } else {
-            0.0
+            z
         };
 
         let a = if h & 1 == 0 { u } else { -u };

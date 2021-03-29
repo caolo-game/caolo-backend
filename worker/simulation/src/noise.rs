@@ -6,8 +6,8 @@ pub fn world_perlin(pos: WorldPosition, room_size: f32) -> f32 {
     let [_, _, z] = pos.hex_axial_to_cube();
     let z = z as f32;
 
-    let [x, y] = pos.to_pixel_pointy(2.0);
-    let [rx, ry] = room.to_pixel_pointy(room_size * 4.0);
+    let [x, y] = pos.to_pixel_pointy(4.0);
+    let [rx, ry] = room.to_pixel_pointy(room_size * 8.0);
 
     let [x, y] = [rx + x, ry + y];
 
@@ -68,6 +68,32 @@ pub fn perlin(x: f32, y: f32, z: f32) -> f32 {
 }
 
 mod perlin {
+
+    pub fn grad(hash: i32, x: f32, y: f32, z: f32) -> f32 {
+        let h = hash & 15;
+        let u = if h < 8 { x } else { y };
+        let v = if h < 4 {
+            y
+        } else if h == 12 || h == 14 {
+            x
+        } else {
+            z
+        };
+
+        let a = if h & 1 == 0 { u } else { -u };
+        let b = if h & 2 == 0 { v } else { -v };
+
+        a + b
+    }
+
+    pub fn interpolate(a0: f32, a1: f32, w: f32) -> f32 {
+        (a1 - a0) * w + a0
+    }
+
+    pub fn fade(t: f32) -> f32 {
+        t * t * t * (t * (t * 6.0 - 15.0) + 10.0)
+    }
+
     pub static P: [i32; 512] = [
         151, 160, 137, 91, 90, 15, 131, 13, 201, 95, 96, 53, 194, 233, 7, 225, 140, 36, 103, 30,
         69, 142, 8, 99, 37, 240, 21, 10, 23, 190, 6, 148, 247, 120, 234, 75, 0, 26, 197, 62, 94,
@@ -96,29 +122,4 @@ mod perlin {
         192, 214, 31, 181, 199, 106, 157, 184, 84, 204, 176, 115, 121, 50, 45, 127, 4, 150, 254,
         138, 236, 205, 93, 222, 114, 67, 29, 24, 72, 243, 141, 128, 195, 78, 66, 215, 61, 156, 180,
     ];
-
-    pub fn grad(hash: i32, x: f32, y: f32, z: f32) -> f32 {
-        let h = hash & 15;
-        let u = if h < 8 { x } else { y };
-        let v = if h < 4 {
-            y
-        } else if h == 12 || h == 14 {
-            x
-        } else {
-            z
-        };
-
-        let a = if h & 1 == 0 { u } else { -u };
-        let b = if h & 2 == 0 { v } else { -v };
-
-        a + b
-    }
-
-    pub fn interpolate(a0: f32, a1: f32, w: f32) -> f32 {
-        (a1 - a0) * w + a0
-    }
-
-    pub fn fade(t: f32) -> f32 {
-        t * t * t * (t * (t * 6.0 - 15.0) + 10.0)
-    }
 }

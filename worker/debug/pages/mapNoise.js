@@ -19,11 +19,11 @@ export default function MapNoise() {
     const [noise, setNoise] = useState(null);
     const [loading, setLoading] = useState(false);
 
-    const [q, setQ] = useState(1);
-    const [r, setR] = useState(1);
+    const [roomId, setRoomId] = useState([15, 16]);
     const [size, setSize] = useState(25);
 
     useEffect(() => {
+        const [q, r] = roomId;
         setLoading(true);
         generateNoise({
             room: { q, r },
@@ -34,32 +34,41 @@ export default function MapNoise() {
                 setLoading(false);
             })
             .catch(console.error);
-    }, [setNoise, setLoading, q, r, size]);
+    }, [setNoise, setLoading, roomId, size]);
 
     return (
         <>
             <Header />
             <main>
-                    <form onSubmit={(e) => e.preventDefault()}>
-                        <input
-                            type="number"
-                            onChange={(e) => setQ(parseInt(e.target.value))}
-                            value={q}
-                            disabled={loading}
-                        />
-                        <input
-                            type="number"
-                            onChange={(e) => setR(parseInt(e.target.value))}
-                            value={r}
-                            disabled={loading}
-                        />
+                <form
+                    onSubmit={(e) => {
+                        e.preventDefault();
+                        let t = Math.random();
+                        let q = 1225 * t;
+                        t = Math.random();
+                        let r = 1225 * t;
+
+                        q = Math.floor(q);
+                        r = Math.floor(r);
+
+                        setRoomId([q, r]);
+                    }}
+                >
+                    <div>
+                        <span> Size</span>
                         <input
                             type="number"
                             onChange={(e) => setSize(parseInt(e.target.value))}
                             value={size}
-                            disabled={loading}
                         />
-                    </form>
+                    </div>
+                    <div>
+                        <input type="submit" value="Random room" />
+                    </div>
+                </form>
+                <div>
+                    RoomId: {roomId[0]} {roomId[1]}
+                </div>
                 <div
                     style={{ maxWidth: "50%" }}
                     dangerouslySetInnerHTML={{ __html: noise }}

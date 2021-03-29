@@ -1,5 +1,5 @@
 // TODO rename module to hex_grid
-use std::convert::TryInto;
+use std::{convert::TryInto, ops::Index, ops::IndexMut};
 
 use crate::{geometry::Axial, prelude::Hexagon};
 
@@ -172,6 +172,22 @@ impl<T> HexGrid<T> {
             // SAFETY
             // no, this isn't safe at all, I'm guessing
             .map(move |p| (p, unsafe { std::mem::transmute(self.get_unchecked_mut(p)) }))
+    }
+}
+
+impl<T> Index<Axial> for HexGrid<T> {
+    type Output = T;
+
+    fn index(&self, pos: Axial) -> &Self::Output {
+        assert!(self.bounds.contains(pos));
+        unsafe { self.get_unchecked(pos) }
+    }
+}
+
+impl<T> IndexMut<Axial> for HexGrid<T> {
+    fn index_mut(&mut self, pos: Axial) -> &mut Self::Output {
+        assert!(self.bounds.contains(pos));
+        unsafe { self.get_unchecked_mut(pos) }
     }
 }
 

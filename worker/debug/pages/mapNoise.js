@@ -18,42 +18,48 @@ async function generateNoise({ room, roomSize }) {
 export default function MapNoise() {
     const [noise, setNoise] = useState(null);
     const [loading, setLoading] = useState(false);
+
     const [q, setQ] = useState(1);
     const [r, setR] = useState(1);
+    const [size, setSize] = useState(16);
 
     useEffect(() => {
         setLoading(true);
         generateNoise({
             room: { q, r },
-            roomSize: 16,
+            roomSize: size,
         })
             .then((res) => {
                 setNoise(res);
                 setLoading(false);
             })
             .catch(console.error);
-    }, [setNoise, setLoading, q, r]);
+    }, [setNoise, setLoading, q, r, size]);
 
     return (
         <>
             <Header />
             <main>
-                {loading ? (
-                    "loading..."
-                ) : (
                     <form onSubmit={(e) => e.preventDefault()}>
                         <input
                             type="number"
                             onChange={(e) => setQ(parseInt(e.target.value))}
                             value={q}
+                            disabled={loading}
                         />
                         <input
                             type="number"
                             onChange={(e) => setR(parseInt(e.target.value))}
                             value={r}
+                            disabled={loading}
+                        />
+                        <input
+                            type="number"
+                            onChange={(e) => setSize(parseInt(e.target.value))}
+                            value={size}
+                            disabled={loading}
                         />
                     </form>
-                )}
                 <div
                     style={{ maxWidth: "50%" }}
                     dangerouslySetInnerHTML={{ __html: noise }}

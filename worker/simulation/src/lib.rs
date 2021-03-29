@@ -8,6 +8,7 @@ pub mod geometry;
 pub mod indices;
 pub mod init;
 pub mod map_generation;
+pub mod noise;
 pub mod pathfinding;
 pub mod prelude;
 pub mod scripting_api;

@@ -21,13 +21,14 @@ fn main() {
 
     tauri::AppBuilder::new()
         .invoke_handler(move |_webview, arg| {
-            use cmd::Cmd::*;
+            use cmd::Cmd;
+
             match serde_json::from_str(arg) {
                 Err(e) => Err(e.to_string()),
                 Ok(command) => {
                     match command {
                         // definitions for your custom commands from Cmd here
-                        GenerateWorld {
+                        Cmd::GenerateWorld {
                             room_radius,
                             world_radius,
                             callback,
@@ -39,6 +40,24 @@ fn main() {
                                 move || {
                                     let w = generate_world(logger, world_radius, room_radius);
                                     Ok(w)
+                                },
+                                callback,
+                                error,
+                            )
+                        }
+                        Cmd::MapNoise {
+                            room,
+                            room_radius,
+                            callback,
+                            error,
+                        } => {
+                            use cmd::generate_room_noise;
+
+                            tauri::execute_promise(
+                                _webview,
+                                move || {
+                                    let res = generate_room_noise(room, room_radius);
+                                    Ok(res)
                                 },
                                 callback,
                                 error,

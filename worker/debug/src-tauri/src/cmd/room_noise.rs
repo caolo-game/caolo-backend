@@ -24,7 +24,7 @@ pub fn generate_room_noise_impl(room: Axial, room_radius: u32) -> String {
         let wp = WorldPosition { room, pos };
         (pos, world_perlin(wp, room_radius as f32) + 0.5)
     }) {
-        let value = (255.0 * noise) as i32;
+        let value = (220.0 * noise) as i32;
         let mut path = Path::new().set("fill", format!("rgba({},{},{},1)", value, value, value));
 
         let [x, y] = render_hex(&mut path, size, p);

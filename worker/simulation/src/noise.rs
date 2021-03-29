@@ -3,8 +3,8 @@ use crate::indices::WorldPosition;
 pub fn world_perlin(pos: WorldPosition, room_size: f32) -> f32 {
     let WorldPosition { room, pos } = pos;
 
-    let [x, y] = pos.to_pixel_pointy(1.0);
-    let [rx, ry] = room.to_pixel_pointy(room_size);
+    let [x, y] = pos.to_pixel_pointy(2.0);
+    let [rx, ry] = room.to_pixel_pointy(room_size * 4.0);
 
     let [x, y] = [rx + x, ry + y];
 

@@ -21,7 +21,7 @@ export default function MapNoise() {
 
     const [q, setQ] = useState(1);
     const [r, setR] = useState(1);
-    const [size, setSize] = useState(16);
+    const [size, setSize] = useState(25);
 
     useEffect(() => {
         setLoading(true);

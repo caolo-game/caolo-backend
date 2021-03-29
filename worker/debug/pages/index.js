@@ -13,43 +13,53 @@ async function generateWorld({ world_radius, room_radius }) {
 
 export default function Home() {
     const [rooms, setRooms] = useState([]);
-    const [selected, setSelectedRoom] = useState(null);
+    const [loading, setLoading] = useState(false);
     useEffect(() => {
+        setLoading(true);
         generateWorld({ room_radius: 16, world_radius: 1 })
             .then((res) => {
-                setSelectedRoom(0);
                 setRooms(res);
+                setLoading(false);
             })
             .catch(console.error);
-    }, [setRooms, setSelectedRoom]);
-
-    const room = rooms[selected];
-    console.log(room);
-
-    if (!room) {
-        return "loading...";
-    }
+    }, [setRooms, setLoading]);
 
     return (
         <div>
-            <button
-                onClick={() => {
-                    setRooms([]);
-                    generateWorld({ room_radius: 16, world_radius: 1 })
-                        .then((res) => {
-                            setSelectedRoom(0);
-                            setRooms(res);
-                        })
-                        .catch(console.error);
-                }}
-            >
-                Regenerate
-            </button>
+            {loading ? (
+                "loading..."
+            ) : (
+                <button
+                    onClick={() => {
+                        setLoading(true);
+                        generateWorld({ room_radius: 16, world_radius: 1 })
+                            .then((res) => {
+                                setRooms(res);
+                                setLoading(false);
+                            })
+                            .catch(console.error);
+                    }}
+                >
+                    Regenerate
+                </button>
+            )}
 
-            <h2>
-                Room: ({room.roomId.q}, {room.roomId.r})
-            </h2>
-            <div dangerouslySetInnerHTML={{ __html: room.payload }} />
+            {rooms.map((room, i) => {
+                return (
+                    <div key={i}>
+                        <h2>
+                            Room: ({room.roomId.q}, {room.roomId.r})
+                        </h2>
+                        <div
+                            style={{
+                                maxWidth: "50%",
+                                margin: "0 auto",
+                            }}
+                            dangerouslySetInnerHTML={{ __html: room.payload }}
+                        />
+                    </div>
+                );
+            })}
         </div>
     );
 }

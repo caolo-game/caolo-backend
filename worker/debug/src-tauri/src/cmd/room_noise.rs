@@ -40,7 +40,7 @@ pub fn generate_room_noise_impl(room: Axial, room_radius: u32) -> String {
         "viewBox",
         (
             minx + width as i32 - 1,
-            miny + height as i32 - 1,
+            miny - height as i32 - 1,
             maxx + width as i32 + 1,
             maxy + height as i32 + 1,
         ),

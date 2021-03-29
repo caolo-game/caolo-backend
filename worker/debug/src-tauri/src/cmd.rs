@@ -1,11 +1,23 @@
 use caolo_sim::prelude::*;
-use slog::{o, Drain};
-use svg::{
-    node::element::{path::Data, Path},
-    Document,
-};
+use serde::Deserialize;
+use svg::node::element::path::Data;
+use svg::node::element::Path;
+use svg::Document;
 
-fn render_room(it: impl Iterator<Item = (Axial, TerrainComponent)>) -> svg::Document {
+#[derive(Deserialize)]
+#[serde(tag = "cmd", rename_all = "camelCase")]
+pub enum Cmd {
+    // your custom commands
+    // multiple arguments are allowed
+    GenerateWorld {
+        room_radius: u32,
+        world_radius: u32,
+        callback: String,
+        error: String,
+    },
+}
+
+fn render_room(it: impl Iterator<Item = (Axial, TerrainComponent)>) -> Document {
     let mut document = Document::new().set("viewBox", (0, 0, 2000, 2000));
     for (p, t) in it {
         let path = match t.0 {
@@ -41,31 +53,35 @@ fn render_room(it: impl Iterator<Item = (Axial, TerrainComponent)>) -> svg::Docu
     document
 }
 
-fn main() {
-    let decorator = slog_term::TermDecorator::new().build();
-    let drain = slog_term::FullFormat::new(decorator).build().fuse();
-    let drain = slog_envlogger::new(drain).fuse();
-    let drain = slog_async::Async::new(drain)
-        .overflow_strategy(slog_async::OverflowStrategy::Drop)
-        .build()
-        .fuse();
-    let logger = slog::Logger::root(drain, o!());
-
+pub fn generate_world(logger: slog::Logger, world_radius: u32, room_radius: u32) -> Vec<String> {
     let mut exc = SimpleExecutor;
     let world = exc
         .initialize(
             Some(logger.clone()),
             GameConfig {
-                world_radius: 1,
-                room_radius: 16,
+                world_radius,
+                room_radius,
                 ..Default::default()
             },
         )
         .unwrap();
 
-    for (room_id, room) in View::<WorldPosition, TerrainComponent>::new(&world).iter_rooms() {
-        let doc = render_room(room.iter().map(|(p, t)| (p, *t)));
-        let name = format!("out/room-{}-{}.svg", room_id.0.q, room_id.0.r);
-        svg::save(name, &doc).unwrap();
-    }
+    View::<WorldPosition, TerrainComponent>::new(&world)
+        .iter_rooms()
+        .map(|(Room(room_id), room)| {
+            let doc = render_room(room.iter().map(|(p, t)| (p, *t)));
+            let res = WorldResponse {
+                room_id,
+                payload: doc.to_string(),
+            };
+            serde_json::to_string(&res).unwrap()
+        })
+        .collect()
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct WorldResponse {
+    pub room_id: Axial,
+    pub payload: String,
 }

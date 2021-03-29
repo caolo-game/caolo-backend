@@ -11,14 +11,14 @@ pub fn world_perlin(pos: WorldPosition, room_size: f32) -> f32 {
     perlin(x, y)
 }
 
-pub fn perlin(mut x: f32, mut y: f32) -> f32 {
+pub fn perlin(x: f32, y: f32) -> f32 {
     use self::perlin::*;
 
     let x0 = x as i32 & 255;
     let y0 = y as i32 & 255;
 
-    x -= x.floor();
-    y -= y.floor();
+    let x = x.fract();
+    let y = y.fract();
 
     let u = fade(x);
     let v = fade(y);

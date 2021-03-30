@@ -3,11 +3,12 @@ import { promisified } from "tauri/api/tauri";
 
 import Header from "../components/Header";
 
-async function generateNoise({ room, roomSize }) {
+async function generateNoise({ room, roomSize, seed }) {
     const res = await promisified({
         cmd: "mapNoise",
         room,
         room_radius: roomSize,
+        seed,
     });
 
     console.log("win", res);
@@ -18,8 +19,9 @@ async function generateNoise({ room, roomSize }) {
 export default function MapNoise() {
     const [noise, setNoise] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [seed, setSeed] = useState(null);
 
-    const [roomId, setRoomId] = useState([15, 16]);
+    const [roomId, _] = useState([15, 16]);
     const [size, setSize] = useState(25);
 
     useEffect(() => {
@@ -28,13 +30,14 @@ export default function MapNoise() {
         generateNoise({
             room: { q, r },
             roomSize: size,
+            seed,
         })
             .then((res) => {
                 setNoise(res);
                 setLoading(false);
             })
             .catch(console.error);
-    }, [setNoise, setLoading, roomId, size]);
+    }, [setNoise, setLoading, roomId, seed, size]);
 
     return (
         <>
@@ -43,19 +46,13 @@ export default function MapNoise() {
                 <form
                     onSubmit={(e) => {
                         e.preventDefault();
-                        let t = Math.random();
-                        let q = 1225 * t;
-                        t = Math.random();
-                        let r = 1225 * t;
 
-                        q = Math.floor(q);
-                        r = Math.floor(r);
-
-                        setRoomId([q, r]);
+                        let seed = Math.floor(Math.random() * 1000000);
+                        setSeed(seed);
                     }}
                 >
                     <div>
-                        <span> Size</span>
+                        <span>Size: </span>
                         <input
                             type="number"
                             onChange={(e) => setSize(parseInt(e.target.value))}
@@ -63,7 +60,15 @@ export default function MapNoise() {
                         />
                     </div>
                     <div>
-                        <input type="submit" value="Random room" />
+                        <span>Seed: </span>
+                        {seed}
+                    </div>
+                    <div>
+                        <input
+                            type="submit"
+                            value="Random room"
+                            disabled={loading}
+                        />
                     </div>
                 </form>
                 <div>

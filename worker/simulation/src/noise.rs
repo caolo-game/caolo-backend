@@ -1,70 +1,112 @@
 use crate::indices::WorldPosition;
 
-pub fn world_perlin(pos: WorldPosition, room_size: f32) -> f32 {
-    let WorldPosition { room, pos } = pos;
+use rand::{prelude::SliceRandom, rngs::SmallRng, SeedableRng};
 
-    let [_, _, z] = pos.hex_axial_to_cube();
-    let z = z as f32;
-
-    let [x, y] = pos.to_pixel_pointy(4.0);
-    let [rx, ry] = room.to_pixel_pointy(room_size * 8.0);
-
-    let [x, y] = [rx + x, ry + y];
-
-    perlin(x, y, z)
+pub struct PerlinNoise {
+    seed: u64,
+    permutations: Box<[i32; 512]>,
 }
 
-pub fn perlin(x: f32, y: f32, z: f32) -> f32 {
-    use self::perlin::*;
+impl PerlinNoise {
+    pub fn seed(&self) -> u64 {
+        self.seed
+    }
 
-    let x0 = x as i32 & 255;
-    let y0 = y as i32 & 255;
-    let z0 = z as i32 & 255;
+    pub fn new(seed: impl Into<Option<u64>>) -> Self {
+        let seed = seed.into().unwrap_or(0xdeadbeef);
+        let mut res = Self {
+            seed,
+            permutations: Box::new([0; 512]),
+        };
+        res.reseed(seed);
+        res
+    }
 
-    let x = x.fract();
-    let y = y.fract();
-    let z = z.fract();
+    pub fn reseed(&mut self, seed: u64) {
+        self.seed = seed;
+        for i in 0..256i32 {
+            self.permutations[i as usize] = i;
+        }
+        let mut rng = SmallRng::seed_from_u64(seed);
 
-    let u = fade(x);
-    let v = fade(y);
-    let w = fade(z);
+        self.permutations[0..256].shuffle(&mut rng);
 
-    let a = P[x0 as usize] + y0;
-    let aa = P[a as usize] + z0;
-    let ab = P[a as usize + 1] + z0;
-    let b = P[x0 as usize + 1] + y0;
-    let ba = P[b as usize] + z0;
-    let bb = P[b as usize + 1] + z0;
+        for i in 0..256 {
+            self.permutations[i + 256] = self.permutations[i];
+        }
+    }
 
-    interpolate(
+    pub fn world_perlin(&self, pos: WorldPosition, room_size: f32) -> f32 {
+        let WorldPosition { room, pos } = pos;
+
+        let [_, _, z] = pos.hex_axial_to_cube();
+        let z = z as f32;
+
+        let [x, y] = pos.to_pixel_pointy(4.0);
+        let [rx, ry] = room.to_pixel_pointy(room_size * 8.0);
+
+        let [x, y] = [rx + x, ry + y];
+
+        self.perlin(x, y, z)
+    }
+
+    pub fn perlin(&self, x: f32, y: f32, z: f32) -> f32 {
+        use self::perlin::*;
+
+        let x0 = x as i32 & 255;
+        let y0 = y as i32 & 255;
+        let z0 = z as i32 & 255;
+
+        let x = x.fract();
+        let y = y.fract();
+        let z = z.fract();
+
+        let u = fade(x);
+        let v = fade(y);
+        let w = fade(z);
+
+        let a = self.permutations[x0 as usize] + y0;
+        let aa = self.permutations[a as usize] + z0;
+        let ab = self.permutations[a as usize + 1] + z0;
+        let b = self.permutations[x0 as usize + 1] + y0;
+        let ba = self.permutations[b as usize] + z0;
+        let bb = self.permutations[b as usize + 1] + z0;
+
         interpolate(
-            v,
             interpolate(
-                grad(P[aa as usize], x, y, z),
-                grad(P[ba as usize], x - 1.0, y, z),
-                u,
+                v,
+                interpolate(
+                    grad(self.permutations[aa as usize], x, y, z),
+                    grad(self.permutations[ba as usize], x - 1.0, y, z),
+                    u,
+                ),
+                interpolate(
+                    grad(self.permutations[ab as usize], x, y - 1.0, z),
+                    grad(self.permutations[bb as usize], x - 1.0, y - 1.0, z),
+                    u,
+                ),
             ),
             interpolate(
-                grad(P[ab as usize], x, y - 1.0, z),
-                grad(P[bb as usize], x - 1.0, y - 1.0, z),
-                u,
+                interpolate(
+                    grad(self.permutations[aa as usize + 1], x, y, z - 1.0),
+                    grad(self.permutations[ba as usize + 1], x - 1.0, y, z - 1.0),
+                    u,
+                ),
+                interpolate(
+                    grad(self.permutations[ab as usize + 1], x, y - 1.0, z - 1.0),
+                    grad(
+                        self.permutations[bb as usize + 1],
+                        x - 1.0,
+                        y - 1.0,
+                        z - 1.0,
+                    ),
+                    u,
+                ),
+                v,
             ),
-        ),
-        interpolate(
-            interpolate(
-                grad(P[aa as usize + 1], x, y, z - 1.0),
-                grad(P[ba as usize + 1], x - 1.0, y, z - 1.0),
-                u,
-            ),
-            interpolate(
-                grad(P[ab as usize + 1], x, y - 1.0, z - 1.0),
-                grad(P[bb as usize + 1], x - 1.0, y - 1.0, z - 1.0),
-                u,
-            ),
-            v,
-        ),
-        w,
-    )
+            w,
+        )
+    }
 }
 
 mod perlin {
@@ -93,33 +135,4 @@ mod perlin {
     pub fn fade(t: f32) -> f32 {
         t * t * t * (t * (t * 6.0 - 15.0) + 10.0)
     }
-
-    pub static P: [i32; 512] = [
-        151, 160, 137, 91, 90, 15, 131, 13, 201, 95, 96, 53, 194, 233, 7, 225, 140, 36, 103, 30,
-        69, 142, 8, 99, 37, 240, 21, 10, 23, 190, 6, 148, 247, 120, 234, 75, 0, 26, 197, 62, 94,
-        252, 219, 203, 117, 35, 11, 32, 57, 177, 33, 88, 237, 149, 56, 87, 174, 20, 125, 136, 171,
-        168, 68, 175, 74, 165, 71, 134, 139, 48, 27, 166, 77, 146, 158, 231, 83, 111, 229, 122, 60,
-        211, 133, 230, 220, 105, 92, 41, 55, 46, 245, 40, 244, 102, 143, 54, 65, 25, 63, 161, 1,
-        216, 80, 73, 209, 76, 132, 187, 208, 89, 18, 169, 200, 196, 135, 130, 116, 188, 159, 86,
-        164, 100, 109, 198, 173, 186, 3, 64, 52, 217, 226, 250, 124, 123, 5, 202, 38, 147, 118,
-        126, 255, 82, 85, 212, 207, 206, 59, 227, 47, 16, 58, 17, 182, 189, 28, 42, 223, 183, 170,
-        213, 119, 248, 152, 2, 44, 154, 163, 70, 221, 153, 101, 155, 167, 43, 172, 9, 129, 22, 39,
-        253, 19, 98, 108, 110, 79, 113, 224, 232, 178, 185, 112, 104, 218, 246, 97, 228, 251, 34,
-        242, 193, 238, 210, 144, 12, 191, 179, 162, 241, 81, 51, 145, 235, 249, 14, 239, 107, 49,
-        192, 214, 31, 181, 199, 106, 157, 184, 84, 204, 176, 115, 121, 50, 45, 127, 4, 150, 254,
-        138, 236, 205, 93, 222, 114, 67, 29, 24, 72, 243, 141, 128, 195, 78, 66, 215, 61, 156, 180,
-        151, 160, 137, 91, 90, 15, 131, 13, 201, 95, 96, 53, 194, 233, 7, 225, 140, 36, 103, 30,
-        69, 142, 8, 99, 37, 240, 21, 10, 23, 190, 6, 148, 247, 120, 234, 75, 0, 26, 197, 62, 94,
-        252, 219, 203, 117, 35, 11, 32, 57, 177, 33, 88, 237, 149, 56, 87, 174, 20, 125, 136, 171,
-        168, 68, 175, 74, 165, 71, 134, 139, 48, 27, 166, 77, 146, 158, 231, 83, 111, 229, 122, 60,
-        211, 133, 230, 220, 105, 92, 41, 55, 46, 245, 40, 244, 102, 143, 54, 65, 25, 63, 161, 1,
-        216, 80, 73, 209, 76, 132, 187, 208, 89, 18, 169, 200, 196, 135, 130, 116, 188, 159, 86,
-        164, 100, 109, 198, 173, 186, 3, 64, 52, 217, 226, 250, 124, 123, 5, 202, 38, 147, 118,
-        126, 255, 82, 85, 212, 207, 206, 59, 227, 47, 16, 58, 17, 182, 189, 28, 42, 223, 183, 170,
-        213, 119, 248, 152, 2, 44, 154, 163, 70, 221, 153, 101, 155, 167, 43, 172, 9, 129, 22, 39,
-        253, 19, 98, 108, 110, 79, 113, 224, 232, 178, 185, 112, 104, 218, 246, 97, 228, 251, 34,
-        242, 193, 238, 210, 144, 12, 191, 179, 162, 241, 81, 51, 145, 235, 249, 14, 239, 107, 49,
-        192, 214, 31, 181, 199, 106, 157, 184, 84, 204, 176, 115, 121, 50, 45, 127, 4, 150, 254,
-        138, 236, 205, 93, 222, 114, 67, 29, 24, 72, 243, 141, 128, 195, 78, 66, 215, 61, 156, 180,
-    ];
 }

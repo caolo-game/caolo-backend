@@ -1,13 +1,13 @@
 use super::render_hex;
 use caolo_sim::geometry::point::Hexagon;
-use caolo_sim::noise::world_perlin;
+use caolo_sim::noise::PerlinNoise;
 use caolo_sim::prelude::WorldPosition;
 use caolo_sim::prelude::*;
 use svg::node::element::path::Data;
 use svg::node::element::Path;
 use svg::Document;
 
-pub fn generate_room_noise_impl(room: Axial, room_radius: u32) -> String {
+pub fn generate_room_noise_impl(room: Axial, room_radius: u32, seed: Option<u64>) -> String {
     let mut document = Document::new();
     let mut maxx = 0;
     let mut maxy = 0;
@@ -19,10 +19,12 @@ pub fn generate_room_noise_impl(room: Axial, room_radius: u32) -> String {
     let width = 3.0f32.sqrt() * size;
     let height = 2.0f32 * size;
 
+    let noise = PerlinNoise::new(seed);
+
     let hex = Hexagon::from_radius(room_radius as i32);
     for (p, noise) in hex.iter_points().map(|pos| {
         let wp = WorldPosition { room, pos };
-        (pos, world_perlin(wp, room_radius as f32) + 0.5)
+        (pos, noise.world_perlin(wp, room_radius as f32) + 0.5)
     }) {
         let value = (220.0 * noise) as i32;
         let mut path = Path::new().set("fill", format!("rgba({},{},{},1)", value, value, value));

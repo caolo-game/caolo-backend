@@ -126,8 +126,8 @@ fn execute_map_generation(
         .unwrap();
     let room_params = RoomGenerationParams::builder()
         .with_radius(room_radius)
-        .with_chance_plain(0.19)
-        .with_chance_wall(0.39)
+        .with_chance_plain(0.39)
+        .with_chance_wall(1.0 - 0.39)
         .with_plain_dilation(1)
         .build()
         .unwrap();

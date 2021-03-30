@@ -39,6 +39,23 @@ mod perlin {
             }
         }
 
+        pub fn world_perlin_smoother(&self, pos: WorldPosition, room_size: f32) -> f32 {
+            let WorldPosition { room, pos } = pos;
+
+            let [_, _, z] = pos.hex_axial_to_cube();
+            let z = z as f32;
+
+            let [x, y] = pos.to_pixel_pointy(4.0);
+            let [rx, ry] = room.to_pixel_pointy(room_size * 8.0);
+
+            let [x, y] = [rx + x, ry + y];
+
+            (self.perlin(x, y, z)
+                + self.perlin(x, y, z + room_size)
+                + self.perlin(x, y, z - room_size))
+                / 3.0
+        }
+
         pub fn world_perlin(&self, pos: WorldPosition, room_size: f32) -> f32 {
             let WorldPosition { room, pos } = pos;
 
@@ -73,27 +90,27 @@ mod perlin {
             let ba = self.permutations[b as usize] + z0;
             let bb = self.permutations[b as usize + 1] + z0;
 
-            lerp(
-                lerp(
-                    lerp(
+            interpolate(
+                interpolate(
+                    interpolate(
                         grad(self.permutations[aa as usize], x, y, z),
                         grad(self.permutations[ba as usize], x - 1.0, y, z),
                         u,
                     ),
-                    lerp(
+                    interpolate(
                         grad(self.permutations[ab as usize], x, y - 1.0, z),
                         grad(self.permutations[bb as usize], x - 1.0, y - 1.0, z),
                         u,
                     ),
                     v,
                 ),
-                lerp(
-                    lerp(
+                interpolate(
+                    interpolate(
                         grad(self.permutations[aa as usize + 1], x, y, z - 1.0),
                         grad(self.permutations[ba as usize + 1], x - 1.0, y, z - 1.0),
                         u,
                     ),
-                    lerp(
+                    interpolate(
                         grad(self.permutations[ab as usize + 1], x, y - 1.0, z - 1.0),
                         grad(
                             self.permutations[bb as usize + 1],
@@ -127,8 +144,9 @@ mod perlin {
         a + b
     }
 
-    fn lerp(a0: f32, a1: f32, w: f32) -> f32 {
-        (a1 - a0) * w + a0
+    fn interpolate(a0: f32, a1: f32, w: f32) -> f32 {
+        // smoothstep / cubic interpolation
+        (a1 - a0) * (3.0 - w * 2.0) * w * w + a0
     }
 
     fn fade(t: f32) -> f32 {

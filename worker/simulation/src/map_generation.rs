@@ -81,7 +81,6 @@ pub fn generate_full_map(
                 logger.new(o!("room.q" => room.q,"room.r" => room.r)),
                 room_params,
                 room_connections.as_slice(),
-                &mut rng,
                 (UnsafeView::from_table(&mut terrain_table),),
             )
             .map_err(|err| MapGenError::RoomGenerationError {

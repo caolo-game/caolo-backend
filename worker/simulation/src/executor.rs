@@ -128,7 +128,7 @@ fn execute_map_generation(
         .with_radius(radius)
         .with_chance_plain(0.33)
         .with_chance_wall(0.33)
-        .with_plain_dilation(2)
+        .with_plain_dilation(1)
         .build()
         .unwrap();
     debug!(logger, "generating map {:#?} {:#?}", params, room_params);

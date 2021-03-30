@@ -179,14 +179,24 @@ impl<T> Index<Axial> for HexGrid<T> {
     type Output = T;
 
     fn index(&self, pos: Axial) -> &Self::Output {
-        assert!(self.bounds.contains(pos));
+        assert!(
+            self.bounds.contains(pos),
+            "Pos: {:?}, bounds: {:?}",
+            pos,
+            self.bounds
+        );
         unsafe { self.get_unchecked(pos) }
     }
 }
 
 impl<T> IndexMut<Axial> for HexGrid<T> {
     fn index_mut(&mut self, pos: Axial) -> &mut Self::Output {
-        assert!(self.bounds.contains(pos));
+        assert!(
+            self.bounds.contains(pos),
+            "Pos: {:?}, bounds: {:?}",
+            pos,
+            self.bounds
+        );
         unsafe { self.get_unchecked_mut(pos) }
     }
 }

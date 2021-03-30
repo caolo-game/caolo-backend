@@ -14,7 +14,7 @@ fn main() {
     let drain = slog_term::FullFormat::new(decorator).build().fuse();
     let drain = slog_envlogger::new(drain).fuse();
     let drain = slog_async::Async::new(drain)
-        .overflow_strategy(slog_async::OverflowStrategy::Drop)
+        .overflow_strategy(slog_async::OverflowStrategy::Block)
         .build()
         .fuse();
     let logger = slog::Logger::root(drain, o!());

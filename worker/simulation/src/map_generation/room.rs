@@ -142,19 +142,6 @@ pub fn generate_room(
             })
             .expect("Failed to update center");
     }
-    if params.plain_dilation > 0 {
-        // to make dilation unbiased we clone the terrain and inject that as separate input
-        let terrain_in: <TerrainComponent as crate::tables::Component<Axial>>::Table =
-            (*terrain).clone();
-        dilate(
-            logger.clone(),
-            center,
-            radius,
-            params.plain_dilation,
-            View::from_table(&terrain_in),
-            terrain,
-        );
-    }
 
     coastline(&logger, radius - 1, terrain);
 
@@ -183,11 +170,23 @@ pub fn generate_room(
         .collect();
     trace!(logger, "Deleting {} items from the room", delegates.len());
     for p in delegates {
-        terrain
-            .insert(p, TerrainComponent(TileTerrainType::Empty))
-            .unwrap();
+        terrain[p] = TerrainComponent(TileTerrainType::Empty);
     }
     trace!(logger, "Cutting outliers done");
+
+    if params.plain_dilation > 0 {
+        // to make dilation unbiased we clone the terrain and inject that as separate input
+        let terrain_in: <TerrainComponent as crate::tables::Component<Axial>>::Table =
+            (*terrain).clone();
+        dilate(
+            logger.clone(),
+            center,
+            radius,
+            params.plain_dilation,
+            View::from_table(&terrain_in),
+            terrain,
+        );
+    }
 
     debug!(logger, "Map generation done {:#?}", heightmap_props);
     Ok(heightmap_props)
@@ -709,12 +708,14 @@ mod tests {
     fn all_plain_are_reachable() {
         let logger = test_logger();
 
+        const RADIUS: i32 = 8;
+
         // doesn't work all the time...
         let mut plains = Vec::with_capacity(512);
-        let mut terrain = HexGrid::new(8);
+        let mut terrain = HexGrid::new(0);
 
         let params = RoomGenerationParams::builder()
-            .with_radius(8)
+            .with_radius(RADIUS as u32)
             .with_plain_dilation(1)
             .build()
             .unwrap();
@@ -728,15 +729,15 @@ mod tests {
 
         dbg!(props);
 
-        for p in Hexagon::from_radius(8).iter_points() {
-            let TerrainComponent(tile) = unsafe { terrain.get_unchecked(p) };
+        for p in terrain.bounds().iter_points() {
+            let TerrainComponent(tile) = terrain[p];
             if tile.is_walkable() {
                 plains.push(p);
             }
         }
 
         let from = Axial::new(0, 0);
-        let to = Axial::new(16, 16);
+        let to = terrain.bounds().center + Axial::new(RADIUS, RADIUS);
 
         print_terrain(from, to, View::from_table(&terrain));
 
@@ -752,7 +753,7 @@ mod tests {
                 *first,
                 *b,
                 (View::from_table(&positions), View::from_table(&terrain)),
-                1024,
+                10240,
                 &mut path,
             ) {
                 panic!("Failed to find path from {:?} to {:?}: {:?}", first, b, err);

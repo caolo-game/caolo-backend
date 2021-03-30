@@ -54,8 +54,8 @@ impl Node {
 
 #[derive(Debug, Clone, Copy, Error)]
 pub enum PathFindingError {
-    #[error("No path was found")]
-    NotFound { remaining_steps: u32 },
+    #[error("Pathfinding timed out")]
+    Timeout,
     #[error("Target is unreachable")]
     Unreachable,
     #[error("Room {0:?} does not exist")]
@@ -197,8 +197,8 @@ fn find_path_multiroom(
             Ok(_) => {
                 break 'a;
             }
-            Err(PathFindingError::NotFound { remaining_steps: m }) => {
-                max_steps = m;
+            Err(PathFindingError::Timeout) => {
+                max_steps = 0;
             }
             Err(e) => return Err(e),
         }
@@ -275,9 +275,7 @@ pub fn find_path_overworld(
             // we ran out of possible paths
             return Err(PathFindingError::Unreachable);
         }
-        return Err(PathFindingError::NotFound {
-            remaining_steps: max_steps,
-        });
+        return Err(PathFindingError::Timeout );
     }
 
     // reconstruct path
@@ -359,9 +357,7 @@ pub fn find_path_in_room(
             // we ran out of possible paths
             return Err(PathFindingError::Unreachable);
         }
-        return Err(PathFindingError::NotFound {
-            remaining_steps: max_steps,
-        });
+        return Err(PathFindingError::Timeout);
     }
 
     // reconstruct path
@@ -551,10 +547,10 @@ pub fn mirrored_room_position(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{prelude::Hexagon, tables::morton::MortonTable};
     use crate::tables::morton_hierarchy::SpacialStorage;
     use crate::tables::square_grid::HexGrid;
     use crate::terrain::TileTerrainType;
+    use crate::{prelude::Hexagon, tables::morton::MortonTable};
     use slog::{o, Drain};
 
     #[test]

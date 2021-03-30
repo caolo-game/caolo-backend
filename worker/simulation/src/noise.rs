@@ -136,8 +136,7 @@ mod perlin {
     }
 
     fn interpolate(a0: f32, a1: f32, w: f32) -> f32 {
-        // smoothstep / cubic interpolation
-        (a1 - a0) * (3.0 - w * 2.0) * w * w + a0
+        (a1 - a0) * w + a0
     }
 
     fn fade(t: f32) -> f32 {

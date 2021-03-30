@@ -143,6 +143,20 @@ pub fn generate_room(
             .expect("Failed to update center");
     }
 
+    if params.plain_dilation > 0 {
+        // to make dilation unbiased we clone the terrain and inject that as separate input
+        let terrain_in: <TerrainComponent as crate::tables::Component<Axial>>::Table =
+            (*terrain).clone();
+        dilate(
+            logger.clone(),
+            center,
+            radius,
+            params.plain_dilation,
+            View::from_table(&terrain_in),
+            terrain,
+        );
+    }
+
     coastline(&logger, radius - 1, terrain);
 
     let chunk_metadata = calculate_plain_chunks(&logger, View::from_table(&*terrain));
@@ -173,20 +187,6 @@ pub fn generate_room(
         terrain[p] = TerrainComponent(TileTerrainType::Empty);
     }
     trace!(logger, "Cutting outliers done");
-
-    if params.plain_dilation > 0 {
-        // to make dilation unbiased we clone the terrain and inject that as separate input
-        let terrain_in: <TerrainComponent as crate::tables::Component<Axial>>::Table =
-            (*terrain).clone();
-        dilate(
-            logger.clone(),
-            center,
-            radius,
-            params.plain_dilation,
-            View::from_table(&terrain_in),
-            terrain,
-        );
-    }
 
     debug!(logger, "Map generation done {:#?}", heightmap_props);
     Ok(heightmap_props)

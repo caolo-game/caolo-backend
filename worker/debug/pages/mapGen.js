@@ -19,7 +19,7 @@ export default function MapGen() {
     const [loading, setLoading] = useState(false);
     useEffect(() => {
         setLoading(true);
-        generateWorld({ room_radius: 16, world_radius: 1 })
+        generateWorld({ room_radius: 25, world_radius: 1 })
             .then((res) => {
                 setRooms(res);
                 setLoading(false);
@@ -37,7 +37,7 @@ export default function MapGen() {
                     <button
                         onClick={() => {
                             setLoading(true);
-                            generateWorld({ room_radius: 16, world_radius: 1 })
+                            generateWorld({ room_radius: 25, world_radius: 1 })
                                 .then((res) => {
                                     setRooms(res);
                                     setLoading(false);

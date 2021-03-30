@@ -115,19 +115,19 @@ fn execute_map_generation(
     config: &GameConfig,
 ) -> Result<(), MapGenError> {
     let world_radius = config.world_radius;
-    let radius = config.room_radius;
-    assert!(radius > 6);
+    let room_radius = config.room_radius;
+    assert!(room_radius > 6);
     let params = OverworldGenerationParams::builder()
         .with_radius(world_radius as u32)
-        .with_room_radius(radius)
+        .with_room_radius(room_radius)
         .with_min_bridge_len(3)
-        .with_max_bridge_len(radius - 3)
+        .with_max_bridge_len(room_radius - 3)
         .build()
         .unwrap();
     let room_params = RoomGenerationParams::builder()
-        .with_radius(radius)
-        .with_chance_plain(0.33)
-        .with_chance_wall(0.33)
+        .with_radius(room_radius)
+        .with_chance_plain(0.45)
+        .with_chance_wall(0.45)
         .with_plain_dilation(1)
         .build()
         .unwrap();

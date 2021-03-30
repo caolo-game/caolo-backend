@@ -46,7 +46,6 @@ fn main() {
                             )
                         }
                         Cmd::MapNoise {
-                            room,
                             room_radius,
                             seed,
                             callback,
@@ -57,7 +56,7 @@ fn main() {
                             tauri::execute_promise(
                                 _webview,
                                 move || {
-                                    let res = generate_room_noise(room, room_radius, seed);
+                                    let res = generate_room_noise(room_radius, seed);
                                     Ok(res)
                                 },
                                 callback,

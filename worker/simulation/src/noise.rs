@@ -1,7 +1,7 @@
 pub use perlin::PerlinNoise;
 
 mod perlin {
-    use crate::indices::WorldPosition;
+    use crate::{indices::WorldPosition, prelude::Axial};
 
     use rand::{prelude::SliceRandom, rngs::SmallRng, SeedableRng};
 
@@ -39,21 +39,12 @@ mod perlin {
             }
         }
 
-        pub fn world_perlin_smoother(&self, pos: WorldPosition, room_size: f32) -> f32 {
-            let WorldPosition { room, pos } = pos;
+        pub fn axial_perlin(&self, pos: Axial, room_size: f32) -> f32 {
+            let [x, y] = pos.to_pixel_pointy(1.0);
 
-            let [_, _, z] = pos.hex_axial_to_cube();
-            let z = z as f32;
+            let [x, y] = [x / room_size, y / room_size];
 
-            let [x, y] = pos.to_pixel_pointy(4.0);
-            let [rx, ry] = room.to_pixel_pointy(room_size * 8.0);
-
-            let [x, y] = [rx + x, ry + y];
-
-            (self.perlin(x, y, z)
-                + self.perlin(x, y, z + room_size)
-                + self.perlin(x, y, z - room_size))
-                / 3.0
+            self.perlin(x, y, 0.0)
         }
 
         pub fn world_perlin(&self, pos: WorldPosition, room_size: f32) -> f32 {

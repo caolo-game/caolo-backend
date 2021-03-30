@@ -77,9 +77,13 @@ pub fn generate_full_map(
                 .filter_map(|c| c.as_ref())
                 .cloned()
                 .collect::<ArrayVec<_, 6>>();
+            let room_params = RoomGenerationParams {
+                room: Room(room),
+                ..room_params.clone()
+            };
             generate_room(
                 logger.new(o!("room.q" => room.q,"room.r" => room.r)),
-                room_params,
+                &room_params,
                 room_connections.as_slice(),
                 (UnsafeView::from_table(&mut terrain_table),),
             )

@@ -5,6 +5,7 @@ mod params;
 pub use params::*;
 
 use crate::geometry::{Axial, Hexagon};
+use crate::indices::WorldPosition;
 use crate::storage::views::{UnsafeView, View};
 use crate::tables::morton_hierarchy::SpacialStorage;
 use crate::tables::{morton::msb_de_bruijn, square_grid::HexGrid};
@@ -103,13 +104,10 @@ pub fn generate_room(
     trace!(logger, "Generating heightmap");
     let noise = PerlinNoise::new(params.seed);
     for pos in Hexagon::from_radius(dsides).iter_points() {
-        let grad = noise.world_perlin_smoother(
-            crate::indices::WorldPosition { room: room.0, pos },
-            2.0 * radius as f32,
-        );
+        let grad = noise.world_perlin(WorldPosition { pos, room: room.0 }, radius as f32);
         gradient.insert(pos, grad).unwrap();
         min_grad = min_grad.min(grad);
-        max_grad = max_grad.min(grad);
+        max_grad = max_grad.max(grad);
     }
     trace!(logger, "Generating heightmap done");
 
@@ -129,10 +127,11 @@ pub fn generate_room(
 
     {
         // ensure at least 1 plain at this point
-        let minq = center.q - (radius / 2);
-        let minr = center.r - (radius / 2);
-        let maxq = center.q + (radius / 2);
-        let maxr = center.r + (radius / 2);
+        let r2 = radius / 2;
+        let minq = center.q - r2;
+        let minr = center.r - r2;
+        let maxq = center.q + r2;
+        let maxr = center.r + r2;
 
         let q = rng.gen_range(minq, maxq);
         let r = rng.gen_range(minr, maxr);
@@ -143,24 +142,7 @@ pub fn generate_room(
             })
             .expect("Failed to update center");
     }
-
-    coastline(&logger, radius - 1, terrain);
-
-    let chunk_metadata = calculate_plain_chunks(&logger, View::from_table(&*terrain));
-    if chunk_metadata.chunks.len() > 1 {
-        connect_chunks(
-            &logger,
-            center,
-            radius - 1,
-            &mut rng,
-            &chunk_metadata.chunks,
-            terrain,
-        );
-    }
-
-    fill_edges(logger.clone(), edges, terrain, &mut rng)?;
-
-    {
+    if params.plain_dilation > 0 {
         // to make dilation unbiased we clone the terrain and inject that as separate input
         let terrain_in: <TerrainComponent as crate::tables::Component<Axial>>::Table =
             (*terrain).clone();
@@ -173,6 +155,21 @@ pub fn generate_room(
             terrain,
         );
     }
+
+    coastline(&logger, radius - 1, terrain);
+
+    let chunk_metadata = calculate_plain_chunks(&logger, View::from_table(&*terrain));
+    if chunk_metadata.chunks.len() > 1 {
+        connect_chunks(
+            &logger,
+            radius - 1,
+            &mut rng,
+            &chunk_metadata.chunks,
+            terrain,
+        );
+    }
+
+    fill_edges(logger.clone(), edges, terrain, &mut rng)?;
 
     trace!(logger, "Cutting outliers");
     // cut the edges, because generation might insert invalid Plains on the edge
@@ -233,14 +230,7 @@ fn fill_edges(
         )?;
     }
     trace!(logger, "Connecting edges to the mainland");
-    connect_chunks(
-        &logger,
-        center,
-        radius - 2,
-        rng,
-        &chunk_metadata.chunks,
-        terrain,
-    );
+    connect_chunks(&logger, radius - 2, rng, &chunk_metadata.chunks, terrain);
     trace!(logger, "Filling edges done");
     for edge in edges.iter() {
         chunk_metadata
@@ -304,7 +294,6 @@ fn dilate(
 
 fn connect_chunks(
     logger: &Logger,
-    center: Axial,
     radius: i32,
     rng: &mut impl Rng,
     chunks: &[HashSet<Axial>],
@@ -312,10 +301,9 @@ fn connect_chunks(
 ) {
     trace!(logger, "Connecting {} chunks", chunks.len());
     debug_assert!(radius > 0);
-    let bounds = Hexagon {
-        center,
-        radius: radius - 1,
-    };
+    let mut bounds = Hexagon::from_radius(radius - 1);
+    bounds.center += Axial::new(1, 1);
+
     'chunks: for chunk in chunks[1..].iter() {
         let avg: Axial =
             chunk.iter().cloned().fold(Axial::default(), |a, b| a + b) / chunk.len() as i32;
@@ -355,7 +343,7 @@ fn connect_chunks(
                 break 'connecting;
             }
             for _ in 0..4 {
-                let vel = if rng.gen_bool(1.0 / 2.0) {
+                let vel = if rng.gen_bool(0.5) {
                     vel.rotate_left()
                 } else {
                     vel.rotate_right()
@@ -468,6 +456,7 @@ fn transform_heightmap_into_terrain(
 
             // normalize grad to [0-1]
             grad -= min_grad;
+            grad /= depth;
 
             {
                 // let's do some stats on the normal
@@ -677,7 +666,7 @@ mod tests {
 
         let params = RoomGenerationParams::builder()
             .with_radius(8)
-            .with_plain_dilation(2)
+            .with_plain_dilation(1)
             .build()
             .unwrap();
 
@@ -726,7 +715,7 @@ mod tests {
 
         let params = RoomGenerationParams::builder()
             .with_radius(8)
-            .with_plain_dilation(2)
+            .with_plain_dilation(1)
             .build()
             .unwrap();
         let props = generate_room(

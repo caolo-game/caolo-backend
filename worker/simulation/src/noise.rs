@@ -7,7 +7,7 @@ mod perlin {
 
     pub struct PerlinNoise {
         seed: u64,
-        permutations: Box<[i32; 512]>,
+        permutations: Box<[u32; 512]>,
     }
 
     impl PerlinNoise {
@@ -27,7 +27,7 @@ mod perlin {
 
         pub fn reseed(&mut self, seed: u64) {
             self.seed = seed;
-            for i in 0..256i32 {
+            for i in 0..256u32 {
                 self.permutations[i as usize] = i;
             }
             let mut rng = SmallRng::seed_from_u64(seed);
@@ -54,9 +54,9 @@ mod perlin {
         }
 
         pub fn perlin(&self, x: f32, y: f32, z: f32) -> f32 {
-            let x0 = x as i32 & 255;
-            let y0 = y as i32 & 255;
-            let z0 = z as i32 & 255;
+            let x0 = x as u32 & 255;
+            let y0 = y as u32 & 255;
+            let z0 = z as u32 & 255;
 
             let x = x.fract();
             let y = y.fract();
@@ -110,7 +110,7 @@ mod perlin {
         }
     }
 
-    fn grad(hash: i32, x: f32, y: f32, z: f32) -> f32 {
+    fn grad(hash: u32, x: f32, y: f32, z: f32) -> f32 {
         let h = hash & 15;
         let u = if h < 8 { x } else { y };
         let v = if h < 4 {

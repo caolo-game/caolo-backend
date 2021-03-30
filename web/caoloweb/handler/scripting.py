@@ -204,3 +204,34 @@ async def fetch_program(
         program_id,
     )
     return {"status": "ok"}
+
+
+class UpdateProgramForm(BaseModel):
+    program_id: UUID
+    name: str
+
+
+@router.put("/program")
+async def update_program(
+    req: Request,
+    form: UpdateProgramForm = Body(...),
+    current_user_id=Depends(get_current_user_id),
+):
+    res = await req.state.db.fetchrow(
+        """
+        UPDATE user_script
+        SET name=$1
+        WHERE user_script.id=$2 AND user_script.owner_id=$3
+        RETURNING user_script.id
+        """,
+        form.name,
+        form.program_id,
+        current_user_id,
+    )
+
+    if res is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+    assert res["id"] == form.program_id
+
+    return {"status": "ok"}

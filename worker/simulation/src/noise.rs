@@ -75,7 +75,6 @@ mod perlin {
 
             lerp(
                 lerp(
-                    v,
                     lerp(
                         grad(self.permutations[aa as usize], x, y, z),
                         grad(self.permutations[ba as usize], x - 1.0, y, z),
@@ -86,6 +85,7 @@ mod perlin {
                         grad(self.permutations[bb as usize], x - 1.0, y - 1.0, z),
                         u,
                     ),
+                    v,
                 ),
                 lerp(
                     lerp(

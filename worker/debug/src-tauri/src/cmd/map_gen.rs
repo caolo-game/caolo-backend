@@ -1,8 +1,6 @@
 use super::render_hex;
 use super::WorldResponse;
 use caolo_sim::prelude::*;
-use serde::Deserialize;
-use svg::node::element::path::Data;
 use svg::node::element::Path;
 use svg::Document;
 

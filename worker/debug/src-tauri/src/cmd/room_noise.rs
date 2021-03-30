@@ -3,7 +3,6 @@ use caolo_sim::geometry::point::Hexagon;
 use caolo_sim::noise::PerlinNoise;
 use caolo_sim::prelude::WorldPosition;
 use caolo_sim::prelude::*;
-use svg::node::element::path::Data;
 use svg::node::element::Path;
 use svg::Document;
 

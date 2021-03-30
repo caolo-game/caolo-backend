@@ -5,7 +5,6 @@ use caolo_sim::prelude::*;
 use serde::Deserialize;
 use svg::node::element::path::Data;
 use svg::node::element::Path;
-use svg::Document;
 
 #[derive(Deserialize)]
 #[serde(tag = "cmd", rename_all = "camelCase")]

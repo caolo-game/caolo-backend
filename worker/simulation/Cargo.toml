@@ -3,6 +3,7 @@ name = "caolo-sim"
 version = "0.1.0"
 authors = ["Daniel Kiss <littlesnorrboy@gmail.com>"]
 edition = "2018"
+build = "build.rs"
 
 # docker caching hack
 # [[bin]]
@@ -45,6 +46,11 @@ serde_yaml = "*"
 # env_logger needs to be compiled without default features so the test suite can capture the logs
 env_logger = { version = "0.7", default-features = false }
 slog-stdlog = "3"
+
+[build-dependencies]
+toml = "0.4"
+serde = { version = "1", features = ["derive"] }
+semver = "0.11"
 
 [[bench]]
 name = "simulation_benchmarks"

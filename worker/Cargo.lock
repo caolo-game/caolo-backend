@@ -438,6 +438,7 @@ dependencies = [
  "env_logger 0.7.1",
  "rand 0.7.3",
  "rayon",
+ "semver 0.11.0",
  "serde",
  "serde_derive",
  "serde_json",
@@ -448,6 +449,7 @@ dependencies = [
  "slog-stdlog 3.0.5",
  "slog-term",
  "thiserror",
+ "toml",
  "uuid",
 ]
 

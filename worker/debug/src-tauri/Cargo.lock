@@ -365,6 +365,7 @@ dependencies = [
  "chrono",
  "rand 0.7.3",
  "rayon",
+ "semver",
  "serde",
  "serde_derive",
  "serde_json",
@@ -373,6 +374,7 @@ dependencies = [
  "slog-envlogger",
  "slog-term",
  "thiserror",
+ "toml 0.4.10",
  "uuid",
 ]
 

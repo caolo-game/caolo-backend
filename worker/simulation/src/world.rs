@@ -202,7 +202,7 @@ impl World {
             slog::Logger::root(drain, o!())
         });
 
-        _new(logger)
+        _new(logger.new(o!("cao-sim-version" => crate::version::VERSION_STR)))
     }
 
     pub fn view<Id: TableId, C: Component<Id>>(&self) -> View<Id, C>

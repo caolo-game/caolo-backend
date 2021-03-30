@@ -21,6 +21,10 @@ mod systems;
 mod utils;
 pub mod world;
 
+pub mod version {
+    include!(concat!(env!("OUT_DIR"), "/cao_sim_version.rs"));
+}
+
 #[derive(Clone, Debug, Default, Copy, serde::Serialize, serde::Deserialize)]
 pub struct Time(pub u64);
 

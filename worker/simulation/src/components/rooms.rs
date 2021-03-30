@@ -2,7 +2,7 @@ use crate::geometry::Axial;
 use crate::indices::ConfigKey;
 use crate::indices::WorldPosition;
 use crate::tables::{
-    morton::MortonTable, square_grid::HexGrid, unique::UniqueTable, Component, MortonGridTable,
+    morton::MortonTable, hex_grid::HexGrid, unique::UniqueTable, Component, MortonGridTable,
 };
 use crate::terrain::TileTerrainType;
 use serde::{Deserialize, Serialize};
@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 /// Represents a connection of a room to another.
 /// Length of the Bridge is defined by `radius - offset_end - offset_start`.
 /// I choose to represent connections this way because it is much easier to invert them.
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
 pub struct RoomConnection {
     pub direction: Axial,
     /// Where the bridge points start on the edge

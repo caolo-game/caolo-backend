@@ -1,5 +1,5 @@
 use super::render_hex;
-use caolo_sim::geometry::point::Hexagon;
+use caolo_sim::geometry::Hexagon;
 use caolo_sim::noise::PerlinNoise;
 use svg::node::element::Path;
 use svg::Document;

@@ -1,5 +1,5 @@
 use super::morton::{MortonKey, MortonTable};
-use super::square_grid::HexGrid;
+use super::hex_grid::HexGrid;
 use super::*;
 use crate::geometry::Axial;
 use crate::indices::{Room, WorldPosition};

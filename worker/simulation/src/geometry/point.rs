@@ -190,45 +190,7 @@ impl Div<i32> for Axial {
     }
 }
 
-#[derive(Debug, Clone, Default, Copy, Eq, PartialEq, Serialize, Deserialize, Ord, PartialOrd)]
-pub struct Hexagon {
-    pub center: Axial,
-    pub radius: i32,
-}
-
-impl Hexagon {
-    pub fn from_radius(radius: i32) -> Self {
-        debug_assert!(radius >= 0);
-        Self {
-            radius,
-            center: Axial::new(radius, radius),
-        }
-    }
-
-    pub fn contains(&self, point: Axial) -> bool {
-        let point = point - self.center;
-        let [x, y, z] = point.hex_axial_to_cube();
-        let r = self.radius;
-        debug_assert!(r >= 0);
-        x.abs() <= r && y.abs() <= r && z.abs() <= r
-    }
-
-    pub fn iter_points(&self) -> impl Iterator<Item = Axial> {
-        let radius = self.radius;
-        let center = self.center;
-        (-radius..=radius).flat_map(move |x| {
-            let fromy = (-radius).max(-x - radius);
-            let toy = radius.min(-x + radius);
-            (fromy..=toy).map(move |y| {
-                let p = Axial::new(x, -x - y);
-                p + center
-            })
-        })
-    }
-}
-
 impl AutoByteEncodeProperties for Axial {}
-impl AutoByteEncodeProperties for Hexagon {}
 
 #[cfg(test)]
 mod tests {
@@ -264,15 +226,6 @@ mod tests {
         for (i, n) in neighbours.iter().cloned().enumerate() {
             let j = Axial::neighbour_index(n - p);
             assert_eq!(j, Some(i));
-        }
-    }
-
-    #[test]
-    fn hex_iter_points_are_inside_itself() {
-        let hex = Hexagon::from_radius(12);
-
-        for p in hex.iter_points() {
-            assert!(hex.contains(p));
         }
     }
 }

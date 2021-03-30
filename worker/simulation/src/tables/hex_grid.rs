@@ -104,13 +104,10 @@ impl<T> HexGrid<T> {
     where
         Op: FnMut(Axial, &'a T),
     {
-        let radius = radius as i32;
-        for r in -radius..=radius {
-            for q in -radius..=radius {
-                let p = center + Axial::new(q, r);
-                if let Some(t) = self.at(p) {
-                    op(p, t);
-                }
+        let bounds = Hexagon::from_radius(radius as i32).with_center(center);
+        for p in bounds.iter_points() {
+            if let Some(t) = self.at(p) {
+                op(p, t);
             }
         }
     }

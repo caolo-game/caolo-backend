@@ -8,7 +8,7 @@ use crate::geometry::{Axial, Hexagon};
 use crate::indices::WorldPosition;
 use crate::storage::views::{UnsafeView, View};
 use crate::tables::morton_hierarchy::SpacialStorage;
-use crate::tables::{morton::msb_de_bruijn, square_grid::HexGrid};
+use crate::tables::{morton::msb_de_bruijn, hex_grid::HexGrid};
 use crate::terrain::TileTerrainType;
 use crate::{
     components::{RoomConnection, TerrainComponent},
@@ -135,12 +135,7 @@ pub fn generate_room(
 
         let q = rng.gen_range(minq, maxq);
         let r = rng.gen_range(minr, maxr);
-        terrain
-            .insert(Axial::new(q, r), TerrainComponent(TileTerrainType::Plain))
-            .map_err(|e| {
-                error!(logger, "Failed to update the center point {:?}", e);
-            })
-            .expect("Failed to update center");
+        terrain[Axial::new(q, r)] = TerrainComponent(TileTerrainType::Plain);
     }
 
     if params.plain_dilation > 0 {
@@ -172,22 +167,6 @@ pub fn generate_room(
 
     fill_edges(logger.clone(), edges, terrain, &mut rng)?;
 
-    trace!(logger, "Cutting outliers");
-    // cut the edges, because generation might insert invalid Plains on the edge
-    let bounds = Hexagon { center, radius };
-    let delegates: Vec<Axial> = terrain
-        .iter()
-        .filter_map(|(p, t)| {
-            (!bounds.contains(p) && !matches!(t, TerrainComponent(TileTerrainType::Empty)))
-                .then(|| p)
-        })
-        .collect();
-    trace!(logger, "Deleting {} items from the room", delegates.len());
-    for p in delegates {
-        terrain[p] = TerrainComponent(TileTerrainType::Empty);
-    }
-    trace!(logger, "Cutting outliers done");
-
     debug!(logger, "Map generation done {:#?}", heightmap_props);
     Ok(heightmap_props)
 }
@@ -211,7 +190,20 @@ fn fill_edges(
             chunk_metadata.chunks.len(),
         ));
     }
-    for mut edge in edges.iter().cloned() {
+    // first fill with empty
+    for edge in edges.iter().copied() {
+        fill_edge(
+            &logger,
+            center,
+            radius,
+            TileTerrainType::Empty,
+            &edge,
+            terrain,
+            chunk_metadata.chunks.last_mut().unwrap(),
+        )?;
+    }
+    // fill bridge neighbours
+    for mut edge in edges.iter().copied() {
         // offset - 1 but at least 0
         edge.offset_start = 1.max(edge.offset_start) - 1;
         edge.offset_end = 1.max(edge.offset_end) - 1;
@@ -298,15 +290,16 @@ fn connect_chunks(
     chunks: &[HashSet<Axial>],
     mut terrain: UnsafeView<Axial, TerrainComponent>,
 ) {
-    trace!(logger, "Connecting {} chunks", chunks.len());
+    debug!(logger, "Connecting {} chunks", chunks.len());
+    trace!(logger, "Chunks: {:#?}", chunks);
     debug_assert!(radius > 0);
-    let mut bounds = Hexagon::from_radius(radius - 1);
-    bounds.center += Axial::new(1, 1);
 
-    'chunks: for chunk in chunks[1..].iter() {
+    let bounds = terrain.bounds().with_radius(radius - 1);
+
+    'chunks: for (last_index, chunk) in chunks[1..].iter().enumerate() {
         let avg: Axial =
-            chunk.iter().cloned().fold(Axial::default(), |a, b| a + b) / chunk.len() as i32;
-        let closest = *chunks[0]
+            chunk.iter().copied().fold(Axial::default(), |a, b| a + b) / chunk.len() as i32;
+        let closest = *chunks[last_index]
             .iter()
             .min_by_key(|p| p.hex_distance(avg))
             .unwrap();
@@ -318,26 +311,31 @@ fn connect_chunks(
         let get_next_step = |current| {
             let vel = closest - current;
             debug_assert!(vel.q != 0 || vel.r != 0);
-            match vel.q.abs().cmp(&vel.r.abs()) {
+            let rabs = vel.r.abs();
+            let qabs = vel.q.abs();
+            match qabs.cmp(&rabs) {
                 Ordering::Equal => {
                     if (vel.q + vel.r) % 2 == 0 {
-                        Axial::new(vel.q / vel.q.abs(), 0)
+                        Axial::new(vel.q / qabs, 0)
                     } else {
-                        Axial::new(0, vel.r / vel.r.abs())
+                        Axial::new(0, vel.r / rabs)
                     }
                 }
-                Ordering::Less => Axial::new(0, vel.r / vel.r.abs()),
-                Ordering::Greater => Axial::new(vel.q / vel.q.abs(), 0),
+                Ordering::Less => Axial::new(0, vel.r / rabs),
+                Ordering::Greater => Axial::new(vel.q / qabs, 0),
             }
         };
 
-        if current.hex_distance(closest) <= 1 {
+        if current.hex_distance(closest) == 0 {
             continue 'chunks;
         }
         'connecting: loop {
             let vel = get_next_step(current);
             current += vel;
-            terrain[current] = TerrainComponent(TileTerrainType::Plain);
+            match terrain.at_mut(current) {
+                Some(t) => *t = TerrainComponent(TileTerrainType::Plain),
+                None => break 'connecting,
+            }
             if current.hex_distance(closest) == 0 {
                 break 'connecting;
             }
@@ -367,13 +365,12 @@ fn connect_chunks(
 fn coastline(logger: &Logger, radius: i32, mut terrain: UnsafeView<Axial, TerrainComponent>) {
     trace!(logger, "Building coastline");
     let mut changeset = vec![];
-    'walle: for wall_pos in Hexagon::from_radius(radius).iter_points().filter(|p| {
-        matches!(
-            terrain.at(*p),
-            Some(TerrainComponent(TileTerrainType::Wall))
-        )
-    }) {
-        for n in wall_pos.hex_neighbours().iter().cloned() {
+    let bounds = terrain.bounds().with_radius(radius);
+    'walle: for wall_pos in bounds
+        .iter_points()
+        .filter(|p| matches!(terrain[*p], TerrainComponent(TileTerrainType::Wall)))
+    {
+        for n in wall_pos.hex_neighbours().iter().copied() {
             if matches!(
                 terrain.at(n),
                 Some(TerrainComponent(TileTerrainType::Empty)) | None

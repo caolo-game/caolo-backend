@@ -1,6 +1,8 @@
-pub mod point;
+mod point;
+mod hexagon;
 
 pub use point::*;
+pub use hexagon::*;
 
 pub fn aabb_over_circle(center: Axial, radius: u32) -> (Axial, Axial) {
     let [x, y] = center.as_array();

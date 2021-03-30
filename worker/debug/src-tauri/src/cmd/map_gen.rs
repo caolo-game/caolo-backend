@@ -17,7 +17,7 @@ fn render_room(it: impl Iterator<Item = (Axial, TerrainComponent)>) -> Document 
     let height = 2.0f32 * size;
     for (p, t) in it {
         let mut path = match t.0 {
-            caolo_sim::terrain::TileTerrainType::Empty => continue,
+            caolo_sim::terrain::TileTerrainType::Empty => Path::new().set("fill", "lightblue"),
             caolo_sim::terrain::TileTerrainType::Plain => Path::new().set("fill", "yellow"),
             caolo_sim::terrain::TileTerrainType::Bridge => Path::new().set("fill", "green"),
             caolo_sim::terrain::TileTerrainType::Wall => Path::new().set("fill", "red"),

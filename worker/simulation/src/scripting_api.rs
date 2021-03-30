@@ -8,7 +8,7 @@ mod tests;
 pub mod bots;
 pub mod find_api;
 use crate::components;
-use crate::geometry::point::Axial;
+use crate::geometry::Axial;
 use crate::indices::{EntityId, WorldPosition};
 use crate::profile;
 use crate::systems::script_execution::ScriptExecutionData;

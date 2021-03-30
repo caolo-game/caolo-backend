@@ -14,7 +14,7 @@ use crate::{
 };
 use crate::{
     indices::{ConfigKey, Room, WorldPosition},
-    tables::square_grid::HexGrid,
+    tables::hex_grid::HexGrid,
 };
 use arrayvec::ArrayVec;
 use rand::{rngs::SmallRng, thread_rng, RngCore, SeedableRng};

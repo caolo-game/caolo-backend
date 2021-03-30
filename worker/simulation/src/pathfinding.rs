@@ -548,7 +548,7 @@ pub fn mirrored_room_position(
 mod tests {
     use super::*;
     use crate::tables::morton_hierarchy::SpacialStorage;
-    use crate::tables::square_grid::HexGrid;
+    use crate::tables::hex_grid::HexGrid;
     use crate::terrain::TileTerrainType;
     use crate::{prelude::Hexagon, tables::morton::MortonTable};
     use slog::{o, Drain};

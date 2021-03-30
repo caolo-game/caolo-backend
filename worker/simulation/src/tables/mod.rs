@@ -7,7 +7,7 @@ pub mod flag;
 pub mod iterators;
 pub mod morton;
 pub mod morton_hierarchy;
-pub mod square_grid;
+pub mod hex_grid;
 pub mod traits;
 pub mod unique;
 

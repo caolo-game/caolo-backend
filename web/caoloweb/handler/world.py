@@ -9,14 +9,26 @@ from ..model.game_state import get_room_objects, manager
 router = APIRouter(prefix="/world")
 
 
-@router.get("/terrain", response_model=List[Tuple[Axial, str]])
+@router.get("/room-terrain-layout", response_model=List[Axial])
+async def room_terrain_layout(
+    req: Request,
+):
+    """
+    return the coordinates of the room grid points in a list.
+
+    If you query the terrain the i-th terrain enum value will correspond to the i-th coordinates returned by this endpoint
+    """
+    return manager.game_state.payload["terrain"]["roomLayout"]
+
+
+@router.get("/terrain", response_model=List[str])
 async def terrain(
     req: Request,
     q: str = Query(None, max_length=5),
     r: str = Query(None, max_length=5),
 ):
     room_id = make_room_id(q, r)
-    return manager.game_state.payload["terrain"].get(room_id)
+    return manager.game_state.payload["terrain"]["roomTerrain"].get(room_id)
 
 
 @router.get("/rooms", response_model=List[Dict])

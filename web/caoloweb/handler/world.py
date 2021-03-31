@@ -22,11 +22,7 @@ async def room_terrain_layout(
 
 
 @router.get("/terrain", response_model=List[str])
-async def terrain(
-    req: Request,
-    q: str = Query(None, max_length=5),
-    r: str = Query(None, max_length=5),
-):
+async def terrain(req: Request, q: int = Query(None), r: int = Query(None)):
     room_id = make_room_id(q, r)
     return manager.game_state.payload["terrain"]["roomTerrain"].get(room_id)
 
@@ -44,11 +40,7 @@ async def rooms(req: Request):
 
 
 @router.get("/room-objects", response_model=RoomObjects)
-async def room_objects(
-    req: Request,
-    q: str = Query(None, max_length=5),
-    r: str = Query(None, max_length=5),
-):
+async def room_objects(req: Request, q: int = Query(None), r: int = Query(None)):
     """
     return a list of each type of entity in the given room
     """

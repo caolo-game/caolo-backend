@@ -4,8 +4,8 @@ use super::World;
 use crate::prelude::{Axial, Hexagon};
 use std::collections::HashMap;
 
-fn pos_to_string(pos: Axial) -> String {
-    format!("{};{}", pos.q, pos.r)
+fn pos_to_string(Axial { q, r }: Axial) -> String {
+    format!("{};{}", q, r)
 }
 
 pub fn json_serialize_resources(world: &World) -> serde_json::Value {
@@ -41,7 +41,18 @@ pub fn json_serialize_terrain(world: &World) -> serde_json::Value {
                     .collect::<Vec<_>>(),
             )
         })
-        .collect::<HashMap<_, _>>();
+        .fold(
+            HashMap::with_capacity(terrain.len()),
+            |mut res, (room_id, terrain)| {
+                debug_assert!(
+                    !res.contains_key(&room_id),
+                    "found duplicate room key: {}",
+                    room_id
+                );
+                res.insert(room_id, terrain);
+                res
+            },
+        );
 
     #[cfg(debug_assertions)]
     if let Some((_id, terrain)) = terrain.iter().next() {

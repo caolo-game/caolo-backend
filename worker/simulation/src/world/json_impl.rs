@@ -32,6 +32,7 @@ pub fn json_serialize_terrain(world: &World) -> serde_json::Value {
     let terrain = terrain
         .iter_rooms()
         .flat_map(|(room_id, room)| {
+            debug_assert_eq!(room.bounds(), bounds, "{:?}", room_id);
             room.iter()
                 .map(move |(pos, t)| {
                     (
@@ -48,6 +49,10 @@ pub fn json_serialize_terrain(world: &World) -> serde_json::Value {
             map.entry(room).or_insert_with(Vec::new).push(payload);
             map
         });
+    #[cfg(debug_assertions)]
+    if let Some((_id, terrain)) = terrain.iter().next() {
+        debug_assert_eq!(points.len(), terrain.len());
+    }
     serde_json::json!({
         "roomLayout": points,
         "roomTerrain": terrain

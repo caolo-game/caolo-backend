@@ -8,7 +8,7 @@ use crate::geometry::{Axial, Hexagon};
 use crate::indices::WorldPosition;
 use crate::storage::views::{UnsafeView, View};
 use crate::tables::morton_hierarchy::SpacialStorage;
-use crate::tables::{morton::msb_de_bruijn, hex_grid::HexGrid};
+use crate::tables::{hex_grid::HexGrid, morton::msb_de_bruijn};
 use crate::terrain::TileTerrainType;
 use crate::{
     components::{RoomConnection, TerrainComponent},
@@ -93,10 +93,11 @@ pub fn generate_room(
     let dsides = pot(radius as u32 * 2) as i32;
 
     terrain.clear();
-    terrain.resize(dsides);
+    terrain.resize(radius);
+
     let mut gradient = GradientMap::new(dsides as usize);
 
-    let center = Axial::new(radius, radius);
+    let center = terrain.bounds().center;
 
     let mut min_grad = 1e15f32;
     let mut max_grad = -1e15f32;
@@ -416,9 +417,6 @@ fn transform_heightmap_into_terrain(
     let mut normal_std = 0.0;
     let mut i = 1.0;
     let depth = max_grad - min_grad;
-
-    terrain.clear();
-    terrain.resize(radius);
 
     let terrain_bounds: Hexagon = terrain.bounds();
     let tg_vec = gradient.bounds().center - terrain_bounds.center; // from terrain to gradient center displacement

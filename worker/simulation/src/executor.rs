@@ -140,6 +140,7 @@ fn execute_map_generation(
         None,
         FromWorldMut::new(world),
     )?;
+
     debug!(logger, "world generation done");
     Ok(())
 }

@@ -45,7 +45,7 @@ pub fn generate_full_map(
     overworld_params: &OverworldGenerationParams,
     room_params: &RoomGenerationParams,
     seed: Option<[u8; 16]>,
-    (mut terrain, rooms, room_props, room_connections): MapGenerationTables,
+    (mut terrain, rooms, mut room_props, room_connections): MapGenerationTables,
 ) -> Result<(), MapGenError> {
     let seed = seed.unwrap_or_else(|| {
         let mut bytes = [0; 16];
@@ -57,11 +57,22 @@ pub fn generate_full_map(
         logger.clone(),
         overworld_params,
         &mut rng,
-        (rooms, room_connections, room_props),
+        (rooms, room_connections),
     )
     .map_err(|err| MapGenError::OverworldGenerationError { err })?;
 
     let radius = room_params.radius as usize;
+
+    // setup properties table
+    {
+        use std::convert::TryInto;
+
+        let room_radius = room_params.radius;
+        room_props.value = Some(RoomProperties {
+            radius: room_radius,
+            center: crate::prelude::Hexagon::from_radius(room_radius.try_into().unwrap()).center,
+        });
+    }
 
     let terrain_tables = rooms.iter().try_fold(
         Vec::with_capacity(rooms.len()),

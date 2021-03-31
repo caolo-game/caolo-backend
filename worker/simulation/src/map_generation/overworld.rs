@@ -3,9 +3,8 @@
 mod params;
 pub use params::*;
 
-use crate::components::{RoomComponent, RoomConnection, RoomConnections, RoomProperties};
+use crate::components::{RoomComponent, RoomConnection, RoomConnections};
 use crate::geometry::{Axial, Hexagon};
-use crate::indices::ConfigKey;
 use crate::storage::views::UnsafeView;
 use crate::tables::morton::{ExtendFailure, MortonTable};
 use rand::Rng;
@@ -39,10 +38,9 @@ pub fn generate_room_layout(
         max_bridge_len,
     }: &OverworldGenerationParams,
     rng: &mut impl Rng,
-    (mut rooms, mut room_connections, mut room_props): (
+    (mut rooms, mut room_connections): (
         UnsafeView<Axial, RoomComponent>,
         UnsafeView<Axial, RoomConnections>,
-        UnsafeView<ConfigKey, RoomProperties>,
     ),
 ) -> Result<(), OverworldGenerationError> {
     let radius = *radius as i32;
@@ -51,10 +49,6 @@ pub fn generate_room_layout(
     let bounds = Hexagon { center, radius };
 
     // Init the grid
-    room_props.value = Some(RoomProperties {
-        radius: room_radius as u32,
-        center,
-    });
     rooms.clear();
     rooms
         .extend(bounds.iter_points().map(|p| (p, RoomComponent)))
@@ -190,7 +184,6 @@ fn update_room_connections(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tables::unique::UniqueTable;
     use crate::utils::*;
 
     #[test]
@@ -201,7 +194,6 @@ mod tests {
 
         let mut rooms = MortonTable::new();
         let mut room_connections = MortonTable::new();
-        let mut props = UniqueTable::default();
 
         let params = OverworldGenerationParams::builder()
             .with_radius(12)
@@ -217,15 +209,10 @@ mod tests {
             (
                 UnsafeView::from_table(&mut rooms),
                 UnsafeView::from_table(&mut room_connections),
-                UnsafeView::from_table(&mut props),
             ),
         )
         .unwrap();
 
-        assert_eq!(
-            props.value.map(|RoomProperties { radius, .. }| radius),
-            Some(16)
-        );
         assert_eq!(rooms.len(), room_connections.len());
 
         // for each connection of the room test if the corresponding connection of the neighbour

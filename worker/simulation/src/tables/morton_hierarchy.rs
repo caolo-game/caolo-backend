@@ -1,5 +1,5 @@
-use super::morton::{MortonKey, MortonTable};
 use super::hex_grid::HexGrid;
+use super::morton::{MortonKey, MortonTable};
 use super::*;
 use crate::geometry::Axial;
 use crate::indices::{Room, WorldPosition};
@@ -126,6 +126,10 @@ where
                 error: error.to_string(),
                 room: id.room,
             })
+    }
+
+    pub fn at(&self, id: WorldPosition) -> Option<&Row> {
+        self.table.at(id.room).and_then(|room| room.at(id.pos))
     }
 
     pub fn at_mut(&mut self, id: WorldPosition) -> Option<&mut Row> {

@@ -34,6 +34,7 @@ impl<T> HexGrid<T> {
         }
     }
 
+    #[inline]
     pub fn contains_key(&self, pos: Axial) -> bool {
         self.bounds.contains(pos)
     }

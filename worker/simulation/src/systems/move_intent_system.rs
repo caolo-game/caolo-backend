@@ -1,4 +1,4 @@
-use crate::components::{Bot, EntityComponent, PositionComponent};
+use crate::components::{Bot, EntityComponent, PositionComponent, TerrainComponent};
 use crate::indices::{EmptyKey, EntityId, WorldPosition};
 use crate::intents::{Intents, MoveIntent};
 use crate::profile;
@@ -14,10 +14,14 @@ type Mut = (
 type Const<'a> = (
     View<'a, EntityId, Bot>,
     View<'a, WorldPosition, EntityComponent>,
+    View<'a, WorldPosition, TerrainComponent>,
     WorldLogger,
 );
 
-pub fn update((mut positions, mut intents): Mut, (bots, pos_entities, WorldLogger(logger)): Const) {
+pub fn update(
+    (mut positions, mut intents): Mut,
+    (bots, pos_entities, _terrain, WorldLogger(logger)): Const,
+) {
     profile!(" MoveSystem update");
 
     pre_process_move_intents(&logger, &mut intents.0);
@@ -28,6 +32,12 @@ pub fn update((mut positions, mut intents): Mut, (bots, pos_entities, WorldLogge
             intent.bot,
             intent.position
         );
+
+        debug_assert!(_terrain
+            .at(intent.position)
+            .expect("Failed to get the terrain under bot")
+            .0
+            .is_walkable());
 
         if bots.get_by_id(intent.bot).is_none() {
             trace!(logger, "Bot by id {:?} does not exist", intent.bot);

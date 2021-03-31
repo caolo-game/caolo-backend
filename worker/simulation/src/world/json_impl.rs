@@ -1,10 +1,7 @@
 use serde_json::json;
 
 use super::World;
-use crate::{
-    indices::WorldPosition,
-    prelude::{Axial, Hexagon},
-};
+use crate::prelude::{Axial, Hexagon};
 use std::collections::HashMap;
 
 fn pos_to_string(pos: Axial) -> String {
@@ -31,24 +28,14 @@ pub fn json_serialize_terrain(world: &World) -> serde_json::Value {
     let points = bounds.iter_points().collect::<Vec<_>>();
     let terrain = terrain
         .iter_rooms()
-        .flat_map(|(room_id, room)| {
+        .map(|(room_id, room)| {
             debug_assert_eq!(room.bounds(), bounds, "{:?}", room_id);
-            room.iter()
-                .map(move |(pos, t)| {
-                    (
-                        WorldPosition {
-                            room: room_id.0,
-                            pos,
-                        },
-                        t,
-                    )
-                })
-                .map(|(pos, terrain)| (pos_to_string(pos.room), terrain))
+            (
+                pos_to_string(room_id.0),
+                room.iter().map(|(_, terrain)| terrain).collect::<Vec<_>>(),
+            )
         })
-        .fold(HashMap::new(), |mut map, (room, payload)| {
-            map.entry(room).or_insert_with(Vec::new).push(payload);
-            map
-        });
+        .collect::<HashMap<_, _>>();
     #[cfg(debug_assertions)]
     if let Some((_id, terrain)) = terrain.iter().next() {
         debug_assert_eq!(points.len(), terrain.len());

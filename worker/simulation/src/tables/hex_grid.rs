@@ -25,17 +25,13 @@ impl<T> HexGrid<T> {
         T: Default + Clone,
     {
         let radius = radius.try_into().expect("Radius must fit into 30 bits");
-        let diameter = Self::diameter(radius) as usize;
+        let diameter = diameter(radius) as usize;
         let area = diameter * diameter;
         let bounds = Hexagon::from_radius(radius);
         Self {
             bounds,
             values: vec![Default::default(); area],
         }
-    }
-
-    fn diameter(radius: i32) -> i32 {
-        radius * 2 + 1
     }
 
     pub fn contains_key(&self, pos: Axial) -> bool {
@@ -52,10 +48,8 @@ impl<T> HexGrid<T> {
     ///
     /// The point must be inside the squared grid radius Х radius
     #[inline]
-    pub unsafe fn get_unchecked(&self, Axial { q, r }: Axial) -> &T {
-        let diameter = Self::diameter(self.bounds.radius);
-        let ind = r as usize * diameter as usize + q as usize;
-
+    pub unsafe fn get_unchecked(&self, pos: Axial) -> &T {
+        let ind = hex_index(pos, self.bounds.radius);
         self.values.get_unchecked(ind)
     }
 
@@ -63,10 +57,8 @@ impl<T> HexGrid<T> {
     ///
     /// The point must be inside the squared grid radius Х radius
     #[inline]
-    pub unsafe fn get_unchecked_mut(&mut self, Axial { q, r }: Axial) -> &mut T {
-        let diameter = Self::diameter(self.bounds.radius);
-        let ind = r as usize * diameter as usize + q as usize;
-
+    pub unsafe fn get_unchecked_mut(&mut self, pos: Axial) -> &mut T {
+        let ind = hex_index(pos, self.bounds.radius);
         self.values.get_unchecked_mut(ind)
     }
 
@@ -82,7 +74,7 @@ impl<T> HexGrid<T> {
     {
         debug_assert!(new_radius >= 0);
 
-        let diameter = Self::diameter(new_radius);
+        let diameter = diameter(new_radius);
         let area = diameter * diameter;
 
         self.bounds = Hexagon::from_radius(new_radius);
@@ -124,13 +116,7 @@ impl<T> HexGrid<T> {
         if !self.bounds.contains(pos) {
             return None;
         }
-        let row = pos.r;
-        let col = pos.q;
-
-        let radius = self.bounds.radius;
-        let diameter = Self::diameter(radius);
-
-        let ind = row as usize * diameter as usize + col as usize;
+        let ind = hex_index(pos, self.bounds.radius);
         Some(ind)
     }
 
@@ -170,6 +156,22 @@ impl<T> HexGrid<T> {
             // no, this isn't safe at all, I'm guessing
             .map(move |p| (p, unsafe { std::mem::transmute(self.get_unchecked_mut(p)) }))
     }
+}
+
+#[inline]
+fn hex_index(Axial { q, r }: Axial, radius: i32) -> usize {
+    let diameter = diameter(radius);
+
+    debug_assert!(diameter > 0);
+    debug_assert!(q >= 0);
+    debug_assert!(r >= 0);
+
+    q as usize * diameter as usize + r as usize
+}
+
+#[inline]
+fn diameter(radius: i32) -> i32 {
+    radius * 2 + 1
 }
 
 impl<T> Index<Axial> for HexGrid<T> {

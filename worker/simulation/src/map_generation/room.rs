@@ -181,15 +181,12 @@ fn fill_edges(
     trace!(logger, "Filling edges");
     let Hexagon { center, radius } = terrain.bounds();
     let mut chunk_metadata = calculate_plain_chunks(&logger, View::from_table(&*terrain));
-    if chunk_metadata.chunks.len() != 1 {
+    if chunk_metadata.chunks.is_empty() {
         error!(
             logger,
-            "Expected 1 single chunk when applying edges, intead got {}",
-            chunk_metadata.chunks.len()
+            "Expected at least 1 chunk when applying edges, intead got 0",
         );
-        return Err(RoomGenerationError::ExpectedSingleChunk(
-            chunk_metadata.chunks.len(),
-        ));
+        return Err(RoomGenerationError::ExpectedSingleChunk(0));
     }
     // first fill with empty
     for edge in edges.iter().copied() {

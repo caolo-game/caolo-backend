@@ -30,16 +30,24 @@ pub fn json_serialize_terrain(world: &World) -> serde_json::Value {
         .iter_rooms()
         .map(|(room_id, room)| {
             debug_assert_eq!(room.bounds(), bounds, "{:?}", room_id);
+            let mut _it = points.iter();
             (
                 pos_to_string(room_id.0),
-                room.iter().map(|(_, terrain)| terrain).collect::<Vec<_>>(),
+                room.iter()
+                    .map(move |(_p, terrain)| {
+                        debug_assert_eq!(_p, _it.next().copied().expect("points ran out :monkas:"));
+                        terrain
+                    })
+                    .collect::<Vec<_>>(),
             )
         })
         .collect::<HashMap<_, _>>();
+
     #[cfg(debug_assertions)]
     if let Some((_id, terrain)) = terrain.iter().next() {
         debug_assert_eq!(points.len(), terrain.len());
     }
+
     serde_json::json!({
         "roomLayout": points,
         "roomTerrain": terrain

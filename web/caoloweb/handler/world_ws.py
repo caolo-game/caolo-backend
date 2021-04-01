@@ -12,7 +12,11 @@ import datetime as dt
 from dataclasses import dataclass
 
 from ..api_schema import RoomObjects, Axial, make_room_id, parse_room_id
-from ..model.game_state import manager as game_state_manager, get_room_objects
+from ..model.game_state import (
+    manager as game_state_manager,
+    get_room_objects,
+    get_terrain,
+)
 
 router = APIRouter()
 
@@ -39,13 +43,24 @@ class WorldMessenger:
         except ValueError:
             pass
 
-    async def send_to(self, client):
+    async def send_terrain(self, client):
+        state = self.game_state or game_state_manager.game_state
+        if not state:
+            logging.error("No GameState is available")
+            return
+        terrain = get_terrain(state, client.room_id)
+        pl = {"terrain": terrain}
+        pl = json.dumps(pl, default=lambda o: o.__dict__)
+        await client.ws.send_text(pl)
+
+    async def send_entities(self, client):
         state = self.game_state or game_state_manager.game_state
         if not state:
             logging.error("No GameState is available")
             return
         client.last_seen = state.created
-        pl = get_room_objects(state, client.room_id)
+        entities = get_room_objects(state, client.room_id)
+        pl = {"entities": entities}
         pl = json.dumps(pl, default=lambda o: o.__dict__)
         await client.ws.send_text(pl)
 
@@ -57,7 +72,7 @@ class WorldMessenger:
         dc = []
         for client in self.connections:
             try:
-                await self.send_to(client)
+                await self.send_entities(client)
             except WebSocketDisconnect:
                 dc.append(client)
             except Exception as exc:
@@ -77,7 +92,9 @@ game_state_manager.on_new_state(manager.on_new_state)
 # NOTE:
 # the router.websocket ignores the router's path prefix
 @router.websocket("/world/object-stream")
-async def object_stream(ws: WebSocket, manager=Depends(lambda: manager)):
+async def object_stream(
+    ws: WebSocket, manager: WorldMessenger = Depends(lambda: manager)
+):
     """
     Streams game objects of a room.
 
@@ -93,7 +110,8 @@ async def object_stream(ws: WebSocket, manager=Depends(lambda: manager)):
             room_id = await ws.receive_text()
             client.room_id = room_id
             # on new room_id send a state immediately
-            await manager.send_to(client)
+            await manager.send_terrain(client)
+            await manager.send_entities(client)
     except WebSocketDisconnect:
         pass
     except:

@@ -18,6 +18,11 @@ class GameState:
     payload: Dict
 
 
+def get_terrain(game_state: GameState, room_id: str):
+    terrain = game_state.payload["terrain"].get("roomTerrain", {})
+    return terrain.get(room_id, [])
+
+
 def get_room_objects(game_state: GameState, room_id: str):
     payload = RoomObjects()
     payload.time = game_state.world_time

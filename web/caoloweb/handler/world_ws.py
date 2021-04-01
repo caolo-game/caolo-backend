@@ -49,7 +49,7 @@ class WorldMessenger:
             logging.error("No GameState is available")
             return
         terrain = get_terrain(state, client.room_id)
-        pl = {"terrain": terrain}
+        pl = {"terrain": terrain, "ty": "terrain"}
         pl = json.dumps(pl, default=lambda o: o.__dict__)
         await client.ws.send_text(pl)
 
@@ -60,7 +60,7 @@ class WorldMessenger:
             return
         client.last_seen = state.created
         entities = get_room_objects(state, client.room_id)
-        pl = {"entities": entities}
+        pl = {"entities": entities, "ty": "entities"}
         pl = json.dumps(pl, default=lambda o: o.__dict__)
         await client.ws.send_text(pl)
 

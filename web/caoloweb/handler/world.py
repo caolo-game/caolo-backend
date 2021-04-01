@@ -14,7 +14,7 @@ async def room_terrain_layout():
     """
     return the coordinates of the room grid points in a list.
 
-    If you query the terrain the i-th terrain enum value 
+    If you query the terrain the i-th terrain enum value
     will correspond to the i-th coordinates returned by this endpoint
     """
     return manager.game_state.payload["terrain"]["roomLayout"]
@@ -31,7 +31,7 @@ async def rooms():
     # keys are 'q;r', so split them and insert them into a 'pos' object,
     # then put the rest of the values next to it
     return (
-        {"pos": room_id, **v}
+        {"pos": [room_id.q, room_id.r], **v}
         for room_id, v in (
             (parse_room_id(k), v)
             for k, v in manager.game_state.payload["rooms"].items()

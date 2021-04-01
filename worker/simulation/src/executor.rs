@@ -44,7 +44,8 @@ impl Executor for SimpleExecutor {
         let start = chrono::Utc::now();
         profile!("world_forward");
 
-        let logger = world.logger.new(o!("tick" => world.time()));
+        let tick = world.time();
+        let logger = world.logger.new(o!("tick" => tick));
 
         info!(logger, "Tick starting");
 
@@ -85,10 +86,16 @@ impl Executor for SimpleExecutor {
         let end = chrono::Utc::now();
         let duration = end - start;
 
-        diag.tick_latency_ms = duration.num_milliseconds();
         diag.tick_start = start;
         diag.tick_end = end;
-        info!(logger, "Tick done\n{:#?}", diag);
+        diag.tick_end(duration.num_milliseconds(), tick);
+        info!(
+            logger,
+            "Tick done. Latency: {} Mean latency: {} Std latency: {}",
+            diag.tick_latency_ms,
+            diag.tick_latency_mean,
+            diag.tick_latency_std,
+        );
 
         Ok(())
     }

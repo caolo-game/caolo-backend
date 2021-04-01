@@ -18,8 +18,10 @@ pub struct Diagnostics {
     pub tick_latency_mean: f64,
     pub tick_latency_std: f64,
 
-    pub tick_latency_mean_aggregator: f64,
-    pub tick_latency_std_aggregator: f64,
+    #[serde(skip)]
+    tick_latency_std_aggregator: f64,
+    #[serde(skip)]
+    tick_latency_count: u64,
 }
 
 impl Default for Diagnostics {
@@ -36,9 +38,9 @@ impl Default for Diagnostics {
             systems_update_ms: 0,
             scripts_execution_ms: 0,
 
+            tick_latency_count: 0,
             tick_latency_mean: 0.0,
             tick_latency_std: 0.0,
-            tick_latency_mean_aggregator: 0.0,
             tick_latency_std_aggregator: 0.0,
         }
     }
@@ -55,12 +57,13 @@ impl Diagnostics {
 
         let latency = latency as f64;
 
-        let t = latency - self.tick_latency_mean_aggregator;
-        self.tick_latency_mean_aggregator += t / (tick as f64 + 1.0);
-        self.tick_latency_std_aggregator += t * (latency - self.tick_latency_mean_aggregator);
+        let tick = self.tick_latency_count as f64;
+        let tmp = latency - self.tick_latency_mean;
+        self.tick_latency_mean += tmp / (tick + 1.0);
+        self.tick_latency_std_aggregator += tmp * (latency - self.tick_latency_mean);
 
-        self.tick_latency_std = (self.tick_latency_std_aggregator / (self.tick + 1) as f64).sqrt();
-        self.tick_latency_mean = self.tick_latency_mean_aggregator * (tick + 1) as f64;
+        self.tick_latency_std = (self.tick_latency_std_aggregator / tick).sqrt();
+        self.tick_latency_count += 1;
     }
 }
 

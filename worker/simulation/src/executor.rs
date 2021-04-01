@@ -51,7 +51,6 @@ impl Executor for SimpleExecutor {
 
         let mut diag = world.unsafe_view::<EmptyKey, Diagnostics>();
         let diag: &mut Diagnostics = diag.unwrap_mut_or_default();
-        diag.clear();
 
         let scripts_table = world.view::<EntityId, EntityScript>();
         let executions: Vec<(EntityId, EntityScript)> =
@@ -89,9 +88,10 @@ impl Executor for SimpleExecutor {
         diag.tick_start = start;
         diag.tick_end = end;
         diag.update_latency_stats(duration.num_milliseconds(), tick);
+        info!(logger, "Tick done");
         info!(
             logger,
-            "Tick done. Latency: Current: {:.4}ms Mean: {:.4}ms STD: {:.4}ms",
+            "Latency | Current {:.4}ms | Mean {:.4}ms | STD {:.4}ms",
             diag.tick_latency_ms,
             diag.tick_latency_mean,
             diag.tick_latency_std,

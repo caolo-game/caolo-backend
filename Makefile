@@ -9,13 +9,13 @@ start: web
 	docker-compose logs -f --tail=100
 
 web:
-	docker build -t frenetiq/caolo-web:bleeding -f ./dockerfile.web .
+	docker build -t frenetiq/caolo-web:bleeding -f ./web.Dockerfile .
 
 worker:
-	docker build -t frenetiq/caolo-worker:bleeding -f ./dockerfile.worker .
+	docker build -t frenetiq/caolo-worker:bleeding -f ./worker.Dockerfile .
 
 release:
-	docker build -t frenetiq/caolo-release:bleeding -f dockerfile.release .
+	docker build -t frenetiq/caolo-release:bleeding -f release.Dockerfile .
 
 all: web worker release
 

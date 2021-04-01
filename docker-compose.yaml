@@ -3,7 +3,7 @@ services:
   release:
     build: 
       context: .
-      dockerfile: ./dockerfile.release
+      dockerfile: ./release.Dockerfile
     image: frenetiq/caolo-release:bleeding
     env_file: docker.env
     depends_on:
@@ -11,7 +11,7 @@ services:
   web:
     build: 
       context: .
-      dockerfile: ./dockerfile.web
+      dockerfile: ./web.Dockerfile
     image: frenetiq/caolo-web:bleeding
     env_file: docker.env
     environment:
@@ -32,7 +32,7 @@ services:
   worker:
     build: 
       context: .
-      dockerfile: ./dockerfile.worker
+      dockerfile: ./worker.Dockerfile
     image: frenetiq/caolo-worker:bleeding
     env_file: docker.env
     depends_on:

@@ -27,7 +27,7 @@ from ..model.auth import (
 )
 
 
-router = APIRouter()
+router = APIRouter(tags=["users"])
 
 
 class User(BaseModel):

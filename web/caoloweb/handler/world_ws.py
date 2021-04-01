@@ -16,7 +16,7 @@ from ..model.game_state import (
     get_terrain,
 )
 
-router = APIRouter()
+router = APIRouter(tags=["world"])
 
 
 @dataclass

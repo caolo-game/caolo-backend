@@ -20,7 +20,7 @@ from asyncpg.exceptions import UniqueViolationError
 
 from .users import get_current_user_id
 
-router = APIRouter(prefix="/scripting")
+router = APIRouter(prefix="/scripting", tags=["scripting"])
 
 
 @router.get("/schema", response_model=List[Dict])

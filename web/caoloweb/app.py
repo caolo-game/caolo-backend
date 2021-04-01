@@ -18,7 +18,12 @@ from .model import game_state
 from . import handler
 
 
-app = FastAPI()
+tags_metadata = [
+    {"name": "world", "description": "game world related stuff"},
+    # TODO tag metadata for the rest
+]
+
+app = FastAPI(title="Cao-Lo API", version="0.1.0", openapi_tags=tags_metadata)
 
 app.add_middleware(
     CORSMiddleware,

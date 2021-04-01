@@ -23,7 +23,7 @@ from ..config import QUEEN_TAG
 from .users import get_current_user_id
 
 
-router = APIRouter(prefix="/commands")
+router = APIRouter(prefix="/commands", tags=["commands"])
 
 
 class BotScriptPayload(BaseModel):

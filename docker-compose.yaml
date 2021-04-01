@@ -44,7 +44,7 @@ services:
     ports:
       - "6379:6379"
 
-  postgres:
+  db:
     image: postgres:11.1
     environment:
       POSTGRES_USER: postgres

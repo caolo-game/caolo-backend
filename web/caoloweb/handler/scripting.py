@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Any, Optional
 from uuid import UUID
 import json
 import logging
@@ -53,12 +53,22 @@ def _compile_caolang_program(prog_json: str):
         ) from err
 
 
+class CaoLangCard(BaseModel):
+    """
+    A Cao-Lang card
+    """
+
+    ty: str
+    val: Any
+
+
 class CaoLangLane(BaseModel):
     """
     See the `schema` endpoint for available cards
     """
 
-    cards: List
+    name: Optional[str]
+    cards: List[CaoLangCard]
 
 
 class CaoLangProgram(BaseModel):

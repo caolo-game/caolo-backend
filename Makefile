@@ -35,11 +35,11 @@ deploy-heroku-web:web
 	docker push registry.heroku.com/$(app)/web
 
 deploy-heroku-worker:worker
-	docker tag frenetiq/caolo-release:bleeding registry.heroku.com/$(app)/release
+	docker tag frenetiq/caolo-worker:bleeding registry.heroku.com/$(app)/worker
 	docker push registry.heroku.com/$(app)/worker
 
 deploy-heroku-release:release
-	docker tag frenetiq/caolo-worker:bleeding registry.heroku.com/$(app)/worker
+	docker tag frenetiq/caolo-release:bleeding registry.heroku.com/$(app)/release
 	docker push registry.heroku.com/$(app)/release
 
 deploy-heroku: deploy-heroku-web deploy-heroku-worker deploy-heroku-release

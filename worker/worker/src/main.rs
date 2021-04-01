@@ -205,6 +205,7 @@ fn main() {
         .expect("failed to connect to database");
 
     let tag = env::var("CAO_QUEEN_TAG").unwrap_or_else(|_| Uuid::new_v4().to_string());
+    let logger = logger.new(o!("queen_tag" => tag.clone()));
 
     info!(logger, "Creating cao executor with tag {}", tag);
     let mut executor = SimpleExecutor;

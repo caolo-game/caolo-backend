@@ -7,7 +7,7 @@ services:
     image: frenetiq/caolo-release:bleeding
     env_file: docker.env
     depends_on:
-      - postgres
+      - db
   web:
     build: 
       context: .
@@ -21,7 +21,7 @@ services:
       - "8000:8000"
     depends_on:
       - cache
-      - postgres
+      - db
 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/"]
@@ -37,7 +37,7 @@ services:
     env_file: docker.env
     depends_on:
       - cache
-      - postgres
+      - db
 
   cache:
     image: eqalpha/keydb:latest

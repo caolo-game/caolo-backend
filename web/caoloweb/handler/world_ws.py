@@ -10,6 +10,10 @@ from fastapi import (
     WebSocketDisconnect,
 )
 
+
+from websockets.exceptions import ConnectionClosedError
+
+
 from ..model.game_state import (
     manager as game_state_manager,
     get_room_objects,
@@ -71,7 +75,7 @@ class WorldMessenger:
         for client in self.connections:
             try:
                 await self.send_entities(client)
-            except WebSocketDisconnect:
+            except (WebSocketDisconnect, ConnectionClosedError):
                 dc.append(client)
             except:
                 logging.exception("Sending game state failed")

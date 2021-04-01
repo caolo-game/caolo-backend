@@ -2,14 +2,14 @@ from typing import Dict, List
 
 from fastapi import APIRouter, Query
 
-from ..api_schema import RoomObjects, Axial, make_room_id, parse_room_id
+from ..api_schema import RoomObjects, make_room_id, parse_room_id
 from ..model.game_state import get_room_objects, manager
 
 
 router = APIRouter(prefix="/world", tags=["world"])
 
 
-@router.get("/room-terrain-layout", response_model=List[Axial])
+@router.get("/room-terrain-layout", response_model=List[Tuple[int, int]])
 async def room_terrain_layout():
     """
     return the coordinates of the room grid points in a list.

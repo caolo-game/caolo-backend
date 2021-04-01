@@ -4,31 +4,40 @@
             "name": "main",
             "cards": [
                 {
-                    "ScalarInt": 6
+                    "ty": "ScalarInt",
+                    "val": 6
                 },
                 {
-                    "ScalarInt": 14
+                    "ty": "ScalarInt",
+                    "val": 14
                 },
                 {
-                    "ScalarInt": 20
+                    "ty": "ScalarInt",
+                    "val": 20
                 },
                 {
-                    "ScalarInt": 9
+                    "ty": "ScalarInt",
+                    "val": 9
                 },
                 {
-                    "Call": "WorldPosition"
+                    "ty": "Call",
+                    "val": "WorldPosition"
                 },
                 {
-                    "Call": "Move to position"
+                    "ty": "Call",
+                    "val": "Move to position"
                 },
                 {
-                    "ScalarInt": 0
+                    "ty": "ScalarInt",
+                    "val": 0
                 },
                 {
-                    "Equals": null
+                    "ty": "Equals",
+                    "val": null
                 },
                 {
-                    "JumpIfFalse": { "LaneName": "error" }
+                    "ty": "JumpIfFalse",
+                    "val": { "LaneName": "error" }
                 }
             ]
         },
@@ -36,10 +45,12 @@
             "name": "error",
             "cards": [
                 {
-                    "StringLiteral": "Failed to move"
+                    "ty": "StringLiteral",
+                    "val": "Failed to move"
                 },
                 {
-                    "Call": "Console Log"
+                    "ty": "Call",
+                    "val": "Console Log"
                 }
             ]
         }

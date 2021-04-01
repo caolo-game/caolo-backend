@@ -34,8 +34,10 @@ fn test_world_position() {
     const PROGRAM: &str = r#"
 lanes:
     - cards:
-        - Call: "WorldPosition"
-        - SetGlobalVar: "pos"
+        - ty: Call
+          val: "WorldPosition"
+        - ty: SetGlobalVar
+          val: "pos"
 "#;
 
     let program = serde_yaml::from_str(PROGRAM).unwrap();

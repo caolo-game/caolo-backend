@@ -4,43 +4,56 @@
             "name": "main",
             "cards": [
                 {
-                    "ScalarInt": 1
+                    "ty": "ScalarInt",
+                    "val": 1
                 },
                 {
-                    "StringLiteral": "Resource"
+                    "ty": "StringLiteral",
+                    "val": "Resource"
                 },
                 {
-                    "Call": "Parse Find Constant"
+                    "ty": "Call",
+                    "val": "Parse Find Constant"
                 },
                 {
-                    "Call": "Find Closest"
+                    "ty": "Call",
+                    "val": "Find Closest"
                 },
                 {
-                    "ScalarInt": 0
+                    "ty": "ScalarInt",
+                    "val": 0
                 },
                 {
-                    "Equals": null
+                    "ty": "Equals",
+                    "val": null
                 },
                 {
-                    "JumpIfFalse": { "LaneName": "resource-error" }
+                    "ty": "JumpIfFalse",
+                    "val": { "LaneName": "resource-error" }
                 },
                 {
-                    "CopyLast": null
+                    "ty": "CopyLast",
+                    "val": null
                 },
                 {
-                    "Call": "Approach Entity"
+                    "ty": "Call",
+                    "val": "Approach Entity"
                 },
                 {
-                    "Pop": null
+                    "ty": "Pop",
+                    "val": null
                 },
                 {
-                    "Call": "Mine"
+                    "ty": "Call",
+                    "val": "Mine"
                 },
                 {
-                    "StringLiteral": "We be mining bois"
+                    "ty": "StringLiteral",
+                    "val": "We be mining bois"
                 },
                 {
-                    "Call": "Console Log"
+                    "ty": "Call",
+                    "val": "Console Log"
                 }
             ]
         },
@@ -48,10 +61,12 @@
             "name": "resource-error",
             "cards": [
                 {
-                    "StringLiteral": "No resource found"
+                    "ty": "StringLiteral",
+                    "val": "No resource found"
                 },
                 {
-                    "Call": "Console Log"
+                    "ty": "Call",
+                    "val": "Console Log"
                 }
             ]
         }

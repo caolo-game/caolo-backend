@@ -19,9 +19,9 @@ pub struct Diagnostics {
     pub tick_latency_max: i64,
     pub tick_latency_mean: f64,
     pub tick_latency_std: f64,
+    pub tick_latency_count: u64,
 
     pub __tick_latency_std_aggregator: f64,
-    pub tick_latency_count: u64,
 }
 
 impl Default for Diagnostics {

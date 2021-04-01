@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple, Any
+from typing import Dict, List, Tuple
 
 from fastapi import APIRouter, Query
 
@@ -26,7 +26,7 @@ async def terrain(q: int = Query(None), r: int = Query(None)):
     return manager.game_state.payload["terrain"]["roomTerrain"].get(room_id)
 
 
-@router.get("/rooms", response_model=List[Dict[Tuple[int, int], Any]])
+@router.get("/rooms", response_model=List[Dict])
 async def rooms():
     # keys are 'q;r', so split them and insert them into a 'pos' object,
     # then put the rest of the values next to it

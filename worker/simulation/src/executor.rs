@@ -83,11 +83,8 @@ impl Executor for SimpleExecutor {
             diag.systems_update_ms = duration.num_milliseconds();
         }
         let end = chrono::Utc::now();
-        let duration = end - start;
 
-        diag.tick_start = start;
-        diag.tick_end = end;
-        diag.update_latency_stats(duration.num_milliseconds(), tick);
+        diag.update_latency_stats(tick, start, end);
         info!(logger, "Tick done");
         info!(
             logger,

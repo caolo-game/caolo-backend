@@ -57,8 +57,8 @@ pub fn execute_scripts(
     #[derive(Default)]
     struct RunResult {
         intents: Vec<BotIntents>,
-        num_scripts_ran: i64,
-        num_scripts_errored: i64,
+        num_scripts_ran: u64,
+        num_scripts_errored: u64,
     }
 
     let run_result: Option<RunResult> = workload
@@ -120,7 +120,7 @@ pub fn execute_scripts(
 
     diag.number_of_intents = run_result
         .as_ref()
-        .map(|i| i.intents.len() as i64)
+        .map(|i| i.intents.len() as u64)
         .unwrap_or(0);
     diag.number_of_scripts_ran = run_result.as_ref().map(|i| i.num_scripts_ran).unwrap_or(0);
     diag.number_of_scripts_errored = run_result

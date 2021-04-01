@@ -4,22 +4,29 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Diagnostics {
+    /// start time of diagnostics collection
+    pub start: DateTime<Utc>,
+    /// current tick
     pub tick: u64,
 
+    /// total latency of the current tick
     pub tick_latency_ms: i64,
-    pub tick_start: DateTime<Utc>,
-    pub tick_end: DateTime<Utc>,
     pub scripts_execution_ms: i64,
     pub systems_update_ms: i64,
-    pub number_of_scripts_ran: i64,
-    pub number_of_scripts_errored: i64,
-    pub number_of_intents: i64,
 
+    // aggregated stats
     pub tick_latency_min: i64,
     pub tick_latency_max: i64,
     pub tick_latency_mean: f64,
     pub tick_latency_std: f64,
     pub tick_latency_count: u64,
+
+    pub number_of_scripts_ran: u64,
+    pub number_of_scripts_errored: u64,
+    pub number_of_intents: u64,
+
+    /// total time since the beginning of stats collection. a.k.a [start](Diagnostics::start)
+    pub uptime_ms: i64,
 
     pub __tick_latency_std_aggregator: f64,
 }
@@ -33,10 +40,10 @@ impl Default for Diagnostics {
             number_of_scripts_ran: 0,
             number_of_scripts_errored: 0,
             number_of_intents: 0,
-            tick_start: now,
-            tick_end: now,
+            start: now,
             systems_update_ms: 0,
             scripts_execution_ms: 0,
+            uptime_ms: 0,
 
             tick_latency_min: std::i64::MAX,
             tick_latency_max: 0,
@@ -53,7 +60,18 @@ impl Diagnostics {
         *self = Self::default();
     }
 
-    pub fn update_latency_stats(&mut self, latency: i64, tick: u64) {
+    pub fn update_latency_stats(&mut self, tick: u64, start: DateTime<Utc>, end: DateTime<Utc>) {
+        let duration = end - start;
+
+        let latency = duration.num_milliseconds();
+
+        debug_assert!(
+            (latency.abs() - self.systems_update_ms - self.scripts_execution_ms).abs() < 2,
+            "Latency should equal the sum of the sub-categories"
+        );
+
+        self.uptime_ms = (end - self.start).num_milliseconds();
+
         self.tick_latency_ms = latency;
         self.tick = tick;
 

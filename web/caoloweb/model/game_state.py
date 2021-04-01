@@ -5,10 +5,10 @@ import datetime as dt
 import asyncio
 import logging
 
-from ..api_schema import RoomObjects
-
-import aioredis
 from aioredis import Redis
+
+from ..config import QUEEN_TAG
+from ..api_schema import RoomObjects
 
 
 @dataclass
@@ -36,7 +36,6 @@ def get_room_objects(game_state: GameState, room_id: str):
 
 async def load_latest_game_state(db, queen_tag=None) -> GameState:
     if queen_tag is None:
-        from ..app import QUEEN_TAG
 
         queen_tag = QUEEN_TAG
 

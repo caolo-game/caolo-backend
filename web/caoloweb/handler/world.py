@@ -1,6 +1,6 @@
-from typing import Dict, List, Tuple
-from fastapi import APIRouter, Query, Request, Response
-import json
+from typing import Dict, List
+
+from fastapi import APIRouter, Query
 
 from ..api_schema import RoomObjects, Axial, make_room_id, parse_room_id
 from ..model.game_state import get_room_objects, manager
@@ -10,26 +10,26 @@ router = APIRouter(prefix="/world")
 
 
 @router.get("/room-terrain-layout", response_model=List[Axial])
-async def room_terrain_layout(
-    req: Request,
-):
+async def room_terrain_layout():
     """
     return the coordinates of the room grid points in a list.
 
-    If you query the terrain the i-th terrain enum value will correspond to the i-th coordinates returned by this endpoint
+    If you query the terrain the i-th terrain enum value 
+    will correspond to the i-th coordinates returned by this endpoint
     """
     return manager.game_state.payload["terrain"]["roomLayout"]
 
 
 @router.get("/terrain", response_model=List[str])
-async def terrain(req: Request, q: int = Query(None), r: int = Query(None)):
+async def terrain(q: int = Query(None), r: int = Query(None)):
     room_id = make_room_id(q, r)
     return manager.game_state.payload["terrain"]["roomTerrain"].get(room_id)
 
 
 @router.get("/rooms", response_model=List[Dict])
-async def rooms(req: Request):
-    # keys are 'q;r', so split them and insert them into a 'pos' object, then put the rest of the values next to it
+async def rooms():
+    # keys are 'q;r', so split them and insert them into a 'pos' object,
+    # then put the rest of the values next to it
     return (
         {"pos": room_id, **v}
         for room_id, v in (
@@ -40,7 +40,7 @@ async def rooms(req: Request):
 
 
 @router.get("/room-objects", response_model=RoomObjects)
-async def room_objects(req: Request, q: int = Query(None), r: int = Query(None)):
+async def room_objects(q: int = Query(None), r: int = Query(None)):
     """
     return a list of each type of entity in the given room
     """

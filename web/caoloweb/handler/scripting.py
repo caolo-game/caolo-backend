@@ -1,6 +1,7 @@
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List
 from uuid import UUID
 import json
+import logging
 
 import cao_lang
 
@@ -42,12 +43,14 @@ def _compile_caolang_program(prog_json: str):
     except ValueError as err:
         raise HTTPException(
             status_code=400, detail=f"Failed to parse compilation unit: {err}"
-        )
+        ) from err
 
     try:
         _program = cao_lang.compile(compilation_unit)
     except ValueError as err:
-        raise HTTPException(status_code=400, detail=f"Failed to compile program: {err}")
+        raise HTTPException(
+            status_code=400, detail=f"Failed to compile program: {err}"
+        ) from err
 
 
 class CaoLangLane(BaseModel):
@@ -63,7 +66,7 @@ class CaoLangProgram(BaseModel):
 
 
 @router.post("/compile")
-async def compile(req: Request, _body: CaoLangProgram = Body(...)):
+async def compile_program(req: Request, _body: CaoLangProgram = Body(...)):
     # Body is used for openapi hint
     # we need the program to be json encoded, so just use the raw body
     payload: bytes = await req.body()
@@ -90,7 +93,7 @@ async def commit_script(
     db = req.state.db
 
     # we need the program to be json encoded
-    payload = json.dumps(body.program, default=lambda o: dict(o))
+    payload = json.dumps(body.program, default=dict)
     _compile_caolang_program(payload)
 
     # if the program compiles we can save it in the database
@@ -149,7 +152,7 @@ async def init_new_script(
 
         else:
             logging.exception("Failed to insert new program, constraint not handled")
-        raise HTTPException(status_code, detail)
+        raise HTTPException(status_code, detail) from err
 
     return {"program_id": res["id"]}
 
@@ -189,7 +192,7 @@ async def fetch_program(
 
 
 @router.delete("/program")
-async def fetch_program(
+async def delete_program(
     req: Request,
     program_id: UUID = Query(...),
     current_user_id=Depends(get_current_user_id),

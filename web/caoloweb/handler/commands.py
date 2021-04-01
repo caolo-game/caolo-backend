@@ -17,9 +17,11 @@ from pydantic import BaseModel
 from aioredis import Redis
 import asyncio
 
+import cao_commands_pb2 as cao_commands
+
+from ..config import QUEEN_TAG
 from .users import get_current_user_id
 
-import cao_commands_pb2 as cao_commands
 
 router = APIRouter(prefix="/commands")
 
@@ -30,7 +32,6 @@ class BotScriptPayload(BaseModel):
 
 
 async def _send_command(payload: str, msg_id: UUID, redis: Redis):
-    from ..app import QUEEN_TAG
 
     q_name = f"{QUEEN_TAG}-commands"
 

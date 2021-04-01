@@ -10,18 +10,13 @@ import json
 import os
 import asyncio
 
+from .config import QUEEN_TAG, DB_URL, REDIS_STR
 
 from .api_schema import RoomObjects, Axial, make_room_id, parse_room_id
 from .model import game_state
 
 from . import handler
 
-try:
-    from dotenv import load_dotenv
-
-    load_dotenv()
-except:
-    pass
 
 app = FastAPI()
 
@@ -34,7 +29,6 @@ app.add_middleware(
 )
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-DB_URL = os.getenv("DATABASE_URL", "postgres://postgres:admin@localhost:5432/caolo")
 _DB_POOL = None
 
 
@@ -45,15 +39,7 @@ async def db_pool():
     return _DB_POOL
 
 
-REDIS_STR = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 _REDIS_POOL = None
-
-try:
-    QUEEN_TAG = os.getenv("CAO_QUEEN_TAG")
-    assert QUEEN_TAG is not None
-except:
-    logging.exception("Failed to find my queen :(")
-    raise
 
 
 async def redis_pool():

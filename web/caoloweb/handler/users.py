@@ -1,13 +1,10 @@
-import json
-from typing import Dict, List, Tuple, Optional
+from typing import Optional
 import logging
 import string
 import random
 
 from fastapi import (
     APIRouter,
-    Response,
-    Query,
     Request,
     Depends,
     HTTPException,
@@ -16,12 +13,11 @@ from fastapi import (
 )
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel, Field, EmailStr
-from jose import jwt, JWTError
+from jose import JWTError
 
 
 from asyncpg.exceptions import UniqueViolationError
 
-from .. import app
 from ..model.auth import (
     hashpw,
     verifypw,
@@ -53,9 +49,9 @@ async def get_current_user_id(token: str = Depends(oauth2_scheme)):
 
     try:
         payload = decode_access_token(token)
-    except (AssertionError, JWTError):
+    except (AssertionError, JWTError) as err:
         logging.exception("Failed to validate JWT")
-        raise credentials_exception()
+        raise credentials_exception() from err
     return payload.get("sub")
 
 
@@ -129,7 +125,7 @@ async def register(req: Request, form_data: RegisterForm = Body(...)):
         else:
             logging.exception("Failed to register new user, constraint not handled")
 
-        raise HTTPException(status_code=status_code, detail=detail)
+        raise HTTPException(status_code=status_code, detail=detail) from err
 
     token = await _update_access_token(res["id"], db)
     return {"access_token": token, "token_type": "bearer"}

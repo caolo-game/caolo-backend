@@ -1,17 +1,15 @@
+import json
+import logging
+import asyncio
+from dataclasses import dataclass
+
 from fastapi import (
     APIRouter,
     WebSocket,
     Depends,
     WebSocketDisconnect,
 )
-import json
-import logging
-import asyncio
-import datetime as dt
 
-from dataclasses import dataclass
-
-from ..api_schema import RoomObjects, Axial, make_room_id, parse_room_id
 from ..model.game_state import (
     manager as game_state_manager,
     get_room_objects,
@@ -75,7 +73,7 @@ class WorldMessenger:
                 await self.send_entities(client)
             except WebSocketDisconnect:
                 dc.append(client)
-            except Exception as exc:
+            except:
                 logging.exception("Sending game state failed")
                 dc.append(client)
         # disconnected clients
@@ -83,17 +81,17 @@ class WorldMessenger:
             await self.disconnect(c)
 
 
-manager = WorldMessenger()
+world_messanger = WorldMessenger()
 
 
-game_state_manager.on_new_state(manager.on_new_state)
+game_state_manager.on_new_state(world_messanger.on_new_state)
 
 
 # NOTE:
 # the router.websocket ignores the router's path prefix
 @router.websocket("/world/object-stream")
 async def object_stream(
-    ws: WebSocket, manager: WorldMessenger = Depends(lambda: manager)
+    ws: WebSocket, manager: WorldMessenger = Depends(lambda: world_messanger)
 ):
     """
     Streams game objects of a room.
@@ -116,6 +114,5 @@ async def object_stream(
         pass
     except:
         logging.exception("Error in object streaming to client")
-        pass
     finally:
         await manager.disconnect(client)

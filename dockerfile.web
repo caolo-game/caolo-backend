@@ -1,10 +1,9 @@
-FROM python:3.9-slim
+FROM python:3.9-alpine AS build
 
-RUN apt-get update
-RUN apt-get install curl gcc libpq-dev protobuf-compiler -y --fix-missing
+RUN apk add curl gcc libpq protobuf build-base libffi-dev
 RUN protoc --version
 
-RUN pip install gunicorn
+RUN pip install -U setuptools pip virtualenv
 
 WORKDIR /caolo
 # install Rust compiler
@@ -20,7 +19,21 @@ COPY ./web/ ./web/
 ENV CAO_PROTOS_PATH=/caolo/protos
 WORKDIR /caolo/web
 
-RUN pip install .
+RUN python -m venv .env
+RUN .env/bin/pip install . --no-cache-dir
+
+FROM python:3.9-alpine
+
+WORKDIR /caolo/web
+
+RUN apk add gcc libpq
+
+COPY --from=build /caolo/web/start.sh ./
+COPY --from=build /caolo/web/ ./
+
+ENV PATH="/caolo/web/.env/bin:$PATH"
+
+RUN pip install gunicorn
 RUN chmod +x start.sh
 
 ENTRYPOINT [ "sh", "./start.sh"]

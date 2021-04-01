@@ -88,10 +88,10 @@ impl Executor for SimpleExecutor {
 
         diag.tick_start = start;
         diag.tick_end = end;
-        diag.tick_end(duration.num_milliseconds(), tick);
+        diag.update_latency_stats(duration.num_milliseconds(), tick);
         info!(
             logger,
-            "Tick done. Latency: {} Mean latency: {} Std latency: {}",
+            "Tick done. Latency: {:.4}ms Mean latency: {:.4}ms Std latency: {:.4}ms",
             diag.tick_latency_ms,
             diag.tick_latency_mean,
             diag.tick_latency_std,

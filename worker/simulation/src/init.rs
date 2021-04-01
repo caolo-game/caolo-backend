@@ -101,7 +101,7 @@ pub fn init_world_entities(logger: Logger, storage: &mut World, n_fake_users: us
             .get_by_id(spawnid)
             .expect("spawn should have position")
             .0;
-        for _ in 0..3 {
+        for _ in 0..2 {
             let botid = storage.insert_entity();
             init_bot(
                 botid,
@@ -111,7 +111,7 @@ pub fn init_world_entities(logger: Logger, storage: &mut World, n_fake_users: us
                 FromWorldMut::new(storage),
             );
         }
-        for _ in 0..3 {
+        for _ in 0..2 {
             let botid = storage.insert_entity();
             init_bot(
                 botid,

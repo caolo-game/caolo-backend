@@ -1,11 +1,11 @@
+mod serde_impl;
+
 use cao_lang::traits::AutoByteEncodeProperties;
-use serde_derive::{Deserialize, Serialize};
+use serde_derive::Deserialize;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
 
 /// Represents a hex point in axial coordinate space
-#[derive(
-    Debug, Clone, Default, Copy, Eq, PartialEq, Serialize, Deserialize, Ord, PartialOrd, Hash,
-)]
+#[derive(Debug, Clone, Default, Copy, Eq, PartialEq, Deserialize, Ord, PartialOrd, Hash)]
 pub struct Axial {
     pub q: i32,
     pub r: i32,

@@ -1,7 +1,7 @@
-mod point;
+mod axial;
 mod hexagon;
 
-pub use point::*;
+pub use axial::*;
 pub use hexagon::*;
 
 pub fn aabb_over_circle(center: Axial, radius: u32) -> (Axial, Axial) {

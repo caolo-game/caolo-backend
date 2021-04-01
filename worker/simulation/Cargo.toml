@@ -46,6 +46,7 @@ serde_yaml = "*"
 # env_logger needs to be compiled without default features so the test suite can capture the logs
 env_logger = { version = "0.7", default-features = false }
 slog-stdlog = "3"
+serde_test = "*"
 
 [build-dependencies]
 toml = "0.4"

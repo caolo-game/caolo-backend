@@ -20,7 +20,9 @@ from . import handler
 
 tags_metadata = [
     {"name": "world", "description": "game world related stuff"},
-    # TODO tag metadata for the rest
+    {"name": "scripting", "description": "Cao-Lang related stuff"},
+    {"name": "commands", "description": "Simulation interaction"},
+    {"name": "users", "description": "User management"},
 ]
 
 app = FastAPI(title="Cao-Lo API", version="0.1.0", openapi_tags=tags_metadata)

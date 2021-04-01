@@ -15,13 +15,13 @@ pub struct Diagnostics {
     pub number_of_scripts_errored: i64,
     pub number_of_intents: i64,
 
+    pub tick_latency_min: i64,
+    pub tick_latency_max: i64,
     pub tick_latency_mean: f64,
     pub tick_latency_std: f64,
 
-    #[serde(skip)]
-    tick_latency_std_aggregator: f64,
-    #[serde(skip)]
-    tick_latency_count: u64,
+    pub tick_latency_std_aggregator: f64,
+    pub tick_latency_count: u64,
 }
 
 impl Default for Diagnostics {
@@ -38,6 +38,8 @@ impl Default for Diagnostics {
             systems_update_ms: 0,
             scripts_execution_ms: 0,
 
+            tick_latency_min: 0,
+            tick_latency_max: 0,
             tick_latency_count: 0,
             tick_latency_mean: 0.0,
             tick_latency_std: 0.0,
@@ -54,6 +56,9 @@ impl Diagnostics {
     pub fn update_latency_stats(&mut self, latency: i64, tick: u64) {
         self.tick_latency_ms = latency;
         self.tick = tick;
+
+        self.tick_latency_min = self.tick_latency_min.min(latency);
+        self.tick_latency_max = self.tick_latency_max.max(latency);
 
         let latency = latency as f64;
 

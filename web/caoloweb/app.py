@@ -9,6 +9,7 @@ import logging
 import json
 import os
 import asyncio
+import sys
 
 from .config import QUEEN_TAG, DB_URL, REDIS_STR
 
@@ -16,6 +17,12 @@ from .api_schema import RoomObjects, Axial, make_room_id, parse_room_id
 from .model import game_state
 
 from . import handler
+
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(pathname)s:%(lineno)d: %(message)s",
+)
 
 
 tags_metadata = [

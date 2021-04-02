@@ -77,6 +77,7 @@ class GameStateManager:
 
     async def _listener(self, ch):
         while await ch.wait_message():
+            logging.info("GameStateManager got a new message")
             msg = await ch.get_json()
             self.game_state = GameState(
                 world_time=msg["time"],

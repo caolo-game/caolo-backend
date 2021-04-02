@@ -75,26 +75,33 @@ class GameStateManager:
     async def _load_from_db(self, db):
         self.game_state = await load_latest_game_state(db)
 
-    async def _listener(self, ch):
-        while await ch.wait_message():
-            logging.info("GameStateManager got a new message")
-            msg = await ch.get_json()
-            self.game_state = GameState(
-                world_time=msg["time"],
-                created=dt.datetime.now(),
-                payload=msg,
+    async def _listener(self, queen_tag: str, redis: Redis):
+        key = f"{queen_tag}-world"
+        while 1:
+            logging.info("Subscribing to %s", key)
+            ch = await redis.subscribe(key)
+            ch = ch[0]
+
+            async for msg in ch.iter(decoder=json.loads):
+                logging.info("Got a new game state of tick %d" % msg["time"])
+                self.game_state = GameState(
+                    world_time=msg["time"],
+                    created=dt.datetime.now(),
+                    payload=msg,
+                )
+                for cb in self.on_new_state_callbacks:
+                    try:
+                        cb(self.game_state)
+                    except:
+                        logging.exception("Callback failed")
+            logging.warn(
+                "GameStateManager._listener exiting. channel: %s.",
+                ch,
             )
-            for cb in self.on_new_state_callbacks:
-                try:
-                    cb(self.game_state)
-                except:
-                    logging.exception("Callback failed")
 
     async def start(self, queen_tag: str, redis: Redis, db):
-        ch = await redis.subscribe(f"{queen_tag}-world")
-        ch = ch[0]
         await self._load_from_db(db)
-        asyncio.create_task(self._listener(ch))
+        asyncio.create_task(self._listener(queen_tag, redis))
 
 
 manager = GameStateManager()

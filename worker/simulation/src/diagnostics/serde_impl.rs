@@ -10,11 +10,13 @@ impl Serialize for DiagDur {
     {
         let days = self.0.num_days();
         let hours = self.0.num_hours() % 24;
-        let seconds = self.0.num_seconds() % (24 * 60) % 60;
+        let minutes = self.0.num_minutes() % 60;
+        let seconds = self.0.num_seconds() % 60;
 
         let costume = DiagDurSerde {
             days,
             hours,
+            minutes,
             seconds,
         };
 
@@ -31,6 +33,7 @@ impl<'de> Deserialize<'de> for DiagDur {
 
         let dur = Duration::days(costume.days)
             + Duration::hours(costume.hours)
+            + Duration::minutes(costume.minutes)
             + Duration::seconds(costume.seconds);
 
         Ok(Self(dur))
@@ -41,6 +44,7 @@ impl<'de> Deserialize<'de> for DiagDur {
 struct DiagDurSerde {
     days: i64,
     hours: i64,
+    minutes: i64,
     seconds: i64,
 }
 
@@ -58,12 +62,14 @@ mod tests {
             &[
                 Token::Struct {
                     name: "DiagDurSerde",
-                    len: 3,
+                    len: 4,
                 },
                 Token::Str("days"),
                 Token::I64(12),
                 Token::Str("hours"),
                 Token::I64(23),
+                Token::Str("minutes"),
+                Token::I64(0),
                 Token::Str("seconds"),
                 Token::I64(42),
                 Token::StructEnd,

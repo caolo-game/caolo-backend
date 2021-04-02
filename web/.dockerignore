@@ -4,3 +4,4 @@
 !start.sh
 __pycache__
 *.egg-info
+*.pyc

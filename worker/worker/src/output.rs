@@ -65,20 +65,20 @@ pub async fn send_schema<'a>(
     Ok(())
 }
 
-/// Publish the world to {queen_tag}-world
-async fn output_to_redis<'a>(
-    payload: &'a serde_json::Value,
+/// Publish the world time to {queen_tag}-world
+///
+/// Clients can query the database for the world with this tag and time
+async fn publish_tick_to_redis<'a>(
     client: &'a redis::Client,
+    time: i64,
     queen_tag: &'a str,
 ) -> anyhow::Result<()> {
-    let payload = serde_json::to_vec(payload).unwrap();
-
     let mut conn = client
         .get_async_connection()
         .await
         .with_context(|| "Failed to acquire redis connection")?;
 
-    conn.publish(format!("{}-world", queen_tag), payload)
+    conn.publish(format!("{}-world", queen_tag), time)
         .await
         .with_context(|| "Failed to publish world payload via Redis")?;
 
@@ -115,12 +115,16 @@ pub async fn send_world<'a>(
     redis: &'a redis::Client,
 ) -> anyhow::Result<()> {
     info!(logger, "Sending world");
-    let db = output_to_db(time, payload, db, queen_tag);
-    let red = output_to_redis(payload, redis, queen_tag);
 
-    let (db, red) = futures::join!(db, red);
-    db.with_context(||"Failed to send to db")?;
-    red.with_context(||"Failed to send to redis")?;
+    output_to_db(time, payload, db, queen_tag)
+        .await
+        .with_context(|| "Failed to send to db")?;
+
+    // wait for db insert before publishing
+
+    publish_tick_to_redis(redis, time, queen_tag)
+        .await
+        .with_context(|| "Failed to send to redis")?;
 
     info!(logger, "Sending world done");
     Ok(())

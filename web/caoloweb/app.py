@@ -20,7 +20,7 @@ from . import handler
 
 
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.WARNING,
     format="%(asctime)s [%(levelname)s] %(pathname)s:%(lineno)d: %(message)s",
 )
 
@@ -126,10 +126,10 @@ async def _broadcast_gamestate():
     redis = aioredis.Redis(cache)
 
     pool = await db_pool()
-    # Do not release this redis instance, game_state manager needs to hold it for pubsub
+    # Do not release this redis/db instance, game_state manager needs to hold it for pubsub
     # db is only needed for initialization
-    async with pool.acquire() as con:
-        await game_state.manager.start(QUEEN_TAG, redis, con)
+    con = await pool.acquire()
+    await game_state.manager.start(QUEEN_TAG, redis, con)
 
 
 @app.on_event("startup")

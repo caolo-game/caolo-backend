@@ -122,5 +122,6 @@ pub async fn send_world<'a>(
     db.with_context(||"Failed to send to db")?;
     red.with_context(||"Failed to send to redis")?;
 
+    info!(logger, "Sending world done");
     Ok(())
 }

@@ -7,7 +7,7 @@ RUN cargo install diesel_cli --root . --no-default-features --features="postgres
 FROM ubuntu:18.04
 WORKDIR /caolo
 RUN apt-get update
-RUN apt-get install libpq-dev -y
+RUN apt-get install libpq-dev curl -y
 
 COPY ./migrations/ ./migrations/
 COPY ./release.sh ./

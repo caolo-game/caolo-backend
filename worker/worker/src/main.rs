@@ -1,12 +1,11 @@
 mod config;
 mod input;
+mod output;
 
 mod protos;
 
-use anyhow::Context;
 use caolo_sim::{executor::Executor, executor::SimpleExecutor, prelude::*};
-use redis::AsyncCommands;
-use slog::{debug, error, info, o, warn, Drain, Logger};
+use slog::{error, info, o, Drain, Logger};
 use std::{
     env,
     time::{Duration, Instant},
@@ -38,133 +37,23 @@ fn tick(logger: Logger, exc: &mut impl Executor, storage: &mut World) {
         .expect("Failed to forward game state")
 }
 
-async fn send_schema<'a>(
-    logger: Logger,
-    connection: impl sqlx::Executor<'a, Database = sqlx::Postgres>,
-    queen_tag: &'a str,
-) -> anyhow::Result<()> {
-    debug!(logger, "Sending schema");
-    let schema = caolo_sim::scripting_api::make_import();
-    let imports = schema.imports();
-
-    let basic_descs = cao_lang::compiler::card_description::get_instruction_descriptions();
-
-    #[derive(serde::Serialize)]
-    struct Card<'a> {
-        name: &'a str,
-        description: &'a str,
-        ty: &'a str,
-        input: &'a [&'a str],
-        output: &'a [&'a str],
-        constants: &'a [&'a str],
-    }
-
-    let msg = imports
-        .iter()
-        .map(|import| Card {
-            name: import.desc.name,
-            description: import.desc.description,
-            constants: &*import.desc.constants,
-            input: &*import.desc.input,
-            output: &*import.desc.output,
-            ty: import.desc.ty.as_str(),
-        })
-        .chain(basic_descs.iter().map(|card| Card {
-            name: card.name,
-            description: card.description,
-            input: &*card.input,
-            output: &*card.output,
-            constants: &*card.constants,
-            ty: card.ty.as_str(),
-        }))
-        .collect::<Vec<_>>();
-
-    let payload = serde_json::to_value(&msg)?;
-
-    sqlx::query!(
-        r#"
-    INSERT INTO scripting_schema (queen_tag, payload)
-    VALUES ($1, $2)
-    ON CONFLICT (queen_tag)
-    DO UPDATE SET
-    payload=$2
-        "#,
-        queen_tag,
-        payload
-    )
-    .execute(connection)
-    .await
-    .with_context(|| "Failed to send schema")?;
-
-    debug!(logger, "Sending schema done");
-    Ok(())
-}
-
-/// Publish the world to {queen_tag}-world
-async fn output_to_redis<'a>(
-    payload: &'a serde_json::Value,
-    client: &'a redis::Client,
-    queen_tag: &'a str,
-) -> anyhow::Result<()> {
-    let payload = serde_json::to_vec(payload).unwrap();
-
-    let mut conn = client
-        .get_async_connection()
-        .await
-        .with_context(|| "Failed to acquire redis connection")?;
-
-    conn.publish(format!("{}-world", queen_tag), payload)
-        .await
-        .with_context(|| "Failed to send world payload")?;
-
-    Ok(())
-}
-
-async fn output_to_db<'a>(
-    time: i64,
-    payload: &'a serde_json::Value,
-    connection: impl sqlx::Executor<'a, Database = sqlx::Postgres>,
-    queen_tag: &'a str,
-) -> anyhow::Result<()> {
-    sqlx::query!(
-        r#"
-        INSERT INTO world_output (queen_tag, world_time, payload)
-        VALUES ($1, $2, $3);
-        "#,
-        queen_tag,
-        time,
-        payload
-    )
-    .execute(connection)
-    .await
-    .with_context(|| "Failed to insert current world state")?;
-    Ok(())
-}
-
-async fn output<'a>(
-    time: i64,
-    payload: &'a serde_json::Value,
-    queen_tag: &'a str,
-    db: impl sqlx::Executor<'a, Database = sqlx::Postgres>,
-    redis: &'a redis::Client,
-) -> anyhow::Result<()> {
-    let db = output_to_db(time, payload, db, queen_tag);
-    let red = output_to_redis(payload, redis, queen_tag);
-
-    db.await.with_context(|| "Failed to send to database")?;
-    red.await.with_context(|| "Failed to send to redis")?;
-    Ok(())
-}
-
 fn main() {
     init();
     let sim_rt = caolo_sim::RuntimeGuard::new();
 
     let game_conf = config::GameConfig::load();
 
+    let _sentry = env::var("SENTRY_URI")
+        .ok()
+        .map(|uri| sentry::init(uri.as_str()))
+        .ok_or_else(|| {
+            eprintln!("Sentry URI was not provided");
+        });
+
     let decorator = slog_term::TermDecorator::new().build();
     let drain = slog_term::FullFormat::new(decorator).build().fuse();
     let drain = slog_envlogger::new(drain).fuse();
+    let drain = sentry_slog::SentryDrain::new(drain).fuse();
     let drain = slog_async::Async::new(drain)
         .overflow_strategy(slog_async::OverflowStrategy::Drop)
         .build()
@@ -172,17 +61,6 @@ fn main() {
     let logger = slog::Logger::root(drain, o!());
 
     info!(logger, "Loaded game config {:?}", game_conf);
-
-    let _sentry = env::var("SENTRY_URI")
-        .ok()
-        .map(|uri| {
-            let options: sentry::ClientOptions = uri.as_str().into();
-            let integration = sentry_slog::SlogIntegration::default();
-            sentry::init(options.add_integration(integration))
-        })
-        .ok_or_else(|| {
-            warn!(logger, "Sentry URI was not provided");
-        });
 
     let script_chunk_size = env::var("CAO_QUEEN_SCRIPT_CHUNK_SIZE")
         .ok()
@@ -229,7 +107,7 @@ fn main() {
     info!(logger, "Starting with {} actors", game_conf.n_actors);
 
     sim_rt
-        .block_on(send_schema(
+        .block_on(output::send_schema(
             logger.clone(),
             &db_pool,
             storage.queen_tag().unwrap(),
@@ -253,7 +131,8 @@ fn main() {
 
         let world_json = storage.as_json();
         sim_rt
-            .block_on(output(
+            .block_on(output::send_world(
+                logger.clone(),
                 storage.time() as i64,
                 &world_json,
                 storage.queen_tag().unwrap(),

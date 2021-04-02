@@ -27,10 +27,11 @@ slog-envlogger = "*"
 chrono = { version = "0.4", features = ["serde"] }
 serde_json = "1"
 serde = "1"
+futures = "*"
 serde_derive = "1"
 rand = "*"
-sentry = "0.20"
-sentry-slog = "0.20"
+sentry = "0.22"
+sentry-slog = "0.22"
 anyhow = "1"
 thiserror = "1"
 sqlx = { version = "0.4.1", features = [

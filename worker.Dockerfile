@@ -17,25 +17,20 @@ COPY ./worker/Cargo.toml ./Cargo.toml
 COPY ./worker/Cargo.lock ./Cargo.lock
 
 RUN mkdir worker/src/
-RUN echo "fn main() {}" > ./worker/src/dummy.rs
 RUN mkdir simulation/src/
-RUN echo "fn main() {}" > ./simulation/src/dummy.rs
+RUN echo "fn main() {println!(\"If you see this the build did a doo doo\");}" > ./worker/src/main.rs
+RUN touch ./simulation/src/lib.rs
 
 # Delete the build script
 RUN sed -i '/build\s*=\s*\"build\.rs\"/d' worker/Cargo.toml
-# Uncomment the [[bin]] section
-RUN sed -i 's/src\/main.rs/src\/dummy.rs/' worker/Cargo.toml
-RUN sed -i 's/# \[\[bin]]/[[bin]]/' simulation/Cargo.toml
-RUN sed -i 's/# name =/name =/' simulation/Cargo.toml
-RUN sed -i 's/# path =/path =/' simulation/Cargo.toml
-RUN sed -i 's/# required =/required =/' simulation/Cargo.toml
+RUN sed -i '/build\s*=\s*\"build\.rs\"/d' simulation/Cargo.toml
 # Delete the bench section
 RUN sed -i '/\[\[bench/,+2d' simulation/Cargo.toml
 
 
-WORKDIR /caolo/worker
-RUN cargo build --release --all-features
-
+ENV SQLX_OFFLINE=true
+RUN cargo build --release
+RUN rm -f target/release/deps/caolo_*
 
 # ==============================================================================================
 

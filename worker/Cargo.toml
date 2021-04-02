@@ -1,6 +1,3 @@
 [workspace]
 members = ["cao-storage-derive", "simulation", "worker"]
-exclude=["debug/src-tauri"]
-
-[profile.release]
-lto = true
+exclude = ["debug/src-tauri"]

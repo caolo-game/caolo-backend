@@ -1,6 +1,11 @@
+mod serde_impl;
+
 use crate::prelude::{tables::unique::UniqueTable, Component, EmptyKey};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct DiagDur(pub Duration);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Diagnostics {
@@ -26,7 +31,10 @@ pub struct Diagnostics {
     pub number_of_intents: u64,
 
     /// total time since the beginning of stats collection. a.k.a [start](Diagnostics::start)
-    pub uptime_ms: i64,
+    ///
+    /// Note that during serialization fidelity is lost, this is only ment to be used as an
+    /// estimate of uptime
+    pub uptime: DiagDur,
 
     pub __tick_latency_std_aggregator: f64,
 }
@@ -43,7 +51,7 @@ impl Default for Diagnostics {
             start: now,
             systems_update_ms: 0,
             scripts_execution_ms: 0,
-            uptime_ms: 0,
+            uptime: DiagDur(Duration::microseconds(0)),
 
             tick_latency_min: std::i64::MAX,
             tick_latency_max: 0,
@@ -70,7 +78,7 @@ impl Diagnostics {
             "Latency should equal the sum of the sub-categories"
         );
 
-        self.uptime_ms = (end - self.start).num_milliseconds();
+        self.uptime = DiagDur(end - self.start);
 
         self.tick_latency_ms = latency;
         self.tick = tick;

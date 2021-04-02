@@ -35,26 +35,26 @@ RUN rm -f target/release/deps/caolo_*
 # ==============================================================================================
 
 FROM rust:1.51 AS build
-COPY ./.cargo/ ./.cargo/
-RUN cargo --version
 
 RUN apt-get update
 RUN apt-get install lld clang libc-dev  pkgconf libpq-dev protobuf-compiler -y
 
 WORKDIR /caolo
-RUN protoc --version
 
 RUN cargo install diesel_cli --no-default-features --features=postgres --root .
 
 # copy the cache
 COPY --from=deps $CARGO_HOME $CARGO_HOME
+COPY --from=deps /caolo/target ./worker/target
+COPY --from=deps /caolo/Cargo.lock ./worker/Cargo.lock
+
+COPY ./.cargo/ ./.cargo/
+RUN cargo --version
+RUN protoc --version
 
 COPY ./protos/ ./protos/
 COPY ./worker/ ./worker/
-
 WORKDIR /caolo/worker
-COPY --from=deps /caolo/target ./target
-COPY --from=deps /caolo/Cargo.lock ./Cargo.lock
 
 ENV SQLX_OFFLINE=true
 RUN cargo build --release

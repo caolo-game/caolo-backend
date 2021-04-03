@@ -2,7 +2,7 @@
 !migrations
 !diesel.toml
 !api
-!worker
+!sim
 !protos
 !.cargo
 !release.sh

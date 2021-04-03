@@ -1,3 +1,4 @@
+# ============= cache dependencies ============================================================
 FROM rust:1.51 AS deps
 
 RUN apt-get update
@@ -8,13 +9,12 @@ WORKDIR /caolo
 COPY ./.cargo/ ./.cargo/
 RUN cargo --version
 
-# ============= cache dependencies ============================================================
 WORKDIR /caolo
-COPY ./worker/cao-storage-derive/ ./cao-storage-derive/
-COPY ./worker/worker/Cargo.toml ./worker/Cargo.toml
-COPY ./worker/simulation/Cargo.toml ./simulation/Cargo.toml
-COPY ./worker/Cargo.toml ./Cargo.toml
-COPY ./worker/Cargo.lock ./Cargo.lock
+COPY ./sim/cao-storage-derive/ ./cao-storage-derive/
+COPY ./sim/worker/Cargo.toml ./worker/Cargo.toml
+COPY ./sim/simulation/Cargo.toml ./simulation/Cargo.toml
+COPY ./sim/Cargo.toml ./Cargo.toml
+COPY ./sim/Cargo.lock ./Cargo.lock
 
 RUN mkdir worker/src/
 RUN mkdir simulation/src/
@@ -45,16 +45,16 @@ RUN cargo install diesel_cli --no-default-features --features=postgres --root .
 
 # copy the cache
 COPY --from=deps $CARGO_HOME $CARGO_HOME
-COPY --from=deps /caolo/target ./worker/target
-COPY --from=deps /caolo/Cargo.lock ./worker/Cargo.lock
+COPY --from=deps /caolo/target ./sim/target
+COPY --from=deps /caolo/Cargo.lock ./sim/Cargo.lock
 
 COPY ./.cargo/ ./.cargo/
 RUN cargo --version
 RUN protoc --version
 
 COPY ./protos/ ./protos/
-COPY ./worker/ ./worker/
-WORKDIR /caolo/worker
+COPY ./sim/ ./sim/
+WORKDIR /caolo/sim
 
 ENV SQLX_OFFLINE=true
 RUN cargo build --release
@@ -66,11 +66,9 @@ WORKDIR /caolo
 
 RUN apt-get update -y
 RUN apt-get install bash libpq-dev openssl -y
-# RUN apt-get install valgrind -y
-# RUN apt-get install heaptrack -y
 
 COPY ./migrations ./migrations
-COPY --from=build /caolo/worker/target/release/caolo-worker ./caolo-worker
+COPY --from=build /caolo/sim/target/release/caolo-worker ./caolo-worker
 COPY --from=build /caolo/bin/diesel ./diesel
 
 RUN ls -al

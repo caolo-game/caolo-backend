@@ -8,11 +8,11 @@ services:
     env_file: docker.env
     depends_on:
       - db
-  web:
+  api:
     build: 
       context: .
-      dockerfile: ./web.Dockerfile
-    image: frenetiq/caolo-web:bleeding
+      dockerfile: ./api.Dockerfile
+    image: frenetiq/caolo-api:bleeding
     env_file: docker.env
     environment:
       HOST: 0.0.0.0
@@ -29,11 +29,11 @@ services:
       retries: 3
       start_period: 5s
 
-  worker:
+  sim:
     build: 
       context: .
-      dockerfile: ./worker.Dockerfile
-    image: frenetiq/caolo-worker:bleeding
+      dockerfile: ./sim.Dockerfile
+    image: frenetiq/caolo-sim:bleeding
     env_file: docker.env
     depends_on:
       - cache

@@ -73,11 +73,6 @@ impl Diagnostics {
 
         let latency = duration.num_milliseconds();
 
-        debug_assert!(
-            (latency.abs() - self.systems_update_ms - self.scripts_execution_ms).abs() < 2,
-            "Latency should equal the sum of the sub-categories"
-        );
-
         self.uptime = DiagDur(end - self.start);
 
         self.tick_latency_ms = latency;

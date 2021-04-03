@@ -50,11 +50,41 @@ async def load_latest_game_state(db, queen_tag=None) -> GameState:
         """,
         queen_tag,
     )
-    return GameState(
-        world_time=row["world_time"],
-        created=row["created"],
-        payload=json.loads(row["payload"]),
+    if row:
+        return GameState(
+            world_time=row["world_time"],
+            created=row["created"],
+            payload=json.loads(row["payload"]),
+        )
+    return None
+
+
+async def load_latest_game_state_after(
+    db, min_bound_tick: int, queen_tag=None
+) -> GameState:
+    if queen_tag is None:
+        queen_tag = QUEEN_TAG
+
+    row = await db.fetchrow(
+        """
+        SELECT
+            t.payload as payload
+            , t.world_time as world_time
+            , t.created as created
+        FROM public.world_output t
+        WHERE t.queen_tag=$1 AND t.world_time > $2
+        ORDER BY t.created DESC
+        """,
+        queen_tag,
+        min_bound_tick,
     )
+    if row:
+        return GameState(
+            world_time=row["world_time"],
+            created=row["created"],
+            payload=json.loads(row["payload"]),
+        )
+    return None
 
 
 class GameStateManager:
@@ -72,16 +102,21 @@ class GameStateManager:
             pass
 
     async def _load_from_db(self, db, queen_tag=None):
-        new_state = await load_latest_game_state(db, queen_tag)
         if self.game_state:
-            logging.debug("Last game-state time %d", self.game_state.world_time)
-            assert new_state.world_time >= self.game_state.world_time
-        self.game_state = new_state
-        logging.debug(
-            "Loaded game-state # %d of tag %s",
-            self.game_state.world_time,
-            queen_tag,
-        )
+            new_state = await load_latest_game_state_after(
+                db, self.game_state.world_time, queen_tag
+            )
+        else:
+            new_state = await load_latest_game_state(db, queen_tag)
+        if new_state:
+            self.game_state = new_state
+            logging.debug(
+                "Loaded game-state # %d of tag %s",
+                self.game_state.world_time,
+                queen_tag,
+            )
+        else:
+            logging.debug("No new state is available")
 
     async def _listener(self, queen_tag: str, redis: Redis, db):
         key = f"{queen_tag}-world"

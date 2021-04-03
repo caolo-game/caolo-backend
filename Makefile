@@ -1,15 +1,15 @@
 .DEFAULT_GOAL := buildall
-.PHONY: web worker
+.PHONY: api worker
 
 test-worker:
 	${MAKE} -C worker test
 
-start: web
+start:
 	docker-compose up -d
 	docker-compose logs -f --tail=100
 
-web:
-	docker build -t frenetiq/caolo-web:bleeding -f ./web.Dockerfile .
+api:
+	docker build -t frenetiq/caolo-api:bleeding -f ./api.Dockerfile .
 
 worker:
 	docker build -t frenetiq/caolo-worker:bleeding -f ./worker.Dockerfile .
@@ -17,15 +17,15 @@ worker:
 release:
 	docker build -t frenetiq/caolo-release:bleeding -f release.Dockerfile .
 
-all: web worker release
+all: api worker release
 
 push: all
-	docker push frenetiq/caolo-web:bleeding
+	docker push frenetiq/caolo-api:bleeding
 	docker push frenetiq/caolo-release:bleeding
 	docker push frenetiq/caolo-worker:bleeding
 
 deploy-heroku: all
-	docker tag frenetiq/caolo-web:bleeding registry.heroku.com/$(app)/web
+	docker tag frenetiq/caolo-api:bleeding registry.heroku.com/$(app)/web
 	docker tag frenetiq/caolo-worker:bleeding registry.heroku.com/$(app)/worker
 	docker tag frenetiq/caolo-release:bleeding registry.heroku.com/$(app)/release
 	docker push registry.heroku.com/$(app)/web

@@ -1,7 +1,7 @@
 # ----------- Venv cache hack image -----------
 
 FROM python:3.9-alpine AS venv
-WORKDIR /caolo/web
+WORKDIR /caolo/api
 RUN python -m venv .env
 RUN .env/bin/pip install gunicorn
 
@@ -27,35 +27,35 @@ RUN cargo --version
 COPY ./protos/ ./protos/
 ENV CAO_PROTOS_PATH=/caolo/protos
 
-# Blind-bake dependencies by running setup with an empty caoloweb/ directory
-COPY ./web/setup.py ./web/setup.py
-RUN mkdir ./web/caoloweb
-RUN mkdir ./web/caoloweb/protos
+# Blind-bake dependencies by running setup with an empty caoloapi/ directory
+COPY ./api/setup.py ./api/setup.py
+RUN mkdir ./api/caoloapi
+RUN mkdir ./api/caoloapi/protos
 
-WORKDIR /caolo/web
+WORKDIR /caolo/api
 
 # copy our cached virtualenv
-COPY --from=venv /caolo/web/.env ./.env
+COPY --from=venv /caolo/api/.env ./.env
 
 # Install deps
 RUN .env/bin/pip install . --no-cache-dir
 
-# Actually install caoloweb
-COPY ./web/ ./
+# Actually install caoloapi
+COPY ./api/ ./
 RUN .env/bin/pip install . --no-cache-dir
 
 # ----------- Prod image -----------
 
 FROM python:3.9-alpine
 
-WORKDIR /caolo/web
+WORKDIR /caolo/api
 
 RUN apk add gcc libpq
 
-COPY --from=build /caolo/web/start.sh ./
-COPY --from=build /caolo/web/ ./
+COPY --from=build /caolo/api/start.sh ./
+COPY --from=build /caolo/api/ ./
 
-ENV PATH="/caolo/web/.env/bin:$PATH"
+ENV PATH="/caolo/api/.env/bin:$PATH"
 
 RUN chmod +x start.sh
 

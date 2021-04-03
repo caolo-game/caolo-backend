@@ -42,7 +42,7 @@ for e in os.listdir(PROTO_DIR):
                     "-I",
                     str(PROTO_DIR),
                     "--python_out",
-                    str(HERE / "caoloweb/protos"),
+                    str(HERE / "caoloapi/protos"),
                     str(PROTO_DIR / e),
                 ]
             )
@@ -50,7 +50,7 @@ for e in os.listdir(PROTO_DIR):
         assert res == 0, f"Failed to compile proto {e} to Python"
 
 setup(
-    name="caoloweb",
+    name="caoloapi",
     package_dir={"": "."},
     install_requires=[
         "fastapi",

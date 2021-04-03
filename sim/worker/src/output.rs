@@ -1,6 +1,5 @@
 //! Sending stuff outside (DB)
 use anyhow::Context;
-use redis::AsyncCommands;
 use slog::{debug, info, Logger};
 
 pub async fn send_schema<'a>(
@@ -65,26 +64,6 @@ pub async fn send_schema<'a>(
     Ok(())
 }
 
-/// Publish the world time to {queen_tag}-world
-///
-/// Clients can query the database for the world with this tag and time
-async fn publish_tick_to_redis<'a>(
-    client: &'a redis::Client,
-    time: i64,
-    queen_tag: &'a str,
-) -> anyhow::Result<()> {
-    let mut conn = client
-        .get_async_connection()
-        .await
-        .with_context(|| "Failed to acquire redis connection")?;
-
-    conn.publish(format!("{}-world", queen_tag), time)
-        .await
-        .with_context(|| "Failed to publish world payload via Redis")?;
-
-    Ok(())
-}
-
 async fn output_to_db<'a>(
     time: i64,
     payload: &'a serde_json::Value,
@@ -112,19 +91,12 @@ pub async fn send_world<'a>(
     payload: &'a serde_json::Value,
     queen_tag: &'a str,
     db: impl sqlx::Executor<'a, Database = sqlx::Postgres>,
-    redis: &'a redis::Client,
 ) -> anyhow::Result<()> {
     info!(logger, "Sending world");
 
     output_to_db(time, payload, db, queen_tag)
         .await
         .with_context(|| "Failed to send to db")?;
-
-    // wait for db insert before publishing
-
-    publish_tick_to_redis(redis, time, queen_tag)
-        .await
-        .with_context(|| "Failed to send to redis")?;
 
     info!(logger, "Sending world done");
     Ok(())

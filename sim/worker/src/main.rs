@@ -100,9 +100,6 @@ fn main() {
         )
         .expect("Initialize executor");
 
-    let queue_url =
-        std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_owned());
-    let redis_client = redis::Client::open(queue_url).expect("Failed to connect to redis");
 
     info!(logger, "Starting with {} actors", game_conf.n_actors);
 
@@ -137,7 +134,6 @@ fn main() {
                 &world_json,
                 storage.queen_tag().unwrap(),
                 &db_pool,
-                &redis_client,
             ))
             .map_err(|err| {
                 error!(logger, "Failed to send world output to storage {:?}", err);
@@ -153,14 +149,13 @@ fn main() {
         // inputs because handling them is built into the sleep cycle
         while sleep_duration > Duration::from_millis(0) {
             let start = Instant::now();
-            sim_rt
-                .block_on(input::handle_messages(
-                    logger.clone(),
-                    &mut storage,
-                    &redis_client,
-                ))
-                .map_err(|err| error!(logger, "Failed to handle inputs {:?}", err))
-                .unwrap_or(());
+            // sim_rt
+            //     .block_on(input::handle_messages(
+            //         logger.clone(),
+            //         &mut storage,
+            //     ))
+            //     .map_err(|err| error!(logger, "Failed to handle inputs {:?}", err))
+            //     .unwrap_or(());
             sleep_duration = sleep_duration
                 .checked_sub(Instant::now() - start)
                 // the idea is to sleep for half of the remaining time, then handle messages again

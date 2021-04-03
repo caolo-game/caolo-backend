@@ -35,33 +35,30 @@ message SetDefaultScriptCommand
     cao_common.Uuid scriptId = 2;
 }
 
+/// Generic response, where success is signaled by error being null.
 message CommandResult
 {
     string error = 1;
 }
 
-message TakeRoom
+message TakeRoomCommand
 {
     cao_common.Uuid userId = 1;
     cao_common.Axial roomId = 2;
 }
 
-message RegisterUser
+message RegisterUserCommand
 {
     cao_common.Uuid userId = 1;
     uint32 level = 2;
 }
 
-message InputMessage
+service Command
 {
-    cao_common.Uuid messageId = 1;
-    oneof payload
-    {
-        PlaceStructureCommand placeStructure = 2;
-        UpdateEntityScriptCommand updateEntityScript = 3;
-        UpdateScriptCommand updateScript = 4;
-        SetDefaultScriptCommand setDefaultScript = 5;
-        TakeRoom takeRoom = 6;
-        RegisterUser registerUser = 7;
-    }
+    rpc PlaceStructure(PlaceStructureCommand) returns (CommandResult) { }
+    rpc UpdateEntityScript(UpdateEntityScriptCommand) returns (CommandResult) { }
+    rpc UpdateScript(UpdateScriptCommand) returns (CommandResult) { }
+    rpc SetDefaultScript(SetDefaultScriptCommand) returns (CommandResult) { }
+    rpc TakeRoom(TakeRoomCommand) returns (CommandResult) { }
+    rpc RegisterUser(RegisterUserCommand) returns (CommandResult) { }
 }

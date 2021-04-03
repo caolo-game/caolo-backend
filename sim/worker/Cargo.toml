@@ -16,7 +16,6 @@ default = ["dotenv"]
 [dependencies]
 caolo-sim = { path = "../simulation" } # , features=["cao-profile"] }
 cao-lang = { git = "https://github.com/caolo-game/cao-lang.git" }
-redis = { version = "0.18", features = ["aio", "async-std-comp"] }
 slog = { version = "2", features = [
     "max_level_trace",
     "release_max_level_info"
@@ -34,19 +33,18 @@ sentry = "0.22"
 sentry-slog = "0.22"
 anyhow = "1"
 thiserror = "1"
-sqlx = { version = "0.4.1", features = [
+sqlx = { version = "0.5", features = [
     "json",
     "postgres",
     "chrono",
     "tls",
     "uuid",
     "macros",
-    "runtime-async-std-native-tls",
+    "runtime-tokio-native-tls",
     "offline"
 ] }
 dotenv = { version = "0.14", optional = true }
 uuid = { version = "0.8", features = ["v4"] }
-protobuf = { version = "2" }
 
 [target.'cfg(not(target_env = "msvc"))'.dependencies]
 jemallocator = "0.3.2"

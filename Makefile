@@ -23,12 +23,3 @@ push: all
 	docker push frenetiq/caolo-api:bleeding
 	docker push frenetiq/caolo-sim:bleeding
 	docker push frenetiq/caolo-release:bleeding
-
-deploy-heroku: all
-	docker tag frenetiq/caolo-api:bleeding registry.heroku.com/$(app)/web
-	docker tag frenetiq/caolo-sim:bleeding registry.heroku.com/$(app)/worker
-	docker tag frenetiq/caolo-release:bleeding registry.heroku.com/$(app)/release
-	docker push registry.heroku.com/$(app)/web
-	docker push registry.heroku.com/$(app)/worker
-	docker push registry.heroku.com/$(app)/release
-	heroku container:release web release worker -a=$(app)

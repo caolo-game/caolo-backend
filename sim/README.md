@@ -10,7 +10,6 @@ Game simulation/back-end of Cao-Lo.
 ## Deploy dependencies
 
 - [PostgreSQL](https://www.postgresql.org/)
-- [Redis](https://keydb.dev/)
 - Diesel CLI `cargo install diesel_cli --no-default-features --features=postgres`
 
 

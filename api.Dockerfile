@@ -1,19 +1,17 @@
 # ----------- Venv cache hack image -----------
 
-FROM python:3.9-alpine AS venv
+FROM python:3.9-slim AS venv
+
 WORKDIR /caolo/api
 RUN python -m venv .env
-RUN .env/bin/pip install gunicorn
-
-RUN pip install -U setuptools pip virtualenv
+RUN .env/bin/pip install gunicorn grpcio-tools
 
 # ----------- Build image -----------
 
-FROM python:3.9-alpine AS build
+FROM python:3.9-slim AS build
 
-RUN apk add curl gcc libpq protobuf build-base libffi-dev
-RUN protoc --version
-
+RUN apt-get update
+RUN apt-get install curl build-essential -y
 RUN pip install -U setuptools pip virtualenv
 
 WORKDIR /caolo
@@ -28,6 +26,7 @@ COPY ./protos/ ./protos/
 ENV CAO_PROTOS_PATH=/caolo/protos
 
 # Blind-bake dependencies by running setup with an empty caoloapi/ directory
+COPY ./api/pyproject.toml ./api/pyproject.toml
 COPY ./api/setup.py ./api/setup.py
 RUN mkdir ./api/caoloapi
 RUN mkdir ./api/caoloapi/protos
@@ -46,11 +45,12 @@ RUN .env/bin/pip install . --no-cache-dir
 
 # ----------- Prod image -----------
 
-FROM python:3.9-alpine
+FROM python:3.9-slim
 
 WORKDIR /caolo/api
 
-RUN apk add gcc libpq
+RUN apt-get update
+RUN apt-get install libpq-dev -y
 
 COPY --from=build /caolo/api/start.sh ./
 COPY --from=build /caolo/api/ ./

@@ -117,7 +117,10 @@ fn main() {
 
     let world = Arc::new(tokio::sync::Mutex::new(world));
 
-    let addr = "[::1]:50051".parse().unwrap();
+    let addr = env::var("CAO_SERVICE_ADDR")
+        .ok()
+        .map(|x| x.parse().expect("failed to parse cao service address"))
+        .unwrap_or_else(|| "[::1]:50051".parse().unwrap());
 
     info!(
         logger,

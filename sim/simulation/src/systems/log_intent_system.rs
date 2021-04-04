@@ -5,7 +5,7 @@ use crate::profile;
 use crate::storage::views::{UnsafeView, UnwrapViewMut, WorldLogger};
 use crate::tables::Table;
 use slog::trace;
-use std::mem::replace;
+use std::mem::take;
 
 type Mut = (
     UnsafeView<EntityTime, LogEntry>,
@@ -15,7 +15,7 @@ type Mut = (
 pub fn update((mut log_table, mut intents): Mut, WorldLogger(logger): WorldLogger) {
     profile!("LogIntentSystem update");
 
-    let intents = replace(&mut intents.0, vec![]);
+    let intents = take(&mut intents.0);
 
     for intent in intents {
         trace!(logger, "inserting log entry {:?}", intent);

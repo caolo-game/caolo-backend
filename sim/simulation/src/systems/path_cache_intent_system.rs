@@ -4,7 +4,7 @@ use crate::intents::{CachePathIntent, Intents, MutPathCacheIntent, PathCacheInte
 use crate::profile;
 use crate::storage::views::{UnsafeView, UnwrapView, UnwrapViewMut, View};
 use crate::tables::Table;
-use std::mem::replace;
+use std::mem::take;
 
 pub fn update(
     (mut path_cache_table, mut cache_intents): (
@@ -18,7 +18,7 @@ pub fn update(
 ) {
     profile!("UpdatePathCacheSystem update");
 
-    let cache_intents = replace(&mut cache_intents.0, vec![]);
+    let cache_intents = take(&mut cache_intents.0);
 
     for intent in cache_intents.into_iter() {
         let entity_id = intent.bot;

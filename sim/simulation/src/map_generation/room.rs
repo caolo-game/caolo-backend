@@ -607,11 +607,10 @@ fn calculate_plain_chunks(logger: &Logger, terrain: View<Axial, TerrainComponent
         chunks.len()
     );
     debug_assert!(
-        chunks
+        !chunks
             .iter()
             .zip(chunks.iter().skip(1))
-            .find(|(a, b)| !a.is_disjoint(b))
-            .is_none(),
+            .any(|(a, b)| !a.is_disjoint(b)),
         "Internal error: chunks must be disjoint!"
     );
     ChunkMeta {

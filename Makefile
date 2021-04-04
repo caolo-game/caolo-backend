@@ -1,8 +1,10 @@
 .DEFAULT_GOAL := buildall
 .PHONY: api sim
 
-test-worker:
-	${MAKE} -C worker test
+test-sim:
+	${MAKE} -C sim test
+
+test: test-sim
 
 start:
 	docker-compose up -d

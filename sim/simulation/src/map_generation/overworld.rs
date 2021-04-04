@@ -111,7 +111,7 @@ fn update_room_connections(
         }
     });
 
-    if to_connect.iter().find(|c| c.is_some()).is_none() {
+    if !to_connect.iter().any(|c| c.is_some()) {
         // if this room has no room_connections insert 1 at random
         let mut weights = [0.0; 6];
         connection_weights.query_range(point, 3, &mut |p, _| {

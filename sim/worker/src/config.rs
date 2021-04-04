@@ -41,7 +41,7 @@ impl GameConfig {
                     let a = n_actors as f32;
                     ((a * 1.0 / (3.0 * 3.0f32.sqrt())).powf(0.33)).ceil() as u32
                 }),
-            target_tick_ms: std::env::var("TARGET_TICK_LATENCY_MS")
+            target_tick_ms: std::env::var("TARGET_TICK_FREQUENCY_MS")
                 .map(|i| i.parse::<u64>().unwrap())
                 .unwrap_or(200),
         }

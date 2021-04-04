@@ -1,5 +1,5 @@
 syntax = "proto3";
-package commands;
+package cao_commands;
 
 import "cao_common.proto";
 import "cao_script.proto";
@@ -35,10 +35,8 @@ message SetDefaultScriptCommand
     cao_common.Uuid scriptId = 2;
 }
 
-/// Generic response, where success is signaled by error being null.
 message CommandResult
 {
-    string error = 1;
 }
 
 message TakeRoomCommand

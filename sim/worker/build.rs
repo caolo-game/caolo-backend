@@ -1,6 +1,9 @@
 fn main() {
+
     let man = env!("CARGO_MANIFEST_DIR").replace('\\', "/");
     let protos_dir = format!("{}/../../protos", man);
+    println!("cargo:rerun-if-changed={}", protos_dir);
+
     let protos = std::fs::read_dir(protos_dir.as_str())
         .expect("Failed to read protos directory")
         .filter(|path| {
@@ -18,10 +21,7 @@ fn main() {
         .map(|p| p.as_os_str().to_str().unwrap())
         .collect::<Vec<_>>();
 
-    protoc_rust::Codegen::new()
-        .out_dir("src/protos")
-        .inputs(protos.as_slice())
-        .include(protos_dir.as_str())
-        .run()
+    tonic_build::configure()
+        .compile(protos.as_slice(), &[protos_dir.as_str()])
         .expect("Failed to run protoc");
 }

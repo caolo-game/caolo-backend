@@ -45,6 +45,9 @@ sqlx = { version = "0.5", features = [
 ] }
 dotenv = { version = "0.14", optional = true }
 uuid = { version = "0.8", features = ["v4"] }
+tokio = { version = "1", features = ["sync"] }
+tonic = "*"
+prost = "*"
 
 [target.'cfg(not(target_env = "msvc"))'.dependencies]
 jemallocator = "0.3.2"
@@ -53,4 +56,4 @@ jemallocator = "0.3.2"
 env_logger = { version = "*", default-features = false }
 
 [build-dependencies]
-protoc-rust = "2"
+tonic-build = "0.4"

@@ -276,19 +276,16 @@ impl World {
         Ok(self)
     }
 
-    pub fn as_json(&self) -> serde_json::Value {
+    /// cold data as json
+    pub fn cold_as_json(&self) -> serde_json::Value {
         use rayon::prelude::*;
 
         // this can be quite a bit of data, so let's parallelize the serialization
         let result = [
-            "bots",
-            "structures",
-            "resources",
             "terrain",
             "roomProperties",
             "gameConfig",
             "users",
-            "diagnostics",
             "rooms",
             "time",
             "queenTag",
@@ -299,10 +296,7 @@ impl World {
             Default::default,
             |mut output: serde_json::Map<String, _>, key: &str| {
                 let value: serde_json::Value = match key {
-                    "bots" => json_impl::json_serialize_bots(&self),
                     "users" => json_impl::json_serialize_users(&self),
-                    "structures" => json_impl::json_serialize_structures(&self),
-                    "resources" => json_impl::json_serialize_resources(&self),
                     "terrain" => json_impl::json_serialize_terrain(&self),
                     "roomProperties" => {
                         serde_json::to_value(&self.config.room_properties.value).unwrap()
@@ -331,6 +325,61 @@ impl World {
         });
 
         result.into()
+    }
+
+    /// hot data as json
+    pub fn hot_as_json(&self) -> serde_json::Value {
+        use rayon::prelude::*;
+        // this can be quite a bit of data, so let's parallelize the serialization
+        let result = [
+            "bots",
+            "structures",
+            "resources",
+            "diagnostics",
+            "time",
+            "queenTag",
+        ]
+        .par_iter()
+        .cloned()
+        .fold(
+            Default::default,
+            |mut output: serde_json::Map<String, _>, key: &str| {
+                let value: serde_json::Value = match key {
+                    "bots" => json_impl::json_serialize_bots(&self),
+                    "structures" => json_impl::json_serialize_structures(&self),
+                    "resources" => json_impl::json_serialize_resources(&self),
+                    "diagnostics" => {
+                        serde_json::to_value(&self.resources.diagnostics.value).unwrap()
+                    }
+                    "time" => self.time().into(),
+                    "queenTag" => match self.queen_tag() {
+                        Some(tag) => tag.into(),
+                        None => serde_json::Value::Null,
+                    },
+                    _ => unreachable!(),
+                };
+                output.insert(key.to_string(), value);
+                output
+            },
+        )
+        .reduce(serde_json::Map::default, |mut output, rhs| {
+            for (key, value) in rhs {
+                output.insert(key, value);
+            }
+            output
+        });
+
+        result.into()
+    }
+
+    pub fn as_json(&self) -> serde_json::Value {
+        let (mut hot, mut cold) = rayon::join(|| self.hot_as_json(), || self.cold_as_json());
+
+        hot.as_object_mut()
+            .unwrap()
+            .append(cold.as_object_mut().unwrap());
+
+        hot
     }
 }
 

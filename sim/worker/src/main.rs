@@ -3,6 +3,8 @@ mod input;
 mod output;
 mod protos;
 
+mod command_service;
+
 use crate::protos::cao_commands::command_server::CommandServer;
 use caolo_sim::{executor::Executor, executor::SimpleExecutor};
 use slog::{error, info, o, Drain, Logger};
@@ -128,10 +130,9 @@ fn main() {
     );
 
     let server = tonic::transport::Server::builder()
-        .add_service(CommandServer::new(crate::protos::CommandService::new(
-            logger.clone(),
-            Arc::clone(&world),
-        )))
+        .add_service(CommandServer::new(
+            crate::command_service::CommandService::new(logger.clone(), Arc::clone(&world)),
+        ))
         .serve(addr);
 
     let game_loop = async move {

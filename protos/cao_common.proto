@@ -17,3 +17,10 @@ message Uuid
 {
   bytes data = 1;
 }
+
+/// newtype wrapper around a json serialized object
+message Json
+{
+    bytes value = 1;
+}
+

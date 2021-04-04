@@ -1,6 +1,8 @@
 syntax = "proto3";
 package cao_script;
 
+import "cao_common.proto";
+
 message Card
 {
     string name = 1;
@@ -29,11 +31,6 @@ message Schema
     repeated Card cards = 1;
 }
 
-message Json
-{
-    bytes value = 1;
-}
-
 message CompilerVersion
 {
     uint32 major = 1;
@@ -43,7 +40,7 @@ message CompilerVersion
 
 message CompilationUnit
 {
-    Json compilationUnit = 1;
+    cao_common.Json compilationUnit = 1;
 
     CompilerVersion verifiedBy = 2;
 }

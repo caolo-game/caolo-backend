@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package cao_world;
+
+import "cao_common.proto";
+
+message RoomObjects
+{
+    cao_common.Axial roomId = 1;
+    cao_common.Json payload = 2;
+}
+
+message WorldEntities
+{
+    repeated RoomObjects bots = 1;
+    repeated RoomObjects structures = 2;
+    repeated RoomObjects resources = 3;
+}
+
+message Empty { }
+
+service World
+{
+    /// Stream the entities on updates
+    rpc Entities(Empty) returns (stream WorldEntities) { }
+}

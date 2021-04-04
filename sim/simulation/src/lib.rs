@@ -59,8 +59,7 @@ impl RuntimeGuard {
 
         let rt = tokio::runtime::Builder::new_multi_thread()
             .worker_threads(3.max(rayon::current_num_threads() / 4)) // leave more resources for our boi rayon.
-            .enable_time()
-            .enable_io()
+            .enable_all()
             .build()
             .expect("Failed to init tokio runtime");
         RuntimeGuard(Arc::new(rt))

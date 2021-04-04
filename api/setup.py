@@ -26,11 +26,6 @@ except FileNotFoundError:
 
 print(f"Found protos at {PROTO_DIR}")
 
-PROTOC = "protoc"  # protoc command
-
-res = os.system(" ".join([PROTOC, "--version"]))
-assert res == 0, "can't find protoc command. Make sure protoc is installed and in $PATH"
-
 
 # produce python files from our proto files
 for e in os.listdir(PROTO_DIR):
@@ -38,10 +33,14 @@ for e in os.listdir(PROTO_DIR):
         res = os.system(
             " ".join(
                 [
-                    PROTOC,
+                    sys.executable,
+                    "-m",
+                    "grpc_tools.protoc",
                     "-I",
                     str(PROTO_DIR),
                     "--python_out",
+                    str(HERE / "caoloapi/protos"),
+                    "--grpc_python_out",
                     str(HERE / "caoloapi/protos"),
                     str(PROTO_DIR / e),
                 ]
@@ -57,6 +56,7 @@ setup(
         "asyncpg",
         "uvicorn[standard]",
         "pydantic[email]",
+        "grpcio-tools",
         "protobuf",
         "aioredis",
         "python-multipart",

@@ -17,6 +17,7 @@ services:
     environment:
       HOST: 0.0.0.0
       PORT: 8000
+      CAO_SIM_URL: sim:50051
     ports:
       - "8000:8000"
     depends_on:
@@ -38,6 +39,8 @@ services:
     depends_on:
       - cache
       - db
+    ports:
+      - "50051:50051"
 
   cache:
     image: eqalpha/keydb:latest

@@ -7,14 +7,15 @@ import "cao_common.proto";
 message RoomObjects
 {
     cao_common.Axial roomId = 1;
-    cao_common.Json payload = 2;
+
+    cao_common.Json bots = 2;
+    cao_common.Json structures = 3;
+    cao_common.Json resources = 4;
 }
 
 message WorldEntities
 {
-    repeated RoomObjects bots = 1;
-    repeated RoomObjects structures = 2;
-    repeated RoomObjects resources = 3;
+    repeated RoomObjects rooms = 1;
 }
 
 message Empty { }

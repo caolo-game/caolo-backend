@@ -39,7 +39,7 @@ jobs:
       - name: Check all features
         run: |
           cargo +${{ matrix.rust }} check-all-features
-        working-directory: worker
+        working-directory: sim
         env:
           SQLX_OFFLINE: true
 
@@ -47,7 +47,7 @@ jobs:
         run: |
           cargo +${{ matrix.rust }} test --benches --tests
           cargo +${{ matrix.rust }} test --doc
-        working-directory: worker
+        working-directory: sim
         env:
           RUST_LOG: caolo_sim=trace
           RUST_BACKTRACE: 1
@@ -74,6 +74,6 @@ jobs:
       - uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features --manifest-path ./worker/Cargo.toml
+          args: --all-features --manifest-path ./sim/Cargo.toml
         env:
           SQLX_OFFLINE: true

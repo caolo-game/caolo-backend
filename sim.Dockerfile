@@ -42,6 +42,7 @@ RUN apt-get install lld clang libc-dev  pkgconf libpq-dev protobuf-compiler -y
 WORKDIR /caolo
 
 RUN cargo install diesel_cli --no-default-features --features=postgres --root .
+RUN rustup component add rustfmt
 
 # copy the cache
 COPY --from=deps $CARGO_HOME $CARGO_HOME

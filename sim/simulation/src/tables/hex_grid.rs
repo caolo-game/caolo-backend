@@ -86,10 +86,10 @@ impl<T> HexGrid<T> {
     ///
     /// return None if the position is invalid
     pub fn insert(&mut self, pos: Axial, val: T) -> Result<T, ExtendFailure> {
-        let bounds = self.bounds.clone();
+        let bounds = self.bounds;
         let old = self
             .at_mut(pos)
-            .ok_or_else(move || ExtendFailure::OutOfBounds { pos, bounds })?;
+            .ok_or(ExtendFailure::OutOfBounds { pos, bounds })?;
         Ok(std::mem::replace(old, val))
     }
 
@@ -150,7 +150,7 @@ impl<T> HexGrid<T> {
     }
 
     pub fn iter_mut(&mut self) -> impl Iterator<Item = (Axial, &mut T)> {
-        let bounds = self.bounds.clone();
+        let bounds = self.bounds;
         bounds
             .iter_points()
             // SAFETY

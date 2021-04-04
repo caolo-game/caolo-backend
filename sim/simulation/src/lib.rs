@@ -40,12 +40,19 @@ impl<Id: TableId> Component<Id> for Time {
 
 // use phantomdata member to disallow crate users the creation of runtimes directly
 #[cfg(not(feature = "tokio"))]
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct RuntimeGuard(std::marker::PhantomData<()>);
 
 #[cfg(feature = "tokio")]
 #[derive(Clone)]
 pub struct RuntimeGuard(std::sync::Arc<tokio::runtime::Runtime>);
+
+#[cfg(feature = "tokio")]
+impl Default for RuntimeGuard {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl RuntimeGuard {
     #[cfg(not(feature = "tokio"))]

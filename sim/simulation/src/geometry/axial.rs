@@ -119,7 +119,7 @@ impl Axial {
     pub fn to_pixel_pointy(self, size: f32) -> [f32; 2] {
         let Axial { q, r } = self;
         let [q, r] = [q as f32, r as f32];
-        const SQRT_3: f32 = 1.7320508075688772935274463415059;
+        const SQRT_3: f32 = 1.732_050_8;
         let x = size * (SQRT_3 * q + SQRT_3 / 2.0 * r);
         let y = size * (3. / 2. * r);
         [x, y]

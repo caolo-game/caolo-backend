@@ -17,6 +17,12 @@ pub enum PlaceStructureError {
 
     #[error("Failed to parse owner id")]
     OwnerIdError,
+
+    #[error("Missing expected field {0}")]
+    MissingField(&'static str),
+
+    #[error("Unrecognized structure type {0}")]
+    BadType(i32),
 }
 
 pub fn place_structure(
@@ -26,17 +32,22 @@ pub fn place_structure(
 ) -> Result<(), PlaceStructureError> {
     let entity_id = storage.insert_entity();
 
-    let position = command.get_position();
+    let position = command
+        .position
+        .as_ref()
+        .ok_or(PlaceStructureError::MissingField("position"))?;
 
-    let pos = position.get_pos();
-    let q = pos.get_q();
-    let r = pos.get_r();
-    let pos = Axial::new(q, r);
+    let pos = position
+        .pos
+        .as_ref()
+        .ok_or(PlaceStructureError::MissingField("position.pos"))?;
+    let pos = Axial::new(pos.q, pos.r);
 
-    let room = position.get_room();
-    let q = room.get_q();
-    let r = room.get_r();
-    let room = Axial::new(q, r);
+    let room = position
+        .room
+        .as_ref()
+        .ok_or(PlaceStructureError::MissingField("position.room"))?;
+    let room = Axial::new(room.q, room.r);
 
     let position = WorldPosition { room, pos };
 
@@ -59,14 +70,20 @@ pub fn place_structure(
         return Err(PlaceStructureError::TakenPosition(position));
     }
 
-    let ty = command.get_ty();
-    let owner = command.get_ownerId().get_data();
+    let ty = command.ty;
+    let owner = command
+        .owner_id
+        .as_ref()
+        .ok_or(PlaceStructureError::MissingField("owner_id"))?
+        .data
+        .as_slice();
     let owner = uuid::Uuid::from_slice(owner).map_err(|err| {
         error!(logger, "Failed to parse owner id {:?}", err);
         PlaceStructureError::OwnerIdError
     })?;
+    let ty = StructureType::from_i32(ty).ok_or(PlaceStructureError::BadType(ty))?;
     match ty {
-        StructureType::SPAWN => {
+        StructureType::Spawn => {
             // a player may only have 1 spawn atm
             let has_spawn = join!(
                 storage

@@ -1,8 +1,6 @@
-use super::parse_uuid;
 use crate::protos::cao_commands::{
     SetDefaultScriptCommand, UpdateEntityScriptCommand, UpdateScriptCommand,
 };
-use anyhow::Context;
 use caolo_sim::{self, prelude::*, tables::JoinIterator};
 use slog::{debug, error, Logger};
 use thiserror::Error;
@@ -11,11 +9,16 @@ use thiserror::Error;
 pub enum UpdateProgramError {
     #[error("Unauthorized")]
     Unauthorized,
-    #[error("Failed to perform the operation {0:?}")]
-    Internal(anyhow::Error),
-    #[error("Invalid message {0:?}")]
-    BadMessage(anyhow::Error),
+    #[error("Missing expected field {0}")]
+    MissingField(&'static str),
+    #[error("Failed to parse uuid {0}")]
+    UuidError(anyhow::Error),
+    #[error("Failed to compile the script {0}")]
+    CompilationError(cao_lang::prelude::CompilationError),
+    #[error("Failed to deserialize the compilation unit {0}")]
+    CuDeserializationError(serde_json::Error),
 }
+
 type UpdateResult = Result<(), UpdateProgramError>;
 
 pub fn update_program(
@@ -25,8 +28,23 @@ pub fn update_program(
 ) -> UpdateResult {
     debug!(logger, "Updating program");
 
-    let user_id = parse_uuid(msg.get_userId()).map_err(UpdateProgramError::BadMessage)?;
-    let script_id = parse_uuid(msg.get_scriptId()).map_err(UpdateProgramError::BadMessage)?;
+    let user_id = msg
+        .user_id
+        .as_ref()
+        .ok_or(UpdateProgramError::MissingField("user_id"))?
+        .data
+        .as_slice();
+    let user_id =
+        uuid::Uuid::from_slice(user_id).map_err(|err| UpdateProgramError::UuidError(err.into()))?;
+
+    let script_id = msg
+        .script_id
+        .as_ref()
+        .ok_or(UpdateProgramError::MissingField("script_id"))?
+        .data
+        .as_slice();
+    let script_id = uuid::Uuid::from_slice(script_id)
+        .map_err(|err| UpdateProgramError::UuidError(err.into()))?;
 
     debug!(
         logger,
@@ -36,15 +54,25 @@ pub fn update_program(
     let user_id = UserId(user_id);
     let script_id = ScriptId(script_id);
 
-    let cu = msg.get_compilationUnit().get_compilationUnit().get_value();
+    // TODO:
+    // check if verified_by version matches our version?
+    let cu = msg
+        .compilation_unit
+        .as_ref()
+        .ok_or(UpdateProgramError::MissingField("compilation_unit"))?
+        .compilation_unit
+        .as_ref()
+        .ok_or(UpdateProgramError::MissingField(
+            "compilation_unit.compilation_unit",
+        ))?
+        .value
+        .as_slice();
 
-    let compilation_unit = serde_json::from_slice(cu)
-        .with_context(|| "Failed to deserialize CU")
-        .map_err(UpdateProgramError::BadMessage)?;
+    let compilation_unit =
+        serde_json::from_slice(cu).map_err(UpdateProgramError::CuDeserializationError)?;
 
     let program = cao_lang::prelude::compile(compilation_unit, None)
-        .with_context(|| "Failed to compile script")
-        .map_err(UpdateProgramError::BadMessage)?;
+        .map_err(UpdateProgramError::CompilationError)?;
 
     let program = ScriptComponent(program);
     storage
@@ -81,9 +109,16 @@ fn update_user_bot_scripts(
 }
 
 pub fn update_entity_script(storage: &mut World, msg: &UpdateEntityScriptCommand) -> UpdateResult {
-    let user_id = parse_uuid(msg.get_userId()).map_err(UpdateProgramError::Internal)?;
+    let user_id = msg
+        .user_id
+        .as_ref()
+        .ok_or(UpdateProgramError::MissingField("user_id"))?
+        .data
+        .as_slice();
+    let user_id =
+        uuid::Uuid::from_slice(user_id).map_err(|err| UpdateProgramError::UuidError(err.into()))?;
 
-    let entity_id = EntityId(msg.get_entityId());
+    let entity_id = EntityId(msg.entity_id);
 
     let owned_entities_table: View<EntityId, OwnedEntity> = storage.view();
 
@@ -98,7 +133,14 @@ pub fn update_entity_script(storage: &mut World, msg: &UpdateEntityScriptCommand
             }
         })?;
 
-    let script_id = parse_uuid(msg.get_scriptId()).map_err(UpdateProgramError::Internal)?;
+    let script_id = msg
+        .script_id
+        .as_ref()
+        .ok_or(UpdateProgramError::MissingField("script_id"))?
+        .data
+        .as_slice();
+    let script_id = uuid::Uuid::from_slice(script_id)
+        .map_err(|err| UpdateProgramError::UuidError(err.into()))?;
     let script_id = ScriptId(script_id);
 
     let mut scripts_table: UnsafeView<EntityId, EntityScript> = storage.unsafe_view();
@@ -107,8 +149,23 @@ pub fn update_entity_script(storage: &mut World, msg: &UpdateEntityScriptCommand
 }
 
 pub fn set_default_script(storage: &mut World, msg: &SetDefaultScriptCommand) -> UpdateResult {
-    let user_id = parse_uuid(msg.get_userId()).map_err(UpdateProgramError::BadMessage)?;
-    let script_id = parse_uuid(msg.get_scriptId()).map_err(UpdateProgramError::BadMessage)?;
+    let user_id = msg
+        .user_id
+        .as_ref()
+        .ok_or(UpdateProgramError::MissingField("user_id"))?
+        .data
+        .as_slice();
+    let script_id = msg
+        .script_id
+        .as_ref()
+        .ok_or(UpdateProgramError::MissingField("script_id"))?
+        .data
+        .as_slice();
+
+    let user_id =
+        uuid::Uuid::from_slice(user_id).map_err(|err| UpdateProgramError::UuidError(err.into()))?;
+    let script_id = uuid::Uuid::from_slice(script_id)
+        .map_err(|err| UpdateProgramError::UuidError(err.into()))?;
 
     let user_id = UserId(user_id);
     let script_id = ScriptId(script_id);

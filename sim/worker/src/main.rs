@@ -1,13 +1,14 @@
 mod config;
 mod input;
 mod output;
-
 mod protos;
 
-use caolo_sim::{executor::Executor, executor::SimpleExecutor, prelude::*};
+use crate::protos::cao_commands::command_server::CommandServer;
+use caolo_sim::{executor::Executor, executor::SimpleExecutor};
 use slog::{error, info, o, Drain, Logger};
 use std::{
     env,
+    sync::Arc,
     time::{Duration, Instant},
 };
 use uuid::Uuid;
@@ -15,6 +16,8 @@ use uuid::Uuid;
 #[cfg(not(target_env = "msvc"))]
 #[global_allocator]
 static GLOBAL: jemallocator::Jemalloc = jemallocator::Jemalloc;
+
+type World = std::pin::Pin<Box<caolo_sim::prelude::World>>;
 
 fn init() {
     #[cfg(feature = "dotenv")]
@@ -88,7 +91,8 @@ fn main() {
     info!(logger, "Creating cao executor with tag {}", tag);
     let mut executor = SimpleExecutor;
     info!(logger, "Init storage");
-    let mut storage = executor
+    let queen_tag = tag.clone();
+    let mut world = executor
         .initialize(
             Some(logger.clone()),
             caolo_sim::executor::GameConfig {
@@ -100,68 +104,75 @@ fn main() {
         )
         .expect("Initialize executor");
 
-
     info!(logger, "Starting with {} actors", game_conf.n_actors);
 
     sim_rt
         .block_on(output::send_schema(
             logger.clone(),
             &db_pool,
-            storage.queen_tag().unwrap(),
+            queen_tag.as_str(),
         ))
         .expect("Failed to send schema");
-    caolo_sim::init::init_world_entities(logger.clone(), &mut storage, game_conf.n_actors as usize);
+    caolo_sim::init::init_world_entities(logger.clone(), &mut world, game_conf.n_actors as usize);
 
-    sentry::capture_message(
-        format!(
-            "Caolo Worker {} initialization complete! Starting the game loop",
-            storage.queen_tag().unwrap()
-        )
-        .as_str(),
-        sentry::Level::Info,
+    let world = Arc::new(tokio::sync::Mutex::new(world));
+
+    let addr = "[::1]:50051".parse().unwrap();
+
+    info!(
+        logger,
+        "Init done. Starting the game loop. Starting the service on {:?}", addr
     );
 
-    loop {
-        let start = Instant::now();
+    let server = tonic::transport::Server::builder()
+        .add_service(CommandServer::new(crate::protos::CommandService::new(
+            logger.clone(),
+            Arc::clone(&world),
+        )))
+        .serve(addr);
 
-        tick(logger.clone(), &mut executor, &mut storage);
+    let game_loop = async move {
+        loop {
+            let start = Instant::now();
+            let world_json;
+            let time;
+            {
+                // free the world mutex at the end of this scope
+                let mut world = world.lock().await;
 
-        let world_json = storage.as_json();
-        sim_rt
-            .block_on(output::send_world(
+                tick(logger.clone(), &mut executor, &mut *world);
+
+                world_json = world.as_json();
+                time = world.time() as i64;
+            }
+            output::send_world(
                 logger.clone(),
-                storage.time() as i64,
+                time,
                 &world_json,
-                storage.queen_tag().unwrap(),
+                queen_tag.as_str(),
                 &db_pool,
-            ))
+            )
+            .await
             .map_err(|err| {
                 error!(logger, "Failed to send world output to storage {:?}", err);
             })
             .unwrap_or(());
 
-        let mut sleep_duration = tick_latency
-            .checked_sub(Instant::now() - start)
-            .unwrap_or_else(|| Duration::from_millis(0));
-
-        // use the sleep time to update inputs
-        // this allows faster responses to clients as well as potentially spending less time on
-        // inputs because handling them is built into the sleep cycle
-        while sleep_duration > Duration::from_millis(0) {
-            let start = Instant::now();
-            // sim_rt
-            //     .block_on(input::handle_messages(
-            //         logger.clone(),
-            //         &mut storage,
-            //     ))
-            //     .map_err(|err| error!(logger, "Failed to handle inputs {:?}", err))
-            //     .unwrap_or(());
-            sleep_duration = sleep_duration
+            let sleep_duration = tick_latency
                 .checked_sub(Instant::now() - start)
-                // the idea is to sleep for half of the remaining time, then handle messages again
-                .and_then(|d| d.checked_div(2))
                 .unwrap_or_else(|| Duration::from_millis(0));
-            std::thread::sleep(sleep_duration);
+
+            // use the sleep time to update clients
+            tokio::time::sleep(sleep_duration).await;
         }
-    }
+        // using this for a type hint
+        #[allow(unreachable_code)]
+        Ok::<_, ()>(())
+    };
+
+    sim_rt.block_on(async move {
+        let (a, b) = futures::join!(server, game_loop);
+        a.unwrap();
+        b.unwrap();
+    });
 }

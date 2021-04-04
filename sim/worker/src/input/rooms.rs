@@ -1,5 +1,4 @@
-use super::parse_uuid;
-use crate::protos::cao_commands::TakeRoom;
+use crate::protos::cao_commands::TakeRoomCommand;
 use anyhow::Context;
 use caolo_sim::prelude::*;
 use slog::{debug, Logger};
@@ -8,8 +7,6 @@ use uuid::Uuid;
 
 #[derive(Debug, Error)]
 pub enum TakeRoomError {
-    #[error("Invalid message {0}")]
-    BadMessage(anyhow::Error),
     #[error("Target room already has an owner")]
     Owned,
     #[error("Maximum number of rooms ({0}) owned already")]
@@ -18,15 +15,33 @@ pub enum TakeRoomError {
     InternalError(anyhow::Error),
     #[error("User by id {0} was not registered")]
     NotRegistered(Uuid),
+    #[error("Missing expected field {0}")]
+    MissingField(&'static str),
+    #[error("Failed to parse uuid {0}")]
+    UuidError(anyhow::Error),
 }
 
-pub fn take_room(logger: Logger, world: &mut World, msg: &TakeRoom) -> Result<(), TakeRoomError> {
+pub fn take_room(
+    logger: Logger,
+    world: &mut World,
+    msg: &TakeRoomCommand,
+) -> Result<(), TakeRoomError> {
     debug!(logger, "Taking room");
 
-    let user_id = parse_uuid(msg.get_userId()).map_err(TakeRoomError::BadMessage)?;
+    let user_id = msg
+        .user_id
+        .as_ref()
+        .ok_or(TakeRoomError::MissingField("user_id"))?
+        .data
+        .as_slice();
+    let user_id =
+        uuid::Uuid::from_slice(user_id).map_err(|err| TakeRoomError::UuidError(err.into()))?;
 
-    let room_id = msg.get_roomId();
-    let room_id = Axial::new(room_id.get_q(), room_id.get_r());
+    let room_id = msg
+        .room_id
+        .as_ref()
+        .ok_or(TakeRoomError::MissingField("room_id"))?;
+    let room_id = Axial::new(room_id.q, room_id.r);
 
     let has_owner = world.view::<Axial, OwnedEntity>().contains_key(room_id);
     if has_owner {

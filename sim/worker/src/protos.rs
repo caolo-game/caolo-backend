@@ -1,5 +1,7 @@
+use crate::input::rooms;
 use crate::input::script_update;
 use crate::input::structures;
+use crate::input::users;
 use tonic::{Request, Response, Status};
 
 pub mod cao_common {
@@ -75,13 +77,19 @@ impl crate::protos::cao_commands::command_server::Command for CommandService {
         &self,
         request: tonic::Request<crate::protos::cao_commands::TakeRoomCommand>,
     ) -> Result<tonic::Response<crate::protos::cao_commands::CommandResult>, tonic::Status> {
-        todo!()
+        let mut w = self.world.lock().await;
+        rooms::take_room(self.logger.clone(), &mut *w, request.get_ref())
+            .map(|_: ()| Response::new(crate::protos::cao_commands::CommandResult {}))
+            .map_err(|err| Status::invalid_argument(err.to_string()))
     }
 
     async fn register_user(
         &self,
         request: tonic::Request<crate::protos::cao_commands::RegisterUserCommand>,
     ) -> Result<tonic::Response<cao_commands::CommandResult>, tonic::Status> {
-        todo!()
+        let mut w = self.world.lock().await;
+        users::register_user(self.logger.clone(), &mut *w, request.get_ref())
+            .map(|_: ()| Response::new(crate::protos::cao_commands::CommandResult {}))
+            .map_err(|err| Status::invalid_argument(err.to_string()))
     }
 }

@@ -120,6 +120,7 @@ class GameStateManager:
         while 1:
             try:
                 logging.info("Subscribing to world updates at %s", queen_url)
+                # TODO: maybe use secure channel??
                 channel = grpc.aio.insecure_channel(queen_url)
                 stub = cao_world_pb2_grpc.WorldStub(channel)
 
@@ -165,9 +166,15 @@ class GameStateManager:
 
                 logging.warn("GameStateManager._listener exiting")
                 return
+            except grpc.aio.AioRpcError as err:
+                if err.code() == grpc.StatusCode.UNAVAILABLE:
+                    logging.warn("Cao-Queen is unavailable. Retrying...")
+                else:
+                    logging.exception("gRPC error in GameState listender")
+                    raise
             except:
                 logging.exception("Error in GameState listener")
-                self.game_state = None
+                raise
 
     async def start(self, queen_tag: str, queen_url: str, db):
         await self._load_from_db(db, queen_tag)

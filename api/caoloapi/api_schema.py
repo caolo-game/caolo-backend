@@ -1,5 +1,5 @@
 from typing import List, Any
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class RoomObjectsPayload(BaseModel):
@@ -21,6 +21,15 @@ class Axial(BaseModel):
         super().__init__()
         self.q = q
         self.r = r
+
+
+class WorldPosition(BaseModel):
+    room: Axial
+    pos: Axial
+
+
+class StructureType(BaseModel):
+    value: int = Field(ge=0, lt=1)
 
 
 def parse_room_id(room_id: str) -> Axial:

@@ -1,6 +1,6 @@
 use crate::protos::cao_commands::{PlaceStructureCommand, StructureType};
-use caolo_sim::{join, prelude::*, query, tables::JoinIterator};
-use slog::{error, Logger};
+use caolo_sim::{join, prelude::*, tables::JoinIterator};
+use slog::{error, info, Logger};
 use thiserror::Error;
 use uuid::Uuid;
 
@@ -30,7 +30,7 @@ pub fn place_structure(
     storage: &mut World,
     command: &PlaceStructureCommand,
 ) -> Result<(), PlaceStructureError> {
-    let entity_id = storage.insert_entity();
+    info!(logger, "Handling place_structure command {:?}", command);
 
     let position = command
         .position
@@ -82,6 +82,8 @@ pub fn place_structure(
         PlaceStructureError::OwnerIdError
     })?;
     let ty = StructureType::from_i32(ty).ok_or(PlaceStructureError::BadType(ty))?;
+    let entity_id;
+    let owner_id = owner;
     match ty {
         StructureType::Spawn => {
             // a player may only have 1 spawn atm
@@ -100,37 +102,13 @@ pub fn place_structure(
                 });
             }
 
-            query!(
-                mutate
-                storage
-                {
-                    EntityId, SpawnComponent,
-                        .insert_or_update(entity_id, SpawnComponent::default());
-                }
+            entity_id = storage.insert_entity();
+
+            caolo_sim::entity_archetypes::init_structure_spawn(
+                entity_id, owner_id, position, storage,
             );
         }
     }
-
-    let owner_id = UserId(owner);
-    query!(
-        mutate
-        storage
-        {
-            EntityId, Structure,
-                .insert(entity_id);
-
-            EntityId, PositionComponent,
-                .insert_or_update(entity_id, PositionComponent(position));
-
-            EntityId, OwnedEntity,
-                .insert_or_update(entity_id, OwnedEntity{owner_id});
-
-            WorldPosition, EntityComponent,
-                .insert(position, EntityComponent(entity_id))
-                // expect that position validity is confirmed at this point
-                .expect("Failed to insert position");
-        }
-    );
 
     Ok(())
 }

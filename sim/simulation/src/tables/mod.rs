@@ -4,10 +4,10 @@
 pub mod btree;
 pub mod dense;
 pub mod flag;
+pub mod hex_grid;
 pub mod iterators;
 pub mod morton;
 pub mod morton_hierarchy;
-pub mod hex_grid;
 pub mod traits;
 pub mod unique;
 

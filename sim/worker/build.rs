@@ -1,5 +1,4 @@
 fn main() {
-
     let man = env!("CARGO_MANIFEST_DIR").replace('\\', "/");
     let protos_dir = format!("{}/../../protos", man);
     println!("cargo:rerun-if-changed={}", protos_dir);

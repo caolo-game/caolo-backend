@@ -1,7 +1,7 @@
 version: "3.7"
 services:
   release:
-    build: 
+    build:
       context: .
       dockerfile: ./release.Dockerfile
     image: frenetiq/caolo-release:bleeding
@@ -9,7 +9,7 @@ services:
     depends_on:
       - db
   api:
-    build: 
+    build:
       context: .
       dockerfile: ./api.Dockerfile
     image: frenetiq/caolo-api:bleeding
@@ -21,7 +21,6 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - cache
       - db
 
     healthcheck:
@@ -31,21 +30,15 @@ services:
       start_period: 5s
 
   sim:
-    build: 
+    build:
       context: .
       dockerfile: ./sim.Dockerfile
     image: frenetiq/caolo-sim:bleeding
     env_file: docker.env
     depends_on:
-      - cache
       - db
     ports:
       - "50051:50051"
-
-  cache:
-    image: eqalpha/keydb:latest
-    ports:
-      - "6379:6379"
 
   db:
     image: postgres:11.1
@@ -53,10 +46,9 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: admin
     volumes:
-    - db-data:/var/lib/postgresql/data
+      - db-data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
-
 
 volumes:
   db-data:

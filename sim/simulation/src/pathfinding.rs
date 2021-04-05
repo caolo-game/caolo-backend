@@ -275,7 +275,7 @@ pub fn find_path_overworld(
             // we ran out of possible paths
             return Err(PathFindingError::Unreachable);
         }
-        return Err(PathFindingError::Timeout );
+        return Err(PathFindingError::Timeout);
     }
 
     // reconstruct path
@@ -547,8 +547,8 @@ pub fn mirrored_room_position(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tables::morton_hierarchy::SpacialStorage;
     use crate::tables::hex_grid::HexGrid;
+    use crate::tables::morton_hierarchy::SpacialStorage;
     use crate::terrain::TileTerrainType;
     use crate::{prelude::Hexagon, tables::morton::MortonTable};
     use slog::{o, Drain};

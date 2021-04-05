@@ -89,8 +89,7 @@ pub fn init_world_entities(logger: Logger, storage: &mut World, n_fake_users: us
             user_id,
             Room(room),
             &mut rng,
-            FromWorldMut::new(storage),
-            FromWorld::new(storage),
+            storage,
         );
         trace!(logger, "spawning entities");
         storage
@@ -192,18 +191,6 @@ fn init_bot(
     hp.insert_or_update(id, HpComponent { hp: 50, hp_max: 50 });
 }
 
-type InitSpawnMuts = (
-    UnsafeView<EntityId, OwnedEntity>,
-    UnsafeView<EntityId, SpawnComponent>,
-    UnsafeView<EntityId, SpawnQueueComponent>,
-    UnsafeView<EntityId, Structure>,
-    UnsafeView<EntityId, PositionComponent>,
-    UnsafeView<EntityId, EnergyComponent>,
-    UnsafeView<EntityId, EnergyRegenComponent>,
-    UnsafeView<WorldPosition, EntityComponent>,
-);
-type InitSpawnConst<'a> = (View<'a, WorldPosition, TerrainComponent>,);
-
 #[allow(clippy::too_many_arguments)] // its just a helper function let it be
 fn init_spawn(
     logger: &Logger,
@@ -212,46 +199,19 @@ fn init_spawn(
     owner_id: Uuid,
     room: Room,
     rng: &mut impl Rng,
-    (
-        mut owners,
-        mut spawns,
-        mut spawn_queues,
-        mut structures,
-        mut positions,
-        mut energies,
-        mut regens,
-        mut entities_by_pos,
-    ): InitSpawnMuts,
-    (terrain,): InitSpawnConst,
+    world: &mut World,
 ) {
     trace!(logger, "init_spawn");
-    structures.insert(id);
-    spawns.insert_or_update(id, SpawnComponent::default());
-    spawn_queues.insert_or_update(id, SpawnQueueComponent::default());
-    owners.insert_or_update(
-        id,
-        OwnedEntity {
-            owner_id: UserId(owner_id),
-        },
+    let pos = uncontested_pos(
+        logger,
+        room,
+        bounds,
+        &*world.view::<WorldPosition, EntityComponent>(),
+        &*world.view::<WorldPosition, TerrainComponent>(),
+        rng,
     );
-    energies.insert_or_update(
-        id,
-        EnergyComponent {
-            energy: 0,
-            energy_max: 500,
-        },
-    );
-    regens.insert_or_update(id, EnergyRegenComponent { amount: 5 });
 
-    let pos = uncontested_pos(logger, room, bounds, &*entities_by_pos, &*terrain, rng);
-
-    positions.insert_or_update(id, PositionComponent(pos));
-    entities_by_pos
-        .table
-        .at_mut(room.0)
-        .expect("expected room to be in entities_by_pos table")
-        .insert(pos.pos, EntityComponent(id))
-        .expect("entities_by_pos insert");
+    crate::entity_archetypes::init_structure_spawn(id, owner_id, pos, world);
     trace!(logger, "init_spawn done");
 }
 

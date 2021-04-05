@@ -4,6 +4,7 @@ mod output;
 mod protos;
 
 mod command_service;
+mod world_service;
 
 use crate::protos::cao_commands::command_server::CommandServer;
 use caolo_sim::{executor::Executor, executor::SimpleExecutor};

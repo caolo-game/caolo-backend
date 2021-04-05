@@ -8,7 +8,6 @@ Code layout:
 |- migrations/          # SQL schema migrations
 |- protos/              # Protobuf messages used in communications between web and worker services
 |- api/                 # Webservice bridging remote clients and the sim
-|- rt/                  # Realtime communication service to fetch the latest game-state
 |- sim/
  |+ cao-storage-derive/ # Derive macro for the storage of the simulation/
  |+ simulation/         # Library for running the game world

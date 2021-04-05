@@ -1,5 +1,4 @@
 from typing import Dict, List, Tuple
-import aioredis
 from fastapi import FastAPI, Response, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -11,7 +10,7 @@ import os
 import asyncio
 import sys
 
-from .config import QUEEN_TAG, DB_URL, REDIS_STR, QUEEN_URL
+from .config import QUEEN_TAG, DB_URL, QUEEN_URL
 
 from .api_schema import RoomObjects, Axial, make_room_id, parse_room_id
 from .model import game_state
@@ -53,14 +52,6 @@ async def db_pool():
     return _DB_POOL
 
 
-_REDIS_POOL = None
-
-
-async def redis_pool():
-    global _REDIS_POOL
-    if not _REDIS_POOL:
-        _REDIS_POOL = await aioredis.create_pool(REDIS_STR)
-    return _REDIS_POOL
 
 
 @app.middleware("http")
@@ -73,38 +64,10 @@ async def db_session(req, call_next):
     return resp
 
 
-# middlewares seem to be called in opposite order, so register rate_limit before last, after redis
 @app.middleware("http")
 async def rate_limit(req, call_next):
-    redis = req.state.cache
-    tr = redis.multi_exec()
-
-    host = req.client.host
-    key = f"cao-access-{host}"
-    tr.setnx(key, 0)
-    tr.incr(key)
-    tr.expire(key, 1)
-
-    res = await tr.execute()
-    res = res[1]
-
-    if res > 50:
-        return Response(status_code=429)
-
+    # TODO
     return await call_next(req)
-
-
-@app.middleware("http")
-async def redis_session(req, call_next):
-    resp = Response(status_code=500)
-    pool = await redis_pool()
-    cache = await pool.acquire()
-    req.state.cache = aioredis.Redis(cache)
-    try:
-        resp = await call_next(req)
-    finally:
-        pool.release(cache)
-    return resp
 
 
 @app.get("/health")
@@ -122,8 +85,6 @@ app.include_router(handler.users.router)
 
 async def _broadcast_gamestate():
     pool = await db_pool()
-    # Do not release this redis/db instance, game_state manager needs to hold it for pubsub
-    # db is only needed for initialization
     async with pool.acquire() as con:
         await game_state.manager.start(QUEEN_TAG, QUEEN_URL, con)
 
@@ -131,6 +92,5 @@ async def _broadcast_gamestate():
 @app.on_event("startup")
 async def on_start():
     # force connections on startup instead of at the first request
-    await redis_pool()
     await db_pool()
     await _broadcast_gamestate()

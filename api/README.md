@@ -6,7 +6,6 @@
 -   [Protoc](https://grpc.io/docs/protoc-installation/)
 -   [PostgeSQL](https://www.postgresql.org/)
 -   diesel-cli `cargo install diesel_cli --no-default-features --features "postgres"`
--   [Redis](https://keydb.dev/)
 
 ### Docker builds:
 

@@ -14,7 +14,6 @@ from fastapi import (
 import json
 from pydantic import BaseModel
 
-from aioredis import Redis
 import asyncio
 import grpc
 

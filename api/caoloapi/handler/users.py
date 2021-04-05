@@ -2,6 +2,7 @@ from typing import Optional
 import logging
 import string
 import random
+from uuid import UUID
 
 from fastapi import (
     APIRouter,
@@ -31,6 +32,7 @@ router = APIRouter(tags=["users"])
 
 
 class User(BaseModel):
+    user_id: UUID
     username: str
     displayname: str
     email: Optional[str] = None
@@ -59,13 +61,14 @@ async def get_current_user_id(token: str = Depends(oauth2_scheme)):
 async def get_myself(req: Request, current_user=Depends(get_current_user_id)):
     current_user = await req.state.db.fetchrow(
         """
-        SELECT username, email, display_name
+        SELECT id, username, email, display_name
         FROM user_account
         WHERE id=$1
         """,
         current_user,
     )
     return User(
+        user_id=current_user["id"],
         username=current_user["username"],
         email=current_user["email"],
         displayname=current_user["display_name"],

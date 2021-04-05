@@ -96,7 +96,7 @@ impl cao_world::world_server::World for WorldService {
                 // instead of locking in a loop
                 let w = world.read().await;
                 if w.payload.world_time != last_sent {
-                    if let Err(_) = tx.send(Ok(w.payload.clone())).await {
+                    if tx.send(Ok(w.payload.clone())).await.is_err() {
                         break;
                     }
                     last_sent = w.payload.world_time;

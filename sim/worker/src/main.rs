@@ -7,6 +7,7 @@ mod command_service;
 mod world_service;
 
 use crate::protos::cao_commands::command_server::CommandServer;
+use crate::protos::cao_world::world_server::WorldServer;
 use caolo_sim::{executor::Executor, executor::SimpleExecutor};
 use slog::{error, info, o, Drain, Logger};
 use std::{
@@ -130,10 +131,16 @@ fn main() {
         "Init done. Starting the game loop. Starting the service on {:?}", addr
     );
 
+    let outpayload = Arc::new(tokio::sync::RwLock::new(world_service::Payload::default()));
+
     let server = tonic::transport::Server::builder()
         .add_service(CommandServer::new(
             crate::command_service::CommandService::new(logger.clone(), Arc::clone(&world)),
         ))
+        .add_service(WorldServer::new(crate::world_service::WorldService::new(
+            logger.clone(),
+            Arc::clone(&outpayload),
+        )))
         .serve(addr);
 
     let game_loop = async move {
@@ -150,18 +157,29 @@ fn main() {
                 world_json = world.as_json();
                 time = world.time() as i64;
             }
-            output::send_world(
-                logger.clone(),
-                time,
-                &world_json,
-                queen_tag.as_str(),
-                &db_pool,
-            )
-            .await
-            .map_err(|err| {
-                error!(logger, "Failed to send world output to storage {:?}", err);
-            })
-            .unwrap_or(());
+            // SAFETY we transmute borrow lifetimes
+            // it is safe if we await this future in this loop iteration
+            let send_future = unsafe {
+                use std::mem::transmute;
+                tokio::spawn(output::send_world(
+                    logger.clone(),
+                    time,
+                    transmute::<_, &'static _>(&world_json),
+                    transmute::<_, &'static _>(queen_tag.as_str()),
+                    transmute::<_, &'static _>(&db_pool),
+                ))
+            };
+
+            // while we're sending to the database, also update the outbound payload
+            outpayload.write().await.update(time as u64, &world_json);
+
+            send_future
+                .await
+                .expect("Failed to join send_world future")
+                .map_err(|err| {
+                    error!(logger, "Failed to send world output to storage {:?}", err);
+                })
+                .unwrap_or(());
 
             let sleep_duration = tick_latency
                 .checked_sub(Instant::now() - start)

@@ -87,6 +87,7 @@ impl cao_world::world_server::World for WorldService {
             let _logger = logger;
             loop {
                 // TODO: maybe use the broadcast crate and broadcast new world states?
+                // instead of locking in a loop
                 let w = world.read().await;
                 if w.world_time != last_sent {
                     if let Err(_) = tx.send(Ok(w.payload.clone())).await {

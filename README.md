@@ -19,7 +19,3 @@ Code layout:
 ```
 make all
 ```
-
-### Deploying to [Heroku](https://heroku.com)
-
-`make deploy-heroku app=<your heroku app name>`

@@ -6,57 +6,44 @@ import asyncio
 import logging
 
 from aioredis import Redis
+import grpc
+
+import cao_world_pb2
+import cao_world_pb2_grpc
 
 from ..config import QUEEN_TAG
-from ..api_schema import RoomObjects
+from ..api_schema import RoomObjects, make_room_id
 
 
 @dataclass
 class GameState:
     world_time: int
     created: dt.datetime
-    payload: Dict
+    entities: Optional[Dict]
+    properties: Optional[Dict]
 
 
 def get_terrain(game_state: GameState, room_id: str):
-    terrain = game_state.payload["terrain"].get("roomTerrain", {})
+    assert game_state.properties, "Load properties before getting room_objects"
+    terrain = game_state.properties["terrain"].get("roomTerrain", {})
     return terrain.get(room_id, [])
 
 
 def get_room_objects(game_state: GameState, room_id: str):
+    assert game_state.entities, "Load entities before getting room_objects"
+
     payload = RoomObjects()
     payload.time = game_state.world_time
     payload.payload = {
-        "bots": game_state.payload["bots"].get(room_id, []),
-        "structures": game_state.payload["structures"].get(room_id, []),
-        "resources": game_state.payload["resources"].get(room_id, []),
+        "bots": game_state.entities["bots"].get(room_id, []),
+        "structures": game_state.entities["structures"].get(room_id, []),
+        "resources": game_state.entities["resources"].get(room_id, []),
     }
     return payload
 
 
 async def load_latest_game_state(db, queen_tag=None) -> GameState:
-    if queen_tag is None:
-        queen_tag = QUEEN_TAG
-
-    row = await db.fetchrow(
-        """
-        SELECT
-            t.payload as payload
-            , t.world_time as world_time
-            , t.created as created
-        FROM public.world_output t
-        WHERE t.queen_tag=$1
-        ORDER BY t.created DESC
-        """,
-        queen_tag,
-    )
-    if row:
-        return GameState(
-            world_time=row["world_time"],
-            created=row["created"],
-            payload=json.loads(row["payload"]),
-        )
-    return None
+    return await load_latest_game_state_after(db, -1, queen_tag)
 
 
 async def load_latest_game_state_after(
@@ -71,18 +58,29 @@ async def load_latest_game_state_after(
             t.payload as payload
             , t.world_time as world_time
             , t.created as created
-        FROM public.world_output t
+        FROM public.world_hot t
         WHERE t.queen_tag=$1 AND t.world_time > $2
         ORDER BY t.created DESC
         """,
         queen_tag,
         min_bound_tick,
     )
+    props = await db.fetchrow(
+        """
+    SELECT
+        t.payload
+    FROM public.world_const t
+    WHERE t.queen_tag=$1
+    """,
+        queen_tag,
+    )
+
     if row:
         return GameState(
             world_time=row["world_time"],
             created=row["created"],
-            payload=json.loads(row["payload"]),
+            entities=json.loads(row["payload"]),
+            properties=json.loads(props["payload"]),
         )
     return None
 
@@ -118,37 +116,62 @@ class GameStateManager:
         else:
             logging.debug("No new state is available")
 
-    async def _listener(self, queen_tag: str, redis: Redis, db):
-        key = f"{queen_tag}-world"
-        try:
-            logging.info("Subscribing to %s", key)
-            ch = await redis.subscribe(key)
-            ch = ch[0]
+    async def _listener(self, queen_url: str):
+        while 1:
+            try:
+                logging.info("Subscribing to world updates at %s", queen_url)
+                channel = grpc.aio.insecure_channel(queen_url)
+                stub = cao_world_pb2_grpc.WorldStub(channel)
 
-            async for msg in ch.iter():
-                tick = int(msg)
-                logging.debug("Got a new game-state message of tick %d" % tick)
-                await self._load_from_db(db, queen_tag)
-                for cb in self.on_new_state_callbacks:
-                    try:
-                        cb(self.game_state)
-                    except:
-                        logging.exception("Callback failed")
-            logging.warn(
-                "GameStateManager._listener exiting. channel: %s.",
-                ch,
-            )
-        except:
-            logging.exception("Error in GameState listener")
-            self.game_state = None
-            raise
+                async for msg in stub.Entities(cao_world_pb2.Empty()):
+                    payload = {
+                        "bots": {},
+                        "resources": {},
+                        "structures": {},
+                        "diagnostics": None,
+                    }
+                    for room_resources in msg.resources:
+                        room_id = make_room_id(
+                            room_resources.roomId.q, room_resources.roomId.r
+                        )
+                        payload["resources"][room_id] = json.loads(
+                            room_resources.payload.value
+                        )
+                    for room_bots in msg.bots:
+                        room_id = make_room_id(room_bots.roomId.q, room_bots.roomId.r)
+                        payload["bots"][room_id] = json.loads(room_bots.payload.value)
+                    for room_structures in msg.structures:
+                        room_id = make_room_id(
+                            room_structures.roomId.q, room_structures.roomId.r
+                        )
+                        payload["structures"][room_id] = json.loads(
+                            room_structures.payload.value
+                        )
 
-    async def start(self, queen_tag: str, redis: Redis, db):
-        """
-        takes ownership of both `redis` and `db` connections
-        """
-        await self._load_from_db(db)
-        asyncio.create_task(self._listener(queen_tag, redis, db))
+                    if msg.diagnostics:
+                        payload["diagnostics"] = json.loads(msg.diagnostics.value)
+
+                    assert self.game_state
+
+                    self.game_state.world_time = msg.worldTime
+                    self.game_state.created = dt.datetime.now()
+                    self.game_state.entities = payload
+
+                    for cb in self.on_new_state_callbacks:
+                        try:
+                            cb(self.game_state)
+                        except:
+                            logging.exception("Callback failed")
+
+                logging.warn("GameStateManager._listener exiting")
+                return
+            except:
+                logging.exception("Error in GameState listener")
+                self.game_state = None
+
+    async def start(self, queen_tag: str, queen_url: str, db):
+        await self._load_from_db(db, queen_tag)
+        asyncio.create_task(self._listener(queen_url))
 
 
 manager = GameStateManager()

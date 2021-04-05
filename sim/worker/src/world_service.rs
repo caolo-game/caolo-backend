@@ -14,7 +14,6 @@ pub struct WorldService {
 
 #[derive(Default, Debug)]
 pub struct Payload {
-    pub world_time: i64,
     pub payload: cao_world::WorldEntities,
 }
 
@@ -32,11 +31,11 @@ fn write_world_payload(
     use cao_common::{Axial, Json};
     use cao_world::RoomObjects;
 
-    for (roomid, pl) in world_payload[key]
-        .as_object()
-        .expect("key was not a map")
-        .iter()
-    {
+    let pl = world_payload[key].as_object().expect("key was not a map");
+
+    out.reserve(pl.len());
+
+    for (roomid, pl) in pl.iter() {
         // TODO:
         // I'd really prefer if we could just use the original roomids instead of parsing back the
         // serialized roomids
@@ -59,14 +58,21 @@ fn write_world_payload(
 impl Payload {
     /// Transform the usual json serialized world into Payload
     pub fn update(&mut self, time: u64, world_payload: &serde_json::Value) {
-        self.world_time = time as i64;
+        self.payload.world_time = time as i64;
         self.payload.bots.clear();
         self.payload.structures.clear();
         self.payload.resources.clear();
 
+        // TODO:
+        // we could reuse these buffers?
         write_world_payload(world_payload, "bots", &mut self.payload.bots);
         write_world_payload(world_payload, "structures", &mut self.payload.structures);
         write_world_payload(world_payload, "resources", &mut self.payload.resources);
+        if let Some(diag) = world_payload.get("diagnostics") {
+            self.payload.diagnostics = Some(cao_common::Json {
+                value: serde_json::to_vec(diag).unwrap(),
+            });
+        }
     }
 }
 
@@ -89,11 +95,11 @@ impl cao_world::world_server::World for WorldService {
                 // TODO: maybe use the broadcast crate and broadcast new world states?
                 // instead of locking in a loop
                 let w = world.read().await;
-                if w.world_time != last_sent {
+                if w.payload.world_time != last_sent {
                     if let Err(_) = tx.send(Ok(w.payload.clone())).await {
                         break;
                     }
-                    last_sent = w.world_time;
+                    last_sent = w.payload.world_time;
                 }
             }
         });

@@ -17,13 +17,13 @@ async def room_terrain_layout():
     If you query the terrain the i-th terrain enum value
     will correspond to the i-th coordinates returned by this endpoint
     """
-    return manager.game_state.payload["terrain"]["roomLayout"]
+    return manager.game_state.properties["terrain"]["roomLayout"]
 
 
 @router.get("/terrain", response_model=List[str])
 async def terrain(q: int = Query(None), r: int = Query(None)):
     room_id = make_room_id(q, r)
-    return manager.game_state.payload["terrain"]["roomTerrain"].get(room_id)
+    return manager.game_state.properties["terrain"]["roomTerrain"].get(room_id)
 
 
 @router.get("/rooms", response_model=List[Dict])
@@ -34,7 +34,7 @@ async def rooms():
         {"pos": [room_id.q, room_id.r], **v}
         for room_id, v in (
             (parse_room_id(k), v)
-            for k, v in manager.game_state.payload["rooms"].items()
+            for k, v in manager.game_state.properties["rooms"].items()
         )
     )
 
@@ -53,4 +53,4 @@ async def diagnostics():
     """
     returns internal engine diagnostics
     """
-    return manager.game_state.payload["diagnostics"]
+    return manager.game_state.entities["diagnostics"]

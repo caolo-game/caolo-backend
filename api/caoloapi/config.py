@@ -9,7 +9,7 @@ except:
 
 DB_URL = os.getenv("DATABASE_URL", "postgres://postgres:admin@localhost:5432/caolo")
 REDIS_STR = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-CAO_URL = os.getenv("CAO_SIM_URL", "localhost:50051")
+QUEEN_URL = os.getenv("CAO_QUEEN_URL", "localhost:50051")
 
 try:
     QUEEN_TAG = os.getenv("CAO_QUEEN_TAG")

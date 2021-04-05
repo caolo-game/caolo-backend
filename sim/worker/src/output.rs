@@ -64,28 +64,7 @@ pub async fn send_schema<'a>(
     Ok(())
 }
 
-async fn output_to_db<'a>(
-    time: i64,
-    payload: &'a serde_json::Value,
-    connection: impl sqlx::Executor<'a, Database = sqlx::Postgres>,
-    queen_tag: &'a str,
-) -> anyhow::Result<()> {
-    sqlx::query!(
-        r#"
-        INSERT INTO world_output (queen_tag, world_time, payload)
-        VALUES ($1, $2, $3);
-        "#,
-        queen_tag,
-        time,
-        payload
-    )
-    .execute(connection)
-    .await
-    .with_context(|| "Failed to insert current world state into DB")?;
-    Ok(())
-}
-
-pub async fn send_world<'a>(
+pub async fn send_hot<'a>(
     logger: Logger,
     time: i64,
     payload: &'a serde_json::Value,
@@ -94,9 +73,48 @@ pub async fn send_world<'a>(
 ) -> anyhow::Result<()> {
     info!(logger, "Sending world");
 
-    output_to_db(time, payload, db, queen_tag)
-        .await
-        .with_context(|| "Failed to send to db")?;
+    sqlx::query!(
+        r#"
+        INSERT INTO world_hot (queen_tag, world_time, payload)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (queen_tag, world_time)
+        DO UPDATE
+        SET payload=$3, created=now()
+        "#,
+        queen_tag,
+        time,
+        payload
+    )
+    .execute(db)
+    .await
+    .with_context(|| "Failed to insert current world state into DB")?;
+
+    info!(logger, "Sending world done");
+    Ok(())
+}
+
+pub async fn send_const<'a>(
+    logger: Logger,
+    payload: &'a serde_json::Value,
+    queen_tag: &'a str,
+    db: impl sqlx::Executor<'a, Database = sqlx::Postgres>,
+) -> anyhow::Result<()> {
+    info!(logger, "Sending world");
+
+    sqlx::query!(
+        r#"
+        INSERT INTO world_const (queen_tag, payload)
+        VALUES ($1, $2)
+        ON CONFLICT (queen_tag)
+        DO UPDATE
+        SET payload=$2
+        "#,
+        queen_tag,
+        payload
+    )
+    .execute(db)
+    .await
+    .with_context(|| "Failed to insert into DB")?;
 
     info!(logger, "Sending world done");
     Ok(())

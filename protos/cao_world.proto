@@ -12,9 +12,11 @@ message RoomObjects
 
 message WorldEntities
 {
-    repeated RoomObjects bots = 1;
-    repeated RoomObjects structures = 2;
-    repeated RoomObjects resources = 3;
+    int64 worldTime = 1;
+    repeated RoomObjects bots = 2;
+    repeated RoomObjects structures = 3;
+    repeated RoomObjects resources = 4;
+    cao_common.Json diagnostics = 5;
 }
 
 message Empty { }

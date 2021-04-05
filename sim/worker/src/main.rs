@@ -119,7 +119,18 @@ fn main() {
         .expect("Failed to send schema");
     caolo_sim::init::init_world_entities(logger.clone(), &mut world, game_conf.n_actors as usize);
 
-    let world = Arc::new(tokio::sync::Mutex::new(world));
+    info!(logger, "Init Done. Sending cold data to db");
+
+    sim_rt
+        .block_on(output::send_const(
+            logger.clone(),
+            &world.cold_as_json(),
+            queen_tag.as_str(),
+            &db_pool,
+        ))
+        .expect("Failed to send const data");
+
+    info!(logger, "Sending constant data done");
 
     let addr = env::var("CAO_SERVICE_ADDR")
         .ok()
@@ -128,8 +139,10 @@ fn main() {
 
     info!(
         logger,
-        "Init done. Starting the game loop. Starting the service on {:?}", addr
+        "Starting the game loop. Starting the service on {:?}", addr
     );
+
+    let world = Arc::new(tokio::sync::Mutex::new(world));
 
     let outpayload = Arc::new(tokio::sync::RwLock::new(world_service::Payload::default()));
 
@@ -146,7 +159,7 @@ fn main() {
     let game_loop = async move {
         loop {
             let start = Instant::now();
-            let world_json;
+            let entities_json;
             let time;
             {
                 // free the world mutex at the end of this scope
@@ -154,24 +167,24 @@ fn main() {
 
                 tick(logger.clone(), &mut executor, &mut *world);
 
-                world_json = world.as_json();
+                entities_json = world.hot_as_json();
                 time = world.time() as i64;
             }
             // SAFETY we transmute borrow lifetimes
             // it is safe if we await this future in this loop iteration
             let send_future = unsafe {
                 use std::mem::transmute;
-                tokio::spawn(output::send_world(
+                tokio::spawn(output::send_hot(
                     logger.clone(),
                     time,
-                    transmute::<_, &'static _>(&world_json),
+                    transmute::<_, &'static _>(&entities_json),
                     transmute::<_, &'static _>(queen_tag.as_str()),
                     transmute::<_, &'static _>(&db_pool),
                 ))
             };
 
             // while we're sending to the database, also update the outbound payload
-            outpayload.write().await.update(time as u64, &world_json);
+            outpayload.write().await.update(time as u64, &entities_json);
 
             send_future
                 .await

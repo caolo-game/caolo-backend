@@ -11,7 +11,7 @@ import os
 import asyncio
 import sys
 
-from .config import QUEEN_TAG, DB_URL, REDIS_STR
+from .config import QUEEN_TAG, DB_URL, REDIS_STR, QUEEN_URL
 
 from .api_schema import RoomObjects, Axial, make_room_id, parse_room_id
 from .model import game_state
@@ -121,15 +121,11 @@ app.include_router(handler.users.router)
 
 
 async def _broadcast_gamestate():
-    pool = await redis_pool()
-    cache = await pool.acquire()
-    redis = aioredis.Redis(cache)
-
     pool = await db_pool()
     # Do not release this redis/db instance, game_state manager needs to hold it for pubsub
     # db is only needed for initialization
-    con = await pool.acquire()
-    await game_state.manager.start(QUEEN_TAG, redis, con)
+    async with pool.acquire() as con:
+        await game_state.manager.start(QUEEN_TAG, QUEEN_URL, con)
 
 
 @app.on_event("startup")

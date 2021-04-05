@@ -21,7 +21,7 @@ import grpc
 import cao_commands_pb2 as cao_commands
 import cao_commands_pb2_grpc
 
-from ..config import QUEEN_TAG, CAO_URL
+from ..config import QUEEN_TAG, QUEEN_URL
 from .users import get_current_user_id
 
 
@@ -50,7 +50,7 @@ async def set_bot_script(
     _write_uuid(msg.scriptId, req_payload.script_id)
     msg.entityId = req_payload.bot_id
 
-    channel = grpc.aio.insecure_channel(CAO_URL)
+    channel = grpc.aio.insecure_channel(QUEEN_URL)
     stub = cao_commands_pb2_grpc.CommandStub(channel)
 
     try:

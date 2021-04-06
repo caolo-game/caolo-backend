@@ -188,7 +188,8 @@ fn main() {
             let mut pl = world_service::Payload::default();
             pl.update(time as u64, &entities_json);
 
-            outpayload.send(Arc::new(pl)).unwrap();
+            // if there are no subscirbers this will return an error. it doesn't matter for us
+            outpayload.send(Arc::new(pl)).unwrap_or_default();
 
             send_future
                 .await

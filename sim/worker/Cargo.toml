@@ -19,7 +19,7 @@ cao-lang = { git = "https://github.com/caolo-game/cao-lang.git" }
 chrono = { version = "0.4", features = ["serde"] }
 serde_json = "1"
 serde = "1"
-futures = "*"
+futures = "0.3"
 serde_derive = "1"
 rand = "*"
 sentry = "0.22"
@@ -40,7 +40,7 @@ uuid = { version = "0.8", features = ["v4"] }
 tokio = { version = "1", features = ["sync"] }
 tokio-stream = "*"
 tonic = { version = "0.4" }
-prost = "*"
+prost = "0.7"
 tracing = { version = "0.1" }
 tracing-futures = "*"
 tracing-subscriber = { version = "0.2", features = [

@@ -144,7 +144,8 @@ fn main() {
 
     let world = Arc::new(tokio::sync::Mutex::new(world));
 
-    let outpayload = Arc::new(tokio::sync::RwLock::new(world_service::Payload::default()));
+    let (outtx, _) = tokio::sync::broadcast::channel(4);
+    let outpayload = Arc::new(outtx);
 
     let server = tonic::transport::Server::builder()
         .add_service(CommandServer::new(
@@ -184,7 +185,10 @@ fn main() {
             };
 
             // while we're sending to the database, also update the outbound payload
-            outpayload.write().await.update(time as u64, &entities_json);
+            let mut pl = world_service::Payload::default();
+            pl.update(time as u64, &entities_json);
+
+            outpayload.send(Arc::new(pl)).unwrap();
 
             send_future
                 .await

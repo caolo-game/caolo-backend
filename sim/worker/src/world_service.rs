@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use tokio::sync::{mpsc, RwLock};
+use tokio::sync::{broadcast::Sender, mpsc};
 use tokio_stream::wrappers::ReceiverStream;
 use tonic::Status;
 
@@ -9,8 +9,10 @@ use crate::protos::cao_world;
 #[derive(Clone)]
 pub struct WorldService {
     logger: slog::Logger,
-    entities: Arc<RwLock<Payload>>,
+    entities: WorldPayloadSender,
 }
+
+type WorldPayloadSender = Arc<Sender<Arc<Payload>>>;
 
 #[derive(Default, Debug)]
 pub struct Payload {
@@ -18,7 +20,7 @@ pub struct Payload {
 }
 
 impl WorldService {
-    pub fn new(logger: slog::Logger, entities: Arc<RwLock<Payload>>) -> Self {
+    pub fn new(logger: slog::Logger, entities: WorldPayloadSender) -> Self {
         Self { logger, entities }
     }
 }
@@ -87,14 +89,12 @@ impl cao_world::world_server::World for WorldService {
         let (tx, rx) = mpsc::channel(4);
 
         let logger = self.logger.clone();
-        let world = Arc::clone(&self.entities);
+        let mut world = self.entities.subscribe();
         let mut last_sent = -1;
         tokio::spawn(async move {
             let _logger = logger;
             loop {
-                // TODO: maybe use the broadcast crate and broadcast new world states?
-                // instead of locking in a loop
-                let w = world.read().await;
+                let w = world.recv().await.expect("world receive failed");
                 if w.payload.world_time != last_sent {
                     if tx.send(Ok(w.payload.clone())).await.is_err() {
                         break;

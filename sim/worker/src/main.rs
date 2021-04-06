@@ -9,7 +9,7 @@ mod world_service;
 use crate::protos::cao_commands::command_server::CommandServer;
 use crate::protos::cao_world::world_server::WorldServer;
 use caolo_sim::{executor::Executor, executor::SimpleExecutor};
-use slog::{error, info, o, Drain, Logger};
+use slog::{error, info, o, warn, Drain, Logger};
 use std::{
     env,
     sync::Arc,
@@ -184,12 +184,16 @@ fn main() {
                 ))
             };
 
-            // while we're sending to the database, also update the outbound payload
-            let mut pl = world_service::Payload::default();
-            pl.update(time as u64, &entities_json);
+            if outpayload.receiver_count() > 0 {
+                // while we're sending to the database, also update the outbound payload
+                let mut pl = world_service::Payload::default();
+                pl.update(time as u64, &entities_json);
 
-            // if there are no subscirbers this will return an error. it doesn't matter for us
-            outpayload.send(Arc::new(pl)).unwrap_or_default();
+                if outpayload.send(Arc::new(pl)).is_err() {
+                    // happens if the subscribers disconnect while we prepared the payload
+                    warn!(logger, "Lost all world subscribers");
+                }
+            }
 
             send_future
                 .await

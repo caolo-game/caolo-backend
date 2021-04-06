@@ -9,6 +9,12 @@ pub struct CommandService {
     world: std::sync::Arc<tokio::sync::Mutex<crate::World>>,
 }
 
+impl std::fmt::Debug for CommandService {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CommandService").finish()
+    }
+}
+
 impl CommandService {
     pub fn new(world: std::sync::Arc<tokio::sync::Mutex<crate::World>>) -> Self {
         Self { world }
@@ -17,6 +23,7 @@ impl CommandService {
 
 #[tonic::async_trait]
 impl cao_commands::command_server::Command for CommandService {
+    #[tracing::instrument]
     async fn place_structure(
         &self,
         request: Request<cao_commands::PlaceStructureCommand>,
@@ -27,6 +34,7 @@ impl cao_commands::command_server::Command for CommandService {
             .map_err(|err| Status::invalid_argument(err.to_string()))
     }
 
+    #[tracing::instrument]
     async fn update_entity_script(
         &self,
         request: tonic::Request<cao_commands::UpdateEntityScriptCommand>,
@@ -37,6 +45,7 @@ impl cao_commands::command_server::Command for CommandService {
             .map_err(|err| Status::invalid_argument(err.to_string()))
     }
 
+    #[tracing::instrument]
     async fn update_script(
         &self,
         request: tonic::Request<cao_commands::UpdateScriptCommand>,
@@ -47,6 +56,7 @@ impl cao_commands::command_server::Command for CommandService {
             .map_err(|err| Status::invalid_argument(err.to_string()))
     }
 
+    #[tracing::instrument]
     async fn set_default_script(
         &self,
         request: tonic::Request<cao_commands::SetDefaultScriptCommand>,
@@ -57,6 +67,7 @@ impl cao_commands::command_server::Command for CommandService {
             .map_err(|err| Status::invalid_argument(err.to_string()))
     }
 
+    #[tracing::instrument]
     async fn take_room(
         &self,
         request: tonic::Request<cao_commands::TakeRoomCommand>,
@@ -67,6 +78,7 @@ impl cao_commands::command_server::Command for CommandService {
             .map_err(|err| Status::invalid_argument(err.to_string()))
     }
 
+    #[tracing::instrument]
     async fn register_user(
         &self,
         request: tonic::Request<cao_commands::RegisterUserCommand>,

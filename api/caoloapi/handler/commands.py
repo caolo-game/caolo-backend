@@ -20,6 +20,7 @@ import grpc
 import cao_commands_pb2 as cao_commands
 import cao_commands_pb2_grpc
 
+from .scripting import CaoLangProgram, _compile_caolang_program
 from ..config import QUEEN_TAG, QUEEN_URL
 from .users import get_current_user_id
 from ..api_schema import WorldPosition, StructureType
@@ -109,3 +110,45 @@ async def place_structure(
         ) from err
 
     return {"status": "ok"}
+
+
+class UpdateScriptPayload(BaseModel):
+    script_id: UUID
+    program: CaoLangProgram
+
+
+@router.post("/update-script")
+async def update_script(
+    req: Request,
+    req_payload: UpdateScriptPayload = Body(...),
+    current_user_id=Depends(get_current_user_id),
+):
+
+    script_payload = json.dumps(req_payload.program, default=dict)
+
+    # return error if the script does not compile..
+    _compile_caolang_program(script_payload)
+
+    msg = cao_commands.UpdateScriptCommand()
+    msg.compilationUnit.compilationUnit.value = script_payload.encode("utf-8")
+
+    msg.scriptId.data = req_payload.script_id.bytes
+    msg.userId.data = UUID(current_user_id).bytes
+
+    # TODO
+    #  msg.compilationUnit.verifiedBy.major = -1
+    #  msg.compilationUnit.verifiedBy.minor = -1
+    #  msg.compilationUnit.verifiedBy.patch = -1
+
+    stub = get_cao_commands_stub()
+    try:
+        _result = await stub.UpdateScript(msg)
+    except grpc.aio.AioRpcError as err:
+        if err.code() == grpc.StatusCode.INVALID_ARGUMENT:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail=err.details()
+            ) from err
+        logging.exception("Unhandled rpc error")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        ) from err

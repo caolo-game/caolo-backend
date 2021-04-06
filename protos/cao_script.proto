@@ -3,7 +3,7 @@ package cao_script;
 
 import "cao_common.proto";
 
-message Card
+message SchemaCard
 {
     string name = 1;
     string description = 2;
@@ -28,7 +28,7 @@ message Card
 
 message Schema
 {
-    repeated Card cards = 1;
+    repeated SchemaCard cards = 1;
 }
 
 message CompilerVersion
@@ -41,7 +41,6 @@ message CompilerVersion
 message CompilationUnit
 {
     cao_common.Json compilationUnit = 1;
-
     CompilerVersion verifiedBy = 2;
 }
 

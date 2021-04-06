@@ -167,7 +167,7 @@ class GameStateManager:
                 logging.warn("GameStateManager._listener exiting")
                 return
             except grpc.aio.AioRpcError as err:
-                if err.code() == grpc.StatusCode.UNAVAILABLE:
+                if err.code() in (grpc.StatusCode.UNAVAILABLE, grpc.StatusCode.UNKNOWN):
                     logging.warn("Cao-Queen is unavailable. Retrying...")
                 else:
                     logging.exception("gRPC error in GameState listender")

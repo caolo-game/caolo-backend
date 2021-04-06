@@ -44,7 +44,7 @@ impl Executor for SimpleExecutor {
         let s = tracing::info_span!("", tick = tick);
         let _e = s.enter();
 
-        info!("Tick starting");
+        debug!("Tick starting");
 
         let mut diag = world.unsafe_view::<EmptyKey, Diagnostics>();
         let diag: &mut Diagnostics = diag.unwrap_mut_or_default();
@@ -82,7 +82,7 @@ impl Executor for SimpleExecutor {
         let end = chrono::Utc::now();
 
         diag.update_latency_stats(tick, start, end);
-        info!("Tick done");
+        debug!("Tick done");
         info!(
             "Latency | Current {:.4}ms | Mean {:.4}ms | STD {:.4}ms",
             diag.tick_latency_ms, diag.tick_latency_mean, diag.tick_latency_std,

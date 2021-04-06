@@ -6,11 +6,11 @@ use crate::profile;
 use crate::storage::views::View;
 use crate::terrain::{self, TileTerrainType};
 use arrayvec::ArrayVec;
-use slog::{debug, error, trace, warn, Logger};
 use std::cmp::{Ord, Ordering, PartialOrd};
 use std::collections::BinaryHeap;
 use std::collections::HashMap;
 use thiserror::Error;
+use tracing::{debug, error, trace, warn};
 
 const MAX_BRIDGE_LEN: usize = 64;
 
@@ -78,7 +78,6 @@ type FindPathTables<'a> = (
 /// elements.
 /// Returns the remaining steps
 pub fn find_path(
-    logger: &Logger,
     from: WorldPosition,
     to: WorldPosition,
     (positions, terrain, room_connections, room_properties): FindPathTables,
@@ -87,27 +86,19 @@ pub fn find_path(
     rooms_to_visit: &mut Vec<Room>,
 ) -> Result<u32, PathFindingError> {
     profile!("find_path");
-    trace!(logger, "find_path from {:?} to {:?}", from, to);
+    trace!("find_path from {:?} to {:?}", from, to);
     let positions = View::from_table(positions.table.at(from.room).ok_or_else(|| {
-        trace!(logger, "Room of EntityComponents not found");
+        trace!("Room of EntityComponents not found");
         PathFindingError::RoomDoesNotExists(from.room)
     })?);
     let terrain = View::from_table(terrain.table.at(from.room).ok_or_else(|| {
-        trace!(logger, "Room of TerrainComponents not found");
+        trace!("Room of TerrainComponents not found");
         PathFindingError::RoomDoesNotExists(from.room)
     })?);
     if from.room == to.room {
-        find_path_in_room(
-            logger,
-            from.pos,
-            to.pos,
-            (positions, terrain),
-            max_steps,
-            path,
-        )
+        find_path_in_room(from.pos, to.pos, (positions, terrain), max_steps, path)
     } else {
         find_path_multiroom(
-            logger,
             from,
             to,
             (positions, terrain, room_connections, room_properties),
@@ -126,7 +117,6 @@ type FindPathMultiRoomTables<'a> = (
 );
 
 fn find_path_multiroom(
-    logger: &Logger,
     from: WorldPosition,
     to: WorldPosition,
     (positions, terrain, room_connections, room_properties): FindPathMultiRoomTables,
@@ -134,11 +124,10 @@ fn find_path_multiroom(
     path: &mut Vec<RoomPosition>,
     rooms: &mut Vec<Room>,
 ) -> Result<u32, PathFindingError> {
-    trace!(logger, "find_path_multiroom from {:?} to {:?}", from, to);
+    trace!("find_path_multiroom from {:?} to {:?}", from, to);
 
     let from_room = from.room;
     max_steps = find_path_overworld(
-        logger,
         Room(from_room),
         Room(to.room),
         room_connections,
@@ -146,7 +135,7 @@ fn find_path_multiroom(
         rooms,
     )
     .map_err(|err| {
-        trace!(logger, "find_path_overworld failed {:?}", err);
+        trace!("find_path_overworld failed {:?}", err);
         err
     })?;
     let Room(next_room) = rooms
@@ -155,7 +144,7 @@ fn find_path_multiroom(
 
     let edge = *next_room - from_room;
     let bridge = room_connections.at(from_room).ok_or_else(|| {
-        trace!(logger, "Room of bridge not found");
+        trace!("Room of bridge not found");
         PathFindingError::RoomDoesNotExists(from_room)
     })?;
 
@@ -171,7 +160,7 @@ fn find_path_multiroom(
         .expect("expected RoomProperties to be set");
 
     let bridge = iter_edge(*center, *radius, bridge).map_err(|e| {
-        error!(logger, "Failed to obtain edge iterator {:?}", e);
+        error!("Failed to obtain edge iterator {:?}", e);
         PathFindingError::EdgeNotExists(edge)
     })?;
     let mut is_bot_on_bridge = false;
@@ -193,7 +182,7 @@ fn find_path_multiroom(
     bridge.sort_unstable_by_key(|p| p.hex_distance(from.pos));
 
     'a: for p in bridge {
-        match find_path_in_room(logger, from.pos, p, (positions, terrain), max_steps, path) {
+        match find_path_in_room(from.pos, p, (positions, terrain), max_steps, path) {
             Ok(_) => {
                 break 'a;
             }
@@ -204,7 +193,6 @@ fn find_path_multiroom(
         }
     }
     trace!(
-        logger,
         "find_path_in_room succeeded with {} steps remaining",
         max_steps
     );
@@ -215,7 +203,6 @@ fn find_path_multiroom(
 /// uses the A* algorithm
 /// return the remaning iterations
 pub fn find_path_overworld(
-    logger: &Logger,
     Room(from): Room,
     Room(to): Room,
     room_connections: View<Axial, RoomConnections>,
@@ -223,7 +210,7 @@ pub fn find_path_overworld(
     path: &mut Vec<Room>,
 ) -> Result<u32, PathFindingError> {
     profile!("find_path_overworld");
-    trace!(logger, "find_path_overworld from {:?} to {:?}", from, to);
+    trace!("find_path_overworld from {:?} to {:?}", from, to);
 
     let end = to;
 
@@ -241,11 +228,7 @@ pub fn find_path_overworld(
         for neighbour in room_connections
             .at(current_pos)
             .ok_or_else(|| {
-                trace!(
-                    logger,
-                    "Room {:?} not found in RoomConnections table",
-                    current_pos
-                );
+                trace!("Room {:?} not found in RoomConnections table", current_pos);
                 PathFindingError::RoomDoesNotExists(current_pos)
             })?
             .0
@@ -265,7 +248,6 @@ pub fn find_path_overworld(
     if current.pos != end {
         if max_steps > 0 {
             trace!(
-                logger,
                 "{:?} is unreachable from {:?}, remaining steps: {}, closed_set contains: {}",
                 to,
                 from,
@@ -286,7 +268,6 @@ pub fn find_path_overworld(
         current = closed_set[&current].parent;
     }
     trace!(
-        logger,
         "find_path_overworld returning with {} steps remaining\n{:?}",
         max_steps,
         path
@@ -304,7 +285,6 @@ fn is_walkable(point: Axial, terrain: View<Axial, TerrainComponent>) -> bool {
 /// Returns the remaining steps.
 /// Uses the A* algorithm
 pub fn find_path_in_room(
-    logger: &Logger,
     from: Axial,
     to: Axial,
     (positions, terrain): (View<Axial, EntityComponent>, View<Axial, TerrainComponent>),
@@ -312,7 +292,7 @@ pub fn find_path_in_room(
     path: &mut Vec<RoomPosition>,
 ) -> Result<u32, PathFindingError> {
     profile!("find_path_in_room");
-    trace!(logger, "find_path_in_room from {:?} to {:?}", from, to);
+    trace!("find_path_in_room from {:?} to {:?}", from, to);
 
     let current = from;
     let end = to;
@@ -349,10 +329,7 @@ pub fn find_path_in_room(
     }
 
     if current.pos != end {
-        debug!(
-            logger,
-            "find_path_in_room failed, remaining_steps: {}", max_steps
-        );
+        debug!("find_path_in_room failed, remaining_steps: {}", max_steps);
         if max_steps > 0 {
             // we ran out of possible paths
             return Err(PathFindingError::Unreachable);
@@ -368,8 +345,8 @@ pub fn find_path_in_room(
         current = closed_set[&current].parent;
     }
     debug!(
-        logger,
-        "find_path_in_room succeeded, remaining_steps: {}", max_steps
+        "find_path_in_room succeeded, remaining_steps: {}",
+        max_steps
     );
     Ok(max_steps)
 }
@@ -384,7 +361,6 @@ pub enum TransitError {
 
 /// If the result is `Ok` it will contain at least 1 item
 pub fn get_valid_transits(
-    logger: &Logger,
     current_pos: WorldPosition,
     target_room: Room,
     (terrain, entities, room_properties): (
@@ -393,28 +369,21 @@ pub fn get_valid_transits(
         View<ConfigKey, RoomProperties>,
     ),
 ) -> Result<ArrayVec<WorldPosition, 3>, TransitError> {
-    trace!(
-        logger,
-        "get_valid_transits {:?} {:?}",
-        current_pos,
-        target_room
-    );
+    trace!("get_valid_transits {:?} {:?}", current_pos, target_room);
     // from a bridge the bot can reach at least 1 and at most 3 tiles
     // try to find an empty one and move the bot there, otherwise the move fails
 
     if current_pos.room.hex_distance(target_room.0) != 1 {
         debug!(
-            logger,
             "Trying to find valid transit from {:?} to {:?} which are not neighbours",
-            current_pos,
-            target_room
+            current_pos, target_room
         );
         return Err(TransitError::InvalidRoom);
     }
 
     let props = room_properties.unwrap_value();
 
-    let mirror_pos = mirrored_room_position(logger, current_pos.pos, props)?;
+    let mirror_pos = mirrored_room_position(current_pos.pos, props)?;
 
     debug_assert_eq!(
         mirror_pos.hex_distance(props.center),
@@ -431,7 +400,7 @@ pub fn get_valid_transits(
         .at(target_room.0)
         .ok_or_else(|| {
             let err = format!("target room {:?} does not exist in terrain", target_room);
-            warn!(logger, "{}", err);
+            warn!("{}", err);
             TransitError::InternalError(anyhow::Error::msg(err))
         })?
         .query_range(mirror_pos, 1, &mut |pos, TerrainComponent(tile)| {
@@ -441,18 +410,16 @@ pub fn get_valid_transits(
                         room: target_room.0,
                         pos,
                     })
-                    .unwrap_or_else(|e| warn!(logger, "Failed to push bridge candidate: {:?}", e));
+                    .unwrap_or_else(|e| warn!("Failed to push bridge candidate: {:?}", e));
             }
         });
 
-    trace!(logger, "Bridge candidates {:?}", candidates);
+    trace!("Bridge candidates {:?}", candidates);
 
     if candidates.is_empty() {
         debug!(
-            logger,
             "Could not find an acceptable bridge candidate around pos {:?} in {:?}",
-            mirror_pos,
-            target_room
+            mirror_pos, target_room
         );
         return Err(TransitError::NotFound);
     }
@@ -464,11 +431,11 @@ pub fn get_valid_transits(
         .collect();
 
     if candidates.is_empty() {
-        trace!(logger, "No empty candidate was found");
+        trace!("No empty candidate was found");
         return Err(TransitError::NotFound);
     }
 
-    trace!(logger, "Returning bridge candidates: {:?}", candidates);
+    trace!("Returning bridge candidates: {:?}", candidates);
     Ok(candidates)
 }
 
@@ -496,7 +463,6 @@ pub fn get_valid_transits(
 /// - Inverting the position ( pos * -1 )
 /// - Translating it back to center
 pub fn mirrored_room_position(
-    _logger: &Logger,
     current_pos: Axial,
     props: &RoomProperties,
 ) -> Result<Axial, TransitError> {
@@ -524,7 +490,7 @@ pub fn mirrored_room_position(
     #[cfg(debug_assertions)]
     {
         if zero_ind.is_some() {
-            error!(_logger, "Room corners are not supported {:?}", current_pos);
+            error!("Room corners are not supported {:?}", current_pos);
             return Err(TransitError::InvalidPos);
         }
     }
@@ -551,14 +517,12 @@ mod tests {
     use crate::tables::morton_hierarchy::SpacialStorage;
     use crate::terrain::TileTerrainType;
     use crate::{prelude::Hexagon, tables::morton::MortonTable};
-    use slog::{o, Drain};
 
     #[test]
     fn test_simple_wall() {
         let from = Axial::new(2, 1);
         let to = Axial::new(5, 2);
 
-        let logger = slog::Logger::root(slog_stdlog::StdLog.fuse(), o!());
         let positions = MortonTable::new();
         let mut terrain = HexGrid::new(3);
         terrain
@@ -579,7 +543,6 @@ mod tests {
 
         let mut path = vec![];
         find_path_in_room(
-            &logger,
             from,
             to,
             (View::from_table(&positions), View::from_table(&terrain)),
@@ -614,9 +577,7 @@ mod tests {
         });
 
         let mut path = vec![];
-        let logger = slog::Logger::root(slog_stdlog::StdLog.fuse(), o!());
         find_path_in_room(
-            &logger,
             from,
             to,
             (View::from_table(&positions), View::from_table(&terrain)),

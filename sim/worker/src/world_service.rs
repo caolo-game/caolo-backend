@@ -1,16 +1,21 @@
-use slog::info;
 use std::sync::Arc;
 use tokio::sync::{broadcast::Sender, mpsc};
 use tokio_stream::wrappers::ReceiverStream;
 use tonic::Status;
+use tracing::info;
 
 use crate::protos::cao_common;
 use crate::protos::cao_world;
 
 #[derive(Clone)]
 pub struct WorldService {
-    logger: slog::Logger,
     entities: WorldPayloadSender,
+}
+
+impl std::fmt::Debug for WorldService {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("WorldService").finish()
+    }
 }
 
 type WorldPayloadSender = Arc<Sender<Arc<Payload>>>;
@@ -21,8 +26,8 @@ pub struct Payload {
 }
 
 impl WorldService {
-    pub fn new(logger: slog::Logger, entities: WorldPayloadSender) -> Self {
-        Self { logger, entities }
+    pub fn new(entities: WorldPayloadSender) -> Self {
+        Self { entities }
     }
 }
 
@@ -83,29 +88,25 @@ impl Payload {
 impl cao_world::world_server::World for WorldService {
     type EntitiesStream = ReceiverStream<Result<cao_world::WorldEntities, Status>>;
 
+    #[tracing::instrument]
     async fn entities(
         &self,
         _r: tonic::Request<cao_world::Empty>,
     ) -> Result<tonic::Response<Self::EntitiesStream>, tonic::Status> {
         let addr = _r.remote_addr();
 
-        info!(
-            self.logger,
-            "Subscribing new client to world entities. Addr: {:?}", addr
-        );
+        info!("Subscribing new client to world entities. Addr: {:?}", addr);
 
         let (tx, rx) = mpsc::channel(4);
 
-        let logger = self.logger.clone();
         let mut entities_rx = self.entities.subscribe();
         let mut last_sent = -1;
         tokio::spawn(async move {
-            let logger = logger;
             loop {
                 let w = entities_rx.recv().await.expect("world receive failed");
                 if w.payload.world_time != last_sent {
                     if tx.send(Ok(w.payload.clone())).await.is_err() {
-                        info!(logger, "World entities client lost {:?}", addr);
+                        info!("World entities client lost {:?}", addr);
                         break;
                     }
                     last_sent = w.payload.world_time;
@@ -130,17 +131,13 @@ mod tests {
 
         let mut exc = caolo_sim::prelude::SimpleExecutor;
         let mut w = exc
-            .initialize(
-                None,
-                caolo_sim::executor::GameConfig {
-                    world_radius: 2,
-                    room_radius: 10,
-                    ..Default::default()
-                },
-            )
+            .initialize(caolo_sim::executor::GameConfig {
+                world_radius: 2,
+                room_radius: 10,
+                ..Default::default()
+            })
             .unwrap();
-        let logger = w.logger.clone();
-        caolo_sim::init::init_world_entities(logger, &mut *w, 12);
+        caolo_sim::init::init_world_entities(&mut *w, 12);
 
         pl.update(w.time(), &w.hot_as_json());
 

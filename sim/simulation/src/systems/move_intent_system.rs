@@ -2,10 +2,10 @@ use crate::components::{Bot, EntityComponent, PositionComponent, TerrainComponen
 use crate::indices::{EmptyKey, EntityId, WorldPosition};
 use crate::intents::{Intents, MoveIntent};
 use crate::profile;
-use crate::storage::views::{UnsafeView, UnwrapViewMut, View, WorldLogger};
+use crate::storage::views::{UnsafeView, UnwrapViewMut, View};
 use crate::tables::traits::Table;
 use rayon::prelude::*;
-use slog::{debug, trace, Logger};
+use tracing::{debug, trace};
 
 type Mut = (
     UnsafeView<EntityId, PositionComponent>,
@@ -15,23 +15,14 @@ type Const<'a> = (
     View<'a, EntityId, Bot>,
     View<'a, WorldPosition, EntityComponent>,
     View<'a, WorldPosition, TerrainComponent>,
-    WorldLogger,
 );
 
-pub fn update(
-    (mut positions, mut intents): Mut,
-    (bots, pos_entities, _terrain, WorldLogger(logger)): Const,
-) {
+pub fn update((mut positions, mut intents): Mut, (bots, pos_entities, _terrain): Const) {
     profile!(" MoveSystem update");
 
-    pre_process_move_intents(&logger, &mut intents.0);
+    pre_process_move_intents(&mut intents.0);
     for intent in intents.iter() {
-        trace!(
-            logger,
-            "Moving bot[{:?}] to {:?}",
-            intent.bot,
-            intent.position
-        );
+        trace!("Moving bot[{:?}] to {:?}", intent.bot, intent.position);
 
         debug_assert!(_terrain
             .at(intent.position)
@@ -40,24 +31,24 @@ pub fn update(
             .is_walkable());
 
         if bots.get_by_id(intent.bot).is_none() {
-            trace!(logger, "Bot by id {:?} does not exist", intent.bot);
+            trace!("Bot by id {:?} does not exist", intent.bot);
             continue;
         }
 
         if pos_entities.get_by_id(intent.position).is_some() {
-            trace!(logger, "Occupied {:?} ", intent.position);
+            trace!("Occupied {:?} ", intent.position);
             continue;
         }
 
         positions.insert_or_update(intent.bot, PositionComponent(intent.position));
 
-        trace!(logger, "Move successful");
+        trace!("Move successful");
     }
 }
 
 /// Remove duplicate positions.
 /// We assume that there are no duplicated entities
-fn pre_process_move_intents(logger: &Logger, move_intents: &mut Vec<MoveIntent>) {
+fn pre_process_move_intents(move_intents: &mut Vec<MoveIntent>) {
     profile!("pre_process_move_intents");
 
     let len = move_intents.len();
@@ -73,10 +64,7 @@ fn pre_process_move_intents(logger: &Logger, move_intents: &mut Vec<MoveIntent>)
         let a = &move_intents[last];
         let b = &move_intents[current];
         if a.position == b.position {
-            debug!(
-                logger,
-                "Duplicated position in move intents, removing {:?}", a
-            );
+            debug!("Duplicated position in move intents, removing {:?}", a);
             move_intents.swap_remove(last);
         }
     }
@@ -88,12 +76,9 @@ mod tests {
     use crate::geometry::Axial;
     use crate::indices::EntityId;
     use crate::indices::WorldPosition;
-    use crate::utils::*;
 
     #[test]
     fn pre_process_move_intents_removes_last_dupe() {
-        setup_testing();
-        let logger = test_logger();
 
         let mut intents = vec![
             MoveIntent {
@@ -126,7 +111,7 @@ mod tests {
             },
         ];
 
-        pre_process_move_intents(&logger, &mut intents);
+        pre_process_move_intents(&mut intents);
         assert_eq!(intents.len(), 2);
         assert_ne!(intents[0].position, intents[1].position);
     }

@@ -2,23 +2,23 @@ use crate::components::LogEntry;
 use crate::indices::*;
 use crate::intents::{Intents, LogIntent};
 use crate::profile;
-use crate::storage::views::{UnsafeView, UnwrapViewMut, WorldLogger};
+use crate::storage::views::{UnsafeView, UnwrapViewMut};
 use crate::tables::Table;
-use slog::trace;
 use std::mem::take;
+use tracing::trace;
 
 type Mut = (
     UnsafeView<EntityTime, LogEntry>,
     UnwrapViewMut<EmptyKey, Intents<LogIntent>>,
 );
 
-pub fn update((mut log_table, mut intents): Mut, WorldLogger(logger): WorldLogger) {
+pub fn update((mut log_table, mut intents): Mut, (): ()) {
     profile!("LogIntentSystem update");
 
     let intents = take(&mut intents.0);
 
     for intent in intents {
-        trace!(logger, "inserting log entry {:?}", intent);
+        trace!("inserting log entry {:?}", intent);
         let id = EntityTime(intent.entity, intent.time);
         // use delete to move out of the data structure, then we'll move it back in
         // this should be cheaper than cloning all the time, because of the inner vectors

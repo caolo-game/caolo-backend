@@ -2,8 +2,8 @@ use crate::protos::cao_commands::{
     SetDefaultScriptCommand, UpdateEntityScriptCommand, UpdateScriptCommand,
 };
 use caolo_sim::{self, prelude::*, tables::JoinIterator};
-use slog::{debug, error, Logger};
 use thiserror::Error;
+use tracing::{debug, error};
 
 #[derive(Debug, Error)]
 pub enum UpdateProgramError {
@@ -21,12 +21,8 @@ pub enum UpdateProgramError {
 
 type UpdateResult = Result<(), UpdateProgramError>;
 
-pub fn update_program(
-    logger: Logger,
-    storage: &mut World,
-    msg: &UpdateScriptCommand,
-) -> UpdateResult {
-    debug!(logger, "Updating program");
+pub fn update_program(storage: &mut World, msg: &UpdateScriptCommand) -> UpdateResult {
+    debug!("Updating program");
 
     let user_id = msg
         .user_id
@@ -46,10 +42,7 @@ pub fn update_program(
     let script_id = uuid::Uuid::from_slice(script_id)
         .map_err(|err| UpdateProgramError::UuidError(err.into()))?;
 
-    debug!(
-        logger,
-        "Inserting new program for user {} {}", user_id, script_id
-    );
+    debug!("Inserting new program for user {} {}", user_id, script_id);
 
     let user_id = UserId(user_id);
     let script_id = ScriptId(script_id);
@@ -86,7 +79,7 @@ pub fn update_program(
         FromWorld::new(storage as &_),
     );
 
-    debug!(logger, "Updating program done");
+    debug!("Updating program done");
     Ok(())
 }
 

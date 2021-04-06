@@ -2,33 +2,33 @@ use crate::components::{HpComponent, MeleeAttackComponent};
 use crate::indices::*;
 use crate::intents::*;
 use crate::profile;
-use crate::storage::views::{UnsafeView, UnwrapViewMut, View, WorldLogger};
+use crate::storage::views::{UnsafeView, UnwrapViewMut, View};
 use rayon::prelude::*;
-use slog::{debug, error, Logger};
+use tracing::{debug, error};
 
 type Mut = (
     UnsafeView<EntityId, HpComponent>,
     UnwrapViewMut<EmptyKey, Intents<MeleeIntent>>,
 );
-type Const<'a> = (View<'a, EntityId, MeleeAttackComponent>, WorldLogger);
+type Const<'a> = (View<'a, EntityId, MeleeAttackComponent>,);
 
-pub fn update((mut hp_table, mut intents): Mut, (attack_table, WorldLogger(logger)): Const) {
+pub fn update((mut hp_table, mut intents): Mut, (attack_table,): Const) {
     profile!("AttackSystem update");
 
-    pre_process(&logger, &mut intents.0);
+    pre_process(&mut intents.0);
 
     for intent in intents.iter() {
         let attack = match attack_table.get_by_id(intent.attacker) {
             Some(s) => s,
             None => {
-                error!(logger, "Attacker has no attack component. {:?}", intent);
+                error!("Attacker has no attack component. {:?}", intent);
                 continue;
             }
         };
         let hp = match hp_table.get_by_id_mut(intent.defender) {
             Some(s) => s,
             None => {
-                error!(logger, "Defender has no hp component. {:?}", intent);
+                error!("Defender has no hp component. {:?}", intent);
                 continue;
             }
         };
@@ -37,7 +37,7 @@ pub fn update((mut hp_table, mut intents): Mut, (attack_table, WorldLogger(logge
     }
 }
 
-fn pre_process(logger: &Logger, intents: &mut Vec<MeleeIntent>) {
+fn pre_process(intents: &mut Vec<MeleeIntent>) {
     let len = intents.len();
     if len < 2 {
         return;
@@ -49,7 +49,7 @@ fn pre_process(logger: &Logger, intents: &mut Vec<MeleeIntent>) {
         let a = &intents[last];
         let b = &intents[current];
         if a.attacker == b.attacker {
-            debug!(logger, "Duplicated attacker, removing {:?}", a);
+            debug!("Duplicated attacker, removing {:?}", a);
             intents.swap_remove(last);
         }
     }

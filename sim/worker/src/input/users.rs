@@ -1,8 +1,8 @@
 use crate::protos::cao_commands::RegisterUserCommand;
 use caolo_sim::{prelude::*, query};
-use slog::{debug, Logger};
 use std::{convert::TryFrom, num::TryFromIntError};
 use thiserror::Error;
+use tracing::debug;
 use uuid::Uuid;
 
 #[derive(Debug, Error)]
@@ -18,11 +18,10 @@ pub enum RegisterUserError {
 }
 
 pub fn register_user(
-    logger: Logger,
     world: &mut World,
     msg: &RegisterUserCommand,
 ) -> Result<(), RegisterUserError> {
-    debug!(logger, "Register user");
+    debug!("Register user");
 
     let user_id = msg
         .user_id

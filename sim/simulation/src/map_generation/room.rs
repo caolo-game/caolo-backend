@@ -15,9 +15,9 @@ use crate::{
     noise::PerlinNoise,
 };
 use rand::{prelude::SmallRng, Rng, SeedableRng};
-use slog::{debug, error, trace, Logger};
 use std::cmp::Ordering;
 use std::collections::{HashSet, VecDeque};
+use tracing::{debug, error, trace};
 
 #[derive(Debug, Clone, thiserror::Error)]
 pub enum RoomGenerationError {
@@ -77,12 +77,11 @@ pub struct HeightMapProperties {
 ///
 /// Returns property description of the generated height map.
 pub fn generate_room(
-    logger: Logger,
     params: &RoomGenerationParams,
     edges: &[RoomConnection],
     (mut terrain,): MapTables,
 ) -> Result<HeightMapProperties, RoomGenerationError> {
-    debug!(logger, "Generating Room {:#?}\nedges:\n{:?}", params, edges);
+    debug!("Generating Room {:#?}\nedges:\n{:?}", params, edges);
     let RoomGenerationParams { room, radius, .. } = params;
     if edges.len() > 6 {
         return Err(RoomGenerationError::TooManyNeighbours(edges.len()));
@@ -102,7 +101,7 @@ pub fn generate_room(
     let mut min_grad = 1e15f32;
     let mut max_grad = -1e15f32;
 
-    trace!(logger, "Generating heightmap");
+    trace!("Generating heightmap");
     let noise = PerlinNoise::new(params.seed);
     for pos in Hexagon::from_radius(dsides).iter_points() {
         let grad = noise.world_perlin(WorldPosition { pos, room: room.0 }, radius as f32);
@@ -110,10 +109,9 @@ pub fn generate_room(
         min_grad = min_grad.min(grad);
         max_grad = max_grad.max(grad);
     }
-    trace!(logger, "Generating heightmap done");
+    trace!("Generating heightmap done");
 
     let heightmap_props = transform_heightmap_into_terrain(
-        &logger,
         HeightMapTransformParams {
             max_grad,
             min_grad,
@@ -144,7 +142,6 @@ pub fn generate_room(
         let terrain_in: <TerrainComponent as crate::tables::Component<Axial>>::Table =
             (*terrain).clone();
         dilate(
-            logger.clone(),
             center,
             radius,
             params.plain_dilation,
@@ -153,45 +150,34 @@ pub fn generate_room(
         );
     }
 
-    coastline(&logger, radius - 1, terrain);
+    coastline(&radius - 1, terrain);
 
-    let chunk_metadata = calculate_plain_chunks(&logger, View::from_table(&*terrain));
+    let chunk_metadata = calculate_plain_chunks(View::from_table(&*terrain));
     if chunk_metadata.chunks.len() > 1 {
-        connect_chunks(
-            &logger,
-            radius - 1,
-            &mut rng,
-            &chunk_metadata.chunks,
-            terrain,
-        );
+        connect_chunks(&radius - 1, &mut rng, &chunk_metadata.chunks, terrain);
     }
 
-    fill_edges(logger.clone(), edges, terrain, &mut rng)?;
+    fill_edges(edges, terrain, &mut rng)?;
 
-    debug!(logger, "Map generation done {:#?}", heightmap_props);
+    debug!("Map generation done {:#?}", heightmap_props);
     Ok(heightmap_props)
 }
 
 fn fill_edges(
-    logger: Logger,
     edges: &[RoomConnection],
     terrain: UnsafeView<Axial, TerrainComponent>,
     rng: &mut impl Rng,
 ) -> Result<(), RoomGenerationError> {
-    trace!(logger, "Filling edges");
+    trace!("Filling edges");
     let Hexagon { center, radius } = terrain.bounds();
-    let mut chunk_metadata = calculate_plain_chunks(&logger, View::from_table(&*terrain));
+    let mut chunk_metadata = calculate_plain_chunks(View::from_table(&*terrain));
     if chunk_metadata.chunks.is_empty() {
-        error!(
-            logger,
-            "Expected at least 1 chunk when applying edges, intead got 0",
-        );
+        error!("Expected at least 1 chunk when applying edges, intead got 0",);
         return Err(RoomGenerationError::ExpectedSingleChunk(0));
     }
     // first fill with empty
     for edge in edges.iter().copied() {
         fill_edge(
-            &logger,
             center,
             radius,
             TileTerrainType::Empty,
@@ -209,7 +195,6 @@ fn fill_edges(
             .chunks
             .push(HashSet::with_capacity(radius as usize));
         fill_edge(
-            &logger,
             center,
             radius - 1,
             TileTerrainType::Plain,
@@ -218,15 +203,14 @@ fn fill_edges(
             chunk_metadata.chunks.last_mut().unwrap(),
         )?;
     }
-    trace!(logger, "Connecting edges to the mainland");
-    connect_chunks(&logger, radius - 2, rng, &chunk_metadata.chunks, terrain);
-    trace!(logger, "Filling edges done");
+    trace!("Connecting edges to the mainland");
+    connect_chunks(&radius - 2, rng, &chunk_metadata.chunks, terrain);
+    trace!("Filling edges done");
     for edge in edges.iter() {
         chunk_metadata
             .chunks
             .push(HashSet::with_capacity(radius as usize));
         fill_edge(
-            &logger,
             center,
             radius,
             TileTerrainType::Bridge,
@@ -239,7 +223,6 @@ fn fill_edges(
 }
 
 fn dilate(
-    logger: Logger,
     center: Axial,
     radius: i32,
     kernel_width: u32,
@@ -247,14 +230,13 @@ fn dilate(
     mut terrain_out: UnsafeView<Axial, TerrainComponent>,
 ) {
     trace!(
-        logger,
         "Dilating terrain center: {:?} radius: {} kernel: {}",
         center,
         radius,
         kernel_width
     );
     if radius < kernel_width as i32 + 1 || kernel_width == 0 {
-        trace!(logger, "Skipping dilating");
+        trace!("Skipping dilating");
         return;
     }
 
@@ -278,18 +260,17 @@ fn dilate(
             terrain_out[p] = TerrainComponent(TileTerrainType::Plain);
         }
     }
-    trace!(logger, "Dilate done");
+    trace!("Dilate done");
 }
 
 fn connect_chunks(
-    logger: &Logger,
     radius: i32,
     rng: &mut impl Rng,
     chunks: &[HashSet<Axial>],
     mut terrain: UnsafeView<Axial, TerrainComponent>,
 ) {
-    debug!(logger, "Connecting {} chunks", chunks.len());
-    trace!(logger, "Chunks: {:#?}", chunks);
+    debug!("Connecting {} chunks", chunks.len());
+    trace!("Chunks: {:#?}", chunks);
     debug_assert!(radius > 0);
 
     let bounds = terrain.bounds().with_radius(radius - 1);
@@ -355,13 +336,13 @@ fn connect_chunks(
             }
         }
     }
-    trace!(logger, "Connecting chunks done");
+    trace!("Connecting chunks done");
 }
 
 /// Turn every `Wall` into `Plain` if it has empty neighbour(s).
 /// This should result in a nice coastline where the `Walls` were neighbours with the ocean.
-fn coastline(logger: &Logger, radius: i32, mut terrain: UnsafeView<Axial, TerrainComponent>) {
-    trace!(logger, "Building coastline");
+fn coastline(radius: i32, mut terrain: UnsafeView<Axial, TerrainComponent>) {
+    trace!("Building coastline");
     let mut changeset = vec![];
     let bounds = terrain.bounds().with_radius(radius);
     'walle: for wall_pos in bounds
@@ -378,11 +359,11 @@ fn coastline(logger: &Logger, radius: i32, mut terrain: UnsafeView<Axial, Terrai
             }
         }
     }
-    trace!(logger, "Changing walls to plains {:#?}", changeset);
+    trace!("Changing walls to plains {:#?}", changeset);
     for p in changeset.iter() {
         terrain[*p] = TerrainComponent(TileTerrainType::Plain);
     }
-    trace!(logger, "Building coastline done");
+    trace!("Building coastline done");
 }
 
 struct HeightMapTransformParams {
@@ -395,7 +376,6 @@ struct HeightMapTransformParams {
 }
 
 fn transform_heightmap_into_terrain(
-    logger: &Logger,
     HeightMapTransformParams {
         max_grad,
         min_grad,
@@ -407,7 +387,7 @@ fn transform_heightmap_into_terrain(
     gradient: &HexGrid<f32>,
     mut terrain: UnsafeView<Axial, TerrainComponent>,
 ) -> Result<HeightMapProperties, RoomGenerationError> {
-    trace!(logger, "Building terrain from height-map");
+    trace!("Building terrain from height-map");
     let mut mean = 0.0;
     let mut std = 0.0;
     let mut normal_mean = 0.0;
@@ -418,25 +398,24 @@ fn transform_heightmap_into_terrain(
     let terrain_bounds: Hexagon = terrain.bounds();
     let tg_vec = gradient.bounds().center - terrain_bounds.center; // from terrain to gradient center displacement
     debug_assert!(terrain_bounds.radius <= gradient.bounds().radius);
-    trace!(logger, "Calculating points of a hexagon in the height map",);
+    trace!("Calculating points of a hexagon in the height map",);
     trace!(
-        logger,
         "Terrain bounds: {:?} Gradient bounds: {:?}",
         terrain.bounds(),
         gradient.bounds(),
     );
     terrain
         .extend(terrain_bounds.iter_points().map(|p| {
-            trace!(logger, "Computing terrain of gradient point: {:?}", p);
+            trace!("Computing terrain of gradient point: {:?}", p);
             let mut grad = match gradient.at(tg_vec + p).copied() {
                 Some(g) => g,
                 None => {
-                    error!(logger, "{:?} has no gradient", p);
+                    error!("{:?} has no gradient", p);
                     debug_assert!(false);
                     return (p, TerrainComponent(TileTerrainType::Empty));
                 }
             };
-            trace!(logger, "p: {:?} grad: {}", p, grad);
+            trace!("p: {:?} grad: {}", p, grad);
 
             {
                 // let's do some stats
@@ -457,7 +436,7 @@ fn transform_heightmap_into_terrain(
                 i += 1.0;
             }
 
-            trace!(logger, "Normalized grad: {}", grad);
+            trace!("Normalized grad: {}", grad);
 
             if !grad.is_finite() {
                 return (p, TerrainComponent(TileTerrainType::Empty));
@@ -473,7 +452,7 @@ fn transform_heightmap_into_terrain(
         }))
         .expect("Terrain building failed");
 
-    trace!(logger, "Building terrain from height-map done");
+    trace!("Building terrain from height-map done");
     std = (std / i).sqrt();
     normal_std = (normal_std / i).sqrt();
 
@@ -494,7 +473,6 @@ fn transform_heightmap_into_terrain(
 }
 
 fn fill_edge(
-    logger: &Logger,
     center: Axial,
     radius: i32,
     ty: TileTerrainType,
@@ -502,7 +480,7 @@ fn fill_edge(
     mut terrain: UnsafeView<Axial, TerrainComponent>,
     chunk: &mut HashSet<Axial>,
 ) -> Result<(), RoomGenerationError> {
-    trace!(logger, "Filling edge {:?}", edge);
+    trace!("Filling edge {:?}", edge);
     terrain
         .extend(iter_edge(center, radius as u32, edge)?.map(move |vertex| {
             chunk.insert(vertex);
@@ -553,8 +531,8 @@ struct ChunkMeta {
 
 /// Find the connecting `Plain` chunks.
 /// The first one will be the largest chunk
-fn calculate_plain_chunks(logger: &Logger, terrain: View<Axial, TerrainComponent>) -> ChunkMeta {
-    trace!(logger, "calculate_plain_chunks");
+fn calculate_plain_chunks(terrain: View<Axial, TerrainComponent>) -> ChunkMeta {
+    trace!("calculate_plain_chunks");
     let mut visited = HashSet::new();
     let mut todo = VecDeque::new();
     let mut startind = 0;
@@ -601,11 +579,7 @@ fn calculate_plain_chunks(logger: &Logger, terrain: View<Axial, TerrainComponent
     if chunks.len() >= 2 {
         chunks.swap(0, chungus_id);
     }
-    trace!(
-        logger,
-        "calculate_plain_chunks done, found {} chunks",
-        chunks.len()
-    );
+    trace!("calculate_plain_chunks done, found {} chunks", chunks.len());
     debug_assert!(
         !chunks
             .iter()
@@ -643,15 +617,10 @@ mod tests {
     use super::*;
     use crate::pathfinding::find_path_in_room;
     use crate::storage::views::View;
-    use crate::utils::*;
     use crate::{components::EntityComponent, tables::morton::MortonTable};
-    use slog::{o, Drain};
 
     #[test]
     fn maps_are_not_homogeneous() {
-        setup_testing();
-        let logger = test_logger();
-
         let mut terrain = HexGrid::new(8);
 
         let params = RoomGenerationParams::builder()
@@ -660,13 +629,7 @@ mod tests {
             .build()
             .unwrap();
 
-        let props = generate_room(
-            logger,
-            &params,
-            &[],
-            (UnsafeView::from_table(&mut terrain),),
-        )
-        .unwrap();
+        let props = generate_room(&params, &[], (UnsafeView::from_table(&mut terrain),)).unwrap();
 
         dbg!(props);
 
@@ -697,8 +660,6 @@ mod tests {
 
     #[test]
     fn all_plain_are_reachable() {
-        let logger = test_logger();
-
         const RADIUS: i32 = 8;
 
         // doesn't work all the time...
@@ -710,13 +671,7 @@ mod tests {
             .with_plain_dilation(1)
             .build()
             .unwrap();
-        let props = generate_room(
-            logger,
-            &params,
-            &[],
-            (UnsafeView::from_table(&mut terrain),),
-        )
-        .unwrap();
+        let props = generate_room(&params, &[], (UnsafeView::from_table(&mut terrain),)).unwrap();
 
         dbg!(props);
 
@@ -736,11 +691,9 @@ mod tests {
         let mut path = Vec::with_capacity(1024);
 
         let first = plains.iter().next().expect("at least 1 plain");
-        let logger = slog::Logger::root(slog_stdlog::StdLog.fuse(), o!());
         for b in plains.iter().skip(1) {
             path.clear();
             if let Err(err) = find_path_in_room(
-                &logger,
                 *first,
                 *b,
                 (View::from_table(&positions), View::from_table(&terrain)),

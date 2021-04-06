@@ -6,16 +6,12 @@ use tonic::{Request, Response, Status};
 
 #[derive(Clone)]
 pub struct CommandService {
-    logger: slog::Logger,
     world: std::sync::Arc<tokio::sync::Mutex<crate::World>>,
 }
 
 impl CommandService {
-    pub fn new(
-        logger: slog::Logger,
-        world: std::sync::Arc<tokio::sync::Mutex<crate::World>>,
-    ) -> Self {
-        Self { logger, world }
+    pub fn new(world: std::sync::Arc<tokio::sync::Mutex<crate::World>>) -> Self {
+        Self { world }
     }
 }
 
@@ -26,7 +22,7 @@ impl cao_commands::command_server::Command for CommandService {
         request: Request<cao_commands::PlaceStructureCommand>,
     ) -> Result<Response<cao_commands::CommandResult>, Status> {
         let mut w = self.world.lock().await;
-        structures::place_structure(self.logger.clone(), &mut *w, request.get_ref())
+        structures::place_structure(&mut *w, request.get_ref())
             .map(|_: ()| Response::new(cao_commands::CommandResult {}))
             .map_err(|err| Status::invalid_argument(err.to_string()))
     }
@@ -46,7 +42,7 @@ impl cao_commands::command_server::Command for CommandService {
         request: tonic::Request<cao_commands::UpdateScriptCommand>,
     ) -> Result<tonic::Response<cao_commands::CommandResult>, tonic::Status> {
         let mut w = self.world.lock().await;
-        script_update::update_program(self.logger.clone(), &mut *w, request.get_ref())
+        script_update::update_program(&mut *w, request.get_ref())
             .map(|_: ()| Response::new(cao_commands::CommandResult {}))
             .map_err(|err| Status::invalid_argument(err.to_string()))
     }
@@ -66,7 +62,7 @@ impl cao_commands::command_server::Command for CommandService {
         request: tonic::Request<cao_commands::TakeRoomCommand>,
     ) -> Result<tonic::Response<cao_commands::CommandResult>, tonic::Status> {
         let mut w = self.world.lock().await;
-        rooms::take_room(self.logger.clone(), &mut *w, request.get_ref())
+        rooms::take_room(&mut *w, request.get_ref())
             .map(|_: ()| Response::new(cao_commands::CommandResult {}))
             .map_err(|err| Status::invalid_argument(err.to_string()))
     }
@@ -76,7 +72,7 @@ impl cao_commands::command_server::Command for CommandService {
         request: tonic::Request<cao_commands::RegisterUserCommand>,
     ) -> Result<tonic::Response<cao_commands::CommandResult>, tonic::Status> {
         let mut w = self.world.lock().await;
-        users::register_user(self.logger.clone(), &mut *w, request.get_ref())
+        users::register_user(&mut *w, request.get_ref())
             .map(|_: ()| Response::new(cao_commands::CommandResult {}))
             .map_err(|err| Status::invalid_argument(err.to_string()))
     }

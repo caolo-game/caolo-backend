@@ -1,8 +1,8 @@
 use crate::protos::cao_commands::TakeRoomCommand;
 use anyhow::Context;
 use caolo_sim::prelude::*;
-use slog::{debug, Logger};
 use thiserror::Error;
+use tracing::debug;
 use uuid::Uuid;
 
 #[derive(Debug, Error)]
@@ -21,12 +21,8 @@ pub enum TakeRoomError {
     UuidError(anyhow::Error),
 }
 
-pub fn take_room(
-    logger: Logger,
-    world: &mut World,
-    msg: &TakeRoomCommand,
-) -> Result<(), TakeRoomError> {
-    debug!(logger, "Taking room");
+pub fn take_room(world: &mut World, msg: &TakeRoomCommand) -> Result<(), TakeRoomError> {
+    debug!("Taking room");
 
     let user_id = msg
         .user_id

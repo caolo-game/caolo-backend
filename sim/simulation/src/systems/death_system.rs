@@ -1,27 +1,26 @@
 use crate::indices::*;
 use crate::profile;
-use crate::storage::views::{DeferredDeleteEntityView, View, WorldLogger};
+use crate::storage::views::{DeferredDeleteEntityView, View};
 use crate::{
     components::HpComponent,
     intents::{DeleteEntityIntent, Intents},
     prelude::UnwrapView,
 };
-use slog::{debug, trace};
+use tracing::{debug, trace};
 
 pub fn update(
     mut delete: DeferredDeleteEntityView,
-    (hps, delete_intents, WorldLogger(logger)): (
+    (hps, delete_intents): (
         View<EntityId, HpComponent>,
         UnwrapView<EmptyKey, Intents<DeleteEntityIntent>>,
-        WorldLogger,
     ),
 ) {
     profile!("DeathSystem update");
-    debug!(logger, "update death system called");
+    debug!("update death system called");
 
     hps.iter().for_each(|(id, hp)| {
         if hp.hp == 0 {
-            trace!(logger, "Entity {:?} has died, deleting", id);
+            trace!("Entity {:?} has died, deleting", id);
             unsafe {
                 delete.delete_entity(id);
             }
@@ -35,23 +34,18 @@ pub fn update(
             delete.delete_entity(*id);
         });
 
-    debug!(logger, "update death system done");
+    debug!("update death system done");
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{intents, query, world::World};
-    use crate::{
-        storage::views::FromWorld,
-        storage::views::FromWorldMut,
-        utils::{setup_testing, test_logger},
-    };
+    use crate::{storage::views::FromWorld, storage::views::FromWorldMut};
 
     #[test]
     fn can_kill_or_delete_entity_multiple_times() {
-        setup_testing();
-        let mut store = World::new(test_logger());
+        let mut store = World::new();
 
         let entity_1 = store.insert_entity();
         query!(
@@ -97,8 +91,7 @@ mod tests {
 
     #[test]
     fn test_dead_entity_is_deleted() {
-        setup_testing();
-        let mut store = World::new(test_logger());
+        let mut store = World::new();
 
         let entity_1 = store.insert_entity();
         let entity_2 = store.insert_entity();

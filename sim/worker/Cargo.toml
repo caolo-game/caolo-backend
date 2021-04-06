@@ -16,13 +16,6 @@ default = ["dotenv"]
 [dependencies]
 caolo-sim = { path = "../simulation" } # , features=["cao-profile"] }
 cao-lang = { git = "https://github.com/caolo-game/cao-lang.git" }
-slog = { version = "2", features = [
-    "max_level_trace",
-    "release_max_level_info"
-] }
-slog-async = "*"
-slog-term = "*"
-slog-envlogger = "*"
 chrono = { version = "0.4", features = ["serde"] }
 serde_json = "1"
 serde = "1"
@@ -30,7 +23,6 @@ futures = "*"
 serde_derive = "1"
 rand = "*"
 sentry = "0.22"
-sentry-slog = "0.22"
 anyhow = "1"
 thiserror = "1"
 sqlx = { version = "0.5", features = [
@@ -49,12 +41,18 @@ tokio = { version = "1", features = ["sync"] }
 tokio-stream = "*"
 tonic = { version = "0.4" }
 prost = "*"
+tracing = { version = "0.1" }
+tracing-futures = "*"
+tracing-subscriber = { version = "0.2", features = [
+    "chrono",
+    "env-filter",
+    "fmt"
+] }
 
 [target.'cfg(not(target_env = "msvc"))'.dependencies]
 jemallocator = "0.3.2"
 
 [dev-dependencies]
-env_logger = { version = "*", default-features = false }
 
 [build-dependencies]
 tonic-build = { version = "0.4", default-features = false, features = [

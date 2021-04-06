@@ -4,17 +4,13 @@ use cao_lang::prelude::*;
 use super::*;
 
 fn init_basic_storage() -> std::pin::Pin<Box<World>> {
-    crate::utils::setup_testing();
-
-    World::new(crate::utils::test_logger())
+    World::new()
 }
 
 #[test]
 fn test_world_position() {
     let storage = init_basic_storage();
-    let logger = &storage.logger;
     let data = ScriptExecutionData::new(
-        logger.clone(),
         &*storage.as_ref(),
         Default::default(),
         Default::default(),

@@ -1,6 +1,6 @@
 use std::{convert::Infallible, fmt::Debug, pin::Pin};
 
-use slog::{debug, info, o, Logger};
+use tracing::{debug, info};
 
 use crate::{
     components::EntityScript,
@@ -23,11 +23,7 @@ pub trait Executor {
     type Error: Debug;
 
     /// Initialize this executor's state and return the initial world state
-    fn initialize(
-        &mut self,
-        logger: Option<Logger>,
-        config: GameConfig,
-    ) -> Result<Pin<Box<World>>, Self::Error>;
+    fn initialize(&mut self, config: GameConfig) -> Result<Pin<Box<World>>, Self::Error>;
     /// Forward the world state by 1 tick
     fn forward(&mut self, world: &mut World) -> Result<(), Self::Error>;
 }
@@ -45,9 +41,10 @@ impl Executor for SimpleExecutor {
         profile!("world_forward");
 
         let tick = world.time();
-        let logger = world.logger.new(o!("tick" => tick));
+        let s = tracing::info_span!("", tick = tick);
+        let _e = s.enter();
 
-        info!(logger, "Tick starting");
+        info!("Tick starting");
 
         let mut diag = world.unsafe_view::<EmptyKey, Diagnostics>();
         let diag: &mut Diagnostics = diag.unwrap_mut_or_default();
@@ -57,25 +54,25 @@ impl Executor for SimpleExecutor {
             scripts_table.iter().map(|(id, x)| (id, *x)).collect();
 
         let intents = {
-            debug!(logger, "Executing scripts");
+            debug!("Executing scripts");
             let start = chrono::Utc::now();
             let intents = execute_scripts(executions.as_slice(), world);
             let end = chrono::Utc::now();
             let duration = end - start;
             diag.scripts_execution_ms = duration.num_milliseconds();
-            debug!(logger, "Executing scripts Done");
+            debug!("Executing scripts Done");
             intents
         };
         {
             let start = chrono::Utc::now();
 
-            debug!(logger, "Got {} intents", intents.len());
+            debug!("Got {} intents", intents.len());
             intents::move_into_storage(world, intents);
 
-            debug!(logger, "Executing systems update");
+            debug!("Executing systems update");
             execute_world_update(world);
 
-            debug!(logger, "Executing post-processing");
+            debug!("Executing post-processing");
             world.post_process();
 
             let end = chrono::Utc::now();
@@ -85,27 +82,19 @@ impl Executor for SimpleExecutor {
         let end = chrono::Utc::now();
 
         diag.update_latency_stats(tick, start, end);
-        info!(logger, "Tick done");
+        info!("Tick done");
         info!(
-            logger,
             "Latency | Current {:.4}ms | Mean {:.4}ms | STD {:.4}ms",
-            diag.tick_latency_ms,
-            diag.tick_latency_mean,
-            diag.tick_latency_std,
+            diag.tick_latency_ms, diag.tick_latency_mean, diag.tick_latency_std,
         );
 
         Ok(())
     }
 
-    fn initialize(
-        &mut self,
-        logger: Option<Logger>,
-        config: GameConfig,
-    ) -> Result<Pin<Box<World>>, Self::Error> {
-        let mut world = World::new(logger);
+    fn initialize(&mut self, config: GameConfig) -> Result<Pin<Box<World>>, Self::Error> {
+        let mut world = World::new();
 
-        execute_map_generation(world.logger.clone(), &mut *world, &config)
-            .expect("Failed to generate world map");
+        execute_map_generation(&mut *world, &config).expect("Failed to generate world map");
 
         world.config.game_config.value = Some(config);
 
@@ -113,11 +102,7 @@ impl Executor for SimpleExecutor {
     }
 }
 
-fn execute_map_generation(
-    logger: Logger,
-    world: &mut World,
-    config: &GameConfig,
-) -> Result<(), MapGenError> {
+fn execute_map_generation(world: &mut World, config: &GameConfig) -> Result<(), MapGenError> {
     let world_radius = config.world_radius;
     let room_radius = config.room_radius;
     assert!(room_radius > 6);
@@ -135,16 +120,10 @@ fn execute_map_generation(
         .with_plain_dilation(1)
         .build()
         .unwrap();
-    debug!(logger, "generating map {:#?} {:#?}", params, room_params);
+    debug!("generating map {:#?} {:#?}", params, room_params);
 
-    generate_full_map(
-        logger.clone(),
-        &params,
-        &room_params,
-        None,
-        FromWorldMut::new(world),
-    )?;
+    generate_full_map(&params, &room_params, None, FromWorldMut::new(world))?;
 
-    debug!(logger, "world generation done");
+    debug!("world generation done");
     Ok(())
 }

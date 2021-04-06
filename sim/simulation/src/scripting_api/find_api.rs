@@ -4,8 +4,8 @@ use crate::indices::WorldPosition;
 use crate::profile;
 use crate::world::World;
 use cao_lang::prelude::*;
-use slog::{trace, warn};
 use std::convert::TryFrom;
+use tracing::{trace, warn};
 
 #[derive(Debug, Clone, Copy)]
 #[repr(i32)]
@@ -35,10 +35,9 @@ pub fn parse_find_constant(
     param: Pointer,
 ) -> Result<(), ExecutionError> {
     profile!("parse_find_constant");
-    let logger = &vm.get_aux().logger;
-    trace!(logger, "parse_find_constant");
+    trace!("parse_find_constant");
     let param = vm.get_value_in_place::<&str>(param).ok_or_else(|| {
-        trace!(logger, "parse_find_constant called with invalid param");
+        trace!("parse_find_constant called with invalid param");
         ExecutionError::invalid_argument("parse_find_constant called with invalid param".to_owned())
     })?;
     let constant = match param {
@@ -47,7 +46,6 @@ pub fn parse_find_constant(
         "EnemyBot" => FindConstant::EnemyBot,
         _ => {
             trace!(
-                logger,
                 "parse_find_constant got an invalid constant value {}",
                 param
             );
@@ -69,9 +67,8 @@ pub fn find_closest_by_range(
     profile!("find_closest_by_range");
 
     let aux = vm.get_aux();
-    let logger = &aux.logger;
 
-    trace!(logger, "find_closest_by_range {:?}", param);
+    trace!("find_closest_by_range {:?}", param);
 
     let entity_id = aux.entity_id;
 
@@ -83,12 +80,12 @@ pub fn find_closest_by_range(
     {
         Some(p) => p.0,
         None => {
-            warn!(logger, "{:?} has no PositionComponent", entity_id);
+            warn!("{:?} has no PositionComponent", entity_id);
             return Err(ExecutionError::InvalidArgument { context: None });
         }
     };
 
-    trace!(logger, "Executing find_closest_by_range {:?}", position);
+    trace!("Executing find_closest_by_range {:?}", position);
 
     param.execute(vm, position)
 }
@@ -99,20 +96,19 @@ impl FindConstant {
         vm: &mut Vm<ScriptExecutionData>,
         position: WorldPosition,
     ) -> Result<(), ExecutionError> {
-        let logger = &vm.get_aux().logger;
-        trace!(logger, "Executing find {:?}", self);
+        trace!("Executing find {:?}", self);
 
         let storage = vm.get_aux().storage();
         let user_id = vm.get_aux().user_id;
         let candidate = match self {
             FindConstant::Resource => {
                 let resources = storage.view::<EntityId, components::ResourceComponent>();
-                find_closest_entity_impl(&logger, storage, position, |id| resources.contains(id))
+                find_closest_entity_impl(storage, position, |id| resources.contains(id))
             }
             FindConstant::Spawn => {
                 let owner = storage.view::<EntityId, components::OwnedEntity>();
                 let spawns = storage.view::<EntityId, components::SpawnComponent>();
-                find_closest_entity_impl(&logger, storage, position, |id| {
+                find_closest_entity_impl(storage, position, |id| {
                     spawns.contains(id)
                         && owner.get_by_id(id).map(|owner_id| owner_id.owner_id) == user_id
                 })
@@ -120,7 +116,7 @@ impl FindConstant {
             FindConstant::EnemyBot => {
                 let owner = storage.view::<EntityId, components::OwnedEntity>();
                 let bots = storage.view::<EntityId, components::Bot>();
-                find_closest_entity_impl(&logger, storage, position, |id| {
+                find_closest_entity_impl(storage, position, |id| {
                     bots.contains_id(&id)
                         && owner.get_by_id(id).map(|owner_id| owner_id.owner_id) != user_id
                 })
@@ -133,7 +129,7 @@ impl FindConstant {
                 vm.stack_push(OperationResult::Ok)?;
             }
             None => {
-                trace!(logger, "No stuff was found");
+                trace!("No stuff was found");
                 vm.stack_push(OperationResult::OperationFailed)?;
             }
         }
@@ -142,7 +138,6 @@ impl FindConstant {
 }
 
 fn find_closest_entity_impl<F>(
-    logger: &slog::Logger,
     storage: &World,
     position: WorldPosition,
     filter: F,
@@ -155,8 +150,8 @@ where
 
     let room = entities_by_pos.table.at(room).ok_or_else(|| {
         warn!(
-            logger,
-            "find_closest_resource_by_range called on invalid room {:?}", position
+            "find_closest_resource_by_range called on invalid room {:?}",
+            position
         );
         ExecutionError::InvalidArgument { context: None }
     })?;
@@ -172,7 +167,6 @@ mod tests {
     use super::*;
     use crate::world::World;
     use rand::{rngs::SmallRng, thread_rng, Rng, SeedableRng};
-    use slog::{o, Drain};
 
     fn init_resource_storage(
         entity_id: EntityId,
@@ -180,13 +174,11 @@ mod tests {
         expected_id: EntityId,
         expected_pos: WorldPosition,
     ) -> std::pin::Pin<Box<World>> {
-        crate::utils::setup_testing();
-
         let mut seed = [0; 16];
         thread_rng().fill(&mut seed);
         let mut rng = SmallRng::from_seed(seed);
 
-        let mut storage = World::new(crate::utils::test_logger());
+        let mut storage = World::new();
 
         let mut entity_positions = storage.unsafe_view::<EntityId, PositionComponent>();
         let mut position_entities = storage.unsafe_view::<WorldPosition, EntityComponent>();
@@ -268,14 +260,8 @@ mod tests {
                 entity_id,
                 components::ResourceComponent(components::Resource::Energy),
             );
-        let logger = slog::Logger::root(slog_stdlog::StdLog.fuse(), o!());
-        let data = ScriptExecutionData::new(
-            logger.clone(),
-            &*storage.as_ref(),
-            Default::default(),
-            entity_id,
-            None,
-        );
+        let data =
+            ScriptExecutionData::new(&*storage.as_ref(), Default::default(), entity_id, None);
         let mut vm = Vm::new(data);
 
         let constant = FindConstant::Resource;
@@ -299,7 +285,6 @@ mod tests {
 
     #[test]
     fn finds_closest_resources_as_expected() {
-        crate::utils::setup_testing();
         let entity_id = EntityId(1024);
         let center_pos = WorldPosition {
             room: Axial::new(0, 0),
@@ -313,9 +298,7 @@ mod tests {
         };
 
         let storage = init_resource_storage(entity_id, center_pos, expected_id, expected_pos);
-        let logger = &storage.logger;
         let data = ScriptExecutionData::new(
-            logger.clone(),
             &*storage.as_ref(),
             Default::default(),
             entity_id,

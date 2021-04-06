@@ -1,12 +1,12 @@
 use crate::prelude::*;
 use cao_lang::{compiler::CompileOptions, prelude::*};
 use rand::Rng;
-use slog::{debug, trace, Logger};
+use tracing::{debug, trace};
 use uuid::Uuid;
 
 /// World should be already initialized with a GameConfig
-pub fn init_world_entities(logger: Logger, storage: &mut World, n_fake_users: usize) {
-    debug!(logger, "initializing world");
+pub fn init_world_entities(storage: &mut World, n_fake_users: usize) {
+    debug!("initializing world");
 
     let mut rng = rand::thread_rng();
 
@@ -14,10 +14,10 @@ pub fn init_world_entities(logger: Logger, storage: &mut World, n_fake_users: us
     let script: CompilationUnit =
         serde_json::from_str(include_str!("./programs/mining_program.json"))
             .expect("deserialize example program");
-    debug!(logger, "compiling default program");
+    debug!("compiling default program");
     let compiled = compile(script, CompileOptions::new().with_breadcrumbs(false))
         .expect("failed to compile example program");
-    debug!(logger, "compilation done");
+    debug!("compilation done");
 
     crate::query!(
         mutate
@@ -32,10 +32,10 @@ pub fn init_world_entities(logger: Logger, storage: &mut World, n_fake_users: us
     let script: CompilationUnit =
         serde_json::from_str(include_str!("./programs/center_walking_program.json"))
             .expect("deserialize example program");
-    debug!(logger, "compiling default program");
+    debug!("compiling default program");
     let compiled = compile(script, CompileOptions::new().with_breadcrumbs(false))
         .expect("failed to compile example program");
-    debug!(logger, "compilation done");
+    debug!("compilation done");
 
     crate::query!(
         mutate
@@ -49,7 +49,7 @@ pub fn init_world_entities(logger: Logger, storage: &mut World, n_fake_users: us
     let config = UnwrapView::<ConfigKey, GameConfig>::new(storage);
 
     let radius = config.room_radius;
-    debug!(logger, "Reset position storage");
+    debug!("Reset position storage");
     let mut entities_by_pos = storage.unsafe_view::<WorldPosition, EntityComponent>();
     entities_by_pos.clear();
     entities_by_pos
@@ -73,25 +73,17 @@ pub fn init_world_entities(logger: Logger, storage: &mut World, n_fake_users: us
 
     let mut taken_rooms = Vec::with_capacity(n_fake_users as usize);
     for i in 0..n_fake_users {
-        trace!(logger, "initializing room #{}", i);
+        trace!("initializing room #{}", i);
         let spawnid = storage.insert_entity();
 
         let room = rng.gen_range(0, rooms.len());
         let room = rooms[room];
         taken_rooms.push(room);
 
-        trace!(logger, "initializing room #{} in room {:?}", i, room);
+        trace!("initializing room #{} in room {:?}", i, room);
         let user_id = Uuid::new_v4();
-        init_spawn(
-            &logger,
-            &bounds,
-            spawnid,
-            user_id,
-            Room(room),
-            &mut rng,
-            storage,
-        );
-        trace!(logger, "spawning entities");
+        init_spawn(&bounds, spawnid, user_id, Room(room), &mut rng, storage);
+        trace!("spawning entities");
         storage
             .unsafe_view::<UserId, EntityScript>()
             .insert_or_update(UserId(user_id), EntityScript(center_walking_script_id));
@@ -122,7 +114,6 @@ pub fn init_world_entities(logger: Logger, storage: &mut World, n_fake_users: us
         }
         let id = storage.insert_entity();
         init_resource(
-            &logger,
             &bounds,
             id,
             Room(room),
@@ -130,10 +121,10 @@ pub fn init_world_entities(logger: Logger, storage: &mut World, n_fake_users: us
             FromWorldMut::new(storage),
             FromWorld::new(storage),
         );
-        trace!(logger, "initializing room #{} done", i);
+        trace!("initializing room #{} done", i);
     }
 
-    debug!(logger, "init done");
+    debug!("init done");
 }
 
 type InitBotMuts = (
@@ -193,7 +184,6 @@ fn init_bot(
 
 #[allow(clippy::too_many_arguments)] // its just a helper function let it be
 fn init_spawn(
-    logger: &Logger,
     bounds: &Hexagon,
     id: EntityId,
     owner_id: Uuid,
@@ -201,9 +191,8 @@ fn init_spawn(
     rng: &mut impl Rng,
     world: &mut World,
 ) {
-    trace!(logger, "init_spawn");
+    trace!("init_spawn");
     let pos = uncontested_pos(
-        logger,
         room,
         bounds,
         &*world.view::<WorldPosition, EntityComponent>(),
@@ -212,7 +201,7 @@ fn init_spawn(
     );
 
     crate::entity_archetypes::init_structure_spawn(id, owner_id, pos, world);
-    trace!(logger, "init_spawn done");
+    trace!("init_spawn done");
 }
 
 type InitResourceMuts = (
@@ -225,7 +214,6 @@ type InitResourceMuts = (
 type InitResourceConst<'a> = (View<'a, WorldPosition, TerrainComponent>,);
 
 fn init_resource(
-    logger: &Logger,
     bounds: &Hexagon,
     id: EntityId,
     room: Room,
@@ -242,7 +230,7 @@ fn init_resource(
         },
     );
 
-    let pos = uncontested_pos(logger, room, bounds, &*entities_by_pos, &*terrain, rng);
+    let pos = uncontested_pos(room, bounds, &*entities_by_pos, &*terrain, rng);
 
     positions_table.insert_or_update(id, PositionComponent(pos));
     entities_by_pos
@@ -254,7 +242,6 @@ fn init_resource(
 }
 
 fn uncontested_pos<T: crate::tables::TableRow + Send + Sync>(
-    logger: &Logger,
     room: Room,
     bounds: &Hexagon,
     positions_table: &crate::tables::morton_hierarchy::MortonMortonTable<T>,
@@ -270,10 +257,10 @@ fn uncontested_pos<T: crate::tables::TableRow + Send + Sync>(
 
         let pos = Axial::new(x, y);
 
-        trace!(logger, "checking pos {:?}", pos);
+        trace!("checking pos {:?}", pos);
 
         if !bounds.contains(pos) {
-            trace!(logger, "point {:?} is out of bounds {:?}", pos, bounds);
+            trace!("point {:?} is out of bounds {:?}", pos, bounds);
             continue;
         }
 
@@ -294,33 +281,19 @@ fn uncontested_pos<T: crate::tables::TableRow + Send + Sync>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use slog::*;
 
     #[test]
     fn can_init_the_game() {
-        let decorator = slog_term::TermDecorator::new().build();
-        let drain = slog_term::FullFormat::new(decorator).build().fuse();
-        let drain = slog_envlogger::new(drain).fuse();
-        let drain = slog_async::Async::new(drain)
-            .overflow_strategy(slog_async::OverflowStrategy::DropAndReport)
-            .chan_size(16000)
-            .build()
-            .fuse();
-        let logger = slog::Logger::root(drain, o!());
-
         let mut exc = SimpleExecutor;
         let mut world = exc
-            .initialize(
-                Some(logger.clone()),
-                crate::executor::GameConfig {
-                    world_radius: 2,
-                    room_radius: 10,
-                    ..Default::default()
-                },
-            )
+            .initialize(crate::executor::GameConfig {
+                world_radius: 2,
+                room_radius: 10,
+                ..Default::default()
+            })
             .unwrap();
 
         // smoke test: can the game be even initialized?
-        init_world_entities(logger, &mut *world, 12);
+        init_world_entities(&mut *world, 12);
     }
 }

@@ -2,8 +2,8 @@ use crate::components::{Bot, OwnedEntity, SpawnBotComponent, SpawnQueueComponent
 use crate::indices::*;
 use crate::intents::{Intents, SpawnIntent};
 use crate::profile;
-use crate::storage::views::{InsertEntityView, UnsafeView, UnwrapView, WorldLogger};
-use slog::{debug, o, trace};
+use crate::storage::views::{InsertEntityView, UnsafeView, UnwrapView};
+use tracing::{debug, trace};
 
 type Mut = (
     UnsafeView<EntityId, SpawnBotComponent>,
@@ -12,28 +12,33 @@ type Mut = (
     InsertEntityView,
 );
 
-type Const<'a> = (UnwrapView<'a, EmptyKey, Intents<SpawnIntent>>, WorldLogger);
+type Const<'a> = (UnwrapView<'a, EmptyKey, Intents<SpawnIntent>>,);
 
 pub fn update(
     (mut spawn_bot_table, mut spawn_queue, mut owner_table, mut insert_entity): Mut,
-    (intents, WorldLogger(logger)): Const,
+    (intents,): Const,
 ) {
     profile!("SpawnSystem update");
 
     for intent in intents.iter() {
-        let logger = logger.new(o!("spawn_id"=> intent.spawn_id.0));
-        trace!(logger, "Spawning bot from structure");
+        let s = tracing::span!(
+            tracing::Level::INFO,
+            "spawn intent system update",
+            spawn_id = intent.spawn_id.0
+        );
+        let _e = s.enter();
+        trace!("Spawning bot from structure");
 
         let spawn = match spawn_queue.get_by_id_mut(intent.spawn_id) {
             Some(x) => x,
             None => {
-                debug!(logger, "structure does not have spawn queue component");
+                debug!("structure does not have spawn queue component");
                 continue;
             }
         };
         if spawn.queue.len() > 20 {
             // TODO: config
-            debug!(logger, "spawn queue is full");
+            debug!("spawn queue is full");
             continue;
         }
 

@@ -11,7 +11,7 @@ use crate::query;
 /// use caolo_sim::prelude::*;
 /// use caolo_sim::entity_archetypes::init_structure_spawn;
 ///
-/// let mut w = World::new(None);
+/// let mut w = World::new();
 ///
 /// let id = w.insert_entity();
 /// init_structure_spawn(id, Default::default(), WorldPosition{

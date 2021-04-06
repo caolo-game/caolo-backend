@@ -19,7 +19,7 @@
 //!     // do stuff
 //! }
 //!
-//! let mut storage = World::new(None);
+//! let mut storage = World::new();
 //! update_minerals(FromWorldMut::new(&mut storage), FromWorld::new(&storage));
 //! ```
 //!
@@ -27,13 +27,11 @@ mod unsafe_view;
 mod unwrap;
 mod unwrap_mut;
 mod view;
-mod world_logger;
 
 pub use unsafe_view::*;
 pub use unwrap::*;
 pub use unwrap_mut::*;
 pub use view::*;
-pub use world_logger::*;
 
 use super::{Component, DeleteById, TableId};
 use crate::indices::EntityId;

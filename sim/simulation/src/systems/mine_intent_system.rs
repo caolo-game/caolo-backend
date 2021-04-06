@@ -2,8 +2,8 @@ use crate::components::{CarryComponent, EnergyComponent, Resource, ResourceCompo
 use crate::indices::*;
 use crate::intents::{Intents, MineIntent};
 use crate::profile;
-use crate::storage::views::{UnsafeView, UnwrapView, View, WorldLogger};
-use slog::{o, trace, warn};
+use crate::storage::views::{UnsafeView, UnwrapView, View};
+use tracing::{trace, warn};
 
 pub const MINE_AMOUNT: u16 = 10; // TODO: get from bot body
 
@@ -14,37 +14,38 @@ type Mut = (
 type Const<'a> = (
     View<'a, EntityId, ResourceComponent>,
     UnwrapView<'a, EmptyKey, Intents<MineIntent>>,
-    WorldLogger,
 );
 
-pub fn update(
-    (mut energy_table, mut carry_table): Mut,
-    (resource_table, intents, WorldLogger(logger)): Const,
-) {
+pub fn update((mut energy_table, mut carry_table): Mut, (resource_table, intents): Const) {
     profile!("MineSystem update");
 
     for intent in intents.iter() {
-        let logger = logger.new(o!("bot" => intent.bot.0));
-        trace!(logger, "Bot is mining [{:?}]", intent.resource);
+        let s = tracing::span!(
+            tracing::Level::INFO,
+            "mine system update",
+            bot = intent.bot.0
+        );
+        let _e = s.enter();
+        trace!("Bot is mining [{:?}]", intent.resource);
         match resource_table.get_by_id(intent.resource) {
             Some(ResourceComponent(Resource::Energy)) => {
                 let resource_energy = match energy_table.get_by_id_mut(intent.resource) {
                     Some(resource_energy) => {
                         if resource_energy.energy == 0 {
-                            trace!(logger, "Mineral is empty!");
+                            trace!("Mineral is empty!");
                             continue;
                         }
                         resource_energy
                     }
                     None => {
-                        warn!(logger, "MineIntent resource has no energy component!");
+                        warn!("MineIntent resource has no energy component!");
                         continue;
                     }
                 };
                 let carry = match carry_table.get_by_id_mut(intent.bot) {
                     Some(x) => x,
                     None => {
-                        warn!(logger, "MineIntent bot has no carry component");
+                        warn!("MineIntent bot has no carry component");
                         continue;
                     }
                 };
@@ -56,13 +57,12 @@ pub fn update(
                 resource_energy.energy -= mined;
 
                 trace!(
-                    logger,
                     "Mine succeeded new bot carry {:?} new resource energy {:?}",
                     carry,
                     resource_energy
                 );
             }
-            Some(ResourceComponent(_)) | None => warn!(logger, "Resource not found"),
+            Some(ResourceComponent(_)) | None => warn!("Resource not found"),
         }
     }
 }

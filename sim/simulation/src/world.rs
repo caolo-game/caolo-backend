@@ -14,7 +14,6 @@ use crate::tables::{Component, TableId};
 use crate::Time;
 use crate::{components::game_config::GameConfig, prelude::Axial};
 use serde::Serialize;
-use slog::{o, Drain};
 use std::pin::Pin;
 
 archetype!(
@@ -111,9 +110,6 @@ pub struct World {
     pub deferred_deletes: entity_store::DeferredDeletes,
 
     pub next_entity: EntityId,
-
-    #[serde(skip)]
-    pub logger: slog::Logger,
 }
 
 macro_rules! impl_hastable {
@@ -163,46 +159,28 @@ impl storage::HasTable<ScriptId, ScriptComponent> for World {
 impl World {
     /// Moving World around in memory would invalidate views, so let's make sure it doesn't
     /// happen.
-    pub fn new(logger: impl Into<Option<slog::Logger>>) -> Pin<Box<Self>> {
-        fn _new(logger: slog::Logger) -> Pin<Box<World>> {
-            let mut config: config_store::Archetype = Default::default();
-            config.game_config.value = Some(Default::default());
+    pub fn new() -> Pin<Box<Self>> {
+        let mut config: config_store::Archetype = Default::default();
+        config.game_config.value = Some(Default::default());
 
-            let mut res = Box::pin(World {
-                config,
-                entities: Default::default(),
-                room: Default::default(),
-                resources: Default::default(),
-                entity_logs: Default::default(),
-                scripts: Default::default(),
-                positions: Default::default(),
-                deferred_deletes: Default::default(),
-                next_entity: EntityId::default(),
+        let mut res = Box::pin(World {
+            config,
+            entities: Default::default(),
+            room: Default::default(),
+            resources: Default::default(),
+            entity_logs: Default::default(),
+            scripts: Default::default(),
+            positions: Default::default(),
+            deferred_deletes: Default::default(),
+            next_entity: EntityId::default(),
 
-                logger,
-
-                user: Default::default(),
-            });
-
-            // initialize the intent tables
-            let botints = crate::intents::BotIntents::default();
-            crate::intents::move_into_storage(&mut *res, vec![botints]);
-            res
-        }
-
-        let logger = logger.into().unwrap_or_else(|| {
-            let decorator = slog_term::TermDecorator::new().build();
-            let drain = slog_term::FullFormat::new(decorator).build().fuse();
-            let drain = slog_envlogger::new(drain).fuse();
-            let drain = slog_async::Async::new(drain)
-                .overflow_strategy(slog_async::OverflowStrategy::DropAndReport)
-                .chan_size(16000)
-                .build()
-                .fuse();
-            slog::Logger::root(drain, o!())
+            user: Default::default(),
         });
 
-        _new(logger.new(o!("cao-sim-version" => crate::version::VERSION_STR)))
+        // initialize the intent tables
+        let botints = crate::intents::BotIntents::default();
+        crate::intents::move_into_storage(&mut *res, vec![botints]);
+        res
     }
 
     pub fn view<Id: TableId, C: Component<Id>>(&self) -> View<Id, C>
@@ -403,18 +381,15 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::setup_testing;
 
     #[test]
     fn check_world_sanity() {
-        setup_testing();
-        let _world = World::new(None);
+        let _world = World::new();
     }
 
     #[test]
     fn test_bot_serialization() {
-        setup_testing();
-        let mut world = World::new(None);
+        let mut world = World::new();
 
         for _ in 0..4 {
             let _entity = world.insert_entity(); // produce gaps

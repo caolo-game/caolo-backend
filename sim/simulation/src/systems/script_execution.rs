@@ -11,11 +11,11 @@ use crate::{
 };
 use cao_lang::prelude::*;
 use rayon::prelude::*;
-use slog::{debug, o, trace, warn};
 use std::convert::TryFrom;
 use std::fmt::{self, Display, Formatter};
 use std::mem::{replace, take};
 use thiserror::Error;
+use tracing::{debug, trace, warn};
 
 pub type ExecutionResult = Result<BotIntents, ExecutionError>;
 
@@ -37,7 +37,6 @@ pub fn execute_scripts(
 ) -> Vec<BotIntents> {
     profile!("execute_scripts");
 
-    let logger = storage.logger.new(o!("tick" => storage.time()));
     let owners_table = storage.view::<EntityId, OwnedEntity>().reborrow();
 
     let n_scripts = workload.len();
@@ -50,8 +49,8 @@ pub fn execute_scripts(
     let chunk_size = (n_scripts / n_threads) + 1;
 
     debug!(
-        logger,
-        "Executing {} scripts on {} threads in chunks of {}", n_scripts, n_threads, chunk_size
+        "Executing {} scripts on {} threads in chunks of {}",
+        n_scripts, n_threads, chunk_size
     );
 
     #[derive(Default)]
@@ -70,7 +69,7 @@ pub fn execute_scripts(
                 num_scripts_errored: 0,
             },
             |mut results, entity_scripts| {
-                let data = ScriptExecutionData::unsafe_default(logger.clone());
+                let data = ScriptExecutionData::unsafe_default();
 
                 let conf = UnwrapView::<ConfigKey, GameConfig>::new(storage);
                 let mut vm = Vm::new(data);
@@ -85,15 +84,13 @@ pub fn execute_scripts(
                         .map(|OwnedEntity { owner_id }| *owner_id);
 
                     vm.clear();
-                    match execute_single_script(
-                        &logger, *entity_id, script.0, owner_id, storage, &mut vm,
-                    ) {
+                    match execute_single_script(*entity_id, script.0, owner_id, storage, &mut vm) {
                         Ok(ints) => results.intents.push(ints),
                         Err(err) => {
                             results.num_scripts_errored += 1;
                             warn!(
-                                logger,
-                                "Execution failure in {:?} of {:?}:\n{:?}", script, entity_id, err
+                                "Execution failure in {:?} of {:?}:\n{:?}",
+                                script, entity_id, err
                             );
                         }
                     }
@@ -110,7 +107,6 @@ pub fn execute_scripts(
         });
 
     debug!(
-        logger,
         "Executing scripts done. Returning {:?} intents",
         run_result.as_ref().map(|i| i.intents.len())
     );
@@ -132,7 +128,6 @@ pub fn execute_scripts(
 }
 
 fn prepare_script_data(
-    logger: &slog::Logger,
     entity_id: EntityId,
     user_id: Option<UserId>,
     storage: &World,
@@ -141,37 +136,32 @@ fn prepare_script_data(
         entity_id,
         ..Default::default()
     };
-    ScriptExecutionData::new(logger.clone(), storage, intents, entity_id, user_id)
+    ScriptExecutionData::new(storage, intents, entity_id, user_id)
 }
 
 pub fn execute_single_script<'a>(
-    logger: &slog::Logger,
     entity_id: EntityId,
     script_id: ScriptId,
     user_id: Option<UserId>,
     storage: &'a World,
     vm: &mut Vm<'a, ScriptExecutionData>,
 ) -> ExecutionResult {
-    let logger = logger.new(o!( "entity_id" => entity_id.0 ));
     let program = storage
         .view::<ScriptId, ScriptComponent>()
         .reborrow()
         .get_by_id(script_id)
         .ok_or_else(|| {
-            warn!(logger, "Script by ID {:?} does not exist", script_id);
+            warn!("Script by ID {:?} does not exist", script_id);
             ExecutionError::ScriptNotFound(script_id)
         })?;
 
-    let data = prepare_script_data(&logger, entity_id, user_id, storage);
+    let data = prepare_script_data(entity_id, user_id, storage);
     vm.auxiliary_data = data;
 
-    trace!(logger, "Starting script execution");
+    trace!("Starting script execution");
 
     vm.run(&program.0).map_err(|err| {
-        warn!(
-            logger,
-            "Error while executing script {:?} {:?}", script_id, err
-        );
+        warn!("Error while executing script {:?} {:?}", script_id, err);
         ExecutionError::RuntimeError {
             script_id,
             entity_id,
@@ -182,13 +172,9 @@ pub fn execute_single_script<'a>(
     let history = take(&mut vm.history);
     let aux = replace(
         &mut vm.auxiliary_data,
-        ScriptExecutionData::unsafe_default(logger.clone()),
+        ScriptExecutionData::unsafe_default(),
     );
-    trace!(
-        logger,
-        "Script execution completed, intents:{:?}",
-        aux.intents
-    );
+    trace!("Script execution completed, intents:{:?}", aux.intents);
 
     let mut intents = aux.intents;
     intents.script_history_intent = Some(ScriptHistoryEntry {
@@ -206,7 +192,6 @@ pub struct ScriptExecutionData {
     pub user_id: Option<UserId>,
     pub intents: BotIntents,
     storage: *const World,
-    pub logger: slog::Logger,
 }
 
 impl Display for ScriptExecutionData {
@@ -221,18 +206,16 @@ impl Display for ScriptExecutionData {
 
 impl ScriptExecutionData {
     /// To be used as a placeholder, do not consume
-    pub fn unsafe_default(logger: slog::Logger) -> Self {
+    pub fn unsafe_default() -> Self {
         Self {
             entity_id: Default::default(),
             user_id: None,
             intents: Default::default(),
             storage: std::ptr::null(),
-            logger,
         }
     }
 
     pub fn new(
-        logger: slog::Logger,
         storage: &World,
         intents: BotIntents,
         entity_id: EntityId,
@@ -243,7 +226,6 @@ impl ScriptExecutionData {
             intents,
             entity_id,
             user_id,
-            logger,
         }
     }
 

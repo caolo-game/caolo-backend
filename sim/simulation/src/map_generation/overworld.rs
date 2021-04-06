@@ -8,8 +8,8 @@ use crate::geometry::{Axial, Hexagon};
 use crate::storage::views::UnsafeView;
 use crate::tables::morton::{ExtendFailure, MortonTable};
 use rand::Rng;
-use slog::{debug, error, Logger};
 use thiserror::Error;
+use tracing::{debug, error};
 
 #[derive(Debug, Clone, Error)]
 pub enum OverworldGenerationError {
@@ -30,7 +30,6 @@ pub enum OverworldGenerationError {
 /// [ ] TODO: political map?
 /// [ ] TODO: parallellism?
 pub fn generate_room_layout(
-    logger: Logger,
     OverworldGenerationParams {
         radius,
         room_radius,
@@ -59,7 +58,7 @@ pub fn generate_room_layout(
         .extend(bounds.iter_points().map(|p| (p, Default::default())))
         .map_err(OverworldGenerationError::ExtendFail)?;
 
-    debug!(logger, "Building room_connections");
+    debug!("Building room_connections");
 
     // loosely running the Erdos - Runyi model
     let connection_weights = MortonTable::from_iterator(bounds.iter_points().map(|p| {
@@ -80,7 +79,7 @@ pub fn generate_room_layout(
             room_connections,
         );
     }
-    debug!(logger, "Building room_connections done");
+    debug!("Building room_connections done");
 
     // TODO: insert more room_connections if the graph is not fully connected
 
@@ -184,14 +183,9 @@ fn update_room_connections(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::*;
 
     #[test]
     fn overworld_connections_are_valid() {
-        setup_testing();
-
-        let logger = test_logger();
-
         let mut rooms = MortonTable::new();
         let mut room_connections = MortonTable::new();
 
@@ -203,7 +197,6 @@ mod tests {
             .build()
             .unwrap();
         generate_room_layout(
-            logger,
             &params,
             &mut rand::thread_rng(),
             (

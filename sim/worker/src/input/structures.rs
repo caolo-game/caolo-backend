@@ -1,7 +1,7 @@
 use crate::protos::cao_commands::{PlaceStructureCommand, StructureType};
 use caolo_sim::{join, prelude::*, tables::JoinIterator};
-use slog::{error, info, Logger};
 use thiserror::Error;
+use tracing::{error, info};
 use uuid::Uuid;
 
 #[derive(Debug, Error)]
@@ -26,11 +26,10 @@ pub enum PlaceStructureError {
 }
 
 pub fn place_structure(
-    logger: Logger,
     storage: &mut World,
     command: &PlaceStructureCommand,
 ) -> Result<(), PlaceStructureError> {
-    info!(logger, "Handling place_structure command {:?}", command);
+    info!("Handling place_structure command {:?}", command);
 
     let position = command
         .position
@@ -78,7 +77,7 @@ pub fn place_structure(
         .data
         .as_slice();
     let owner = uuid::Uuid::from_slice(owner).map_err(|err| {
-        error!(logger, "Failed to parse owner id {:?}", err);
+        error!("Failed to parse owner id {:?}", err);
         PlaceStructureError::OwnerIdError
     })?;
     let ty = StructureType::from_i32(ty).ok_or(PlaceStructureError::BadType(ty))?;

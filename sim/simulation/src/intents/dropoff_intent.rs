@@ -6,7 +6,7 @@ use crate::scripting_api::OperationResult;
 use crate::storage::views::View;
 use crate::tables::traits::Table;
 use serde::{Deserialize, Serialize};
-use slog::{debug, Logger};
+use tracing::debug;
 
 pub const DROPOFF_RANGE: u32 = 1;
 
@@ -32,7 +32,6 @@ type CheckInput<'a> = (
 /// - the target is not full
 /// - the target is within dropoff range
 pub fn check_dropoff_intent(
-    logger: &Logger,
     intent: &DropoffIntent,
     userid: UserId,
     (bots, owners, positions, carry, energy): CheckInput,
@@ -65,17 +64,14 @@ pub fn check_dropoff_intent(
     });
     match nearby {
         None => {
-            debug!(
-                logger,
-                "Bot or target has no position components {:?}", intent
-            );
+            debug!("Bot or target has no position components {:?}", intent);
             OperationResult::InvalidInput
         }
         Some(false) => OperationResult::NotInRange,
         Some(true) => {
             let capacity = energy.get_by_id(target);
             if capacity.is_none() {
-                debug!(logger, "Target has no energy component {:?}", intent);
+                debug!("Target has no energy component {:?}", intent);
                 return OperationResult::InvalidInput;
             }
             let capacity = capacity.unwrap();

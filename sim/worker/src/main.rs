@@ -9,12 +9,12 @@ mod world_service;
 use crate::protos::cao_commands::command_server::CommandServer;
 use crate::protos::cao_world::world_server::WorldServer;
 use caolo_sim::{executor::Executor, executor::SimpleExecutor};
-use slog::{error, info, o, warn, Drain, Logger};
 use std::{
     env,
     sync::Arc,
     time::{Duration, Instant},
 };
+use tracing::{debug, error, info, warn, Instrument};
 use uuid::Uuid;
 
 #[cfg(not(target_env = "msvc"))]
@@ -26,16 +26,17 @@ type World = std::pin::Pin<Box<caolo_sim::prelude::World>>;
 fn init() {
     #[cfg(feature = "dotenv")]
     dotenv::dotenv().unwrap_or_default();
+
+    tracing_subscriber::fmt::init();
 }
 
-fn tick(logger: Logger, exc: &mut impl Executor, storage: &mut World) {
+fn tick(exc: &mut impl Executor, storage: &mut World) {
     let start = chrono::Utc::now();
     exc.forward(storage)
         .map(|_| {
             let duration = chrono::Utc::now() - start;
 
             info!(
-                logger,
                 "Tick {} has been completed in {} ms",
                 storage.time(),
                 duration.num_milliseconds()
@@ -57,17 +58,7 @@ fn main() {
             eprintln!("Sentry URI was not provided");
         });
 
-    let decorator = slog_term::TermDecorator::new().build();
-    let drain = slog_term::FullFormat::new(decorator).build().fuse();
-    let drain = slog_envlogger::new(drain).fuse();
-    let drain = sentry_slog::SentryDrain::new(drain).fuse();
-    let drain = slog_async::Async::new(drain)
-        .overflow_strategy(slog_async::OverflowStrategy::Drop)
-        .build()
-        .fuse();
-    let logger = slog::Logger::root(drain, o!());
-
-    info!(logger, "Loaded game config {:?}", game_conf);
+    info!("Loaded game config {:?}", game_conf);
 
     let script_chunk_size = env::var("CAO_QUEEN_SCRIPT_CHUNK_SIZE")
         .ok()
@@ -77,10 +68,8 @@ fn main() {
     let tick_latency = Duration::from_millis(game_conf.target_tick_ms);
 
     info!(
-        logger,
         "Loaded Queen params:\nScript chunk size: {}\nTick latency: {:?}",
-        script_chunk_size,
-        tick_latency
+        script_chunk_size, tick_latency
     );
     let database_url = env::var("DATABASE_URL")
         .unwrap_or_else(|_| "postgres://postgres:admin@localhost:5432/caolo".to_owned());
@@ -90,57 +79,47 @@ fn main() {
         .expect("failed to connect to database");
 
     let tag = env::var("CAO_QUEEN_TAG").unwrap_or_else(|_| Uuid::new_v4().to_string());
-    let logger = logger.new(o!("queen_tag" => tag.clone()));
+    let s = tracing::error_span!("", queen_tag = tag.as_str());
+    let _e = s.enter();
 
-    info!(logger, "Creating cao executor with tag {}", tag);
+    info!("Creating cao executor with tag {}", tag);
     let mut executor = SimpleExecutor;
-    info!(logger, "Init storage");
+    info!("Init storage");
     let queen_tag = tag.clone();
     let mut world = executor
-        .initialize(
-            Some(logger.clone()),
-            caolo_sim::executor::GameConfig {
-                world_radius: game_conf.world_radius,
-                room_radius: game_conf.room_radius,
-                queen_tag: tag,
-                ..Default::default()
-            },
-        )
+        .initialize(caolo_sim::executor::GameConfig {
+            world_radius: game_conf.world_radius,
+            room_radius: game_conf.room_radius,
+            queen_tag: tag,
+            ..Default::default()
+        })
         .expect("Initialize executor");
 
-    info!(logger, "Starting with {} actors", game_conf.n_actors);
+    info!("Starting with {} actors", game_conf.n_actors);
 
     sim_rt
-        .block_on(output::send_schema(
-            logger.clone(),
-            &db_pool,
-            queen_tag.as_str(),
-        ))
+        .block_on(output::send_schema(&db_pool, queen_tag.as_str()))
         .expect("Failed to send schema");
-    caolo_sim::init::init_world_entities(logger.clone(), &mut world, game_conf.n_actors as usize);
+    caolo_sim::init::init_world_entities(&mut world, game_conf.n_actors as usize);
 
-    info!(logger, "Init Done. Sending cold data to db");
+    info!("Init Done. Sending cold data to db");
 
     sim_rt
         .block_on(output::send_const(
-            logger.clone(),
             &world.cold_as_json(),
             queen_tag.as_str(),
             &db_pool,
         ))
         .expect("Failed to send const data");
 
-    info!(logger, "Sending constant data done");
+    info!("Sending constant data done");
 
     let addr = env::var("CAO_SERVICE_ADDR")
         .ok()
         .map(|x| x.parse().expect("failed to parse cao service address"))
         .unwrap_or_else(|| "[::1]:50051".parse().unwrap());
 
-    info!(
-        logger,
-        "Starting the game loop. Starting the service on {:?}", addr
-    );
+    info!("Starting the game loop. Starting the service on {:?}", addr);
 
     let world = Arc::new(tokio::sync::Mutex::new(world));
 
@@ -148,11 +127,11 @@ fn main() {
     let outpayload = Arc::new(outtx);
 
     let server = tonic::transport::Server::builder()
+        .trace_fn(|_| tracing::info_span!(""))
         .add_service(CommandServer::new(
-            crate::command_service::CommandService::new(logger.clone(), Arc::clone(&world)),
+            crate::command_service::CommandService::new(Arc::clone(&world)),
         ))
         .add_service(WorldServer::new(crate::world_service::WorldService::new(
-            logger.clone(),
             Arc::clone(&outpayload),
         )))
         .serve(addr);
@@ -166,7 +145,7 @@ fn main() {
                 // free the world mutex at the end of this scope
                 let mut world = world.lock().await;
 
-                tick(logger.clone(), &mut executor, &mut *world);
+                tick(&mut executor, &mut *world);
 
                 entities_json = world.hot_as_json();
                 time = world.time() as i64;
@@ -175,23 +154,26 @@ fn main() {
             // it is safe if we await this future in this loop iteration
             let send_future = unsafe {
                 use std::mem::transmute;
-                tokio::spawn(output::send_hot(
-                    logger.clone(),
-                    time,
-                    transmute::<_, &'static _>(&entities_json),
-                    transmute::<_, &'static _>(queen_tag.as_str()),
-                    transmute::<_, &'static _>(&db_pool),
-                ))
+                tokio::spawn(
+                    output::send_hot(
+                        time,
+                        transmute::<_, &'static _>(&entities_json),
+                        transmute::<_, &'static _>(queen_tag.as_str()),
+                        transmute::<_, &'static _>(&db_pool),
+                    )
+                    .instrument(tracing::debug_span!("send hot data to db")),
+                )
             };
 
             if outpayload.receiver_count() > 0 {
+                debug!("Sending world entities to subsribers");
                 // while we're sending to the database, also update the outbound payload
                 let mut pl = world_service::Payload::default();
                 pl.update(time as u64, &entities_json);
 
                 if outpayload.send(Arc::new(pl)).is_err() {
                     // happens if the subscribers disconnect while we prepared the payload
-                    warn!(logger, "Lost all world subscribers");
+                    warn!("Lost all world subscribers");
                 }
             }
 
@@ -199,7 +181,7 @@ fn main() {
                 .await
                 .expect("Failed to join send_world future")
                 .map_err(|err| {
-                    error!(logger, "Failed to send world output to storage {:?}", err);
+                    error!("Failed to send world output to storage {:?}", err);
                 })
                 .unwrap_or(());
 

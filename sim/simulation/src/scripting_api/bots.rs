@@ -11,8 +11,8 @@ use crate::{
     storage::views::FromWorld,
 };
 use crate::{prelude::World, terrain::TileTerrainType};
-use slog::{debug, error, trace, warn};
 use std::convert::TryFrom;
+use tracing::{debug, error, trace, warn};
 
 pub fn melee_attack(
     vm: &mut Vm<ScriptExecutionData>,
@@ -21,11 +21,10 @@ pub fn melee_attack(
     profile!("melee-attack");
 
     let aux = vm.get_aux();
-    let logger = &aux.logger;
-    trace!(logger, "melee_attack");
+    trace!("melee_attack");
 
     let target: EntityId = vm.get_value(target).ok_or_else(|| {
-        warn!(logger, "melee_attack called without a target");
+        warn!("melee_attack called without a target");
         ExecutionError::invalid_argument("melee_attack called without a target".to_owned())
     })?;
 
@@ -38,7 +37,7 @@ pub fn melee_attack(
         defender: target,
     };
 
-    let res = check_melee_intent(logger, &intent, user_id, FromWorld::new(storage));
+    let res = check_melee_intent(&intent, user_id, FromWorld::new(storage));
 
     if let OperationResult::Ok = res {
         vm.get_aux_mut().intents.melee_attack_intent = Some(intent);
@@ -55,20 +54,18 @@ pub fn unload(
 ) -> Result<(), ExecutionError> {
     profile!("unload");
     let aux = vm.get_aux();
-    let logger = &aux.logger;
 
-    trace!(logger, "unload");
+    trace!("unload");
 
     let amount = TryFrom::try_from(amount).map_err(|e| {
         ExecutionError::invalid_argument(format!("unload called with invalid amount: {}", e))
     })?;
     let target: EntityId = vm.get_value(target).ok_or_else(|| {
-        warn!(logger, "unload called without a structure");
+        warn!("unload called without a structure");
         ExecutionError::invalid_argument("unload called without a structure".to_owned())
     })?;
 
     trace!(
-        logger,
         "unload: amount: {} type: {:?} target: {:?}, {}",
         amount,
         ty,
@@ -87,8 +84,7 @@ pub fn unload(
         structure: target,
     };
 
-    let checkresult =
-        check_dropoff_intent(logger, &dropoff_intent, user_id, FromWorld::new(storage));
+    let checkresult = check_dropoff_intent(&dropoff_intent, user_id, FromWorld::new(storage));
     if let OperationResult::Ok = checkresult {
         vm.get_aux_mut().intents.dropoff_intent = Some(dropoff_intent);
     }
@@ -102,14 +98,13 @@ pub fn mine_resource(
 ) -> Result<(), ExecutionError> {
     profile!("mine_resource");
     let aux = vm.get_aux();
-    let logger = &aux.logger;
 
     let target: EntityId = vm.get_value(target).ok_or_else(|| {
-        warn!(logger, "mine_resource called without a target");
+        warn!("mine_resource called without a target");
         ExecutionError::InvalidArgument { context: None }
     })?;
 
-    trace!(logger, "mine_resource: target: {:?}, {}", target, aux);
+    trace!("mine_resource: target: {:?}, {}", target, aux);
 
     let storage = aux.storage();
     let user_id = aux.user_id.expect("user_id to be set");
@@ -119,7 +114,7 @@ pub fn mine_resource(
         resource: target,
     };
 
-    let checkresult = check_mine_intent(logger, &intent, user_id, FromWorld::new(storage));
+    let checkresult = check_mine_intent(&intent, user_id, FromWorld::new(storage));
     vm.stack_push(checkresult)?;
     if let OperationResult::Ok = checkresult {
         vm.get_aux_mut().intents.mine_intent = Some(intent);
@@ -134,14 +129,13 @@ pub fn approach_entity(
     profile!("approach_entity");
 
     let aux = vm.get_aux();
-    let logger = &aux.logger;
 
     let target: EntityId = vm.get_value(target).ok_or_else(|| {
-        warn!(logger, "approach_entity called without a target");
+        warn!("approach_entity called without a target");
         ExecutionError::InvalidArgument { context: None }
     })?;
 
-    trace!(logger, "approach_entity: target: {:?}", target);
+    trace!("approach_entity: target: {:?}", target);
 
     let entity = aux.entity_id;
     let storage = aux.storage();
@@ -154,16 +148,13 @@ pub fn approach_entity(
     {
         Some(x) => x,
         None => {
-            warn!(
-                logger,
-                "entity {:?} does not have position component!", target
-            );
+            warn!("entity {:?} does not have position component!", target);
             vm.stack_push(OperationResult::InvalidInput)?;
             return Ok(());
         }
     };
 
-    let checkresult = match move_to_pos(logger, entity, targetpos.0, user_id, storage) {
+    let checkresult = match move_to_pos(entity, targetpos.0, user_id, storage) {
         Ok(Some((move_intent, pop_cache_intent, update_cache_intent))) => {
             let intents = &mut vm.get_aux_mut().intents;
             intents.move_intent = Some(move_intent);
@@ -177,7 +168,7 @@ pub fn approach_entity(
             OperationResult::Ok
         }
         Ok(None) => {
-            trace!(logger, "Bot {:?} approach_entity: nothing to do", entity);
+            trace!("Bot {:?} approach_entity: nothing to do", entity);
             OperationResult::Ok
         }
         Err(e) => e,
@@ -193,20 +184,19 @@ pub fn move_bot_to_position(
     profile!("move_bot_to_position");
 
     let aux = vm.get_aux();
-    let logger = &aux.logger;
 
-    trace!(logger, "move_bot_to_position");
+    trace!("move_bot_to_position");
 
     let entity = aux.entity_id;
     let storage = aux.storage();
     let user_id = aux.user_id.expect("user_id to be set");
 
     let point: WorldPosition = vm.get_value(point).ok_or_else(|| {
-        warn!(logger, "move_bot called without a point");
+        warn!("move_bot called without a point");
         ExecutionError::InvalidArgument { context: None }
     })?;
 
-    let checkresult = match move_to_pos(logger, entity, point, user_id, storage) {
+    let checkresult = match move_to_pos(entity, point, user_id, storage) {
         Ok(Some((move_intent, pop_cache_intent, update_cache_intent))) => {
             let intents = &mut vm.get_aux_mut().intents;
             intents.move_intent = Some(move_intent);
@@ -219,7 +209,7 @@ pub fn move_bot_to_position(
             OperationResult::Ok
         }
         Ok(None) => {
-            trace!(logger, "{:?} move_to_pos nothing to do", entity);
+            trace!("{:?} move_to_pos nothing to do", entity);
             OperationResult::Ok
         }
         Err(e) => e,
@@ -235,7 +225,6 @@ type MoveToPosIntent = (
 );
 
 fn move_to_pos(
-    logger: &slog::Logger,
     bot: EntityId,
     to: WorldPosition,
     user_id: UserId,
@@ -248,7 +237,7 @@ fn move_to_pos(
         .reborrow()
         .get_by_id(bot)
         .ok_or_else(|| {
-            warn!(logger, "entity {:?} does not have position component!", bot);
+            warn!("entity {:?} does not have position component!", bot);
             OperationResult::InvalidInput
         })?;
 
@@ -269,9 +258,9 @@ fn move_to_pos(
                     },
                 };
                 if let OperationResult::Ok =
-                    check_move_intent(logger, &intent, user_id, FromWorld::new(storage))
+                    check_move_intent(&intent, user_id, FromWorld::new(storage))
                 {
-                    trace!(logger, "Bot {:?} path cache hit", bot);
+                    trace!("Bot {:?} path cache hit", bot);
                     let result = (
                         intent,
                         Some(MutPathCacheIntent {
@@ -286,7 +275,7 @@ fn move_to_pos(
         }
         _ => {}
     }
-    trace!(logger, "Bot {:?} path cache miss", bot);
+    trace!("Bot {:?} path cache miss", bot);
 
     // TODO: config omponent and read from there
     let max_pathfinding_iter: u32 = std::env::var("MAX_PATHFINDING_ITER")
@@ -297,7 +286,6 @@ fn move_to_pos(
     let mut path = Vec::with_capacity(max_pathfinding_iter as usize);
     let mut rooms_path = Vec::with_capacity(to.room.hex_distance(botpos.0.room) as usize);
     if let Err(e) = pathfinding::find_path(
-        logger,
         botpos.0,
         to,
         FromWorld::new(storage),
@@ -305,7 +293,7 @@ fn move_to_pos(
         &mut path,
         &mut rooms_path,
     ) {
-        trace!(logger, "pathfinding failed {:?}", e);
+        trace!("pathfinding failed {:?}", e);
         return Err(OperationResult::InvalidTarget);
     }
 
@@ -319,7 +307,7 @@ fn move_to_pos(
                 },
             };
 
-            let checkresult = check_move_intent(logger, &intent, user_id, FromWorld::new(storage));
+            let checkresult = check_move_intent(&intent, user_id, FromWorld::new(storage));
             match checkresult {
                 OperationResult::Ok => {
                     let cache_intent = if !path.is_empty() {
@@ -344,11 +332,7 @@ fn move_to_pos(
             }
         }
         None => {
-            trace!(
-                logger,
-                "Entity {:?} is trying to move to its own position",
-                bot
-            );
+            trace!("Entity {:?} is trying to move to its own position", bot);
             match rooms_path.pop() {
                 Some(to_room) => {
                     let is_bridge = storage
@@ -356,17 +340,13 @@ fn move_to_pos(
                         .get_by_id(botpos.0)
                         .map(|TerrainComponent(t)| *t == TileTerrainType::Bridge)
                         .unwrap_or_else(|| {
-                            error!(
-                                logger,
-                                "Bot {:?} is not standing on terrain {:?}", bot, botpos
-                            );
+                            error!("Bot {:?} is not standing on terrain {:?}", bot, botpos);
                             false
                         });
                     if !is_bridge {
                         return Err(OperationResult::InvalidTarget);
                     }
                     let target_pos = match pathfinding::get_valid_transits(
-                        logger,
                         botpos.0,
                         to_room,
                         FromWorld::new(storage),
@@ -376,7 +356,7 @@ fn move_to_pos(
                             return Err(OperationResult::PathNotFound)
                         }
                         Err(e) => {
-                            error!(logger, "Transit failed {:?}", e);
+                            error!("Transit failed {:?}", e);
                             return Err(OperationResult::OperationFailed);
                         }
                     };
@@ -394,7 +374,7 @@ fn move_to_pos(
                     )))
                 }
                 None => {
-                    debug!(logger, "Entity {:?} is trying to move to its own position, but no next room was returned", bot);
+                    debug!("Entity {:?} is trying to move to its own position, but no next room was returned", bot);
 
                     Ok(None)
                 }
@@ -413,10 +393,8 @@ mod tests {
 
     #[test]
     fn can_move_to_another_room() {
-        crate::utils::setup_testing();
 
-        let logger = crate::utils::test_logger();
-        let mut storage = World::new(logger);
+        let mut storage = World::new();
 
         let bot_id = storage.insert_entity();
         let room_radius = 3;
@@ -520,10 +498,9 @@ mod tests {
         init_connections(next_room);
         init_connections(to.room);
 
-        let (MoveIntent { bot, position }, ..) =
-            move_to_pos(&storage.logger, bot_id, to, user_id, &storage)
-                .expect("Expected move to succeed")
-                .expect("Expected a move intent");
+        let (MoveIntent { bot, position }, ..) = move_to_pos(bot_id, to, user_id, &storage)
+            .expect("Expected move to succeed")
+            .expect("Expected a move intent");
 
         assert_eq!(bot, bot_id);
         assert_eq!(position.room, next_room);

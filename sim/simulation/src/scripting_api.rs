@@ -15,8 +15,8 @@ use crate::systems::script_execution::ScriptExecutionData;
 use cao_lang::{prelude::*, scalar::Scalar, traits::AutoByteEncodeProperties};
 use find_api::FindConstant;
 use serde::{Deserialize, Serialize};
-use slog::trace;
 use std::convert::TryFrom;
+use tracing::trace;
 
 #[derive(Debug, Clone, Eq, PartialEq, Copy)]
 #[repr(i32)]
@@ -95,17 +95,16 @@ pub fn console_log(
     message: Pointer,
 ) -> Result<(), ExecutionError> {
     profile!("console_log");
-    let logger = &vm.get_aux().logger;
-    trace!(logger, "console_log");
+    trace!("console_log");
     let message = vm.get_value_in_place::<&str>(message).ok_or_else(|| {
-        trace!(logger, "console_log called with invalid message");
+        trace!("console_log called with invalid message");
         ExecutionError::InvalidArgument { context: None }
     })?;
     let entity_id = vm.get_aux().entity_id;
     let time = vm.get_aux().storage().time();
 
     let payload = format!("{:?} says {}", entity_id, message);
-    trace!(logger, "{}", payload);
+    trace!("{}", payload);
     vm.get_aux_mut().intents.with_log(entity_id, payload, time);
 
     Ok(())
@@ -113,12 +112,11 @@ pub fn console_log(
 
 pub fn log_scalar(vm: &mut Vm<ScriptExecutionData>, value: Scalar) -> Result<(), ExecutionError> {
     profile!("log_scalar");
-    let logger = &vm.get_aux().logger;
-    trace!(logger, "log_scalar");
+    trace!("log_scalar");
     let entity_id = vm.get_aux().entity_id;
     let time = vm.get_aux().storage().time();
     let payload = format!("{:?} says {:?}", entity_id, value);
-    trace!(logger, "{}", payload);
+    trace!("{}", payload);
     vm.get_aux_mut().intents.with_log(entity_id, payload, time);
     Ok(())
 }

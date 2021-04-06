@@ -14,9 +14,9 @@ use crate::components::*;
 use crate::indices::{EntityId, UserId};
 use crate::join;
 use crate::profile;
-use crate::storage::views::{UnsafeView, View, WorldLogger};
+use crate::storage::views::{UnsafeView, View};
 use crate::tables::{JoinIterator, Table};
-use slog::{debug, warn, Logger};
+use tracing::{debug, warn};
 
 type SpawnSystemMut = (
     UnsafeView<EntityId, SpawnComponent>,
@@ -36,7 +36,7 @@ type SpawnSystemMut = (
 
 pub fn update_spawns(
     (mut spawns, mut spawn_queue, mut energy, spawn_views): SpawnSystemMut,
-    (WorldLogger(logger), user_default_scripts): (WorldLogger, View<UserId, EntityScript>),
+    user_default_scripts: View<UserId, EntityScript>,
 ) {
     profile!("SpawnSystem update");
 
@@ -66,13 +66,7 @@ pub fn update_spawns(
             }
         })
         .for_each(|(spawn_id, entity_id)| {
-            spawn_bot(
-                &logger,
-                spawn_id,
-                entity_id,
-                spawn_views,
-                user_default_scripts,
-            )
+            spawn_bot(spawn_id, entity_id, spawn_views, user_default_scripts)
         });
 }
 
@@ -90,7 +84,6 @@ type SpawnBotMut = (
 /// Spawns a bot from a spawn.
 /// Removes the spawning bot from the spawn and initializes a bot in the world
 fn spawn_bot(
-    logger: &Logger,
     spawn_id: EntityId,
     entity_id: EntityId,
     (
@@ -106,14 +99,14 @@ fn spawn_bot(
     user_default_scripts: View<UserId, EntityScript>,
 ) {
     debug!(
-        logger,
-        "spawn_bot spawn_id: {:?} entity_id: {:?}", spawn_id, entity_id
+        "spawn_bot spawn_id: {:?} entity_id: {:?}",
+        spawn_id, entity_id
     );
 
     match spawn_bots.delete(entity_id) {
         Some(_) => (),
         None => {
-            warn!(logger, "Spawning bot {:?} was not found", entity_id);
+            warn!("Spawning bot {:?} was not found", entity_id);
             return;
         }
     };
@@ -158,7 +151,7 @@ fn spawn_bot(
     }
 
     debug!(
-        logger,
-        "spawn_bot spawn_id: {:?} entity_id: {:?} - done", spawn_id, entity_id
+        "spawn_bot spawn_id: {:?} entity_id: {:?} - done",
+        spawn_id, entity_id
     );
 }

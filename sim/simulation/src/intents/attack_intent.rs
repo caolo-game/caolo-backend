@@ -3,7 +3,7 @@ use crate::indices::{EntityId, UserId};
 use crate::scripting_api::OperationResult;
 use crate::storage::views::View;
 use serde::{Deserialize, Serialize};
-use slog::{debug, trace, Logger};
+use tracing::{debug, trace};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct MeleeIntent {
@@ -23,16 +23,19 @@ type CheckInput<'a> = (
 /// `defender` must have `HpComponent`
 /// `attacker` and `defender` must be within 1 tiles
 pub fn check_melee_intent(
-    logger: &Logger,
     intent: &MeleeIntent,
     user_id: UserId,
     (owner_table, pos_table, melee_table, hp_table): CheckInput,
 ) -> OperationResult {
-    let logger = logger.new(slog::o!(
-            "attacker" => intent.attacker.0,
-            "defender" => intent.defender.0,
-    ));
-    trace!(logger, "check_melee_intent");
+    let s = tracing::span!(
+        tracing::Level::INFO,
+        "check_melee_intent",
+        attacker = intent.attacker.0,
+        defender = intent.defender.0,
+    );
+    let _e = s.enter();
+
+    trace!("check_melee_intent");
 
     if owner_table
         .get_by_id(intent.attacker)
@@ -43,33 +46,33 @@ pub fn check_melee_intent(
         return OperationResult::NotOwner;
     }
     if !melee_table.contains(intent.attacker) {
-        debug!(logger, "attacker has no MeleeAttackComponent");
+        debug!("attacker has no MeleeAttackComponent");
         return OperationResult::InvalidInput;
     }
     if !hp_table.contains_id(intent.defender) {
-        debug!(logger, "defender has no HpComponent");
+        debug!("defender has no HpComponent");
         return OperationResult::InvalidTarget;
     }
     let attack_pos = match pos_table.get_by_id(intent.attacker) {
         Some(x) => x,
         None => {
-            debug!(logger, "attacker has no PositionComponent");
+            debug!("attacker has no PositionComponent");
             return OperationResult::InvalidInput;
         }
     };
     let defend_pos = match pos_table.get_by_id(intent.defender) {
         Some(x) => x,
         None => {
-            debug!(logger, "defender has no PositionComponent");
+            debug!("defender has no PositionComponent");
             return OperationResult::InvalidTarget;
         }
     };
     if attack_pos.0.room != defend_pos.0.room {
-        debug!(logger, "Attacker and defender are not in the same room");
+        debug!("Attacker and defender are not in the same room");
         return OperationResult::InvalidTarget;
     }
     if attack_pos.0.pos.hex_distance(defend_pos.0.pos) > 1 {
-        debug!(logger, "Attacker is out of melee range");
+        debug!("Attacker is out of melee range");
         return OperationResult::NotInRange;
     }
     OperationResult::Ok

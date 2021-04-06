@@ -16,13 +16,6 @@ cao-profile = { git = "https://github.com/caolo-game/cao-profile.git", optional 
     "http"
 ] }
 rayon = { version = "1" }
-slog = { version = "2", features = [
-    "max_level_trace",
-    "release_max_level_info"
-] }
-slog-async = "*"
-slog-term = "*"
-slog-envlogger = "*"
 rand = { version = "0.7", features = ["small_rng"] }
 chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "0.8", features = ["serde", "v4"] }
@@ -33,14 +26,14 @@ thiserror = "1"
 anyhow = "1"
 serde_json = { version = "1" }
 tokio = { version = "1", optional = true, features = ["rt-multi-thread"] }
+tracing = { version = "0.1" }
 
 [dev-dependencies]
 criterion = { version = "0.3", features = ["html_reports"] }
 serde_yaml = "*"
-# env_logger needs to be compiled without default features so the test suite can capture the logs
-env_logger = { version = "0.7", default-features = false }
-slog-stdlog = "3"
 serde_test = "*"
+test-env-log = "0.2"
+tracing-subscriber = {version = "0.2", features = ["chrono", "env-filter", "fmt"]}
 
 [build-dependencies]
 toml = "0.4"

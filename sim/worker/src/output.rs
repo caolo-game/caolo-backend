@@ -1,13 +1,12 @@
 //! Sending stuff outside (DB)
 use anyhow::Context;
-use slog::{debug, info, Logger};
+use tracing::debug;
 
 pub async fn send_schema<'a>(
-    logger: Logger,
     connection: impl sqlx::Executor<'a, Database = sqlx::Postgres>,
     queen_tag: &'a str,
 ) -> anyhow::Result<()> {
-    debug!(logger, "Sending schema");
+    debug!("Sending schema");
     let schema = caolo_sim::scripting_api::make_import();
     let imports = schema.imports();
 
@@ -60,18 +59,17 @@ pub async fn send_schema<'a>(
     .await
     .with_context(|| "Failed to send schema")?;
 
-    debug!(logger, "Sending schema done");
+    debug!("Sending schema done");
     Ok(())
 }
 
 pub async fn send_hot<'a>(
-    logger: Logger,
     time: i64,
     payload: &'a serde_json::Value,
     queen_tag: &'a str,
     db: impl sqlx::Executor<'a, Database = sqlx::Postgres>,
 ) -> anyhow::Result<()> {
-    info!(logger, "Sending world");
+    debug!("Sending world");
 
     sqlx::query!(
         r#"
@@ -89,17 +87,16 @@ pub async fn send_hot<'a>(
     .await
     .with_context(|| "Failed to insert current world state into DB")?;
 
-    info!(logger, "Sending world done");
+    debug!("Sending world done");
     Ok(())
 }
 
 pub async fn send_const<'a>(
-    logger: Logger,
     payload: &'a serde_json::Value,
     queen_tag: &'a str,
     db: impl sqlx::Executor<'a, Database = sqlx::Postgres>,
 ) -> anyhow::Result<()> {
-    info!(logger, "Sending world");
+    debug!("Sending world");
 
     sqlx::query!(
         r#"
@@ -116,6 +113,6 @@ pub async fn send_const<'a>(
     .await
     .with_context(|| "Failed to insert into DB")?;
 
-    info!(logger, "Sending world done");
+    debug!("Sending world done");
     Ok(())
 }

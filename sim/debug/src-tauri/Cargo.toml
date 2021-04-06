@@ -15,6 +15,14 @@ serde = { version = "1.0", features = ["derive"] }
 tauri = { version = "0.11", features = ["all-api"] }
 caolo-sim = { path = "../../simulation" }
 svg = "0.9.1"
+tracing = { version = "0.1" }
+tracing-futures = "*"
+tracing-subscriber = { version = "0.2", features = [
+    "chrono",
+    "env-filter",
+    "fmt"
+] }
+dotenv = { version = "0.14" }
 
 [target."cfg(windows)".build-dependencies]
 winres = "0.1"

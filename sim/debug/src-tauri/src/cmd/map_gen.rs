@@ -42,21 +42,14 @@ fn render_room(it: impl Iterator<Item = (Axial, TerrainComponent)>) -> Document 
     )
 }
 
-pub fn generate_world_impl(
-    logger: slog::Logger,
-    world_radius: u32,
-    room_radius: u32,
-) -> Vec<String> {
+pub fn generate_world_impl(world_radius: u32, room_radius: u32) -> Vec<String> {
     let mut exc = SimpleExecutor;
     let world = exc
-        .initialize(
-            Some(logger.clone()),
-            GameConfig {
-                world_radius,
-                room_radius,
-                ..Default::default()
-            },
-        )
+        .initialize(GameConfig {
+            world_radius,
+            room_radius,
+            ..Default::default()
+        })
         .unwrap();
 
     View::<WorldPosition, TerrainComponent>::new(&world)

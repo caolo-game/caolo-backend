@@ -58,7 +58,7 @@ export default function MapGen() {
                     return (
                         <div key={i}>
                             <h2>
-                                Room: ({room.roomId.q}, {room.roomId.r})
+                                Room: ({room.roomId[0]}, {room.roomId[1]})
                             </h2>
                             <div
                                 style={{

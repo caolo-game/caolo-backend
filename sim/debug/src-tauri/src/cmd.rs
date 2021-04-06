@@ -25,8 +25,8 @@ pub enum Cmd {
     },
 }
 
-pub fn generate_world(logger: slog::Logger, world_radius: u32, room_radius: u32) -> Vec<String> {
-    map_gen::generate_world_impl(logger, world_radius, room_radius)
+pub fn generate_world(world_radius: u32, room_radius: u32) -> Vec<String> {
+    map_gen::generate_world_impl(world_radius, room_radius)
 }
 
 pub fn generate_room_noise(room_radius: u32, seed: Option<u64>) -> String {

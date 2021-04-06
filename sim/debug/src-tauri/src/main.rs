@@ -5,11 +5,11 @@
 
 mod cmd;
 
-use slog::{o, Drain};
-
 use cmd::generate_world;
 
 fn main() {
+    dotenv::dotenv().unwrap_or_default();
+    tracing_subscriber::fmt::init();
 
     tauri::AppBuilder::new()
         .invoke_handler(move |_webview, arg| {
@@ -25,17 +25,15 @@ fn main() {
                             world_radius,
                             callback,
                             error,
-                        } => {
-                            tauri::execute_promise(
-                                _webview,
-                                move || {
-                                    let w = generate_world(world_radius, room_radius);
-                                    Ok(w)
-                                },
-                                callback,
-                                error,
-                            )
-                        }
+                        } => tauri::execute_promise(
+                            _webview,
+                            move || {
+                                let w = generate_world(world_radius, room_radius);
+                                Ok(w)
+                            },
+                            callback,
+                            error,
+                        ),
                         Cmd::MapNoise {
                             room_radius,
                             seed,

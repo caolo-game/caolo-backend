@@ -1,9 +1,16 @@
 from typing import Dict, List, Tuple
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Depends, HTTPException, status
+
+import grpc
+import cao_world_pb2
+import cao_world_pb2_grpc
+import cao_common_pb2
+from google.protobuf.json_format import MessageToDict
 
 from ..api_schema import RoomObjects, make_room_id, parse_room_id
 from ..model.game_state import get_room_objects, manager
+from ..queen import queen_channel
 
 
 router = APIRouter(prefix="/world", tags=["world"])
@@ -17,30 +24,46 @@ async def room_terrain_layout():
     If you query the terrain the i-th terrain enum value
     will correspond to the i-th coordinates returned by this endpoint
     """
-    return manager.game_state.properties["terrain"]["roomLayout"]
-
-
-@router.get("/terrain", response_model=List[str])
-async def terrain(q: int = Query(None), r: int = Query(None)):
-    room_id = make_room_id(q, r)
-    return manager.game_state.properties["terrain"]["roomTerrain"].get(room_id)
-
-
-@router.get("/rooms", response_model=List[Dict])
-async def rooms():
-    # keys are 'q;r', so split them and insert them into a 'pos' object,
-    # then put the rest of the values next to it
-    return (
-        {"pos": [room_id.q, room_id.r], **v}
-        for room_id, v in (
-            (parse_room_id(k), v)
-            for k, v in manager.game_state.properties["rooms"].items()
+    return list(
+        map(
+            lambda p: (int(p["q"]), int(p["r"])),
+            manager.game_state.room_layout,
         )
     )
 
 
+@router.get("/terrain", response_model=List[str])
+async def terrain(q: int = Query(...), r: int = Query(...)):
+    room_id = cao_common_pb2.Axial()
+    room_id.q = q
+    room_id.r = r
+
+    channel = await queen_channel()
+    stub = cao_world_pb2_grpc.WorldStub(channel)
+
+    try:
+        terrain = await stub.GetRoomTerrain(room_id)
+    except grpc.aio.AioRpcError as err:
+        if err.code() == grpc.StatusCode.NOT_FOUND:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Room not found"
+            ) from err
+        else:
+            logging.exception("Unhandled rpc error")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    assert terrain.roomId.q == q
+    assert terrain.roomId.r == r
+    return MessageToDict(terrain, preserving_proto_field_name=False).get("tiles", [])
+
+
+@router.get("/rooms", response_model=List[Dict])
+async def rooms():
+    return manager.game_state.rooms
+
+
 @router.get("/room-objects", response_model=RoomObjects)
-async def room_objects(q: int = Query(None), r: int = Query(None)):
+async def room_objects(q: int = Query(...), r: int = Query(...)):
     """
     return a list of each type of entity in the given room
     """

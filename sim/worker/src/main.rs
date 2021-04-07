@@ -121,10 +121,30 @@ fn main() {
 
     info!("Starting the game loop. Starting the service on {:?}", addr);
 
-    let world = Arc::new(tokio::sync::Mutex::new(world));
-
     let (outtx, _) = tokio::sync::broadcast::channel(4);
     let outpayload = Arc::new(outtx);
+
+    let room_bounds = caolo_sim::prelude::Hexagon::from_radius(
+        world
+            .view::<caolo_sim::indices::ConfigKey, caolo_sim::components::RoomProperties>()
+            .unwrap_value()
+            .radius as i32, // world.config.room_properties.unwrap_value().radius as i32,
+    );
+
+    // TODO: if we're feeling ballsy we could just use an UnsafeView, because terrain data does not
+    // change
+    let terrain = world
+        .view::<caolo_sim::prelude::WorldPosition, caolo_sim::prelude::TerrainComponent>()
+        .iter_rooms()
+        .map(|(room_id, room_terrain)| {
+            (
+                room_id.0,
+                room_terrain.iter().map(|(_, t)| t).copied().collect(),
+            )
+        })
+        .collect();
+
+    let world = Arc::new(tokio::sync::Mutex::new(world));
 
     let server = tonic::transport::Server::builder()
         .trace_fn(|_| tracing::info_span!(""))
@@ -133,6 +153,8 @@ fn main() {
         ))
         .add_service(WorldServer::new(crate::world_service::WorldService::new(
             Arc::clone(&outpayload),
+            room_bounds,
+            Arc::new(terrain),
         )))
         .serve(addr);
 

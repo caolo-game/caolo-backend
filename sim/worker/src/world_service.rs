@@ -2,18 +2,22 @@ mod ser_bots;
 mod ser_resources;
 mod ser_structures;
 
-use caolo_sim::prelude::World;
+use caolo_sim::prelude::{Axial, Hexagon, TerrainComponent, World};
+use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{broadcast::Sender, mpsc};
 use tokio_stream::wrappers::ReceiverStream;
 use tonic::Status;
 use tracing::info;
 
+use crate::protos::cao_common;
 use crate::protos::cao_world;
 
 #[derive(Clone)]
 pub struct WorldService {
     entities: WorldPayloadSender,
+    room_bounds: Hexagon,
+    terrain: Arc<HashMap<Axial, Vec<TerrainComponent>>>,
 }
 
 impl std::fmt::Debug for WorldService {
@@ -30,8 +34,16 @@ pub struct Payload {
 }
 
 impl WorldService {
-    pub fn new(entities: WorldPayloadSender) -> Self {
-        Self { entities }
+    pub fn new(
+        entities: WorldPayloadSender,
+        room_bounds: Hexagon,
+        terrain: Arc<HashMap<Axial, Vec<TerrainComponent>>>,
+    ) -> Self {
+        Self {
+            entities,
+            room_bounds,
+            terrain,
+        }
     }
 }
 
@@ -87,7 +99,6 @@ impl Payload {
 impl cao_world::world_server::World for WorldService {
     type EntitiesStream = ReceiverStream<Result<cao_world::WorldEntities, Status>>;
 
-    #[tracing::instrument]
     async fn entities(
         &self,
         _r: tonic::Request<cao_world::Empty>,
@@ -114,6 +125,48 @@ impl cao_world::world_server::World for WorldService {
         });
 
         Ok(tonic::Response::new(ReceiverStream::new(rx)))
+    }
+
+    async fn get_room_layout(
+        &self,
+        _r: tonic::Request<cao_world::Empty>,
+    ) -> Result<tonic::Response<cao_world::RoomLayout>, tonic::Status> {
+        let positions = self
+            .room_bounds
+            .iter_points()
+            .map(|point| cao_common::Axial {
+                q: point.q,
+                r: point.r,
+            })
+            .collect();
+        Ok(tonic::Response::new(cao_world::RoomLayout { positions }))
+    }
+
+    async fn get_room_terrain(
+        &self,
+        request: tonic::Request<cao_common::Axial>,
+    ) -> Result<tonic::Response<cao_world::RoomTerrain>, tonic::Status> {
+        let q = request.get_ref().q;
+        let r = request.get_ref().r;
+        let p = Axial::new(q, r);
+        let room = self
+            .terrain
+            .get(&p)
+            .ok_or(tonic::Status::not_found("Room does not exist"))?;
+
+        Ok(tonic::Response::new(cao_world::RoomTerrain {
+            room_id: Some(cao_common::Axial { q, r }),
+            tiles: room
+                .iter()
+                .map(|TerrainComponent(t)| match t {
+                    caolo_sim::terrain::TileTerrainType::Empty => cao_world::Terrain::Empty,
+                    caolo_sim::terrain::TileTerrainType::Plain => cao_world::Terrain::Plain,
+                    caolo_sim::terrain::TileTerrainType::Bridge => cao_world::Terrain::Bridge,
+                    caolo_sim::terrain::TileTerrainType::Wall => cao_world::Terrain::Wall,
+                })
+                .map(|t| t.into())
+                .collect(),
+        }))
     }
 }
 

@@ -10,6 +10,26 @@ message Bounded
     int64 valueMax = 2;
 }
 
+message RoomTerrain
+{
+    cao_common.Axial roomId = 1;
+    /// Returned tiles will have the same positions as in RoomLayout
+    repeated Terrain tiles = 2;
+}
+
+enum Terrain {
+    EMPTY = 0;
+    PLAIN = 1;
+    WALL = 2;
+    BRIDGE = 3;
+}
+
+/// All rooms in the world will have the same terrain layout, described here
+message RoomLayout
+{
+    repeated cao_common.Axial positions = 1;
+}
+
 message RoomBots
 {
     cao_common.Axial roomId = 1;
@@ -121,4 +141,8 @@ service World
 {
     /// Stream the entities on updates
     rpc Entities(Empty) returns (stream WorldEntities) { }
+
+    rpc GetRoomLayout(Empty) returns (RoomLayout) { }
+
+    rpc GetRoomTerrain(cao_common.Axial) returns (RoomTerrain) { }
 }

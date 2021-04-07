@@ -4,9 +4,11 @@ mod output;
 mod protos;
 
 mod command_service;
+mod scripting_service;
 mod world_service;
 
 use crate::protos::cao_commands::command_server::CommandServer;
+use crate::protos::cao_script::scripting_server::ScriptingServer;
 use crate::protos::cao_world::world_server::WorldServer;
 use caolo_sim::{executor::Executor, executor::SimpleExecutor};
 use std::{
@@ -138,6 +140,9 @@ fn main() {
         .trace_fn(|_| tracing::info_span!(""))
         .add_service(CommandServer::new(
             crate::command_service::CommandService::new(Arc::clone(&world)),
+        ))
+        .add_service(ScriptingServer::new(
+            crate::scripting_service::ScriptingService::new(Arc::clone(&world)),
         ))
         .add_service(WorldServer::new(crate::world_service::WorldService::new(
             Arc::clone(&outpayload),

@@ -52,8 +52,6 @@ async def db_pool():
     return _DB_POOL
 
 
-
-
 @app.middleware("http")
 async def db_session(req, call_next):
     resp = Response(status_code=500)

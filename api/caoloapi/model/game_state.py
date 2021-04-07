@@ -1,6 +1,6 @@
 import json
 from dataclasses import dataclass
-from typing import Dict, Callable, Optional
+from typing import Dict, Callable, Optional, List
 import datetime as dt
 import asyncio
 import logging
@@ -14,6 +14,7 @@ import cao_world_pb2_grpc
 
 from ..config import QUEEN_TAG
 from ..api_schema import RoomObjects, make_room_id
+from ..queen import queen_channel
 
 
 @dataclass
@@ -21,10 +22,29 @@ class GameState:
     world_time: int
     created: dt.datetime
     entities: Optional[Dict]
-    properties: Optional[Dict]
+    rooms: List
+    room_layout: List
 
 
-def get_terrain(game_state: GameState, room_id: str):
+async def load_initial_game_state(channel):
+    stub = cao_world_pb2_grpc.WorldStub(channel)
+
+    rooms = await stub.GetRoomList(cao_world_pb2.Empty())
+    room_layout = await stub.GetRoomLayout(cao_world_pb2.Empty())
+
+    return GameState(
+        world_time=-1,
+        created=dt.datetime.now(),
+        entities=None,
+        rooms=MessageToDict(rooms, including_default_value_fields=True)["roomIds"],
+        room_layout=MessageToDict(room_layout, including_default_value_fields=True)[
+            "positions"
+        ],
+    )
+
+
+async def get_terrain(game_state: GameState, room_id: str):
+    assert room_id in game_state.rooms
     assert game_state.properties, "Load properties before getting room_objects"
     terrain = game_state.properties["terrain"].get("roomTerrain", {})
     return terrain.get(room_id, [])
@@ -53,30 +73,6 @@ def get_room_objects(game_state: GameState, room_id: str):
     return payload
 
 
-async def load_world_constants(db, queen_tag=None) -> GameState:
-    if queen_tag is None:
-        queen_tag = QUEEN_TAG
-
-    props = await db.fetchrow(
-        """
-    SELECT
-        t.payload
-    FROM public.world_const t
-    WHERE t.queen_tag=$1
-    """,
-        queen_tag,
-    )
-
-    if props:
-        return GameState(
-            world_time=-1,
-            created=None,
-            entities=None,
-            properties=json.loads(props["payload"]),
-        )
-    return None
-
-
 class GameStateManager:
     def __init__(self):
         self.game_state: Optional[GameState] = None
@@ -91,31 +87,15 @@ class GameStateManager:
         except ValueError:
             pass
 
-    async def _load_from_db(self, db, queen_tag=None):
-        if self.game_state:
-            new_state = await load_latest_game_state_after(
-                db, self.game_state.world_time, queen_tag
-            )
-        else:
-            new_state = await load_world_constants(db, queen_tag)
-        if new_state:
-            self.game_state = new_state
-            logging.debug(
-                "Loaded game-state # %d of tag %s",
-                self.game_state.world_time,
-                queen_tag,
-            )
-        else:
-            logging.debug("No new state is available")
-
     async def _listener(self, queen_url: str):
         while 1:
             try:
                 logging.info("Subscribing to world updates at %s", queen_url)
                 # TODO: maybe use secure channel??
-                channel = grpc.aio.insecure_channel(queen_url)
+                channel = await queen_channel(queen_url)
                 stub = cao_world_pb2_grpc.WorldStub(channel)
 
+                self.game_state = await load_initial_game_state(channel)
                 async for msg in stub.Entities(cao_world_pb2.Empty()):
                     payload = {
                         "bots": {},
@@ -165,7 +145,6 @@ class GameStateManager:
                 raise
 
     async def start(self, queen_tag: str, queen_url: str, db):
-        await self._load_from_db(db, queen_tag)
         asyncio.create_task(self._listener(queen_url))
 
 

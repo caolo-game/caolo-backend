@@ -38,7 +38,7 @@ impl<Id: TableId> Component<Id> for DecayComponent {
     type Table = BTreeTable<Id, Self>;
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CarryComponent {
     pub carry: u16,

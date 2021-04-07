@@ -4,19 +4,115 @@ package cao_world;
 
 import "cao_common.proto";
 
-message RoomObjects
+message Bounded
+{
+    int64 value = 1;
+    int64 valueMax = 2;
+}
+
+message RoomBots
 {
     cao_common.Axial roomId = 1;
-    cao_common.Json payload = 2;
+    repeated Bot bots = 2;
+}
+
+message RoomStructures
+{
+    cao_common.Axial roomId = 1;
+    repeated Structure structures = 2;
+}
+
+message RoomResources
+{
+    cao_common.Axial roomId = 1;
+    repeated Resource resources = 2;
+}
+
+message Bot
+{
+    int64 id = 1;
+    cao_common.WorldPosition pos = 2;
+    Bounded carry = 3;
+    Bounded hp = 4;
+    cao_common.Uuid script = 5;
+    cao_common.Uuid owner = 6;
+    uint32 meleeStrength = 7;
+    Decay decay = 8;
+
+    message Decay
+    {
+        int32 hpAmount = 1;
+        int32 interval = 2;
+        int32 timeRemaining = 3;
+    }
+}
+
+message Structure
+{
+    int64 id = 1;
+    cao_common.WorldPosition pos = 2;
+    Bounded hp = 3;
+    Bounded energy = 4;
+    int64 energyRegen = 5;
+    cao_common.Uuid owner = 7;
+
+    oneof structure_type
+    {
+        Spawn spawn = 8;
+    }
+
+    message Spawn
+    {
+        int64 timeToSpawn = 1;
+        int64 spawning = 2;
+        repeated int64 spawnQueue = 3;
+    }
+}
+
+message Resource
+{
+    int64 id = 1;
+    cao_common.WorldPosition pos = 2;
+
+    oneof resource_type
+    {
+        Bounded energy = 3;
+    }
+}
+
+message Diagnostics
+{
+    Current current = 1;
+    Accumulated accumulated = 2;
+
+    message Current
+    {
+        uint64 tick = 1;
+        int64 tick_latency_ms = 2;
+        int64 scripts_execution_ms = 3;
+        int64 systems_update_ms = 4;
+        uint64 number_of_scripts_ran = 11;
+        uint64 number_of_scripts_errored = 12;
+        uint64 number_of_intents = 13;
+    }
+
+    message Accumulated
+    {
+        double tick_latency_mean = 8;
+        double tick_latency_std = 9;
+        int64 tick_latency_min = 5;
+        int64 tick_latency_max = 7;
+        uint64 tick_latency_count = 10;
+    }
 }
 
 message WorldEntities
 {
     int64 worldTime = 1;
-    repeated RoomObjects bots = 2;
-    repeated RoomObjects structures = 3;
-    repeated RoomObjects resources = 4;
-    cao_common.Json diagnostics = 5;
+    repeated RoomBots bots = 2;
+    repeated RoomStructures structures = 3;
+    repeated RoomResources resources = 4;
+    Diagnostics diagnostics = 5;
 }
 
 message Empty { }

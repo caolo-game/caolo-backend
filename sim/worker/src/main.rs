@@ -14,7 +14,7 @@ use std::{
     sync::Arc,
     time::{Duration, Instant},
 };
-use tracing::{debug, error, info, warn, Instrument};
+use tracing::{debug, info, warn};
 use uuid::Uuid;
 
 #[cfg(not(target_env = "msvc"))]
@@ -139,37 +139,20 @@ fn main() {
     let game_loop = async move {
         loop {
             let start = Instant::now();
-            let entities_json;
-            let time;
+            let mut pl = world_service::Payload::default();
             {
                 // free the world mutex at the end of this scope
                 let mut world = world.lock().await;
 
                 tick(&mut executor, &mut *world);
 
-                entities_json = world.hot_as_json();
-                time = world.time() as i64;
+                let time = world.time();
+                pl.update(time, &world);
             }
-            // SAFETY we transmute borrow lifetimes
-            // it is safe if we await this future in this loop iteration
-            let send_future = unsafe {
-                use std::mem::transmute;
-                tokio::spawn(
-                    output::send_hot(
-                        time,
-                        transmute::<_, &'static _>(&entities_json),
-                        transmute::<_, &'static _>(queen_tag.as_str()),
-                        transmute::<_, &'static _>(&db_pool),
-                    )
-                    .instrument(tracing::debug_span!("send hot data to db")),
-                )
-            };
 
             if outpayload.receiver_count() > 0 {
                 debug!("Sending world entities to subsribers");
                 // while we're sending to the database, also update the outbound payload
-                let mut pl = world_service::Payload::default();
-                pl.update(time as u64, &entities_json);
 
                 if outpayload.send(Arc::new(pl)).is_err() {
                     // happens if the subscribers disconnect while we prepared the payload
@@ -177,19 +160,11 @@ fn main() {
                 }
             }
 
-            send_future
-                .await
-                .expect("Failed to join send_world future")
-                .map_err(|err| {
-                    error!("Failed to send world output to storage {:?}", err);
-                })
-                .unwrap_or(());
-
             let sleep_duration = tick_latency
                 .checked_sub(Instant::now() - start)
                 .unwrap_or_else(|| Duration::from_millis(0));
 
-            // use the sleep time to update clients
+            info!("Sleeping for {:?}", sleep_duration);
             tokio::time::sleep(sleep_duration).await;
         }
         // using this for a type hint

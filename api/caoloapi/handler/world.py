@@ -53,4 +53,4 @@ async def diagnostics():
     """
     returns internal engine diagnostics
     """
-    return manager.game_state.entities["diagnostics"]
+    return manager.game_state.entities.get("diagnostics")

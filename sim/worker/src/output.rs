@@ -63,34 +63,6 @@ pub async fn send_schema<'a>(
     Ok(())
 }
 
-pub async fn send_hot<'a>(
-    time: i64,
-    payload: &'a serde_json::Value,
-    queen_tag: &'a str,
-    db: impl sqlx::Executor<'a, Database = sqlx::Postgres>,
-) -> anyhow::Result<()> {
-    debug!("Sending world");
-
-    sqlx::query!(
-        r#"
-        INSERT INTO world_hot (queen_tag, world_time, payload)
-        VALUES ($1, $2, $3)
-        ON CONFLICT (queen_tag, world_time)
-        DO UPDATE
-        SET payload=$3, created=now()
-        "#,
-        queen_tag,
-        time,
-        payload
-    )
-    .execute(db)
-    .await
-    .with_context(|| "Failed to insert current world state into DB")?;
-
-    debug!("Sending world done");
-    Ok(())
-}
-
 pub async fn send_const<'a>(
     payload: &'a serde_json::Value,
     queen_tag: &'a str,

@@ -1,10 +1,14 @@
+mod ser_bots;
+mod ser_resources;
+mod ser_structures;
+
+use caolo_sim::prelude::World;
 use std::sync::Arc;
 use tokio::sync::{broadcast::Sender, mpsc};
 use tokio_stream::wrappers::ReceiverStream;
 use tonic::Status;
 use tracing::info;
 
-use crate::protos::cao_common;
 use crate::protos::cao_world;
 
 #[derive(Clone)]
@@ -31,54 +35,49 @@ impl WorldService {
     }
 }
 
-fn write_world_payload(
-    world_payload: &serde_json::Value,
-    key: &str,
-    out: &mut ::prost::alloc::vec::Vec<cao_world::RoomObjects>,
-) {
-    use cao_common::{Axial, Json};
-    use cao_world::RoomObjects;
-
-    let pl = world_payload[key].as_object().expect("key was not a map");
-
-    out.reserve(pl.len());
-
-    for (roomid, pl) in pl.iter() {
-        // TODO:
-        // I'd really prefer if we could just use the original roomids instead of parsing back the
-        // serialized roomids
-        let mut split = roomid.split(';');
-        let q = split.next().unwrap();
-        let r = split.next().unwrap();
-
-        let q = q.parse().unwrap();
-        let r = r.parse().unwrap();
-
-        out.push(RoomObjects {
-            room_id: Some(Axial { q, r }),
-            payload: Some(Json {
-                value: serde_json::to_vec(pl).unwrap(),
-            }),
-        });
-    }
-}
-
 impl Payload {
     /// Transform the usual json serialized world into Payload
-    pub fn update(&mut self, time: u64, world_payload: &serde_json::Value) {
+    pub fn update(&mut self, time: u64, world: &World) {
         self.payload.world_time = time as i64;
         self.payload.bots.clear();
         self.payload.structures.clear();
         self.payload.resources.clear();
 
-        // TODO:
-        // we could reuse these buffers?
-        write_world_payload(world_payload, "bots", &mut self.payload.bots);
-        write_world_payload(world_payload, "structures", &mut self.payload.structures);
-        write_world_payload(world_payload, "resources", &mut self.payload.resources);
-        if let Some(diag) = world_payload.get("diagnostics") {
-            self.payload.diagnostics = Some(cao_common::Json {
-                value: serde_json::to_vec(diag).unwrap(),
+        ser_bots::bot_payload(
+            &mut self.payload.bots,
+            caolo_sim::prelude::FromWorld::new(world),
+        );
+        ser_structures::structure_payload(
+            &mut self.payload.structures,
+            caolo_sim::prelude::FromWorld::new(world),
+        );
+        ser_resources::resource_payload(
+            &mut self.payload.resources,
+            caolo_sim::prelude::FromWorld::new(world),
+        );
+
+        if let Some(diag) = world
+            .view::<caolo_sim::prelude::EmptyKey, caolo_sim::diagnostics::Diagnostics>()
+            .value
+            .as_ref()
+        {
+            self.payload.diagnostics = Some(cao_world::Diagnostics {
+                current: Some(cao_world::diagnostics::Current {
+                    number_of_intents: diag.number_of_intents,
+                    number_of_scripts_ran: diag.number_of_scripts_ran,
+                    number_of_scripts_errored: diag.number_of_scripts_errored,
+                    systems_update_ms: diag.systems_update_ms,
+                    scripts_execution_ms: diag.scripts_execution_ms,
+                    tick: diag.tick,
+                    tick_latency_ms: diag.tick_latency_ms,
+                }),
+                accumulated: Some(cao_world::diagnostics::Accumulated {
+                    tick_latency_count: diag.tick_latency_count.into(),
+                    tick_latency_max: diag.tick_latency_max.into(),
+                    tick_latency_min: diag.tick_latency_min.into(),
+                    tick_latency_mean: diag.tick_latency_mean,
+                    tick_latency_std: diag.tick_latency_std,
+                }),
             });
         }
     }

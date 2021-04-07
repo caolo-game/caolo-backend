@@ -7,6 +7,7 @@ import logging
 
 from aioredis import Redis
 import grpc
+from google.protobuf.json_format import MessageToDict
 
 import cao_world_pb2
 import cao_world_pb2_grpc
@@ -42,29 +43,10 @@ def get_room_objects(game_state: GameState, room_id: str):
     return payload
 
 
-async def load_latest_game_state(db, queen_tag=None) -> GameState:
-    return await load_latest_game_state_after(db, -1, queen_tag)
-
-
-async def load_latest_game_state_after(
-    db, min_bound_tick: int, queen_tag=None
-) -> GameState:
+async def load_world_constants(db, queen_tag=None) -> GameState:
     if queen_tag is None:
         queen_tag = QUEEN_TAG
 
-    row = await db.fetchrow(
-        """
-        SELECT
-            t.payload as payload
-            , t.world_time as world_time
-            , t.created as created
-        FROM public.world_hot t
-        WHERE t.queen_tag=$1 AND t.world_time > $2
-        ORDER BY t.created DESC
-        """,
-        queen_tag,
-        min_bound_tick,
-    )
     props = await db.fetchrow(
         """
     SELECT
@@ -75,11 +57,11 @@ async def load_latest_game_state_after(
         queen_tag,
     )
 
-    if row:
+    if props:
         return GameState(
-            world_time=row["world_time"],
-            created=row["created"],
-            entities=json.loads(row["payload"]),
+            world_time=-1,
+            created=None,
+            entities=None,
             properties=json.loads(props["payload"]),
         )
     return None
@@ -105,7 +87,7 @@ class GameStateManager:
                 db, self.game_state.world_time, queen_tag
             )
         else:
-            new_state = await load_latest_game_state(db, queen_tag)
+            new_state = await load_world_constants(db, queen_tag)
         if new_state:
             self.game_state = new_state
             logging.debug(
@@ -131,29 +113,33 @@ class GameStateManager:
                         "structures": {},
                         "diagnostics": None,
                     }
+                    for room_bots in msg.bots:
+                        room_id = make_room_id(room_bots.roomId.q, room_bots.roomId.r)
+                        payload["bots"][room_id] = MessageToDict(
+                            message=room_bots, preserving_proto_field_name=False
+                        ).get("bots")
                     for room_resources in msg.resources:
                         room_id = make_room_id(
                             room_resources.roomId.q, room_resources.roomId.r
                         )
-                        payload["resources"][room_id] = json.loads(
-                            room_resources.payload.value
-                        )
-                    for room_bots in msg.bots:
-                        room_id = make_room_id(room_bots.roomId.q, room_bots.roomId.r)
-                        payload["bots"][room_id] = json.loads(room_bots.payload.value)
+                        payload["resources"][room_id] = MessageToDict(
+                            message=room_resources, preserving_proto_field_name=False
+                        ).get("resources")
                     for room_structures in msg.structures:
                         room_id = make_room_id(
                             room_structures.roomId.q, room_structures.roomId.r
                         )
-                        payload["structures"][room_id] = json.loads(
-                            room_structures.payload.value
-                        )
+                        payload["structures"][room_id] = MessageToDict(
+                            room_structures,
+                            preserving_proto_field_name=False,
+                        ).get("structures")
 
                     if msg.diagnostics:
-                        payload["diagnostics"] = json.loads(msg.diagnostics.value)
+                        payload["diagnostics"] = MessageToDict(
+                            msg.diagnostics, preserving_proto_field_name=False
+                        )
 
-                    assert self.game_state
-
+                    assert self.game_state is not None
                     self.game_state.world_time = msg.worldTime
                     self.game_state.created = dt.datetime.now()
                     self.game_state.entities = payload

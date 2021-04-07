@@ -57,7 +57,7 @@ setup(
         "uvicorn[standard]",
         "pydantic[email]",
         "grpcio-tools",
-        "protobuf",
+        "protobuf>=3.8",
         "aioredis",
         "python-multipart",
         "passlib[bcrypt]",

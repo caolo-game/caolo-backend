@@ -34,6 +34,7 @@ class StructureType(BaseModel):
 
 def parse_room_id(room_id: str) -> Axial:
     q, r = room_id.split(";")
+    q, r = int(q), int(r)
     return Axial(q, r)
 
 

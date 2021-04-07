@@ -30,15 +30,25 @@ def get_terrain(game_state: GameState, room_id: str):
     return terrain.get(room_id, [])
 
 
+def __to_dict(obj):
+    if obj is not None:
+        return MessageToDict(obj, preserving_proto_field_name=False)
+    return {}
+
+
 def get_room_objects(game_state: GameState, room_id: str):
     assert game_state.entities, "Load entities before getting room_objects"
 
     payload = RoomObjects()
     payload.time = game_state.world_time
     payload.payload = {
-        "bots": game_state.entities["bots"].get(room_id, []),
-        "structures": game_state.entities["structures"].get(room_id, []),
-        "resources": game_state.entities["resources"].get(room_id, []),
+        "bots": __to_dict(game_state.entities["bots"].get(room_id)).get("bots", []),
+        "structures": __to_dict(game_state.entities["structures"].get(room_id)).get(
+            "structures", []
+        ),
+        "resources": __to_dict(game_state.entities["resources"].get(room_id)).get(
+            "resources", []
+        ),
     }
     return payload
 
@@ -115,24 +125,17 @@ class GameStateManager:
                     }
                     for room_bots in msg.bots:
                         room_id = make_room_id(room_bots.roomId.q, room_bots.roomId.r)
-                        payload["bots"][room_id] = MessageToDict(
-                            message=room_bots, preserving_proto_field_name=False
-                        ).get("bots")
+                        payload["bots"][room_id] = room_bots
                     for room_resources in msg.resources:
                         room_id = make_room_id(
                             room_resources.roomId.q, room_resources.roomId.r
                         )
-                        payload["resources"][room_id] = MessageToDict(
-                            message=room_resources, preserving_proto_field_name=False
-                        ).get("resources")
+                        payload["resources"][room_id] = room_resources
                     for room_structures in msg.structures:
                         room_id = make_room_id(
                             room_structures.roomId.q, room_structures.roomId.r
                         )
-                        payload["structures"][room_id] = MessageToDict(
-                            room_structures,
-                            preserving_proto_field_name=False,
-                        ).get("structures")
+                        payload["structures"][room_id] = room_structures
 
                     if msg.diagnostics:
                         payload["diagnostics"] = MessageToDict(

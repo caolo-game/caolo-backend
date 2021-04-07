@@ -1,4 +1,4 @@
-use crate::protos::cao_commands::{
+use crate::protos::cao_script::{
     SetDefaultScriptCommand, UpdateEntityScriptCommand, UpdateScriptCommand,
 };
 use caolo_sim::{self, prelude::*, tables::JoinIterator};
@@ -47,16 +47,14 @@ pub fn update_program(storage: &mut World, msg: &UpdateScriptCommand) -> UpdateR
     let user_id = UserId(user_id);
     let script_id = ScriptId(script_id);
 
-    // TODO:
-    // check if verified_by version matches our version?
     let cu = msg
         .compilation_unit
         .as_ref()
         .ok_or(UpdateProgramError::MissingField("compilation_unit"))?
-        .compilation_unit
+        .encoded
         .as_ref()
         .ok_or(UpdateProgramError::MissingField(
-            "compilation_unit.compilation_unit",
+            "compilation_unit.encoded",
         ))?
         .value
         .as_slice();

@@ -1,4 +1,3 @@
-use crate::input::script_update;
 use crate::input::structures;
 use crate::input::users;
 use crate::{input::rooms, protos::cao_commands};
@@ -34,38 +33,6 @@ impl cao_commands::command_server::Command for CommandService {
             .map_err(|err| Status::invalid_argument(err.to_string()))
     }
 
-    #[tracing::instrument]
-    async fn update_entity_script(
-        &self,
-        request: tonic::Request<cao_commands::UpdateEntityScriptCommand>,
-    ) -> Result<tonic::Response<cao_commands::CommandResult>, tonic::Status> {
-        let mut w = self.world.lock().await;
-        script_update::update_entity_script(&mut *w, request.get_ref())
-            .map(|_: ()| Response::new(cao_commands::CommandResult {}))
-            .map_err(|err| Status::invalid_argument(err.to_string()))
-    }
-
-    #[tracing::instrument]
-    async fn update_script(
-        &self,
-        request: tonic::Request<cao_commands::UpdateScriptCommand>,
-    ) -> Result<tonic::Response<cao_commands::CommandResult>, tonic::Status> {
-        let mut w = self.world.lock().await;
-        script_update::update_program(&mut *w, request.get_ref())
-            .map(|_: ()| Response::new(cao_commands::CommandResult {}))
-            .map_err(|err| Status::invalid_argument(err.to_string()))
-    }
-
-    #[tracing::instrument]
-    async fn set_default_script(
-        &self,
-        request: tonic::Request<cao_commands::SetDefaultScriptCommand>,
-    ) -> Result<tonic::Response<cao_commands::CommandResult>, tonic::Status> {
-        let mut w = self.world.lock().await;
-        script_update::set_default_script(&mut *w, request.get_ref())
-            .map(|_: ()| Response::new(cao_commands::CommandResult {}))
-            .map_err(|err| Status::invalid_argument(err.to_string()))
-    }
 
     #[tracing::instrument]
     async fn take_room(

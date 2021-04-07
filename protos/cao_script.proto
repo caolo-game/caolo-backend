@@ -7,23 +7,10 @@ message SchemaCard
 {
     string name = 1;
     string description = 2;
-    Inputs input = 3;
-    Outputs output = 4;
-    Constants constants = 5;
+    repeated string inputs = 3;
+    repeated string outputs = 4;
+    repeated string constants = 5;
     string ty = 6;
-
-    message Inputs
-    {
-        repeated string values = 1;
-    }
-    message Outputs
-    {
-        repeated string values = 1;
-    }
-    message Constants
-    {
-        repeated string values = 1;
-    }
 }
 
 message Schema
@@ -31,27 +18,45 @@ message Schema
     repeated SchemaCard cards = 1;
 }
 
-message CompilerVersion
-{
-    uint32 major = 1;
-    uint32 minor = 2;
-    uint32 patch = 3;
-}
-
 message CompilationUnit
 {
-    cao_common.Json compilationUnit = 1;
-    CompilerVersion verifiedBy = 2;
+    cao_common.Json encoded = 1;
 }
 
-message ScriptHistoryEntry
+message EntityId
 {
-    uint32 entityId = 1;
-    repeated ScriptNodeId payload = 2;
+    int64 id = 1;
 }
 
-message ScriptNodeId
+message UpdateEntityScriptCommand
 {
-    uint32 lane = 1;
-    uint32 pos = 2;
+    cao_common.Uuid userId = 1;
+    uint32 entityId = 2;
+    cao_common.Uuid scriptId = 3;
+}
+
+message UpdateScriptCommand
+{
+    cao_common.Uuid userId = 1;
+    cao_common.Uuid scriptId = 2;
+    cao_script.CompilationUnit compilationUnit = 3;
+}
+
+message SetDefaultScriptCommand
+{
+    cao_common.Uuid userId = 1;
+    cao_common.Uuid scriptId = 2;
+}
+
+/// Empty on success
+message CommandResult
+{
+}
+
+service Scripting
+{
+    rpc GetBotScriptId(EntityId) returns (cao_common.Uuid) { }
+    rpc UpdateEntityScript(UpdateEntityScriptCommand) returns (CommandResult) { }
+    rpc UpdateScript(UpdateScriptCommand) returns (CommandResult) { }
+    rpc SetDefaultScript(SetDefaultScriptCommand) returns (CommandResult) { }
 }

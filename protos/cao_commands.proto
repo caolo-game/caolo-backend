@@ -15,26 +15,7 @@ message PlaceStructureCommand
     StructureType ty = 3;
 }
 
-message UpdateEntityScriptCommand
-{
-    cao_common.Uuid userId = 1;
-    uint32 entityId = 2;
-    cao_common.Uuid scriptId = 3;
-}
-
-message UpdateScriptCommand
-{
-    cao_common.Uuid userId = 1;
-    cao_common.Uuid scriptId = 2;
-    cao_script.CompilationUnit compilationUnit = 3;
-}
-
-message SetDefaultScriptCommand
-{
-    cao_common.Uuid userId = 1;
-    cao_common.Uuid scriptId = 2;
-}
-
+/// Empty on success
 message CommandResult
 {
 }
@@ -54,9 +35,6 @@ message RegisterUserCommand
 service Command
 {
     rpc PlaceStructure(PlaceStructureCommand) returns (CommandResult) { }
-    rpc UpdateEntityScript(UpdateEntityScriptCommand) returns (CommandResult) { }
-    rpc UpdateScript(UpdateScriptCommand) returns (CommandResult) { }
-    rpc SetDefaultScript(SetDefaultScriptCommand) returns (CommandResult) { }
     rpc TakeRoom(TakeRoomCommand) returns (CommandResult) { }
     rpc RegisterUser(RegisterUserCommand) returns (CommandResult) { }
 }

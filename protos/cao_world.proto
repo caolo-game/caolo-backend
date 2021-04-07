@@ -30,6 +30,11 @@ message RoomLayout
     repeated cao_common.Axial positions = 1;
 }
 
+message RoomList
+{
+    repeated cao_common.Axial room_ids = 1;
+}
+
 message RoomBots
 {
     cao_common.Axial roomId = 1;
@@ -141,8 +146,8 @@ service World
 {
     /// Stream the entities on updates
     rpc Entities(Empty) returns (stream WorldEntities) { }
-
     rpc GetRoomLayout(Empty) returns (RoomLayout) { }
+    rpc GetRoomList(Empty) returns (RoomList) { }
 
     rpc GetRoomTerrain(cao_common.Axial) returns (RoomTerrain) { }
 }

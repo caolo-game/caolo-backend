@@ -153,8 +153,7 @@ class GameStateManager:
                         except:
                             logging.exception("Callback failed")
 
-                logging.warn("GameStateManager._listener exiting")
-                return
+                logging.warn("Queen stream ended. Retrying...")
             except grpc.aio.AioRpcError as err:
                 if err.code() in (grpc.StatusCode.UNAVAILABLE, grpc.StatusCode.UNKNOWN):
                     logging.warn("Cao-Queen is unavailable. Retrying...")

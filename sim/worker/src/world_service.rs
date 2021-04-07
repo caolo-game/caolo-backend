@@ -129,7 +129,7 @@ impl cao_world::world_server::World for WorldService {
 
     async fn get_room_layout(
         &self,
-        _r: tonic::Request<cao_world::Empty>,
+        _: tonic::Request<cao_world::Empty>,
     ) -> Result<tonic::Response<cao_world::RoomLayout>, tonic::Status> {
         let positions = self
             .room_bounds
@@ -167,6 +167,21 @@ impl cao_world::world_server::World for WorldService {
                 .map(|t| t.into())
                 .collect(),
         }))
+    }
+
+    async fn get_room_list(
+        &self,
+        _: tonic::Request<cao_world::Empty>,
+    ) -> Result<tonic::Response<cao_world::RoomList>, tonic::Status> {
+        let room_ids = self
+            .terrain
+            .keys()
+            .map(|point| cao_common::Axial {
+                q: point.q,
+                r: point.r,
+            })
+            .collect();
+        Ok(tonic::Response::new(cao_world::RoomList { room_ids }))
     }
 }
 

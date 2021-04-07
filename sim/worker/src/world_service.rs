@@ -138,7 +138,7 @@ mod tests {
             .unwrap();
         caolo_sim::init::init_world_entities(&mut *w, 12);
 
-        pl.update(w.time(), &w.hot_as_json());
+        pl.update(w.time(), &w);
 
         assert!(!pl.payload.bots.is_empty());
         assert!(!pl.payload.structures.is_empty());

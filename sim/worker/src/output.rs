@@ -62,29 +62,3 @@ pub async fn send_schema<'a>(
     debug!("Sending schema done");
     Ok(())
 }
-
-pub async fn send_const<'a>(
-    payload: &'a serde_json::Value,
-    queen_tag: &'a str,
-    db: impl sqlx::Executor<'a, Database = sqlx::Postgres>,
-) -> anyhow::Result<()> {
-    debug!("Sending world");
-
-    sqlx::query!(
-        r#"
-        INSERT INTO world_const (queen_tag, payload)
-        VALUES ($1, $2)
-        ON CONFLICT (queen_tag)
-        DO UPDATE
-        SET payload=$2
-        "#,
-        queen_tag,
-        payload
-    )
-    .execute(db)
-    .await
-    .with_context(|| "Failed to insert into DB")?;
-
-    debug!("Sending world done");
-    Ok(())
-}

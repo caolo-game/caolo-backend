@@ -102,18 +102,6 @@ fn main() {
         .expect("Failed to send schema");
     caolo_sim::init::init_world_entities(&mut world, game_conf.n_actors as usize);
 
-    info!("Init Done. Sending cold data to db");
-
-    sim_rt
-        .block_on(output::send_const(
-            &world.cold_as_json(),
-            queen_tag.as_str(),
-            &db_pool,
-        ))
-        .expect("Failed to send const data");
-
-    info!("Sending constant data done");
-
     let addr = env::var("CAO_SERVICE_ADDR")
         .ok()
         .map(|x| x.parse().expect("failed to parse cao service address"))

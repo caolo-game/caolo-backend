@@ -5,11 +5,13 @@ import datetime as dt
 import asyncio
 import logging
 
+from fastapi import HTTPException, status
 from aioredis import Redis
 import grpc
 from google.protobuf.json_format import MessageToDict
 
 import cao_world_pb2
+import cao_common_pb2
 import cao_world_pb2_grpc
 
 from ..config import QUEEN_TAG
@@ -43,11 +45,30 @@ async def load_initial_game_state(channel):
     )
 
 
-async def get_terrain(game_state: GameState, room_id: str):
-    assert room_id in game_state.rooms
-    assert game_state.properties, "Load properties before getting room_objects"
-    terrain = game_state.properties["terrain"].get("roomTerrain", {})
-    return terrain.get(room_id, [])
+async def get_terrain(q, r):
+    room_id = cao_common_pb2.Axial()
+    room_id.q = q
+    room_id.r = r
+
+    channel = await queen_channel()
+    stub = cao_world_pb2_grpc.WorldStub(channel)
+
+    try:
+        terrain = await stub.GetRoomTerrain(room_id)
+    except grpc.aio.AioRpcError as err:
+        if err.code() == grpc.StatusCode.NOT_FOUND:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Room not found"
+            ) from err
+        else:
+            logging.exception("Unhandled rpc error")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    assert terrain.roomId.q == q
+    assert terrain.roomId.r == r
+    return MessageToDict(
+        terrain, including_default_value_fields=True, preserving_proto_field_name=False
+    ).get("tiles", [])
 
 
 def __to_dict(obj):

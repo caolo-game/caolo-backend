@@ -22,7 +22,7 @@ RUN rustup update
 RUN rustc --version
 RUN cargo --version
 
-COPY ./protos/ ./protos/
+RUN mkdir ./protos
 ENV CAO_PROTOS_PATH=/caolo/protos
 
 # Blind-bake dependencies by running setup with an empty caoloapi/ directory
@@ -40,6 +40,7 @@ COPY --from=venv /caolo/api/.env ./.env
 RUN .env/bin/pip install . --no-cache-dir
 
 # Actually install caoloapi
+COPY ./protos/ ./protos/
 COPY ./api/ ./
 RUN .env/bin/pip install . --no-cache-dir
 

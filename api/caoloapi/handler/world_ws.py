@@ -4,10 +4,12 @@ import asyncio
 from dataclasses import dataclass
 
 from fastapi import (
+    status,
     APIRouter,
     WebSocket,
     Depends,
     WebSocketDisconnect,
+    HTTPException,
 )
 
 
@@ -19,6 +21,7 @@ from ..model.game_state import (
     get_room_objects,
     get_terrain,
 )
+from ..api_schema import parse_room_id
 
 router = APIRouter(tags=["world"])
 
@@ -46,12 +49,17 @@ class WorldMessenger:
             pass
 
     async def send_terrain(self, client):
-        state = self.game_state or game_state_manager.game_state
-        if not state:
-            logging.error("No GameState is available")
-            return
-        terrain = get_terrain(state, client.room_id)
-        pl = {"terrain": terrain, "ty": "terrain"}
+        room_id = parse_room_id(client.room_id)
+        try:
+            terrain = await get_terrain(room_id.q, room_id.r)
+            pl = {"terrain": terrain, "ty": "terrain"}
+        except HTTPException as err:
+            if err.status_code == status.HTTP_404_NOT_FOUND:
+                pl = {"error": "Room terrain was not found", "ty": "error"}
+            else:
+                logging.exception("Failed to get terrain")
+                pl = {"error": "Internal server error", "ty": "error"}
+
         pl = json.dumps(pl, default=lambda o: o.__dict__)
         await client.ws.send_text(pl)
 

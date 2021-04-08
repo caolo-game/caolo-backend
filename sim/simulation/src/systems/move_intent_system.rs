@@ -79,7 +79,6 @@ mod tests {
 
     #[test]
     fn pre_process_move_intents_removes_last_dupe() {
-
         let mut intents = vec![
             MoveIntent {
                 bot: EntityId(42),

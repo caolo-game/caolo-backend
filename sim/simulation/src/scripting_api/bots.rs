@@ -393,7 +393,6 @@ mod tests {
 
     #[test]
     fn can_move_to_another_room() {
-
         let mut storage = World::new();
 
         let bot_id = storage.insert_entity();

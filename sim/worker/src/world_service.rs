@@ -84,9 +84,9 @@ impl Payload {
                     tick_latency_ms: diag.tick_latency_ms,
                 }),
                 accumulated: Some(cao_world::diagnostics::Accumulated {
-                    tick_latency_count: diag.tick_latency_count.into(),
-                    tick_latency_max: diag.tick_latency_max.into(),
-                    tick_latency_min: diag.tick_latency_min.into(),
+                    tick_latency_count: diag.tick_latency_count,
+                    tick_latency_max: diag.tick_latency_max,
+                    tick_latency_min: diag.tick_latency_min,
                     tick_latency_mean: diag.tick_latency_mean,
                     tick_latency_std: diag.tick_latency_std,
                 }),
@@ -152,7 +152,7 @@ impl cao_world::world_server::World for WorldService {
         let room = self
             .terrain
             .get(&p)
-            .ok_or(tonic::Status::not_found("Room does not exist"))?;
+            .ok_or_else(|| tonic::Status::not_found("Room does not exist"))?;
 
         Ok(tonic::Response::new(cao_world::RoomTerrain {
             room_id: Some(cao_common::Axial { q, r }),

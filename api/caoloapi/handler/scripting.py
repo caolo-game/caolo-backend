@@ -18,23 +18,24 @@ from fastapi import (
 from pydantic import BaseModel
 from asyncpg.exceptions import UniqueViolationError
 
+from google.protobuf.json_format import MessageToDict
+
+from cao_script_pb2 import Empty
+from cao_script_pb2_grpc import ScriptingStub
+
 from .users import get_current_user_id
+from ..queen import queen_channel
 
 router = APIRouter(prefix="/scripting", tags=["scripting"])
 
 
 @router.get("/schema", response_model=List[Dict])
 async def get_schema(req: Request):
-    res_encoded = await req.state.db.fetchval(
-        """
-        SELECT t.payload
-        FROM public.scripting_schema t
-        ORDER BY t.created DESC
-        """
-    )
-    # returned data is already json encoded string
-    # just write the already encoded response...
-    return Response(res_encoded, media_type="application/json")
+    stub = ScriptingStub(await queen_channel())
+    res = await stub.GetSchema(Empty())
+    return MessageToDict(
+        res, including_default_value_fields=True, preserving_proto_field_name=False
+    ).get("cards", [])
 
 
 def _compile_caolang_program(prog_json: str):

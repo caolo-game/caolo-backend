@@ -1,6 +1,5 @@
 mod config;
 mod input;
-mod output;
 mod protos;
 
 mod command_service;
@@ -73,12 +72,6 @@ fn main() {
         "Loaded Queen params:\nScript chunk size: {}\nTick latency: {:?}",
         script_chunk_size, tick_latency
     );
-    let database_url = env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "postgres://postgres:admin@localhost:5432/caolo".to_owned());
-
-    let db_pool = sim_rt
-        .block_on(sqlx::PgPool::connect(database_url.as_str()))
-        .expect("failed to connect to database");
 
     let tag = env::var("CAO_QUEEN_TAG").unwrap_or_else(|_| Uuid::new_v4().to_string());
     let s = tracing::error_span!("", queen_tag = tag.as_str());
@@ -87,7 +80,6 @@ fn main() {
     info!("Creating cao executor with tag {}", tag);
     let mut executor = SimpleExecutor;
     info!("Init storage");
-    let queen_tag = tag.clone();
     let mut world = executor
         .initialize(caolo_sim::executor::GameConfig {
             world_radius: game_conf.world_radius,
@@ -99,9 +91,6 @@ fn main() {
 
     info!("Starting with {} actors", game_conf.n_actors);
 
-    sim_rt
-        .block_on(output::send_schema(&db_pool, queen_tag.as_str()))
-        .expect("Failed to send schema");
     caolo_sim::init::init_world_entities(&mut world, game_conf.n_actors as usize);
 
     let addr = env::var("CAO_SERVICE_ADDR")

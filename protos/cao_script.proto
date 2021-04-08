@@ -53,10 +53,13 @@ message CommandResult
 {
 }
 
+message Empty { }
+
 service Scripting
 {
     rpc GetBotScriptId(EntityId) returns (cao_common.Uuid) { }
     rpc UpdateEntityScript(UpdateEntityScriptCommand) returns (CommandResult) { }
     rpc UpdateScript(UpdateScriptCommand) returns (CommandResult) { }
     rpc SetDefaultScript(SetDefaultScriptCommand) returns (CommandResult) { }
+    rpc GetSchema(Empty) returns (Schema) { }
 }

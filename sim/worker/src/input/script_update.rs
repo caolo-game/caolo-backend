@@ -53,9 +53,7 @@ pub fn update_program(storage: &mut World, msg: &UpdateScriptCommand) -> UpdateR
         .ok_or(UpdateProgramError::MissingField("compilation_unit"))?
         .encoded
         .as_ref()
-        .ok_or(UpdateProgramError::MissingField(
-            "compilation_unit.encoded",
-        ))?
+        .ok_or(UpdateProgramError::MissingField("compilation_unit.encoded"))?
         .value
         .as_slice();
 

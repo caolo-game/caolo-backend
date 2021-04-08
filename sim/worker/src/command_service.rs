@@ -33,7 +33,6 @@ impl cao_commands::command_server::Command for CommandService {
             .map_err(|err| Status::invalid_argument(err.to_string()))
     }
 
-
     #[tracing::instrument]
     async fn take_room(
         &self,

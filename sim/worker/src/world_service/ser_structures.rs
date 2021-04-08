@@ -95,12 +95,10 @@ pub fn structure_payload(
         }
     }
     // push the last accumulator
-    if room.is_some() {
-        if !accumulator.is_empty() {
-            out.push(cao_world::RoomStructures {
-                room_id: room.map(|Room(Axial { q, r })| cao_common::Axial { q, r }),
-                structures: accumulator,
-            });
-        }
+    if room.is_some() && !accumulator.is_empty() {
+        out.push(cao_world::RoomStructures {
+            room_id: room.map(|Room(Axial { q, r })| cao_common::Axial { q, r }),
+            structures: accumulator,
+        });
     }
 }

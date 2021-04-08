@@ -95,23 +95,23 @@ impl cao_script::scripting_server::Scripting for ScriptingService {
                 constants: card
                     .desc
                     .constants
-                    .into_iter()
+                    .iter()
                     .map(|x| x.to_string())
                     .collect(),
                 outputs: card
                     .desc
                     .output
-                    .into_iter()
+                    .iter()
                     .map(|x| x.to_string())
                     .collect(),
-                inputs: card.desc.input.into_iter().map(|x| x.to_string()).collect(),
+                inputs: card.desc.input.iter().map(|x| x.to_string()).collect(),
                 name: card.desc.name.to_string(),
                 description: card.desc.description.to_string(),
             })
-            .chain(basic_descs.into_iter().map(|card| SchemaCard {
-                constants: card.constants.into_iter().map(|x| x.to_string()).collect(),
-                outputs: card.output.into_iter().map(|x| x.to_string()).collect(),
-                inputs: card.input.into_iter().map(|x| x.to_string()).collect(),
+            .chain(basic_descs.iter().map(|card| SchemaCard {
+                constants: card.constants.iter().map(|x| x.to_string()).collect(),
+                outputs: card.output.iter().map(|x| x.to_string()).collect(),
+                inputs: card.input.iter().map(|x| x.to_string()).collect(),
                 name: card.name.to_string(),
                 description: card.description.to_string(),
                 ty: card.ty.as_str().to_string(),

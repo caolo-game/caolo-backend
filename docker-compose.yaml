@@ -35,8 +35,6 @@ services:
       dockerfile: ./sim.Dockerfile
     image: frenetiq/caolo-sim:bleeding
     env_file: docker.env
-    depends_on:
-      - db
     ports:
       - "50051:50051"
 

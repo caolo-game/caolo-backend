@@ -1,9 +1,14 @@
+import inspect
 import logging
 import asyncio
 
 
 def aio_with_backoff(*, retries=None, max_sleep=None):
-    def _f(func):
+    def _decorator(func):
+        assert inspect.iscoroutinefunction(func) or inspect.isasyncgenfunction(
+            func
+        ), "Only async context is supported"
+
         async def _wrapper(*args, **kwargs):
             i = 0
             while 1:
@@ -21,4 +26,4 @@ def aio_with_backoff(*, retries=None, max_sleep=None):
 
         return _wrapper
 
-    return _f
+    return _decorator

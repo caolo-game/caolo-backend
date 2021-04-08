@@ -31,21 +31,6 @@ fn init() {
     tracing_subscriber::fmt::init();
 }
 
-fn tick(exc: &mut impl Executor, storage: &mut World) {
-    let start = chrono::Utc::now();
-    exc.forward(storage)
-        .map(|_| {
-            let duration = chrono::Utc::now() - start;
-
-            info!(
-                "Tick {} has been completed in {} ms",
-                storage.time(),
-                duration.num_milliseconds()
-            );
-        })
-        .expect("Failed to forward game state")
-}
-
 fn main() {
     init();
     let sim_rt = caolo_sim::RuntimeGuard::new();
@@ -148,10 +133,9 @@ fn main() {
                 // free the world mutex at the end of this scope
                 let mut world = world.lock().await;
 
-                tick(&mut executor, &mut *world);
+                executor.forward(&mut *world).unwrap();
 
-                let time = world.time();
-                pl.update(time, &world);
+                pl.update(world.time(), &world);
             }
 
             if outpayload.receiver_count() > 0 {
@@ -168,7 +152,7 @@ fn main() {
                 .checked_sub(Instant::now() - start)
                 .unwrap_or_else(|| Duration::from_millis(0));
 
-            info!("Sleeping for {:?}", sleep_duration);
+            debug!("Sleeping for {:?}", sleep_duration);
             tokio::time::sleep(sleep_duration).await;
         }
         // using this for a type hint

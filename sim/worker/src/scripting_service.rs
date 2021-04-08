@@ -75,4 +75,51 @@ impl cao_script::scripting_server::Scripting for ScriptingService {
             )),
         }
     }
+
+    async fn get_schema(
+        &self,
+        _: tonic::Request<cao_script::Empty>,
+    ) -> Result<tonic::Response<cao_script::Schema>, tonic::Status> {
+        use cao_script::SchemaCard;
+
+        let schema = caolo_sim::scripting_api::make_import();
+        let imports = schema.imports();
+        let basic_descs = cao_lang::compiler::card_description::get_instruction_descriptions();
+
+        // TODO: allocator prime candidate for the allocator interface feature
+
+        let cards = imports
+            .iter()
+            .map(|card| SchemaCard {
+                ty: "Call".to_string(),
+                constants: card
+                    .desc
+                    .constants
+                    .into_iter()
+                    .map(|x| x.to_string())
+                    .collect(),
+                outputs: card
+                    .desc
+                    .output
+                    .into_iter()
+                    .map(|x| x.to_string())
+                    .collect(),
+                inputs: card.desc.input.into_iter().map(|x| x.to_string()).collect(),
+                name: card.desc.name.to_string(),
+                description: card.desc.description.to_string(),
+            })
+            .chain(basic_descs.into_iter().map(|card| SchemaCard {
+                constants: card.constants.into_iter().map(|x| x.to_string()).collect(),
+                outputs: card.output.into_iter().map(|x| x.to_string()).collect(),
+                inputs: card.input.into_iter().map(|x| x.to_string()).collect(),
+                name: card.name.to_string(),
+                description: card.description.to_string(),
+                ty: card.ty.as_str().to_string(),
+            }))
+            .collect();
+
+        let schema = cao_script::Schema { cards };
+
+        Ok(tonic::Response::new(schema))
+    }
 }

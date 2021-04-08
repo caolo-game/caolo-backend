@@ -25,16 +25,6 @@ rand = "*"
 sentry = "0.22"
 anyhow = "1"
 thiserror = "1"
-sqlx = { version = "0.5", features = [
-    "json",
-    "postgres",
-    "chrono",
-    "tls",
-    "uuid",
-    "macros",
-    "runtime-tokio-native-tls",
-    "offline"
-] }
 dotenv = { version = "0.14", optional = true }
 uuid = { version = "0.8", features = ["v4"] }
 tokio = { version = "1", features = ["sync"] }

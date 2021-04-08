@@ -17,6 +17,7 @@ import cao_world_pb2_grpc
 from ..config import QUEEN_TAG
 from ..api_schema import RoomObjects, make_room_id
 from ..queen import queen_channel
+from ..util import aio_with_backoff
 
 
 @dataclass
@@ -108,62 +109,63 @@ class GameStateManager:
         except ValueError:
             pass
 
+    @aio_with_backoff(retries=None, max_sleep=60)
     async def _listener(self, queen_url: str):
-        while 1:
-            try:
-                logging.info("Subscribing to world updates at %s", queen_url)
-                # TODO: maybe use secure channel??
-                channel = await queen_channel(queen_url)
-                stub = cao_world_pb2_grpc.WorldStub(channel)
+        try:
+            logging.info("Subscribing to world updates at %s", queen_url)
+            channel = await queen_channel(queen_url)
+            stub = cao_world_pb2_grpc.WorldStub(channel)
 
-                self.game_state = await load_initial_game_state(channel)
-                async for msg in stub.Entities(cao_world_pb2.Empty()):
-                    payload = {
-                        "bots": {},
-                        "resources": {},
-                        "structures": {},
-                        "diagnostics": None,
-                    }
-                    for room_bots in msg.bots:
-                        room_id = make_room_id(room_bots.roomId.q, room_bots.roomId.r)
-                        payload["bots"][room_id] = room_bots
-                    for room_resources in msg.resources:
-                        room_id = make_room_id(
-                            room_resources.roomId.q, room_resources.roomId.r
-                        )
-                        payload["resources"][room_id] = room_resources
-                    for room_structures in msg.structures:
-                        room_id = make_room_id(
-                            room_structures.roomId.q, room_structures.roomId.r
-                        )
-                        payload["structures"][room_id] = room_structures
+            self.game_state = await load_initial_game_state(channel)
+            async for msg in stub.Entities(cao_world_pb2.Empty()):
+                payload = {
+                    "bots": {},
+                    "resources": {},
+                    "structures": {},
+                    "diagnostics": None,
+                }
+                for room_bots in msg.bots:
+                    room_id = make_room_id(room_bots.roomId.q, room_bots.roomId.r)
+                    payload["bots"][room_id] = room_bots
+                for room_resources in msg.resources:
+                    room_id = make_room_id(
+                        room_resources.roomId.q, room_resources.roomId.r
+                    )
+                    payload["resources"][room_id] = room_resources
+                for room_structures in msg.structures:
+                    room_id = make_room_id(
+                        room_structures.roomId.q, room_structures.roomId.r
+                    )
+                    payload["structures"][room_id] = room_structures
 
-                    if msg.diagnostics:
-                        payload["diagnostics"] = MessageToDict(
-                            msg.diagnostics, preserving_proto_field_name=False
-                        )
+                if msg.diagnostics:
+                    payload["diagnostics"] = MessageToDict(
+                        msg.diagnostics, preserving_proto_field_name=False
+                    )
 
-                    assert self.game_state is not None
-                    self.game_state.world_time = msg.worldTime
-                    self.game_state.created = dt.datetime.now()
-                    self.game_state.entities = payload
+                assert self.game_state is not None
+                self.game_state.world_time = msg.worldTime
+                self.game_state.created = dt.datetime.now()
+                self.game_state.entities = payload
 
-                    for cb in self.on_new_state_callbacks:
-                        try:
-                            cb(self.game_state)
-                        except:
-                            logging.exception("Callback failed")
+                for cb in self.on_new_state_callbacks:
+                    try:
+                        cb(self.game_state)
+                    except:
+                        logging.exception("Callback failed")
 
-                logging.warn("Queen stream ended. Retrying...")
-            except grpc.aio.AioRpcError as err:
-                if err.code() in (grpc.StatusCode.UNAVAILABLE, grpc.StatusCode.UNKNOWN):
-                    logging.warn("Cao-Queen is unavailable. Retrying...")
-                else:
-                    logging.exception("gRPC error in GameState listener")
-                    raise
-            except:
-                logging.exception("Error in GameState listener")
+            logging.warn("Queen stream ended. Retrying...")
+            raise EOFError("queen stream ended.")
+        except grpc.aio.AioRpcError as err:
+            if err.code() in (grpc.StatusCode.UNAVAILABLE, grpc.StatusCode.UNKNOWN):
+                logging.warn("Cao-Queen is unavailable.")
                 raise
+            else:
+                logging.exception("gRPC error in GameState listener")
+                raise
+        except:
+            logging.exception("Error in GameState listener")
+            raise
 
     async def start(self, queen_tag: str, queen_url: str, db):
         asyncio.create_task(self._listener(queen_url))

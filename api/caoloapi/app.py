@@ -19,7 +19,8 @@ from . import handler
 
 
 logging.basicConfig(
-    level=logging.WARNING,
+    level=logging.DEBUG,
+    #  level=logging.WARNING,
     format="%(asctime)s [%(levelname)s] %(pathname)s:%(lineno)d: %(message)s",
 )
 

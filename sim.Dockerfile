@@ -37,11 +37,9 @@ RUN rm -f target/release/deps/caolo_*
 FROM rust:1.51 AS build
 
 RUN apt-get update
-RUN apt-get install lld clang libc-dev  pkgconf libpq-dev protobuf-compiler -y
+RUN apt-get install lld clang libc-dev pkgconf protobuf-compiler -y
 
 WORKDIR /caolo
-
-RUN cargo install diesel_cli --no-default-features --features=postgres --root .
 
 # copy the cache
 COPY --from=deps $CARGO_HOME $CARGO_HOME
@@ -65,11 +63,9 @@ FROM ubuntu:18.04
 WORKDIR /caolo
 
 RUN apt-get update -y
-RUN apt-get install bash libpq-dev openssl -y
+RUN apt-get install bash openssl -y
 
-COPY ./migrations ./migrations
 COPY --from=build /caolo/sim/target/release/caolo-worker ./caolo-worker
-COPY --from=build /caolo/bin/diesel ./diesel
 
 RUN ls -al
 

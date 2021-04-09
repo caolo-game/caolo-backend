@@ -74,7 +74,9 @@ async def get_terrain(q, r):
 
 def __to_dict(obj):
     if obj is not None:
-        return MessageToDict(obj, preserving_proto_field_name=False)
+        return MessageToDict(
+            obj, preserving_proto_field_name=False, including_default_value_fields=True
+        )
     return {}
 
 

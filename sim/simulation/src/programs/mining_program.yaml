@@ -1,0 +1,47 @@
+lanes:
+  - name: "main"
+    cards:
+      - ty: ScalarInt
+        val: 1
+      - ty: StringLiteral
+        val: "Resource"
+      - ty: Call
+        val: "Parse Find Constant"
+      - ty: Call
+        val: "Find Closest"
+      - ty: ScalarInt
+        val: 0
+      - ty: Equals
+      - ty: JumpIfFalse
+        val:
+          LaneName: "resource-error"
+      - ty: CopyLast
+      - ty: Call
+        val: "Approach Entity"
+      - ty: ScalarInt
+        val: 0
+      - ty: Equals
+      - ty: JumpIfFalse
+        val:
+          LaneName: "move-error"
+      - ty: Call
+        val: Mine
+
+      - ty: StringLiteral
+        val: "We be mining bois"
+      - ty: Call
+        val: "Console Log"
+
+  - name: "resource-error"
+    cards:
+      - ty: StringLiteral
+        val: "No resource found"
+      - ty: Call
+        val: "Console Log"
+
+  - name: "move-error"
+    cards:
+      - ty: StringLiteral
+        val: "Failed to move"
+      - ty: Call
+        val: "Console Log"

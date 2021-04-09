@@ -44,7 +44,7 @@ pub fn init_structure_spawn(id: EntityId, owner_id: Uuid, pos: WorldPosition, wo
                     energy_max: 500,
                 }
             );
-            EntityId, EnergyRegenComponent, .insert_or_update(id, EnergyRegenComponent { amount: 5 });
+            EntityId, EnergyRegenComponent, .insert_or_update(id, EnergyRegenComponent { amount: 20 });
             EntityId, HpComponent, .insert_or_update(
                 id,
                 HpComponent {

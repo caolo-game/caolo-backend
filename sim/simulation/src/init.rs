@@ -12,7 +12,7 @@ pub fn init_world_entities(storage: &mut World, n_fake_users: usize) {
 
     let mining_script_id = ScriptId(Uuid::new_v4());
     let script: CompilationUnit =
-        serde_json::from_str(include_str!("./programs/mining_program.json"))
+        serde_yaml::from_str(include_str!("./programs/mining_program.yaml"))
             .expect("deserialize example program");
     debug!("compiling default program");
     let compiled = compile(script, CompileOptions::new().with_breadcrumbs(false))
@@ -145,8 +145,8 @@ fn init_resource(
     energy_table.insert_or_update(
         id,
         EnergyComponent {
-            energy: 250,
-            energy_max: 250,
+            energy: 100,
+            energy_max: 100,
         },
     );
 

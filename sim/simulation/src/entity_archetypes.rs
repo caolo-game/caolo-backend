@@ -24,6 +24,7 @@ use crate::query;
 ///
 /// ```
 pub fn init_structure_spawn(id: EntityId, owner_id: Uuid, pos: WorldPosition, world: &mut World) {
+    // TODO tweak these numbas
     query!(
         mutate world
         {
@@ -43,7 +44,7 @@ pub fn init_structure_spawn(id: EntityId, owner_id: Uuid, pos: WorldPosition, wo
                     energy_max: 500,
                 }
             );
-            EntityId, EnergyRegenComponent, .insert_or_update(id, EnergyRegenComponent { amount: 5 });
+            EntityId, EnergyRegenComponent, .insert_or_update(id, EnergyRegenComponent { amount: 50 });
             EntityId, HpComponent, .insert_or_update(
                 id,
                 HpComponent {

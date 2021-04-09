@@ -49,17 +49,7 @@ class WorldMessenger:
             pass
 
     async def send_terrain(self, client):
-        room_id = parse_room_id(client.room_id)
-        try:
-            terrain = await get_terrain(room_id.q, room_id.r)
-            pl = {"terrain": terrain, "ty": "terrain"}
-        except HTTPException as err:
-            if err.status_code == status.HTTP_404_NOT_FOUND:
-                pl = {"error": "Room terrain was not found", "ty": "error"}
-            else:
-                logging.exception("Failed to get terrain")
-                pl = {"error": "Internal server error", "ty": "error"}
-
+        pl = self._terrain_payload(client)
         pl = json.dumps(pl, default=lambda o: o.__dict__)
         await client.ws.send_text(pl)
 
@@ -73,6 +63,23 @@ class WorldMessenger:
         pl = {"entities": entities, "ty": "entities"}
         pl = json.dumps(pl, default=lambda o: o.__dict__)
         await client.ws.send_text(pl)
+
+    async def _terrain_payload(self, client):
+        try:
+            room_id = parse_room_id(client.room_id)
+        except ValueError as err:
+            logging.debug("Failed to parse roomId %s", err)
+            return {"error": "Failed to parse roomId", "ty": "error"}
+
+        try:
+            terrain = await get_terrain(room_id.q, room_id.r)
+            return {"terrain": terrain, "ty": "terrain"}
+        except HTTPException as err:
+            if err.status_code == status.HTTP_404_NOT_FOUND:
+                return {"error": "Room terrain was not found", "ty": "error"}
+            else:
+                logging.exception("Failed to get terrain")
+                return {"error": "Internal server error", "ty": "error"}
 
     def on_new_state(self, state):
         self.game_state = state

@@ -2,7 +2,7 @@
 .PHONY: api sim
 
 test-sim:
-	${MAKE} -C sim test
+	@${MAKE} -C sim test
 
 test: test-sim
 

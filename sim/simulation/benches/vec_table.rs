@@ -198,8 +198,8 @@ fn delete_by_id_random(c: &mut Criterion) {
     c.bench_function("vec_table delete_by_id_random", |b| {
         let mut rng = get_rand();
         let mut table = DenseVecTable::<EntityId, i32>::new();
-        let mut ids = Vec::with_capacity(1 << 15);
-        for i in 0..1 << 15 {
+        let mut ids = Vec::with_capacity(1 << 12);
+        for i in 0..1 << 12 {
             let mut res = false;
             let mut id = Default::default();
             while !res {
@@ -210,7 +210,7 @@ fn delete_by_id_random(c: &mut Criterion) {
         }
         ids.as_mut_slice().shuffle(&mut rng);
         let mut i = 0;
-        let mask = (1 << 15) - 1;
+        let mask = (1 << 12) - 1;
         b.iter(|| {
             i = (i + 1) & mask;
             let id = ids[i];

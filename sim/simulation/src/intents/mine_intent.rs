@@ -4,7 +4,7 @@ use crate::scripting_api::OperationResult;
 use crate::storage::views::View;
 use crate::tables::traits::Table;
 use serde::{Deserialize, Serialize};
-use tracing::debug;
+use tracing::{debug, trace};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct MineIntent {
@@ -27,6 +27,10 @@ pub fn check_mine_intent(
     (bots_table, owner_ids_table, positions_table, resources_table, energy_table, carry_table): CheckInput,
 ) -> OperationResult {
     let bot = intent.bot;
+
+    let s = tracing::debug_span!("check_mine_intent", entity_id = bot.0);
+    let _e = s.enter();
+
     match bots_table.get_by_id(bot) {
         Some(_) => {
             let owner_id = owner_ids_table.get_by_id(bot);
@@ -67,7 +71,21 @@ pub fn check_mine_intent(
         }
     }
 
-    if botpos.0.room != mineralpos.0.room || botpos.0.pos.hex_distance(mineralpos.0.pos) > 1 {
+    if botpos.0.room != mineralpos.0.room {
+        trace!(
+            "NotInSameRoom bot: {:?} mineral: {:?}",
+            botpos.0.room,
+            mineralpos.0.room,
+        );
+        return OperationResult::NotInRange;
+    }
+    if botpos.0.pos.hex_distance(mineralpos.0.pos) > 1 {
+        trace!(
+            "NotInRange bot: {:?} mineral: {:?}, distance: {}",
+            botpos.0.pos,
+            mineralpos.0.pos,
+            botpos.0.pos.hex_distance(mineralpos.0.pos)
+        );
         return OperationResult::NotInRange;
     }
 

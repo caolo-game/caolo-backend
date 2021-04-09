@@ -21,9 +21,10 @@ impl Axial {
     /// Return the "Manhattan" distance between two points in a hexagonal coordinate space
     /// Interprets points as axial coordiantes
     /// See https://www.redblobgames.com/grids/hexagons/#distances for more information
-    pub fn hex_distance(self, other: Axial) -> u32 {
+    #[inline]
+    pub fn hex_distance(self, rhs: Axial) -> u32 {
         let [ax, ay, az] = self.hex_axial_to_cube();
-        let [bx, by, bz] = other.hex_axial_to_cube();
+        let [bx, by, bz] = rhs.hex_axial_to_cube();
         let x = (ax - bx).abs();
         let y = (ay - by).abs();
         let z = (az - bz).abs();
@@ -31,6 +32,7 @@ impl Axial {
     }
 
     /// Convert self from a hexagonal axial vector to a hexagonal cube vector
+    #[inline]
     pub fn hex_axial_to_cube(self) -> [i32; 3] {
         let x = self.q;
         let z = self.r;
@@ -38,11 +40,13 @@ impl Axial {
         [x, y, z]
     }
 
+    #[inline]
     pub fn hex_cube_to_axial([q, _, r]: [i32; 3]) -> Self {
         Self { q, r }
     }
 
     /// Get the neighbours of this point starting at top left and going counter-clockwise
+    #[inline]
     pub fn hex_neighbours(self) -> [Axial; 6] {
         [
             Axial::new(self.q + 1, self.r),
@@ -65,6 +69,7 @@ impl Axial {
     /// let i = Axial::neighbour_index(neighbour - point);
     /// assert_eq!(i, Some(2));
     /// ```
+    #[inline]
     pub fn neighbour_index(Axial { q, r }: Axial) -> Option<usize> {
         let i = match (q, r) {
             (1, 0) => 0,
@@ -78,32 +83,38 @@ impl Axial {
         Some(i)
     }
 
+    #[inline]
     pub fn rotate_right_around(self, center: Axial) -> Axial {
         let p = self - center;
         let p = p.rotate_right();
         p + center
     }
 
+    #[inline]
     pub fn rotate_left_around(self, center: Axial) -> Axial {
         let p = self - center;
         let p = p.rotate_left();
         p + center
     }
 
+    #[inline]
     pub fn rotate_right(self) -> Axial {
         let [x, y, z] = self.hex_axial_to_cube();
         Self::hex_cube_to_axial([-z, -x, -y])
     }
 
+    #[inline]
     pub fn rotate_left(self) -> Axial {
         let [x, y, z] = self.hex_axial_to_cube();
         Self::hex_cube_to_axial([-y, -z, -x])
     }
 
+    #[inline]
     pub fn as_array(self) -> [i32; 2] {
         [self.q, self.r]
     }
 
+    #[inline]
     pub fn get_axis(&self, axis: u8) -> i32 {
         match axis & 1 {
             0 => self.q,
@@ -111,6 +122,7 @@ impl Axial {
         }
     }
 
+    #[inline]
     pub fn dist(self, other: Self) -> u32 {
         self.hex_distance(other)
     }

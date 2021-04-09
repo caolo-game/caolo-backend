@@ -117,8 +117,22 @@ pub fn log_scalar(vm: &mut Vm<ScriptExecutionData>, value: Scalar) -> Result<(),
     trace!("log_scalar");
     let entity_id = vm.get_aux().entity_id;
     let time = vm.get_aux().storage().time();
-    let payload = format!("{:?} says {:?}", entity_id, value);
-    trace!("{}", payload);
+    let payload = match value {
+        Scalar::Pointer(p) => {
+            let mut out = String::with_capacity(64);
+            if let Some(val) = vm.get_object_properties(p) {
+                val.write_debug(&mut out);
+            } else {
+                use std::fmt::Write;
+                write!(out, "invalid pointer").unwrap()
+            }
+            out
+        }
+        Scalar::Null => "null".to_string(),
+        Scalar::Integer(i) => i.to_string(),
+        Scalar::Floating(f) => f.to_string(),
+    };
+    trace!("{:?} says: {}", entity_id, payload);
     vm.get_aux_mut().intents.with_log(entity_id, payload, time);
     Ok(())
 }

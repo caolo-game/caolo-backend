@@ -104,7 +104,10 @@ pub fn mine_resource(
         ExecutionError::InvalidArgument { context: None }
     })?;
 
-    trace!("mine_resource: target: {:?}, {}", target, aux);
+    let s = tracing::trace_span!("mine_resource", entity_id = aux.entity_id.0);
+    let _e = s.enter();
+
+    trace!("target: {:?}, {}", target, aux);
 
     let storage = aux.storage();
     let user_id = aux.user_id.expect("user_id to be set");
@@ -116,6 +119,7 @@ pub fn mine_resource(
 
     let checkresult = check_mine_intent(&intent, user_id, FromWorld::new(storage));
     vm.stack_push(checkresult)?;
+    trace!("result: {:?}", checkresult);
     if let OperationResult::Ok = checkresult {
         vm.get_aux_mut().intents.mine_intent = Some(intent);
     }

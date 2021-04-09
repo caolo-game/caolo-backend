@@ -38,12 +38,14 @@ pub fn parse_find_constant(
     trace!("parse_find_constant");
     let param = vm.get_value_in_place::<&str>(param).ok_or_else(|| {
         trace!("parse_find_constant called with invalid param");
-        ExecutionError::invalid_argument("parse_find_constant called with invalid param".to_owned())
+        ExecutionError::invalid_argument(
+            "parse_find_constant called with non-string param".to_owned(),
+        )
     })?;
     let constant = match param {
-        "Resource" => FindConstant::Resource,
-        "Spawn" => FindConstant::Spawn,
-        "EnemyBot" => FindConstant::EnemyBot,
+        "resource" | "RESOURCE" | "Resource" => FindConstant::Resource,
+        "spawn" | "SPAWN" | "Spawn" => FindConstant::Spawn,
+        "enemy_bot" | "ENEMY_BOT" | "EnemyBot" => FindConstant::EnemyBot,
         _ => {
             trace!(
                 "parse_find_constant got an invalid constant value {}",
@@ -67,10 +69,12 @@ pub fn find_closest_by_range(
     profile!("find_closest_by_range");
 
     let aux = vm.get_aux();
+    let entity_id = aux.entity_id;
+
+    let s = tracing::debug_span!("find_closest_by_range", entity_id = entity_id.0);
+    let _e = s.enter();
 
     trace!("find_closest_by_range {:?}", param);
-
-    let entity_id = aux.entity_id;
 
     let position = match vm
         .get_aux()
@@ -125,6 +129,7 @@ impl FindConstant {
         match candidate {
             Some(entity) => {
                 let id = entity.0; // move out of the result to free the storage borrow
+                trace!("Found entity {:?}", entity);
                 vm.set_value(id)?;
                 vm.stack_push(OperationResult::Ok)?;
             }
@@ -148,17 +153,18 @@ where
     let WorldPosition { room, pos } = position;
     let entities_by_pos = storage.view::<WorldPosition, EntityComponent>();
 
-    let room = entities_by_pos.table.at(room).ok_or_else(|| {
-        warn!(
-            "find_closest_resource_by_range called on invalid room {:?}",
-            position
-        );
-        ExecutionError::InvalidArgument { context: None }
-    })?;
+    let room = entities_by_pos
+        .table
+        .at(room)
+        .ok_or_else(|| ExecutionError::InvalidArgument {
+            context: "find_closest_resource_by_range called on invalid room"
+                .to_string()
+                .into(),
+        })?;
 
     // search the whole room
     let candidate = room.find_closest_by_filter(pos, |_, entity| filter(entity.0));
-    let candidate = candidate.map(|(_, _, id)| id.0);
+    let candidate = candidate.map(|(_, _, EntityComponent(id))| *id);
     Ok(candidate)
 }
 

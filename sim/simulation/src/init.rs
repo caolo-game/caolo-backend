@@ -28,23 +28,23 @@ pub fn init_world_entities(storage: &mut World, n_fake_users: usize) {
         }
     );
 
-    let center_walking_script_id = ScriptId(Uuid::new_v4());
-    let script: CompilationUnit =
-        serde_json::from_str(include_str!("./programs/center_walking_program.json"))
-            .expect("deserialize example program");
-    debug!("compiling default program");
-    let compiled = compile(script, CompileOptions::new().with_breadcrumbs(false))
-        .expect("failed to compile example program");
-    debug!("compilation done");
-
-    crate::query!(
-        mutate
-        storage
-        {
-            ScriptId, ScriptComponent,
-                .insert_or_update(center_walking_script_id, ScriptComponent(compiled));
-        }
-    );
+    // let center_walking_script_id = ScriptId(Uuid::new_v4());
+    // let script: CompilationUnit =
+    //     serde_json::from_str(include_str!("./programs/center_walking_program.json"))
+    //         .expect("deserialize example program");
+    // debug!("compiling default program");
+    // let compiled = compile(script, CompileOptions::new().with_breadcrumbs(false))
+    //     .expect("failed to compile example program");
+    // debug!("compilation done");
+    //
+    // crate::query!(
+    //     mutate
+    //     storage
+    //     {
+    //         ScriptId, ScriptComponent,
+    //             .insert_or_update(center_walking_script_id, ScriptComponent(compiled));
+    //     }
+    // );
 
     let config = UnwrapView::<ConfigKey, GameConfig>::new(storage);
 
@@ -86,32 +86,7 @@ pub fn init_world_entities(storage: &mut World, n_fake_users: usize) {
         trace!("spawning entities");
         storage
             .unsafe_view::<UserId, EntityScript>()
-            .insert_or_update(UserId(user_id), EntityScript(center_walking_script_id));
-        let spawn_pos = storage
-            .view::<EntityId, PositionComponent>()
-            .get_by_id(spawnid)
-            .expect("spawn should have position")
-            .0;
-        for _ in 0..2 {
-            let botid = storage.insert_entity();
-            init_bot(
-                botid,
-                mining_script_id,
-                user_id,
-                spawn_pos,
-                FromWorldMut::new(storage),
-            );
-        }
-        for _ in 0..2 {
-            let botid = storage.insert_entity();
-            init_bot(
-                botid,
-                center_walking_script_id,
-                user_id,
-                spawn_pos,
-                FromWorldMut::new(storage),
-            );
-        }
+            .insert_or_update(UserId(user_id), EntityScript(mining_script_id));
         let id = storage.insert_entity();
         init_resource(
             &bounds,
@@ -125,61 +100,6 @@ pub fn init_world_entities(storage: &mut World, n_fake_users: usize) {
     }
 
     debug!("init done");
-}
-
-type InitBotMuts = (
-    UnsafeView<EntityId, MeleeAttackComponent>,
-    UnsafeView<EntityId, HpComponent>,
-    UnsafeView<EntityId, EntityScript>,
-    UnsafeView<EntityId, Bot>,
-    UnsafeView<EntityId, CarryComponent>,
-    UnsafeView<EntityId, OwnedEntity>,
-    UnsafeView<EntityId, PositionComponent>,
-    UnsafeView<WorldPosition, EntityComponent>,
-);
-
-fn init_bot(
-    id: EntityId,
-    script_id: ScriptId,
-    owner_id: Uuid,
-    pos: WorldPosition,
-    (
-        mut melee,
-        mut hp,
-        mut entity_scripts,
-        mut bots,
-        mut carry_component,
-        mut owners,
-        mut positions,
-        mut entities_by_pos,
-    ): InitBotMuts,
-) {
-    entity_scripts.insert_or_update(id, EntityScript(script_id));
-    bots.insert(id);
-    carry_component.insert_or_update(
-        id,
-        CarryComponent {
-            carry: 0,
-            carry_max: 50,
-        },
-    );
-    owners.insert_or_update(
-        id,
-        OwnedEntity {
-            owner_id: UserId(owner_id),
-        },
-    );
-
-    positions.insert_or_update(id, PositionComponent(pos));
-    entities_by_pos
-        .table
-        .at_mut(pos.room)
-        .expect("expected bot pos to be in the table")
-        .insert(pos.pos, EntityComponent(id))
-        .expect("entities_by_pos insert");
-
-    melee.insert_or_update(id, MeleeAttackComponent { strength: 5 });
-    hp.insert_or_update(id, HpComponent { hp: 50, hp_max: 50 });
 }
 
 #[allow(clippy::too_many_arguments)] // its just a helper function let it be

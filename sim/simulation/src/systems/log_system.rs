@@ -13,13 +13,7 @@ pub fn update(mut logs: Mut, time: Const) {
     // clear the old logs
     let changeset = logs
         .iter()
-        .filter_map(|(id, _)| {
-            if id.1 < time.0.max(5) - 5 {
-                Some(id)
-            } else {
-                None
-            }
-        })
+        .filter_map(|(id, _)| (id.1 < time.0.max(5) - 5).then(|| id))
         .collect::<Vec<_>>();
 
     // we delete in the same table we iterated on above

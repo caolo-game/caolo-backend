@@ -98,13 +98,15 @@ pub fn console_log(
     trace!("console_log");
     let message = vm.get_value_in_place::<&str>(message).ok_or_else(|| {
         trace!("console_log called with invalid message");
-        ExecutionError::InvalidArgument { context: None }
+        ExecutionError::InvalidArgument {
+            context: "console_log argument must be a string".to_string().into(),
+        }
     })?;
     let entity_id = vm.get_aux().entity_id;
     let time = vm.get_aux().storage().time();
 
-    let payload = format!("{:?} says {}", entity_id, message);
-    trace!("{}", payload);
+    let payload = message.to_string();
+    trace!("{:?} says {}", entity_id, payload);
     vm.get_aux_mut().intents.with_log(entity_id, payload, time);
 
     Ok(())

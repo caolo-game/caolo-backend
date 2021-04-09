@@ -11,11 +11,13 @@ type BotTables<'a> = (
     View<'a, EntityId, DecayComponent>,
     View<'a, EntityId, OwnedEntity>,
     View<'a, EntityId, EntityScript>,
+    View<'a, EntityTime, LogEntry>,
+    WorldTime,
 );
 
 pub fn bot_payload(
     out: &mut ::prost::alloc::vec::Vec<cao_world::RoomBots>,
-    (room_entities, bots, carry, hp, melee, decay, owner, script): BotTables,
+    (room_entities, bots, carry, hp, melee, decay, owner, script, logs, WorldTime(time)): BotTables,
 ) {
     let room_entities = room_entities.iter_rooms();
 
@@ -86,6 +88,10 @@ pub fn bot_payload(
                         .map(|EntityScript(ScriptId(script_id))| cao_common::Uuid {
                             data: script_id.as_bytes().to_vec(),
                         }),
+                    logs: logs
+                        .get_by_id(EntityTime(entity_id, time-1)) // send the logs of the last tick
+                        .map(|logs| logs.payload.clone())
+                        .unwrap_or_default(),
                 });
             }
         }

@@ -132,6 +132,15 @@ impl InsertEntityView {
     }
 }
 
+/// Immutable view into the world time
+#[derive(Clone, Copy)]
+pub struct WorldTime(pub u64);
+impl<'a> FromWorld<'a> for WorldTime {
+    fn new(w: &'a World) -> Self {
+        Self(w.time())
+    }
+}
+
 macro_rules! implement_tuple {
     ($id: tt = $v: ident) => {
         impl<'a, $v: FromWorld<'a> >

@@ -63,6 +63,7 @@ message Bot
     cao_common.Uuid owner = 6;
     uint32 meleeStrength = 7;
     Decay decay = 8;
+    repeated string logs = 9;
 
     message Decay
     {

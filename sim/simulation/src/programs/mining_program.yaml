@@ -24,13 +24,25 @@ lanes:
       - ty: JumpIfFalse
         val:
           LaneName: "move-error"
+
       - ty: Call
         val: Mine
-
       - ty: StringLiteral
-        val: "We be mining bois"
+        val: "We be mining bois: "
       - ty: Call
         val: "Console Log"
+      - ty: Call
+        val: "Log scalar"
+
+  # TODO: to check for fullness Cao-Lang must be updated w/ the 'tables' feature first. Then the API needs to provide bot state on demand
+  - name: "full"
+    cards:
+      - ty: StringLiteral
+        val: "I'm full baws"
+      - ty: Call
+        val: "Console Log"
+      - ty: ExitWithCode
+        val: 1
 
   - name: "resource-error"
     cards:
@@ -38,6 +50,8 @@ lanes:
         val: "No resource found"
       - ty: Call
         val: "Console Log"
+      - ty: ExitWithCode
+        val: 1
 
   - name: "move-error"
     cards:

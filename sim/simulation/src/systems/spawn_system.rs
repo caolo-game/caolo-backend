@@ -124,7 +124,7 @@ fn spawn_bot(
         DecayComponent {
             interval: 20,
             time_remaining: 20,
-            hp_amount: 100,
+            hp_amount: 10,
         },
     );
     carry.insert_or_update(

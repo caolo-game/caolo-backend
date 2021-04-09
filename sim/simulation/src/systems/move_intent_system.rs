@@ -5,7 +5,7 @@ use crate::profile;
 use crate::storage::views::{UnsafeView, UnwrapViewMut, View};
 use crate::tables::traits::Table;
 use rayon::prelude::*;
-use tracing::{debug, trace};
+use tracing::trace;
 
 type Mut = (
     UnsafeView<EntityId, PositionComponent>,
@@ -64,7 +64,7 @@ fn pre_process_move_intents(move_intents: &mut Vec<MoveIntent>) {
         let a = &move_intents[last];
         let b = &move_intents[current];
         if a.position == b.position {
-            debug!("Duplicated position in move intents, removing {:?}", a);
+            trace!("Duplicated position in move intents, removing {:?}", a);
             move_intents.swap_remove(last);
         }
     }

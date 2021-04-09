@@ -16,7 +16,7 @@ use crate::join;
 use crate::profile;
 use crate::storage::views::{UnsafeView, View};
 use crate::tables::{JoinIterator, Table};
-use tracing::{debug, warn};
+use tracing::{trace, warn};
 
 type SpawnSystemMut = (
     UnsafeView<EntityId, SpawnComponent>,
@@ -98,7 +98,7 @@ fn spawn_bot(
     ): SpawnBotMut,
     user_default_scripts: View<UserId, EntityScript>,
 ) {
-    debug!(
+    trace!(
         "spawn_bot spawn_id: {:?} entity_id: {:?}",
         spawn_id, entity_id
     );
@@ -150,7 +150,7 @@ fn spawn_bot(
         owned.insert_or_update(entity_id, owner);
     }
 
-    debug!(
+    trace!(
         "spawn_bot spawn_id: {:?} entity_id: {:?} - done",
         spawn_id, entity_id
     );

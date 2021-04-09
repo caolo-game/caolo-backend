@@ -4,7 +4,7 @@ use crate::join;
 use crate::profile;
 use crate::storage::views::UnsafeView;
 use crate::tables::JoinIterator;
-use tracing::debug;
+use tracing::{debug, trace};
 
 pub fn update(
     (mut hps, mut decays): (
@@ -25,14 +25,15 @@ pub fn update(
                 DecayComponent {
                     hp_amount,
                     interval,
-                    ref mut time_remaining,
+                    time_remaining,
                 },
-                HpComponent { ref mut hp, .. },
+                HpComponent { hp, .. },
             ),
         )| match time_remaining {
             0 => {
-                *hp -= *hp.min(hp_amount);
+                *hp = (*hp).saturating_sub(*hp_amount);
                 *time_remaining = *interval;
+                trace!("Decayed entity {:?}. Current hp: {}", _id, *hp);
             }
             _ => {
                 *time_remaining -= 1;

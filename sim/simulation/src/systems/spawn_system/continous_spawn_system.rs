@@ -8,7 +8,7 @@ use crate::join;
 use crate::profile;
 use crate::storage::views::{UnwrapViewMut, View};
 use crate::tables::JoinIterator;
-use tracing::debug;
+use tracing::trace;
 
 type SpawnSystemMut = (UnwrapViewMut<EmptyKey, Intents<SpawnIntent>>,);
 
@@ -24,7 +24,7 @@ pub fn update((mut intents,): SpawnSystemMut, (owners, spawn_queues): SpawnSyste
     let own_it = owners.iter();
 
     for (spawn_id, (_spawn, owner)) in join!([spawnq_it, own_it]) {
-        debug!("Adding a spawn intent to the queue of spawn {:?}", spawn_id);
+        trace!("Adding a spawn intent to the queue of spawn {:?}", spawn_id);
         intents.0.push(SpawnIntent {
             spawn_id,
             owner_id: Some(owner.owner_id),

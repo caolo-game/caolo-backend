@@ -49,7 +49,7 @@ class WorldMessenger:
             pass
 
     async def send_terrain(self, client):
-        pl = self._terrain_payload(client)
+        pl = await self._terrain_payload(client)
         pl = json.dumps(pl, default=lambda o: o.__dict__)
         await client.ws.send_text(pl)
 

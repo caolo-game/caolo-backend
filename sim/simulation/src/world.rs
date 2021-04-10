@@ -108,6 +108,7 @@ pub struct World {
     pub deferred_deletes: entity_store::DeferredDeletes,
 
     pub next_entity: EntityId,
+    pub free_entity_list: Vec<EntityId>,
 }
 
 macro_rules! impl_hastable {
@@ -171,6 +172,7 @@ impl World {
             positions: Default::default(),
             deferred_deletes: Default::default(),
             next_entity: EntityId::default(),
+            free_entity_list: Default::default(),
 
             user: Default::default(),
         });
@@ -202,6 +204,9 @@ impl World {
 
     /// Perform post-tick cleanup on the storage
     pub fn post_process(&mut self) {
+        for e in self.deferred_deletes.entityid.iter().copied() {
+            self.free_entity_list.push(e);
+        }
         self.deferred_deletes.execute_all(&mut self.entities);
         self.deferred_deletes.clear();
 
@@ -216,6 +221,11 @@ impl World {
     pub fn insert_entity(&mut self) -> EntityId {
         use crate::tables::SerialId;
 
+        if let Some(entity_id) = self.free_entity_list.pop() {
+            return entity_id;
+        }
+
+        // if no freed id is available then allocate a new entity
         let res = self.next_entity;
         self.next_entity = self.next_entity.next();
         res

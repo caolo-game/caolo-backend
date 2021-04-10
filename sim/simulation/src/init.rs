@@ -28,24 +28,6 @@ pub fn init_world_entities(storage: &mut World, n_fake_users: usize) {
         }
     );
 
-    // let center_walking_script_id = ScriptId(Uuid::new_v4());
-    // let script: CompilationUnit =
-    //     serde_json::from_str(include_str!("./programs/center_walking_program.json"))
-    //         .expect("deserialize example program");
-    // debug!("compiling default program");
-    // let compiled = compile(script, CompileOptions::new().with_breadcrumbs(false))
-    //     .expect("failed to compile example program");
-    // debug!("compilation done");
-    //
-    // crate::query!(
-    //     mutate
-    //     storage
-    //     {
-    //         ScriptId, ScriptComponent,
-    //             .insert_or_update(center_walking_script_id, ScriptComponent(compiled));
-    //     }
-    // );
-
     let config = UnwrapView::<ConfigKey, GameConfig>::new(storage);
 
     let radius = config.room_radius;

@@ -24,7 +24,7 @@ pub fn update((mut log_table, mut intents): Mut, (): ()) {
         // this should be cheaper than cloning all the time, because of the inner vectors
         match log_table.delete(id) {
             Some(mut entry) => {
-                entry.payload.extend_from_slice(intent.payload.as_slice());
+                entry.payload.extend(intent.payload.chars());
                 log_table.insert_or_update(id, entry);
             }
             None => {

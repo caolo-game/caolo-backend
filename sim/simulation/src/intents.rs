@@ -34,12 +34,14 @@ impl BotIntents {
         if self.log_intent.is_none() {
             self.log_intent = Some(LogIntent {
                 entity,
-                payload: Vec::with_capacity(64),
+                payload: String::with_capacity(128),
                 time,
             })
         }
         if let Some(ref mut log_intent) = self.log_intent {
-            log_intent.payload.push(payload.into());
+            use std::fmt::Write;
+            writeln!(&mut log_intent.payload, "{}", payload.into())
+                .expect("Failed to write log line");
         }
         self
     }

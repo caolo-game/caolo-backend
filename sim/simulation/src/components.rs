@@ -141,7 +141,7 @@ impl<Id: TableId> Component<Id> for SpawnBotComponent {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct LogEntry {
-    pub payload: Vec<String>,
+    pub payload: String,
 }
 impl<Id: TableId> Component<Id> for LogEntry {
     type Table = BTreeTable<Id, Self>;

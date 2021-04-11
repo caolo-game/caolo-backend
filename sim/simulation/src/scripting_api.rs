@@ -107,7 +107,9 @@ pub fn console_log(
 
     let payload = message.to_string();
     trace!("{:?} says {}", entity_id, payload);
-    vm.get_aux_mut().intents.with_log(entity_id, payload, time);
+    vm.get_aux_mut()
+        .intents
+        .with_log(entity_id, payload.as_str(), time);
 
     Ok(())
 }
@@ -133,7 +135,9 @@ pub fn log_scalar(vm: &mut Vm<ScriptExecutionData>, value: Scalar) -> Result<(),
         Scalar::Floating(f) => f.to_string(),
     };
     trace!("{:?} says: {}", entity_id, payload);
-    vm.get_aux_mut().intents.with_log(entity_id, payload, time);
+    vm.get_aux_mut()
+        .intents
+        .with_log(entity_id, payload.as_str(), time);
     Ok(())
 }
 

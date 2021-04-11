@@ -25,7 +25,7 @@ use crate::tables::{unique::UniqueTable, Component};
 use serde::{Deserialize, Serialize};
 
 impl BotIntents {
-    pub fn with_log<S: Into<String>>(
+    pub fn with_log<'a, S: Into<&'a str>>(
         &mut self,
         entity: EntityId,
         payload: S,
@@ -39,9 +39,7 @@ impl BotIntents {
             })
         }
         if let Some(ref mut log_intent) = self.log_intent {
-            use std::fmt::Write;
-            writeln!(&mut log_intent.payload, "{}", payload.into())
-                .expect("Failed to write log line");
+            log_intent.payload.push_str(payload.into());
         }
         self
     }

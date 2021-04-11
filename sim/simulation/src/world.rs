@@ -214,7 +214,7 @@ impl World {
             .resources
             .time
             .value
-            .map(|x| Time(x.0 + 1))
+            .map(|Time(x)| Time(x + 1))
             .or(Some(Time(1)));
     }
 

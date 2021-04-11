@@ -254,10 +254,10 @@ pub fn make_import() -> Schema {
             FunctionRow {
                 desc: subprogram_description!(
                     "Find Closest",
-                    "Find an object of type `FindConstant`, closest to the current entity",
+                    "Find an object of type `FindConstant`, closest to the current entity. Returns `null` if no such entity is found",
                     SubProgramType::Function,
                     [FindConstant],
-                    [OperationResult, EntityId],
+                    [EntityId],
                     []
                 ),
                 fo: Box::new(into_f1(find_api::find_closest_by_range)),

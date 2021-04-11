@@ -15,8 +15,8 @@ pub fn init_world_entities(storage: &mut World, n_fake_users: usize) {
         serde_yaml::from_str(include_str!("./programs/mining_program.yaml"))
             .expect("deserialize example program");
     debug!("compiling default program");
-    let compiled = compile(script, CompileOptions::new().with_breadcrumbs(false))
-        .expect("failed to compile example program");
+    let compiled =
+        compile(script, CompileOptions::new()).expect("failed to compile example program");
     debug!("compilation done");
 
     crate::query!(

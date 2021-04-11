@@ -15,19 +15,20 @@ use crate::{
         Component, MortonMortonTable, TableId,
     },
 };
-use cao_lang::{prelude::CaoProgram, vm::HistoryEntry};
+use cao_lang::prelude::CaoProgram;
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 
+/// Currently does nothing as Cao-Lang not yet supports history
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ScriptHistoryEntry {
     pub entity_id: EntityId,
-    pub payload: Vec<HistoryEntry>,
     pub time: u64,
 }
 
+/// Currently does nothing as Cao-Lang not yet supports history
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct ScriptHistory(pub Vec<HistoryEntry>);
+pub struct ScriptHistory(());
 impl Component<EntityId> for ScriptHistory {
     type Table = DenseVecTable<EntityId, Self>;
 }

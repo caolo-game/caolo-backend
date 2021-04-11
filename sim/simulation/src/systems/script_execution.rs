@@ -1,7 +1,5 @@
 use crate::{
-    components::{
-        game_config::GameConfig, EntityScript, OwnedEntity, ScriptComponent, ScriptHistoryEntry,
-    },
+    components::{game_config::GameConfig, EntityScript, OwnedEntity, ScriptComponent},
     diagnostics::Diagnostics,
     indices::{ConfigKey, EntityId, ScriptId, UserId},
     intents::*,
@@ -13,7 +11,7 @@ use cao_lang::prelude::*;
 use rayon::prelude::*;
 use std::convert::TryFrom;
 use std::fmt::{self, Display, Formatter};
-use std::mem::{replace, take};
+use std::mem::replace;
 use thiserror::Error;
 use tracing::{debug, trace, warn};
 
@@ -73,7 +71,6 @@ pub fn execute_scripts(
 
                 let conf = UnwrapView::<ConfigKey, GameConfig>::new(storage);
                 let mut vm = Vm::new(data);
-                vm.history.reserve(conf.execution_limit as usize);
                 vm.max_iter = i32::try_from(conf.execution_limit)
                     .expect("Expected execution_limit to fit into 31 bits");
                 crate::scripting_api::make_import().execute_imports(&mut vm);
@@ -169,20 +166,13 @@ pub fn execute_single_script<'a>(
         }
     })?;
 
-    let history = take(&mut vm.history);
     let aux = replace(
         &mut vm.auxiliary_data,
         ScriptExecutionData::unsafe_default(),
     );
     trace!("Script execution completed, intents:{:?}", aux.intents);
 
-    let mut intents = aux.intents;
-    intents.script_history_intent = Some(ScriptHistoryEntry {
-        entity_id,
-        payload: history,
-        time: storage.time(),
-    });
-
+    let intents = aux.intents;
     Ok(intents)
 }
 

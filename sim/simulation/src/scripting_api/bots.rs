@@ -97,6 +97,7 @@ pub fn mine_resource(
     target: Pointer,
 ) -> Result<(), ExecutionError> {
     profile!("mine_resource");
+
     let aux = vm.get_aux();
 
     let target: EntityId = vm.get_value(target).ok_or_else(|| {

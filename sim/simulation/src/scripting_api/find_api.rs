@@ -129,13 +129,12 @@ impl FindConstant {
         match candidate {
             Some(entity) => {
                 let id = entity.0; // move out of the result to free the storage borrow
-                trace!("Found entity {:?}", entity);
+                trace!("Found entity {:?}", id);
                 vm.set_value(id)?;
-                vm.stack_push(OperationResult::Ok)?;
             }
             None => {
                 trace!("No stuff was found");
-                vm.stack_push(OperationResult::OperationFailed)?;
+                vm.stack_push(Scalar::Null)?;
             }
         }
         Ok(())
@@ -274,11 +273,6 @@ mod tests {
 
         find_closest_by_range(&mut vm, constant).expect("find_closest_by_range exec");
 
-        let res = vm.stack_pop();
-        let res =
-            OperationResult::try_from(res).expect("Expected res to be a valid OperationResult");
-        assert_eq!(res, OperationResult::Ok);
-
         let res_id = vm.stack_pop();
         if let Scalar::Pointer(p) = res_id {
             let res_id: EntityId = vm.get_value(p).expect("Expected entity_id to be set");
@@ -315,11 +309,6 @@ mod tests {
         let constant = FindConstant::Resource;
 
         find_closest_by_range(&mut vm, constant).expect("find_closest_by_range exec");
-
-        let res = vm.stack_pop();
-        let res =
-            OperationResult::try_from(res).expect("Expected res to be a valid OperationResult");
-        assert_eq!(res, OperationResult::Ok);
 
         let res_id = vm.stack_pop();
         if let Scalar::Pointer(p) = res_id {

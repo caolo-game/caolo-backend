@@ -30,7 +30,7 @@ fn test_world_position() {
     const PROGRAM: &str = r#"
 lanes:
     - cards:
-        - ty: Call
+        - ty: CallNative
           val: "WorldPosition"
         - ty: SetGlobalVar
           val: "pos"

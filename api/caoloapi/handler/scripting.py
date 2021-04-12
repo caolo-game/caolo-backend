@@ -76,6 +76,14 @@ class CaoLangProgram(BaseModel):
     lanes: List[CaoLangLane]
 
 
+@router.get("/cao-lang-version")
+async def cao_lang_version() -> str:
+    """
+    return the version of Cao-Lang currently in use
+    """
+    return cao_lang.native_version()
+
+
 @router.post("/compile")
 async def compile_program(req: Request, _body: CaoLangProgram = Body(...)):
     # Body is used for openapi hint

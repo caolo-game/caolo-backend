@@ -71,7 +71,7 @@ pub fn execute_scripts(
 
                 let conf = UnwrapView::<ConfigKey, GameConfig>::new(storage);
                 let mut vm = Vm::new(data);
-                vm.max_iter = i32::try_from(conf.execution_limit)
+                vm.max_instr = i32::try_from(conf.execution_limit)
                     .expect("Expected execution_limit to fit into 31 bits");
                 crate::scripting_api::make_import().execute_imports(&mut vm);
 
@@ -80,12 +80,15 @@ pub fn execute_scripts(
                         .get_by_id(*entity_id)
                         .map(|OwnedEntity { owner_id }| *owner_id);
 
+                    let s = tracing::error_span!("script_execution", entity_id = entity_id.0);
+                    let _e = s.enter();
+
                     vm.clear();
                     match execute_single_script(*entity_id, script.0, owner_id, storage, &mut vm) {
                         Ok(ints) => results.intents.push(ints),
                         Err(err) => {
                             results.num_scripts_errored += 1;
-                            warn!(
+                            debug!(
                                 "Execution failure in {:?} of {:?}:\n{:?}",
                                 script, entity_id, err
                             );

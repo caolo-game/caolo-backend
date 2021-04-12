@@ -180,7 +180,7 @@ pub fn make_import() -> Schema {
         imports: vec![
             FunctionRow {
                 desc: subprogram_description!(
-                    "Console Log",
+                    "console_log",
                     "Log a string",
                     SubProgramType::Function,
                     [String],
@@ -191,7 +191,7 @@ pub fn make_import() -> Schema {
             },
             FunctionRow {
                 desc: subprogram_description!(
-                    "Log Scalar",
+                    "log_scalar",
                     "Log a scalar value",
                     SubProgramType::Function,
                     [Scalar],
@@ -202,7 +202,7 @@ pub fn make_import() -> Schema {
             },
             FunctionRow {
                 desc: subprogram_description!(
-                    "Mine",
+                    "mine",
                     "Mine the target resource",
                     SubProgramType::Function,
                     [EntityId],
@@ -213,7 +213,7 @@ pub fn make_import() -> Schema {
             },
             FunctionRow {
                 desc: subprogram_description!(
-                    "Approach Entity",
+                    "approach_entity",
                     "Move the bot to the given Entity",
                     SubProgramType::Function,
                     [EntityId],
@@ -224,7 +224,7 @@ pub fn make_import() -> Schema {
             },
             FunctionRow {
                 desc: subprogram_description!(
-                    "Move to position",
+                    "move_to_position",
                     "Move the bot to the given Axial",
                     SubProgramType::Function,
                     [Axial],
@@ -235,7 +235,7 @@ pub fn make_import() -> Schema {
             },
             FunctionRow {
                 desc: subprogram_description!(
-                    "Make Point",
+                    "make_point",
                     "Create a point from x and y coordinates",
                     SubProgramType::Function,
                     [i32, i32],
@@ -246,7 +246,7 @@ pub fn make_import() -> Schema {
             },
             FunctionRow {
                 desc: subprogram_description!(
-                    "WorldPosition",
+                    "world_position",
                     "Create a WorldPosition from coordinates: [room.x, room.y, x, y]",
                     SubProgramType::Function,
                     [i32, i32, i32, i32],
@@ -257,7 +257,7 @@ pub fn make_import() -> Schema {
             },
             FunctionRow {
                 desc: subprogram_description!(
-                    "Find Closest",
+                    "find_closest",
                     "Find an object of type `FindConstant`, closest to the current entity. Returns `null` if no such entity is found",
                     SubProgramType::Function,
                     [FindConstant],
@@ -268,7 +268,7 @@ pub fn make_import() -> Schema {
             },
             FunctionRow {
                 desc: subprogram_description!(
-                    "Unload",
+                    "unload",
                     "Unload resources",
                     SubProgramType::Function,
                     [u16, components::Resource, EntityId],
@@ -279,7 +279,7 @@ pub fn make_import() -> Schema {
             },
             FunctionRow {
                 desc: subprogram_description!(
-                    "Parse Find Constant",
+                    "parse_find_constant",
                     "Converts string literal to a find constant",
                     SubProgramType::Function,
                     [String],
@@ -290,7 +290,7 @@ pub fn make_import() -> Schema {
             },
             FunctionRow {
                 desc: subprogram_description!(
-                    "Melee attack",
+                    "melee_attack",
                     "Attempts to strike the target entity",
                     SubProgramType::Function,
                     [EntityId],

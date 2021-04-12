@@ -4,9 +4,9 @@ lanes:
       - ty: StringLiteral
         val: "RESOURCE"
       - ty: CallNative
-        val: "Parse Find Constant"
+        val: "parse_find_constant"
       - ty: CallNative
-        val: "Find Closest"
+        val: "find_closest"
       - ty: SetLocalVar
         val: "resource"
       - ty: ReadVar
@@ -22,7 +22,7 @@ lanes:
       - ty: ReadVar
         val: "resource"
       - ty: CallNative
-        val: Mine
+        val: mine
 
       - ty: ScalarInt
         val: 0
@@ -39,18 +39,18 @@ lanes:
       - ty: ReadVar
         val: "resource"
       - ty: CallNative
-        val: "Approach Entity"
+        val: "approach_entity"
       - ty: StringLiteral
         val: "Work work...Move Result: "
       - ty: CallNative
-        val: "Console Log"
+        val: "console_log"
 
   - name: "resource-error"
     cards:
       - ty: StringLiteral
         val: "No resource found"
       - ty: CallNative
-        val: "Console Log"
+        val: "console_log"
       - ty: ExitWithCode
         val: 1
 
@@ -59,4 +59,4 @@ lanes:
       - ty: StringLiteral
         val: "I be mining baws"
       - ty: CallNative
-        val: "Console Log"
+        val: "console_log"

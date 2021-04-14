@@ -9,7 +9,6 @@ use crate::{
 };
 use cao_lang::prelude::*;
 use rayon::prelude::*;
-use std::convert::TryFrom;
 use std::fmt::{self, Display, Formatter};
 use std::mem::replace;
 use thiserror::Error;
@@ -70,9 +69,9 @@ pub fn execute_scripts(
                 let data = ScriptExecutionData::unsafe_default();
 
                 let conf = UnwrapView::<ConfigKey, GameConfig>::new(storage);
-                let mut vm = Vm::new(data);
-                vm.max_instr = i32::try_from(conf.execution_limit)
-                    .expect("Expected execution_limit to fit into 31 bits");
+                let mut vm = Vm::new(data).expect("Failed to initialize VM");
+                vm.runtime_data.set_memory_limit(40 * 1024 * 1024);
+                vm.max_instr = conf.execution_limit as u64;
                 crate::scripting_api::make_import().execute_imports(&mut vm);
 
                 for (entity_id, script) in entity_scripts {

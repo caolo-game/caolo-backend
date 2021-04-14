@@ -45,11 +45,7 @@ pub enum ExtendFailure {
     OutOfBounds(Axial),
 }
 
-#[derive(Clone)]
-pub struct MortonTable<Row>
-where
-    Row: TableRow,
-{
+pub struct MortonTable<Row> {
     keys: Vec<MortonKey>,
     values: Vec<(Axial, Row)>,
     // SkipList contains the last item of every bucket
@@ -106,7 +102,10 @@ where
         }
     }
 
-    pub fn from_vec(values: Vec<(Axial, Row)>) -> Result<Self, ExtendFailure> {
+    pub fn from_vec(values: Vec<(Axial, Row)>) -> Result<Self, ExtendFailure>
+    where
+        Row: Default,
+    {
         let mut keys = Vec::with_capacity(values.len());
         for (pos, _) in values.iter() {
             if !Self::is_valid_pos(*pos) {
@@ -154,6 +153,7 @@ where
     pub fn from_iterator<It>(it: It) -> Result<Self, ExtendFailure>
     where
         It: Iterator<Item = (Axial, Row)>,
+        Row: Default,
     {
         let mut res = Self::new();
         res.extend(it)?;
@@ -170,6 +170,7 @@ where
     pub fn extend<It>(&mut self, it: It) -> Result<(), ExtendFailure>
     where
         It: Iterator<Item = (Axial, Row)>,
+        Row: Default,
     {
         for (id, value) in it {
             if !self.intersects(id) {
@@ -187,11 +188,11 @@ where
         Ok(())
     }
 
-    /// Extend the map by the items provided.
-    /// Note that `Row`s are cloned!
-    pub fn extend_from_slice(&mut self, items: &[(Axial, Row)]) -> Result<(), ExtendFailure> {
-        self.extend(items.iter().map(|(pos, row)| (*pos, row.clone())))
-    }
+    //    /// Extend the map by the items provided.
+    //    /// Note that `Row`s are cloned!
+    // pub fn extend_from_slice(&mut self, items: &[(Axial, Row)]) -> Result<(), ExtendFailure> {
+    //     self.extend(items.iter().map(|(pos, row)| (*pos, *row)))
+    // }
 
     fn rebuild_skip_list(&mut self) {
         #[cfg(debug_assertions)]
@@ -577,49 +578,6 @@ where
         self.rebuild_skip_list();
         self
     }
-
-    /// Merge two `MortonTable`s by inserting all points that are in `other` but not in `self` and
-    /// calling `update` with all points that are present in both tables.
-    pub fn merge<F>(&mut self, other: &Self, mut update: F) -> Result<(), ExtendFailure>
-    where
-        F: FnMut(Axial, &Row, &Row) -> Row,
-    {
-        let inserts = {
-            let mut lhs = self.iter_mut();
-            let mut rhs = other.iter();
-
-            let mut current_left = lhs.next();
-            let mut current_right = rhs.next();
-
-            let mut inserts = Vec::with_capacity(other.keys.len());
-
-            while let Some(((p1, v1), (p2, v2))) = current_left
-                .as_mut()
-                .and_then(|lhs| current_right.map(|rhs| (lhs, rhs)))
-            {
-                if p1 != &p2 {
-                    if &p2 < p1 {
-                        // `self` can not have any more common items between these two
-                        inserts.push((p2, v2));
-                        current_right = rhs.next();
-                    } else {
-                        current_left = lhs.next();
-                    }
-                } else {
-                    **v1 = update(*p1, v1, v2);
-                    current_left = lhs.next();
-                    current_right = rhs.next();
-                }
-            }
-            while let Some(r) = current_right {
-                inserts.push(r);
-                current_right = rhs.next();
-            }
-            inserts
-        };
-
-        self.extend(inserts.into_iter().map(|(pos, v)| (pos, v.clone())))
-    }
 }
 
 impl<Row> Table for MortonTable<Row>
@@ -661,7 +619,7 @@ where
 
 impl<Row> SpacialStorage<Row> for MortonTable<Row>
 where
-    Row: TableRow,
+    Row: TableRow + Default,
 {
     type ExtendFailure = ExtendFailure;
     fn clear(&mut self) {

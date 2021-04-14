@@ -11,22 +11,19 @@ use crate::{
     storage::views::FromWorld,
 };
 use crate::{prelude::World, terrain::TileTerrainType};
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 use tracing::{debug, error, trace, warn};
 
-pub fn melee_attack(
-    vm: &mut Vm<ScriptExecutionData>,
-    target: Pointer,
-) -> Result<(), ExecutionError> {
+pub fn melee_attack(vm: &mut Vm<ScriptExecutionData>, target: i64) -> Result<(), ExecutionError> {
     profile!("melee-attack");
 
     let aux = vm.get_aux();
     trace!("melee_attack");
 
-    let target: EntityId = vm.get_value(target).ok_or_else(|| {
-        warn!("melee_attack called without a target");
-        ExecutionError::invalid_argument("melee_attack called without a target".to_owned())
-    })?;
+    let target: EntityId = EntityId(target.try_into().map_err(|_| {
+        warn!("melee_attack called without a valid target");
+        ExecutionError::invalid_argument("melee_attack called without valid a target".to_owned())
+    })?);
 
     let storage = aux.storage();
     let entity_id = aux.entity_id;
@@ -48,9 +45,9 @@ pub fn melee_attack(
 
 pub fn unload(
     vm: &mut Vm<ScriptExecutionData>,
-    amount: i32,
+    amount: i64,
     ty: Resource,
-    target: Pointer,
+    target: i64,
 ) -> Result<(), ExecutionError> {
     profile!("unload");
     let aux = vm.get_aux();
@@ -60,10 +57,10 @@ pub fn unload(
     let amount = TryFrom::try_from(amount).map_err(|e| {
         ExecutionError::invalid_argument(format!("unload called with invalid amount: {}", e))
     })?;
-    let target: EntityId = vm.get_value(target).ok_or_else(|| {
-        warn!("unload called without a structure");
-        ExecutionError::invalid_argument("unload called without a structure".to_owned())
-    })?;
+    let target: EntityId = EntityId(target.try_into().map_err(|_| {
+        warn!("melee_attack called without a valid target");
+        ExecutionError::invalid_argument("melee_attack called without valid a target".to_owned())
+    })?);
 
     trace!(
         "unload: amount: {} type: {:?} target: {:?}, {}",
@@ -92,18 +89,15 @@ pub fn unload(
     Ok(())
 }
 
-pub fn mine_resource(
-    vm: &mut Vm<ScriptExecutionData>,
-    target: Pointer,
-) -> Result<(), ExecutionError> {
+pub fn mine_resource(vm: &mut Vm<ScriptExecutionData>, target: i64) -> Result<(), ExecutionError> {
     profile!("mine_resource");
 
     let aux = vm.get_aux();
 
-    let target: EntityId = vm.get_value(target).ok_or_else(|| {
-        warn!("mine_resource called without a target");
-        ExecutionError::InvalidArgument { context: None }
-    })?;
+    let target: EntityId = EntityId(target.try_into().map_err(|_| {
+        warn!("melee_attack called without a valid target");
+        ExecutionError::invalid_argument("melee_attack called without valid a target".to_owned())
+    })?);
 
     let s = tracing::trace_span!("mine_resource", entity_id = aux.entity_id.0);
     let _e = s.enter();
@@ -129,16 +123,16 @@ pub fn mine_resource(
 
 pub fn approach_entity(
     vm: &mut Vm<ScriptExecutionData>,
-    target: Pointer,
+    target: i64,
 ) -> Result<(), ExecutionError> {
     profile!("approach_entity");
 
     let aux = vm.get_aux();
 
-    let target: EntityId = vm.get_value(target).ok_or_else(|| {
-        warn!("approach_entity called without a target");
-        ExecutionError::InvalidArgument { context: None }
-    })?;
+    let target: EntityId = EntityId(target.try_into().map_err(|_| {
+        warn!("melee_attack called without a valid target");
+        ExecutionError::invalid_argument("melee_attack called without valid a target".to_owned())
+    })?);
 
     trace!("approach_entity: target: {:?}", target);
 
@@ -184,7 +178,7 @@ pub fn approach_entity(
 
 pub fn move_bot_to_position(
     vm: &mut Vm<ScriptExecutionData>,
-    point: Pointer,
+    point: *mut FieldTable,
 ) -> Result<(), ExecutionError> {
     profile!("move_bot_to_position");
 
@@ -196,10 +190,10 @@ pub fn move_bot_to_position(
     let storage = aux.storage();
     let user_id = aux.user_id.expect("user_id to be set");
 
-    let point: WorldPosition = vm.get_value(point).ok_or_else(|| {
-        warn!("move_bot called without a point");
-        ExecutionError::InvalidArgument { context: None }
-    })?;
+    let point: WorldPosition = unsafe {
+        let point = &*point;
+        parse_world_pos(point)?
+    };
 
     let checkresult = match move_to_pos(entity, point, user_id, storage) {
         Ok(Some((move_intent, pop_cache_intent, update_cache_intent))) => {

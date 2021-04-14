@@ -3,7 +3,7 @@
 use crate::empty_key;
 use crate::geometry::Axial;
 use crate::tables::SerialId;
-use cao_lang::{prelude::Scalar, traits::AutoByteEncodeProperties};
+use cao_lang::prelude::Value;
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 use std::ops::Add;
@@ -51,12 +51,11 @@ impl SerialId for EntityId {
     }
 }
 
-impl AutoByteEncodeProperties for EntityId {}
-impl TryFrom<Scalar> for EntityId {
-    type Error = Scalar;
-    fn try_from(s: Scalar) -> Result<EntityId, Scalar> {
+impl TryFrom<Value> for EntityId {
+    type Error = Value;
+    fn try_from(s: Value) -> Result<EntityId, Value> {
         match s {
-            Scalar::Integer(i) => {
+            Value::Integer(i) => {
                 if i < 0 {
                     return Err(s);
                 }
@@ -75,21 +74,18 @@ pub struct WorldPosition {
     #[serde(rename = "roomPos")]
     pub pos: Axial,
 }
-impl AutoByteEncodeProperties for WorldPosition {}
 
 /// Newtype wrapper around Axial point for positions that are inside a room.
 #[derive(
     Debug, Clone, Default, Ord, PartialOrd, Eq, PartialEq, Copy, Hash, Serialize, Deserialize,
 )]
 pub struct RoomPosition(pub Axial);
-impl AutoByteEncodeProperties for RoomPosition {}
 
 /// Newtype wrapper around Axial point for room ids.
 #[derive(
     Debug, Clone, Default, Ord, PartialOrd, Eq, PartialEq, Copy, Hash, Serialize, Deserialize,
 )]
 pub struct Room(pub Axial);
-impl AutoByteEncodeProperties for Room {}
 
 impl Room {
     pub fn as_array(self) -> [i32; 2] {

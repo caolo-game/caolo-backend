@@ -143,7 +143,7 @@ fn init_resource(
         .expect("entities_by_pos insert");
 }
 
-fn uncontested_pos<T: crate::tables::TableRow + Send + Sync>(
+fn uncontested_pos<T: crate::tables::TableRow + Send + Sync + Default>(
     room: Room,
     bounds: &Hexagon,
     positions_table: &crate::tables::morton_hierarchy::MortonMortonTable<T>,

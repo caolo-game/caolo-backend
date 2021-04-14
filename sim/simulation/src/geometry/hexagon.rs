@@ -1,5 +1,4 @@
 use super::Axial;
-use cao_lang::traits::AutoByteEncodeProperties;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Default, Copy, Eq, PartialEq, Serialize, Deserialize, Ord, PartialOrd)]
@@ -53,7 +52,6 @@ impl Hexagon {
         self
     }
 }
-impl AutoByteEncodeProperties for Hexagon {}
 
 #[cfg(test)]
 mod tests {

@@ -7,11 +7,11 @@ lanes:
         val: "parse_find_constant"
       - ty: CallNative
         val: "find_closest"
-      - ty: SetLocalVar
+      - ty: SetVar
         val: "resource"
       - ty: ReadVar
         val: "resource"
-      - ty: ScalarNull
+      - ty: ScalarNil
       - ty: Equals
       - ty: IfTrue
         val:
@@ -51,8 +51,7 @@ lanes:
         val: "No resource found"
       - ty: CallNative
         val: "console_log"
-      - ty: ExitWithCode
-        val: 1
+      - ty: Abort
 
   - name: "mine-success"
     cards:

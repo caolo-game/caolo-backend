@@ -12,11 +12,13 @@ use crate::geometry::Axial;
 use crate::indices::{EntityId, WorldPosition};
 use crate::profile;
 use crate::systems::script_execution::ScriptExecutionData;
-use cao_lang::{prelude::*, scalar::Scalar, traits::AutoByteEncodeProperties};
-use find_api::FindConstant;
+use cao_lang::prelude::*;
 use serde::{Deserialize, Serialize};
-use std::convert::TryFrom;
-use tracing::trace;
+use std::{
+    convert::{TryFrom, TryInto},
+    str::FromStr,
+};
+use tracing::{error, trace};
 
 #[derive(Debug, Clone, Eq, PartialEq, Copy)]
 #[repr(i32)]
@@ -32,20 +34,20 @@ pub enum OperationResult {
     PathNotFound = 8,
 }
 
-impl TryFrom<Scalar> for OperationResult {
-    type Error = Scalar;
+impl TryFrom<Value> for OperationResult {
+    type Error = Value;
 
-    fn try_from(i: Scalar) -> Result<OperationResult, Scalar> {
+    fn try_from(i: Value) -> Result<OperationResult, Value> {
         let op = match i {
-            Scalar::Integer(0) => OperationResult::Ok,
-            Scalar::Integer(1) => OperationResult::NotOwner,
-            Scalar::Integer(2) => OperationResult::InvalidInput,
-            Scalar::Integer(3) => OperationResult::OperationFailed,
-            Scalar::Integer(4) => OperationResult::NotInRange,
-            Scalar::Integer(5) => OperationResult::InvalidTarget,
-            Scalar::Integer(6) => OperationResult::Empty,
-            Scalar::Integer(7) => OperationResult::Full,
-            Scalar::Integer(8) => OperationResult::PathNotFound,
+            Value::Integer(0) => OperationResult::Ok,
+            Value::Integer(1) => OperationResult::NotOwner,
+            Value::Integer(2) => OperationResult::InvalidInput,
+            Value::Integer(3) => OperationResult::OperationFailed,
+            Value::Integer(4) => OperationResult::NotInRange,
+            Value::Integer(5) => OperationResult::InvalidTarget,
+            Value::Integer(6) => OperationResult::Empty,
+            Value::Integer(7) => OperationResult::Full,
+            Value::Integer(8) => OperationResult::PathNotFound,
             _ => {
                 return Err(i);
             }
@@ -54,54 +56,35 @@ impl TryFrom<Scalar> for OperationResult {
     }
 }
 
-impl AutoByteEncodeProperties for OperationResult {}
-
-impl From<OperationResult> for Scalar {
+impl From<OperationResult> for Value {
     fn from(opr: OperationResult) -> Self {
-        Scalar::Integer(opr as i32)
+        Value::Integer(opr as i64)
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Script {
     pub compiled: Option<CaoProgram>,
     pub script: CompilationUnit,
 }
 
-pub fn make_point(vm: &mut Vm<ScriptExecutionData>, x: i32, y: i32) -> Result<(), ExecutionError> {
-    let point = Axial::new(x, y);
-    vm.set_value(point)?;
-    Ok(())
-}
-
-pub fn world_position(
-    vm: &mut Vm<ScriptExecutionData>,
-    rx: i32,
-    ry: i32,
-    x: i32,
-    y: i32,
-) -> Result<(), ExecutionError> {
-    let room = Axial::new(rx, ry);
-    let pos = Axial::new(x, y);
-    let wp = WorldPosition { room, pos };
-
-    vm.set_value(wp)?;
-    Ok(())
-}
-
 pub fn console_log(
     vm: &mut Vm<ScriptExecutionData>,
-    message: Pointer,
+    message: cao_lang::StrPointer,
 ) -> Result<(), ExecutionError> {
     profile!("console_log");
     trace!("console_log");
-    let message = vm.get_value_in_place::<&str>(message).ok_or_else(|| {
-        trace!("console_log called with invalid message");
-        ExecutionError::InvalidArgument {
-            context: "console_log argument must be a string".to_string().into(),
-        }
-    })?;
+    let message = unsafe {
+        vm.get_str(message).ok_or_else(|| {
+            trace!("console_log called with invalid message");
+            ExecutionError::InvalidArgument {
+                context: "console_log argument must be a utf-8 string"
+                    .to_string()
+                    .into(),
+            }
+        })?
+    };
     let entity_id = vm.get_aux().entity_id;
     let time = vm.get_aux().storage().time();
 
@@ -114,31 +97,58 @@ pub fn console_log(
     Ok(())
 }
 
-pub fn log_scalar(vm: &mut Vm<ScriptExecutionData>, value: Scalar) -> Result<(), ExecutionError> {
-    profile!("log_scalar");
-    trace!("log_scalar");
+pub fn log_value(vm: &mut Vm<ScriptExecutionData>, value: Value) -> Result<(), ExecutionError> {
+    profile!("log_value");
+    trace!("log_value");
     let entity_id = vm.get_aux().entity_id;
     let time = vm.get_aux().storage().time();
-    let payload = match value {
-        Scalar::Pointer(p) => {
-            let mut out = String::with_capacity(64);
-            if let Some(val) = vm.get_object_properties(p) {
-                val.write_debug(&mut out);
-            } else {
-                use std::fmt::Write;
-                write!(out, "invalid pointer").unwrap()
-            }
-            out
-        }
-        Scalar::Null => "null".to_string(),
-        Scalar::Integer(i) => i.to_string(),
-        Scalar::Floating(f) => f.to_string(),
-    };
+    let payload = value_to_string(vm, value)?;
     trace!("{:?} says: {}", entity_id, payload);
     vm.get_aux_mut()
         .intents
         .with_log(entity_id, payload.as_str(), time);
     Ok(())
+}
+
+fn value_to_string(vm: &Vm<ScriptExecutionData>, value: Value) -> Result<String, ExecutionError> {
+    use std::fmt::Write;
+
+    let pl = match value {
+        Value::String(p) => {
+            let s = unsafe {
+                vm.get_str(p)
+                    .ok_or(ExecutionError::InvalidArgument { context: None })?
+            };
+            format!("String: {}", s)
+        }
+        Value::Object(p) => {
+            let mut pl = String::with_capacity(256);
+            pl.push('{');
+            let has_value = unsafe {
+                let table = &*p;
+                for (hash, value) in table.iter() {
+                    write!(pl, "\n\t{:?} {}", hash, value_to_string(vm, *value)?).map_err(
+                        |err| {
+                            error!("Failed to write value {:?}", err);
+                            ExecutionError::TaskFailure("Internal Error".to_string())
+                        },
+                    )?;
+                }
+                !table.is_empty()
+            };
+            if has_value {
+                pl.push(' ')
+            } else {
+                pl.push('\n');
+            }
+            pl.push('}');
+            pl
+        }
+        Value::Nil => "Nil".to_string(),
+        Value::Integer(i) => i.to_string(),
+        Value::Floating(f) => f.to_string(),
+    };
+    Ok(pl)
 }
 
 /// Holds data about a function
@@ -174,6 +184,36 @@ impl Schema {
     }
 }
 
+/// Takes a Cao-Lang Object (FieldTable) and reads a WorldPosition from the fields:
+/// - `rq` = room.q = Q component of the room id
+/// - `rr` = room.r = R component of the room id
+/// - `q`  = pos.q  = Q component of the room position
+/// - `r`  = pos.r  = R component of the room position
+pub fn parse_world_pos(point: &FieldTable) -> Result<WorldPosition, ExecutionError> {
+    let rq = _get_parse_coordinate(point, "rq")?;
+    let rr = _get_parse_coordinate(point, "rr")?;
+    let q = _get_parse_coordinate(point, "q")?;
+    let r = _get_parse_coordinate(point, "r")?;
+
+    Ok(WorldPosition {
+        room: Axial::new(rq, rr),
+        pos: Axial::new(q, r),
+    })
+}
+
+fn _get_parse_coordinate(point: &FieldTable, key: &str) -> Result<i32, ExecutionError> {
+    let rq = point
+        .get(Key::from_str(key).unwrap())
+        .copied()
+        .unwrap_or_default();
+    let rq: i64 = rq
+        .try_into()
+        .map_err(|_| ExecutionError::invalid_argument("rq was not an integer".to_string()))?;
+    rq.try_into().map_err(|_| {
+        ExecutionError::invalid_argument("rq is not a valid coordinate value!".to_string())
+    })
+}
+
 /// Bootstrap the game API in the Vm
 pub fn make_import() -> Schema {
     Schema {
@@ -183,7 +223,7 @@ pub fn make_import() -> Schema {
                     "console_log",
                     "Log a string",
                     SubProgramType::Function,
-                    [String],
+                    ["Text"],
                     [],
                     []
                 ),
@@ -191,22 +231,22 @@ pub fn make_import() -> Schema {
             },
             FunctionRow {
                 desc: subprogram_description!(
-                    "log_scalar",
-                    "Log a scalar value",
+                    "log_value",
+                    "Log a value",
                     SubProgramType::Function,
-                    [Scalar],
+                    ["Value"],
                     [],
                     []
                 ),
-                fo: Box::new(into_f1(log_scalar)),
+                fo: Box::new(into_f1(log_value)),
             },
             FunctionRow {
                 desc: subprogram_description!(
                     "mine",
                     "Mine the target resource",
                     SubProgramType::Function,
-                    [EntityId],
-                    [OperationResult],
+                    ["EntityId"],
+                    ["OperationResult"],
                     []
                 ),
                 fo: Box::new(into_f1(bots::mine_resource)),
@@ -216,8 +256,8 @@ pub fn make_import() -> Schema {
                     "approach_entity",
                     "Move the bot to the given Entity",
                     SubProgramType::Function,
-                    [EntityId],
-                    [OperationResult],
+                    ["EntityId"],
+                    ["OperationResult"],
                     []
                 ),
                 fo: Box::new(into_f1(bots::approach_entity)),
@@ -227,41 +267,19 @@ pub fn make_import() -> Schema {
                     "move_to_position",
                     "Move the bot to the given Axial",
                     SubProgramType::Function,
-                    [Axial],
-                    [OperationResult],
+                    ["Axial coordinate"],
+                    ["OperationResult"],
                     []
                 ),
                 fo: Box::new(into_f1(bots::move_bot_to_position)),
             },
             FunctionRow {
                 desc: subprogram_description!(
-                    "make_point",
-                    "Create a point from x and y coordinates",
-                    SubProgramType::Function,
-                    [i32, i32],
-                    [Axial],
-                    []
-                ),
-                fo: Box::new(into_f2(make_point)),
-            },
-            FunctionRow {
-                desc: subprogram_description!(
-                    "world_position",
-                    "Create a WorldPosition from coordinates: [room.x, room.y, x, y]",
-                    SubProgramType::Function,
-                    [i32, i32, i32, i32],
-                    [Axial],
-                    []
-                ),
-                fo: Box::new(into_f4(world_position)),
-            },
-            FunctionRow {
-                desc: subprogram_description!(
                     "find_closest",
-                    "Find an object of type `FindConstant`, closest to the current entity. Returns `null` if no such entity is found",
+                    "Find an object of type `FindConstant`, closest to the current entity. Returns `Nil` if no such entity is found",
                     SubProgramType::Function,
-                    [FindConstant],
-                    [EntityId],
+                    ["FindConstant"],
+                    ["EntityId"],
                     []
                 ),
                 fo: Box::new(into_f1(find_api::find_closest_by_range)),
@@ -271,8 +289,8 @@ pub fn make_import() -> Schema {
                     "unload",
                     "Unload resources",
                     SubProgramType::Function,
-                    [u16, components::Resource, EntityId],
-                    [OperationResult],
+                    ["Integer", "Resource", "EntityId"],
+                    ["OperationResult"],
                     []
                 ),
                 fo: Box::new(into_f3(bots::unload)),
@@ -282,8 +300,8 @@ pub fn make_import() -> Schema {
                     "parse_find_constant",
                     "Converts string literal to a find constant",
                     SubProgramType::Function,
-                    [String],
-                    [FindConstant],
+                    ["Text"],
+                    ["FindConstant"],
                     []
                 ),
                 fo: Box::new(into_f1(find_api::parse_find_constant)),
@@ -293,8 +311,8 @@ pub fn make_import() -> Schema {
                     "melee_attack",
                     "Attempts to strike the target entity",
                     SubProgramType::Function,
-                    [EntityId],
-                    [OperationResult],
+                    ["EntityId"],
+                    ["OperationResult"],
                     []
                 ),
                 fo: Box::new(into_f1(bots::melee_attack)),

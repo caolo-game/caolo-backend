@@ -1,5 +1,5 @@
 use crate::tables::{btree::BTreeTable, Component, TableId};
-use cao_lang::{prelude::Scalar, traits::AutoByteEncodeProperties};
+use cao_lang::prelude::Value;
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 
@@ -17,12 +17,11 @@ impl Default for Resource {
     }
 }
 
-impl AutoByteEncodeProperties for Resource {}
-impl TryFrom<Scalar> for Resource {
-    type Error = Scalar;
-    fn try_from(s: Scalar) -> Result<Resource, Scalar> {
+impl TryFrom<Value> for Resource {
+    type Error = Value;
+    fn try_from(s: Value) -> Result<Resource, Value> {
         match s {
-            Scalar::Integer(i) => {
+            Value::Integer(i) => {
                 if i < 0 {
                     return Err(s);
                 }

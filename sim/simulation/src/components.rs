@@ -148,7 +148,7 @@ impl<Id: TableId> Component<Id> for LogEntry {
 }
 
 /// Entities with Scripts
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct ScriptComponent(pub CaoProgram);
 impl<Id: TableId> Component<Id> for ScriptComponent {

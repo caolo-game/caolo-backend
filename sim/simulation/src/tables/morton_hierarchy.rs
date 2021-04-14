@@ -24,7 +24,7 @@ pub type MortonMortonTable<T> = RoomMortonTable<MortonTable<T>, T>;
 pub type MortonGridTable<T> = RoomMortonTable<HexGrid<T>, T>;
 
 pub trait SpacialStorage<Row: TableRow>:
-    Table<Id = Axial, Row = Row> + Clone + std::fmt::Debug + 'static + Default
+    Table<Id = Axial, Row = Row> + std::fmt::Debug + 'static + Default
 {
     type ExtendFailure: std::fmt::Display;
 
@@ -40,7 +40,7 @@ pub trait SpacialStorage<Row: TableRow>:
 
 /// Holds an inner morton_table that holds other spacial data structures for hierarchycal spacial
 /// storage
-#[derive(Default, Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 pub struct RoomMortonTable<InnerTable, Row>
 where
     InnerTable: SpacialStorage<Row>,
@@ -158,8 +158,8 @@ where
         values: &mut [(WorldPosition, Row)],
     ) -> Result<(), ExtendFailure>
     where
-        InnerTable: Send,
-        Row: Sync,
+        InnerTable: Send + Default,
+        Row: Sync + Default + Clone,
     {
         {
             // produce a key list from the rooms of the values
@@ -307,7 +307,7 @@ where
 
 impl<Row> MortonMortonTable<Row>
 where
-    Row: TableRow,
+    Row: TableRow + Default,
 {
     pub fn iter(&self) -> impl Iterator<Item = (WorldPosition, &Row)> {
         self.iter_rooms().flat_map(|(room_id, room)| {

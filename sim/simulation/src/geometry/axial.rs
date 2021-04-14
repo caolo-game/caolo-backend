@@ -1,6 +1,5 @@
 mod serde_impl;
 
-use cao_lang::traits::AutoByteEncodeProperties;
 use serde_derive::Deserialize;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
 
@@ -201,8 +200,6 @@ impl Div<i32> for Axial {
         self
     }
 }
-
-impl AutoByteEncodeProperties for Axial {}
 
 #[cfg(test)]
 mod tests {

@@ -29,7 +29,7 @@ where
 
 impl<'de, Row> Visitor<'de> for MortonVisitor<Row>
 where
-    Row: TableRow + Deserialize<'de>,
+    Row: TableRow + Deserialize<'de> + Default,
 {
     type Value = MortonTable<Row>;
 
@@ -63,7 +63,7 @@ where
 
 impl<'de, Row> Deserialize<'de> for MortonTable<Row>
 where
-    Row: TableRow + Deserialize<'de>,
+    Row: TableRow + Deserialize<'de> + Default,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where

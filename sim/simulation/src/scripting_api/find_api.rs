@@ -3,7 +3,7 @@ use crate::components::{EntityComponent, PositionComponent};
 use crate::indices::WorldPosition;
 use crate::profile;
 use crate::world::World;
-use cao_lang::prelude::*;
+use cao_lang::{prelude::*, StrPointer};
 use std::convert::TryFrom;
 use tracing::{trace, warn};
 
@@ -15,33 +15,33 @@ pub enum FindConstant {
     EnemyBot = 3,
 }
 
-impl TryFrom<Scalar> for FindConstant {
-    type Error = Scalar;
-    fn try_from(i: Scalar) -> Result<Self, Scalar> {
+impl TryFrom<Value> for FindConstant {
+    type Error = Value;
+    fn try_from(i: Value) -> Result<Self, Value> {
         let op = match i {
-            Scalar::Integer(1) => FindConstant::Resource,
-            Scalar::Integer(2) => FindConstant::Spawn,
-            Scalar::Integer(3) => FindConstant::EnemyBot,
+            Value::Integer(1) => FindConstant::Resource,
+            Value::Integer(2) => FindConstant::Spawn,
+            Value::Integer(3) => FindConstant::EnemyBot,
             _ => return Err(i),
         };
         Ok(op)
     }
 }
 
-impl AutoByteEncodeProperties for FindConstant {}
-
 pub fn parse_find_constant(
     vm: &mut Vm<ScriptExecutionData>,
-    param: Pointer,
+    param: StrPointer,
 ) -> Result<(), ExecutionError> {
     profile!("parse_find_constant");
     trace!("parse_find_constant");
-    let param = vm.get_value_in_place::<&str>(param).ok_or_else(|| {
-        trace!("parse_find_constant called with invalid param");
-        ExecutionError::invalid_argument(
-            "parse_find_constant called with non-string param".to_owned(),
-        )
-    })?;
+    let param = unsafe {
+        vm.get_str(param).ok_or_else(|| {
+            trace!("parse_find_constant called with invalid param");
+            ExecutionError::invalid_argument(
+                "parse_find_constant called with non-string param".to_owned(),
+            )
+        })?
+    };
     let constant = match param {
         "resource" | "RESOURCE" | "Resource" => FindConstant::Resource,
         "spawn" | "SPAWN" | "Spawn" => FindConstant::Spawn,
@@ -57,7 +57,7 @@ pub fn parse_find_constant(
             )));
         }
     };
-    vm.stack_push(constant as i32)?;
+    vm.stack_push(constant as i64)?;
     Ok(())
 }
 
@@ -128,13 +128,13 @@ impl FindConstant {
         }?;
         match candidate {
             Some(entity) => {
+                trace!("Found entity {:?}", entity);
                 let id = entity.0; // move out of the result to free the storage borrow
-                trace!("Found entity {:?}", id);
-                vm.set_value(id)?;
+                vm.stack_push(id as i64)?;
             }
             None => {
                 trace!("No stuff was found");
-                vm.stack_push(Scalar::Null)?;
+                vm.stack_push(Value::Nil)?;
             }
         }
         Ok(())
@@ -169,6 +169,8 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::convert::TryInto;
+
     use super::*;
     use crate::world::World;
     use rand::{rngs::SmallRng, thread_rng, Rng, SeedableRng};
@@ -267,15 +269,15 @@ mod tests {
             );
         let data =
             ScriptExecutionData::new(&*storage.as_ref(), Default::default(), entity_id, None);
-        let mut vm = Vm::new(data);
+        let mut vm = Vm::new(data).unwrap();
 
         let constant = FindConstant::Resource;
 
         find_closest_by_range(&mut vm, constant).expect("find_closest_by_range exec");
 
         let res_id = vm.stack_pop();
-        if let Scalar::Pointer(p) = res_id {
-            let res_id: EntityId = vm.get_value(p).expect("Expected entity_id to be set");
+        if let Value::Integer(p) = res_id {
+            let res_id = EntityId(p.try_into().unwrap());
 
             assert_eq!(res_id, entity_id);
         } else {
@@ -304,15 +306,15 @@ mod tests {
             entity_id,
             Default::default(),
         );
-        let mut vm = Vm::new(data);
+        let mut vm = Vm::new(data).unwrap();
 
         let constant = FindConstant::Resource;
 
         find_closest_by_range(&mut vm, constant).expect("find_closest_by_range exec");
 
         let res_id = vm.stack_pop();
-        if let Scalar::Pointer(p) = res_id {
-            let res_id: EntityId = vm.get_value(p).expect("Expected entity_id to be set");
+        if let Value::Integer(p) = res_id {
+            let res_id = EntityId(p.try_into().expect("expected entity id"));
 
             assert_eq!(res_id, expected_id);
         } else {

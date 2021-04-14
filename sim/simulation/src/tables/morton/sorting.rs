@@ -7,7 +7,7 @@ const RADIX_MASK_LEN: usize = 8; // how many bits are considered at a time
 const RADIX_MASK: u32 = (1 << (RADIX_MASK_LEN + 1)) - 1;
 const NUM_BUCKETS: usize = RADIX_MASK as usize + 1;
 
-pub fn sort<T: Clone>(keys: &mut Vec<MortonKey>, values: &mut [T]) {
+pub fn sort<T: Default>(keys: &mut Vec<MortonKey>, values: &mut [T]) {
     debug_assert!(
         keys.len() == values.len(),
         "{} {}",
@@ -21,7 +21,7 @@ pub fn sort<T: Clone>(keys: &mut Vec<MortonKey>, values: &mut [T]) {
 }
 
 #[inline]
-fn sort_radix<T: Clone>(keys: &mut Vec<MortonKey>, values: &mut [T]) {
+fn sort_radix<T: Default>(keys: &mut Vec<MortonKey>, values: &mut [T]) {
     debug_assert_eq!(keys.len(), values.len());
     let mut tmp = vec![Default::default(); keys.len() * 2];
     // double buffer (index, key) pairs
@@ -49,7 +49,7 @@ fn sort_radix<T: Clone>(keys: &mut Vec<MortonKey>, values: &mut [T]) {
     keys.clear();
     for (i, key) in tmp_a {
         keys.push(*key);
-        vs.push(values[*i].clone());
+        vs.push(std::mem::take(&mut values[*i]));
     }
 
     vs.swap_with_slice(values);

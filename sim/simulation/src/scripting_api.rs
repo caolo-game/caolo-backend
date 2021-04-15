@@ -66,7 +66,7 @@ impl From<OperationResult> for Value {
 #[serde(rename_all = "camelCase")]
 pub struct Script {
     pub compiled: Option<CaoProgram>,
-    pub script: CompilationUnit,
+    pub script: CaoIr,
 }
 
 pub fn console_log(vm: &mut Vm<ScriptExecutionData>, message: Value) -> Result<(), ExecutionError> {

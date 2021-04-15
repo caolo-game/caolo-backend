@@ -11,7 +11,7 @@ pub fn init_world_entities(storage: &mut World, n_fake_users: usize) {
     let mut rng = rand::thread_rng();
 
     let mining_script_id = ScriptId(Uuid::new_v4());
-    let script: CompilationUnit =
+    let script: CaoIr =
         serde_yaml::from_str(include_str!("./programs/mining_program.yaml"))
             .expect("deserialize example program");
     debug!("compiling default program");

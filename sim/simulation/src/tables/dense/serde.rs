@@ -19,10 +19,7 @@ where
         let mut data = Vec::with_capacity(self.ids.len());
         for i in 0..self.ids.len() {
             if let Some(ref id) = self.ids[i] {
-                let value = unsafe {
-                    let data = &*self.data[i].as_ptr();
-                    data.clone()
-                };
+                let value = unsafe { &*self.data[i].as_ptr() };
                 data.push((*id, value));
             }
         }

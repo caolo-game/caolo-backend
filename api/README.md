@@ -2,6 +2,7 @@
 
 ### Native builds:
 
+-   [Poetry](https://python-poetry.org/docs/)
 -   [Python](https://python.org/)
 -   [Protoc](https://grpc.io/docs/protoc-installation/)
 -   [PostgeSQL](https://www.postgresql.org/)

@@ -52,16 +52,6 @@ setup(
     name="caoloapi",
     package_dir={"": "."},
     install_requires=[
-        "fastapi",
-        "asyncpg",
-        "uvicorn[standard]",
-        "pydantic[email]",
-        "grpcio-tools",
-        "protobuf>=3.8",
-        "aioredis",
-        "python-multipart",
-        "passlib[bcrypt]",
-        "python-jose>=3.2.0",
-        "cao-lang @ https://github.com/caolo-game/cao-lang/tarball/master#egg=cao-lang-0.1.1",
+        # Use `poetry` to install the dependencies. This scripts is only used to initialize the protos
     ],
 )

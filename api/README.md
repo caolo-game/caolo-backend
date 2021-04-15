@@ -18,9 +18,7 @@
 ```
 diesel database setup
 
-python -m venv env
-source env/scripts/activate
-pip install -e.
+poetry install
 ```
 
 ## Running

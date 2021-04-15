@@ -158,7 +158,7 @@ checksum = "b700ce4376041dcd0a327fd0097c41095743c4c8af8887265942faf1100bd040"
 [[package]]
 name = "cao-lang"
 version = "0.1.21"
-source = "git+https://github.com/caolo-game/cao-lang.git#2c9b959460c875b3db0cd9d09b8449eb7cfd9a90"
+source = "git+https://github.com/caolo-game/cao-lang.git#6f2eb479affb866fb77432a2292b5865b3d9794a"
 dependencies = [
  "arrayvec",
  "num_enum",

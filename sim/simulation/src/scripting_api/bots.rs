@@ -176,11 +176,9 @@ pub fn approach_entity(
     Ok(())
 }
 
-// TODO: replace the param w/ &FieldTable, once Cao-Lang supports it...
-#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn move_bot_to_position(
     vm: &mut Vm<ScriptExecutionData>,
-    point: *mut FieldTable,
+    point: &FieldTable,
 ) -> Result<(), ExecutionError> {
     profile!("move_bot_to_position");
 
@@ -192,10 +190,7 @@ pub fn move_bot_to_position(
     let storage = aux.storage();
     let user_id = aux.user_id.expect("user_id to be set");
 
-    let point: WorldPosition = unsafe {
-        let point = &*point;
-        parse_world_pos(point)?
-    };
+    let point: WorldPosition = parse_world_pos(point)?;
 
     let checkresult = match move_to_pos(entity, point, user_id, storage) {
         Ok(Some((move_intent, pop_cache_intent, update_cache_intent))) => {

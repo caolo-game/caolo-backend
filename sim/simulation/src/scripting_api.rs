@@ -69,22 +69,10 @@ pub struct Script {
     pub script: CompilationUnit,
 }
 
-pub fn console_log(
-    vm: &mut Vm<ScriptExecutionData>,
-    message: cao_lang::StrPointer,
-) -> Result<(), ExecutionError> {
+pub fn console_log(vm: &mut Vm<ScriptExecutionData>, message: Value) -> Result<(), ExecutionError> {
     profile!("console_log");
     trace!("console_log");
-    let message = unsafe {
-        vm.get_str(message).ok_or_else(|| {
-            trace!("console_log called with invalid message");
-            ExecutionError::InvalidArgument {
-                context: "console_log argument must be a utf-8 string"
-                    .to_string()
-                    .into(),
-            }
-        })?
-    };
+    let message = value_to_string(vm, message)?;
     let entity_id = vm.get_aux().entity_id;
     let time = vm.get_aux().storage().time();
 
@@ -97,19 +85,6 @@ pub fn console_log(
     Ok(())
 }
 
-pub fn log_value(vm: &mut Vm<ScriptExecutionData>, value: Value) -> Result<(), ExecutionError> {
-    profile!("log_value");
-    trace!("log_value");
-    let entity_id = vm.get_aux().entity_id;
-    let time = vm.get_aux().storage().time();
-    let payload = value_to_string(vm, value)?;
-    trace!("{:?} says: {}", entity_id, payload);
-    vm.get_aux_mut()
-        .intents
-        .with_log(entity_id, payload.as_str(), time);
-    Ok(())
-}
-
 fn value_to_string(vm: &Vm<ScriptExecutionData>, value: Value) -> Result<String, ExecutionError> {
     use std::fmt::Write;
 
@@ -119,7 +94,7 @@ fn value_to_string(vm: &Vm<ScriptExecutionData>, value: Value) -> Result<String,
                 vm.get_str(p)
                     .ok_or(ExecutionError::InvalidArgument { context: None })?
             };
-            format!("String: {}", s)
+            s.to_string()
         }
         Value::Object(p) => {
             let mut pl = String::with_capacity(256);
@@ -228,17 +203,6 @@ pub fn make_import() -> Schema {
                     []
                 ),
                 fo: Box::new(into_f1(console_log)),
-            },
-            FunctionRow {
-                desc: subprogram_description!(
-                    "log_value",
-                    "Log a value",
-                    SubProgramType::Function,
-                    ["Value"],
-                    [],
-                    []
-                ),
-                fo: Box::new(into_f1(log_value)),
             },
             FunctionRow {
                 desc: subprogram_description!(

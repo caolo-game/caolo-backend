@@ -38,10 +38,12 @@ lanes:
     cards:
       - ty: ReadVar
         val: "resource"
+      - ty: StringLiteral
+        val: "Work work...\nMove Result: "
+      - ty: CallNative
+        val: "console_log"
       - ty: CallNative
         val: "approach_entity"
-      - ty: StringLiteral
-        val: "Work work...Move Result: "
       - ty: CallNative
         val: "console_log"
 

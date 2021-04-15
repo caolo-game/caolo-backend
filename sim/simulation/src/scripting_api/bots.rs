@@ -176,6 +176,8 @@ pub fn approach_entity(
     Ok(())
 }
 
+// TODO: replace the param w/ &FieldTable, once Cao-Lang supports it...
+#[allow(clippy::not_unsafe_ptr_arg_deref)]
 pub fn move_bot_to_position(
     vm: &mut Vm<ScriptExecutionData>,
     point: *mut FieldTable,

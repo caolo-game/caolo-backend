@@ -92,9 +92,9 @@ impl cao_script::scripting_server::Scripting for ScriptingService {
             .iter()
             .map(|card| SchemaCard {
                 ty: "Call".to_string(),
-                constants: card
+                properties: card
                     .desc
-                    .constants
+                    .properties
                     .iter()
                     .map(|x| x.to_string())
                     .collect(),
@@ -109,7 +109,7 @@ impl cao_script::scripting_server::Scripting for ScriptingService {
                 description: card.desc.description.to_string(),
             })
             .chain(basic_descs.iter().map(|card| SchemaCard {
-                constants: card.constants.iter().map(|x| x.to_string()).collect(),
+                properties: card.properties.iter().map(|x| x.to_string()).collect(),
                 outputs: card.output.iter().map(|x| x.to_string()).collect(),
                 inputs: card.input.iter().map(|x| x.to_string()).collect(),
                 name: card.name.to_string(),

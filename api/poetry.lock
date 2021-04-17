@@ -49,7 +49,7 @@ typecheck = ["mypy"]
 
 [[package]]
 name = "cao-lang"
-version = "0.1.8"
+version = "0.1.9"
 description = ""
 category = "main"
 optional = false
@@ -60,7 +60,7 @@ develop = false
 type = "git"
 url = "https://github.com/caolo-game/cao-lang.git"
 reference = "master"
-resolved_reference = "774005f85fb200aca9dcf657f7413a0553e7de47"
+resolved_reference = "863c9a6554641389d5f7f571c8a1932c882fd34f"
 
 [[package]]
 name = "cffi"

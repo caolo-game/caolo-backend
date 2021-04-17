@@ -38,9 +38,10 @@ RUN .env/bin/pip install -r requirements.txt
 RUN .env/bin/pip install -r git-req.txt
 
 # Actually install caoloapi
+WORKDIR /caolo
 COPY ./protos/ ./protos/
-COPY ./api/ ./
-# Use -e = editable to minimize the size of this layer
+COPY ./api/ ./api/
+WORKDIR /caolo/api
 RUN .env/bin/pip install -e.
 
 # ----------- Prod image -----------

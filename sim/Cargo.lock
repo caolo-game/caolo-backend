@@ -73,9 +73,9 @@ dependencies = [
 
 [[package]]
 name = "async-trait"
-version = "0.1.49"
+version = "0.1.50"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "589652ce7ccb335d1e7ecb3be145425702b290dbcb7029bbeaae263fc1d87b48"
+checksum = "0b98e84bbb4cbcdd97da190ba0c58a1bb0de2c1fdf67d159e192ed766aeca722"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -158,7 +158,7 @@ checksum = "b700ce4376041dcd0a327fd0097c41095743c4c8af8887265942faf1100bd040"
 [[package]]
 name = "cao-lang"
 version = "0.1.26"
-source = "git+https://github.com/caolo-game/cao-lang.git#145a80d2e91973412b8bacb92edd211867a6103e"
+source = "git+https://github.com/caolo-game/cao-lang.git#2487ff28615b66d92f4472a2a3db8e1daf031f34"
 dependencies = [
  "arrayvec",
  "num_enum",

@@ -60,7 +60,7 @@ develop = false
 type = "git"
 url = "https://github.com/caolo-game/cao-lang.git"
 reference = "master"
-resolved_reference = "145a80d2e91973412b8bacb92edd211867a6103e"
+resolved_reference = "2487ff28615b66d92f4472a2a3db8e1daf031f34"
 
 [[package]]
 name = "cffi"

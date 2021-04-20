@@ -14,7 +14,7 @@ use tracing::{debug, error, trace, warn};
 
 const MAX_BRIDGE_LEN: usize = 64;
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Default, Debug, Clone, Eq, PartialEq, Hash)]
 struct Node {
     pub pos: Axial,
     pub parent: Axial,
@@ -285,6 +285,7 @@ pub fn find_path_overworld(
     Ok(max_steps)
 }
 
+#[inline]
 fn is_walkable(point: Axial, terrain: View<Axial, TerrainComponent>) -> bool {
     terrain
         .at(point)
@@ -302,6 +303,8 @@ pub fn find_path_in_room(
     mut max_steps: u32,
     path: &mut Vec<RoomPosition>,
 ) -> Result<u32, PathFindingError> {
+    use crate::tables::hex_grid::HexGrid;
+
     profile!("find_path_in_room");
     trace!("find_path_in_room from {:?} to {:?}", from, to);
 
@@ -310,6 +313,7 @@ pub fn find_path_in_room(
 
     let mut closed_set = HashMap::<Axial, Node>::with_capacity(max_steps as usize);
     let mut open_set = BinaryHeap::with_capacity(max_steps as usize);
+    let mut visited = HexGrid::<bool>::new(terrain.bounds().radius as usize);
 
     let mut current = Node::new(current, current, current.hex_distance(end) as i32, 0);
     closed_set.insert(current.pos, current.clone());
@@ -323,11 +327,14 @@ pub fn find_path_in_room(
             let point = *point;
             // Filter only the free neighbours
             // End may be in the either tables!
-            if (point != end && (positions.contains_key(point) || !is_walkable(point, terrain)))
+            if (point != end && (positions.contains_key(point))
+                || visited.at(point).copied().unwrap_or(false)
+                || !is_walkable(point, terrain))
                 || closed_set.contains_key(&point)
             {
                 continue;
             }
+            visited[point] = true;
             let node = Node::new(
                 point,
                 current.pos,

@@ -89,9 +89,11 @@ export default function PathfindingPage() {
                                               r,
                                           })}
                                           key={i}
-                                          scale={8}
+                                          scale={9}
                                           onHoverCb={() => {}}
-                                          onClickCb={() => {}}
+                                          onClickCb={() =>
+                                              !loading && setFrom([q, r])
+                                          }
                                           color="blue"
                                       />
                                   ))

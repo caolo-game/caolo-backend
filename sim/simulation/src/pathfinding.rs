@@ -80,6 +80,7 @@ type FindPathTables<'a> = (
 pub fn find_path(
     from: WorldPosition,
     to: WorldPosition,
+    distance: u32,
     (positions, terrain, room_connections, room_properties): FindPathTables,
     max_steps: u32,
     path: &mut Vec<RoomPosition>,
@@ -96,11 +97,19 @@ pub fn find_path(
         PathFindingError::RoomDoesNotExists(from.room)
     })?);
     if from.room == to.room {
-        find_path_in_room(from.pos, to.pos, (positions, terrain), max_steps, path)
+        find_path_in_room(
+            from.pos,
+            to.pos,
+            distance,
+            (positions, terrain),
+            max_steps,
+            path,
+        )
     } else {
         find_path_multiroom(
             from,
             to,
+            distance,
             (positions, terrain, room_connections, room_properties),
             max_steps,
             path,
@@ -119,6 +128,7 @@ type FindPathMultiRoomTables<'a> = (
 fn find_path_multiroom(
     from: WorldPosition,
     to: WorldPosition,
+    distance: u32,
     (positions, terrain, room_connections, room_properties): FindPathMultiRoomTables,
     mut max_steps: u32,
     path: &mut Vec<RoomPosition>,
@@ -182,7 +192,7 @@ fn find_path_multiroom(
     bridge.sort_unstable_by_key(|p| p.hex_distance(from.pos));
 
     'a: for p in bridge {
-        match find_path_in_room(from.pos, p, (positions, terrain), max_steps, path) {
+        match find_path_in_room(from.pos, p, distance, (positions, terrain), max_steps, path) {
             Ok(_) => {
                 break 'a;
             }
@@ -193,7 +203,7 @@ fn find_path_multiroom(
         }
     }
     trace!(
-        "find_path_in_room succeeded with {} steps remaining",
+        "find_path_multiroom succeeded with {} steps remaining",
         max_steps
     );
     Ok(max_steps)
@@ -287,6 +297,7 @@ fn is_walkable(point: Axial, terrain: View<Axial, TerrainComponent>) -> bool {
 pub fn find_path_in_room(
     from: Axial,
     to: Axial,
+    distance: u32,
     (positions, terrain): (View<Axial, EntityComponent>, View<Axial, TerrainComponent>),
     mut max_steps: u32,
     path: &mut Vec<RoomPosition>,
@@ -304,7 +315,7 @@ pub fn find_path_in_room(
     closed_set.insert(current.pos, current.clone());
     open_set.push(current.clone());
 
-    while current.pos != end && !open_set.is_empty() && max_steps > 0 {
+    while current.pos.hex_distance(end) > distance && !open_set.is_empty() && max_steps > 0 {
         current = open_set.pop().unwrap();
         closed_set.insert(current.pos, current.clone());
 
@@ -328,7 +339,7 @@ pub fn find_path_in_room(
         max_steps -= 1;
     }
 
-    if current.pos != end {
+    if current.pos.hex_distance(end) > distance {
         debug!("find_path_in_room failed, remaining_steps: {}", max_steps);
         if max_steps > 0 {
             // we ran out of possible paths
@@ -338,7 +349,7 @@ pub fn find_path_in_room(
     }
 
     // reconstruct path
-    let mut current = end;
+    let mut current = current.pos;
     let end = from;
     while current != end {
         path.push(RoomPosition(current));
@@ -545,6 +556,7 @@ mod tests {
         find_path_in_room(
             from,
             to,
+            0,
             (View::from_table(&positions), View::from_table(&terrain)),
             512,
             &mut path,
@@ -580,6 +592,7 @@ mod tests {
         find_path_in_room(
             from,
             to,
+            0,
             (View::from_table(&positions), View::from_table(&terrain)),
             512,
             &mut path,

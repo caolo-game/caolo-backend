@@ -53,6 +53,7 @@ pub fn find_path_world(
     if let Err(err) = find_path(
         from,
         to,
+        1,
         FromWorld::new(world),
         25000,
         &mut path,

@@ -284,6 +284,7 @@ fn move_to_pos(
     if let Err(e) = pathfinding::find_path(
         botpos.0,
         to,
+        1,
         FromWorld::new(storage),
         max_pathfinding_iter,
         &mut path,

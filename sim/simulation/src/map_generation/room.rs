@@ -696,6 +696,7 @@ mod tests {
             if let Err(err) = find_path_in_room(
                 *first,
                 *b,
+                0,
                 (View::from_table(&positions), View::from_table(&terrain)),
                 10240,
                 &mut path,

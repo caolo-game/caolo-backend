@@ -10,12 +10,12 @@ mod spawn_intent_system;
 pub use continous_spawn_system::update as update_cont_spawns;
 pub use spawn_intent_system::update as update_spawn_intents;
 
-use crate::components::*;
 use crate::indices::{EntityId, UserId};
 use crate::join;
 use crate::profile;
 use crate::storage::views::{UnsafeView, View};
 use crate::tables::{JoinIterator, Table};
+use crate::{components::*, entity_archetypes::init_bot};
 use tracing::{trace, warn};
 
 type SpawnSystemMut = (
@@ -86,21 +86,13 @@ type SpawnBotMut = (
 fn spawn_bot(
     spawn_id: EntityId,
     entity_id: EntityId,
-    (
-        mut spawn_bots,
-        mut bots,
-        mut hps,
-        mut decay,
-        mut carry,
-        mut positions,
-        mut owned,
-        mut script_table,
-    ): SpawnBotMut,
+    (mut spawn_bots, bots, hps, decay, carry, positions, owned, script_table): SpawnBotMut,
     user_default_scripts: View<UserId, EntityScript>,
 ) {
     trace!(
         "spawn_bot spawn_id: {:?} entity_id: {:?}",
-        spawn_id, entity_id
+        spawn_id,
+        entity_id
     );
 
     match spawn_bots.delete(entity_id) {
@@ -111,47 +103,27 @@ fn spawn_bot(
         }
     };
 
-    bots.insert(entity_id);
-    hps.insert_or_update(
-        entity_id,
-        HpComponent {
-            hp: 100,
-            hp_max: 100,
-        },
-    );
-    decay.insert_or_update(
-        entity_id,
-        DecayComponent {
-            interval: 10,
-            time_remaining: 10,
-            hp_amount: 10,
-        },
-    );
-    carry.insert_or_update(
-        entity_id,
-        CarryComponent {
-            carry: 0,
-            carry_max: 50,
-        },
-    );
+    let owner = owned
+        .get_by_id(spawn_id)
+        .map(|OwnedEntity { owner_id }| owner_id.0);
 
     let pos = positions
         .get_by_id(spawn_id)
-        .cloned()
-        .expect("Spawn should have position");
-    positions.insert_or_update(entity_id, pos);
+        .copied()
+        .expect("Spawn should have position")
+        .0;
 
-    let owner = owned.get_by_id(spawn_id).cloned();
-    if let Some(owner) = owner {
-        if let Some(script) = user_default_scripts.get_by_id(owner.owner_id) {
-            script_table.insert_or_update(entity_id, *script);
-        }
-
-        owned.insert_or_update(entity_id, owner);
-    }
+    init_bot(
+        entity_id,
+        owner,
+        pos,
+        (bots, hps, decay, carry, positions, owned, script_table),
+        user_default_scripts,
+    );
 
     trace!(
         "spawn_bot spawn_id: {:?} entity_id: {:?} - done",
-        spawn_id, entity_id
+        spawn_id,
+        entity_id
     );
 }

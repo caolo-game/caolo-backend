@@ -59,3 +59,67 @@ pub fn init_structure_spawn(id: EntityId, owner_id: Uuid, pos: WorldPosition, wo
         }
     );
 }
+
+type InitBotTables = (
+    UnsafeView<EntityId, Bot>,
+    UnsafeView<EntityId, HpComponent>,
+    UnsafeView<EntityId, DecayComponent>,
+    UnsafeView<EntityId, CarryComponent>,
+    UnsafeView<EntityId, PositionComponent>,
+    UnsafeView<EntityId, OwnedEntity>,
+    UnsafeView<EntityId, EntityScript>,
+);
+pub fn init_bot(
+    entity_id: EntityId,
+    owner_id: Option<Uuid>,
+    pos: WorldPosition,
+    (
+        mut bots,
+        mut hps,
+        mut decay,
+        mut carry,
+        mut positions,
+        mut owned,
+        mut script_table,
+    ): InitBotTables,
+    user_default_scripts: View<UserId, EntityScript>,
+) {
+    bots.insert(entity_id);
+    hps.insert_or_update(
+        entity_id,
+        HpComponent {
+            hp: 100,
+            hp_max: 100,
+        },
+    );
+    decay.insert_or_update(
+        entity_id,
+        DecayComponent {
+            interval: 10,
+            time_remaining: 10,
+            hp_amount: 10,
+        },
+    );
+    carry.insert_or_update(
+        entity_id,
+        CarryComponent {
+            carry: 0,
+            carry_max: 150,
+        },
+    );
+
+    positions.insert_or_update(entity_id, PositionComponent(pos));
+
+    if let Some(owner_id) = owner_id {
+        if let Some(script) = user_default_scripts.get_by_id(UserId(owner_id)) {
+            script_table.insert_or_update(entity_id, *script);
+        }
+
+        owned.insert_or_update(
+            entity_id,
+            OwnedEntity {
+                owner_id: UserId(owner_id),
+            },
+        );
+    }
+}

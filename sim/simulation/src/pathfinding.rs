@@ -88,11 +88,11 @@ pub fn find_path(
     profile!("find_path");
     trace!("find_path from {:?} to {:?}", from, to);
     let positions = View::from_table(positions.table.at(from.room).ok_or_else(|| {
-        trace!("Room of EntityComponents not found");
+        warn!("Room of EntityComponents not found");
         PathFindingError::RoomDoesNotExists(from.room)
     })?);
     let terrain = View::from_table(terrain.table.at(from.room).ok_or_else(|| {
-        trace!("Room of TerrainComponents not found");
+        warn!("Room of TerrainComponents not found");
         PathFindingError::RoomDoesNotExists(from.room)
     })?);
     if from.room == to.room {

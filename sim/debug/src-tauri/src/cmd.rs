@@ -1,10 +1,11 @@
-mod map_gen;
-mod room_noise;
+pub mod map_gen;
+pub mod room_noise;
 
 use caolo_sim::prelude::*;
 use serde::Deserialize;
 use svg::node::element::path::Data;
 use svg::node::element::Path;
+use tracing::error;
 
 #[derive(Deserialize)]
 #[serde(tag = "cmd", rename_all = "camelCase")]
@@ -23,14 +24,49 @@ pub enum Cmd {
         callback: String,
         error: String,
     },
-}
-
-pub fn generate_world(world_radius: u32, room_radius: u32) -> Vec<String> {
-    map_gen::generate_world_impl(world_radius, room_radius)
+    FindPath {
+        from: WorldPosition,
+        to: WorldPosition,
+        callback: String,
+        error: String,
+    },
+    GetWorld {
+        callback: String,
+        error: String,
+    },
 }
 
 pub fn generate_room_noise(room_radius: u32, seed: Option<u64>) -> String {
     room_noise::generate_room_noise_impl(room_radius, seed)
+}
+
+pub fn find_path_world(
+    from: WorldPosition,
+    to: WorldPosition,
+    world: &World,
+) -> Vec<WorldPosition> {
+    use caolo_sim::pathfinding::find_path;
+    use caolo_sim::prelude::*;
+
+    let mut path = Vec::with_capacity(512);
+    let mut rooms_to_visit = Vec::with_capacity(512);
+    if let Err(err) = find_path(
+        from,
+        to,
+        FromWorld::new(world),
+        25000,
+        &mut path,
+        &mut rooms_to_visit,
+    ) {
+        error!("Failed to find path {:?}", err);
+        return vec![];
+    }
+
+    let room = from.room;
+
+    path.into_iter()
+        .map(|pos| WorldPosition { room, pos: pos.0 })
+        .collect()
 }
 
 #[derive(serde::Serialize)]

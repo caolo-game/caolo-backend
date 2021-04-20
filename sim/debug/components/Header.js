@@ -8,6 +8,9 @@ export default function Header() {
                 <li>
                     <a href="/mapNoise">Map Noise</a>
                 </li>
+                <li>
+                    <a href="/pathfinding">Pathfinding</a>
+                </li>
             </ul>
         </nav>
     );

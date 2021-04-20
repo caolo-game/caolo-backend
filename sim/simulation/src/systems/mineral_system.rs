@@ -1,9 +1,9 @@
-use crate::geometry::Axial;
 use crate::indices::{EntityId, WorldPosition};
 use crate::profile;
 use crate::storage::views::{DeferredDeleteEntityView, UnsafeView, View};
 use crate::tables::JoinIterator;
 use crate::{components as comp, join};
+use crate::{geometry::Axial, terrain::TileTerrainType};
 use rand::Rng;
 use tracing::{debug, error, trace};
 
@@ -68,8 +68,8 @@ pub fn update(
                 terrain_table,
                 &mut rng,
                 position.0.pos,
-                15,
-                100,
+                30,
+                2000,
             );
             trace!(
                 "Mineral [{:?}] has been depleted, respawning at {:?}",
@@ -129,7 +129,7 @@ fn random_uncontested_pos_in_range(
 
         if terrain_table
             .at(pos)
-            .map(|comp::TerrainComponent(t)| t.is_walkable())
+            .map(|comp::TerrainComponent(t)| matches!(t, TileTerrainType::Plain))
             .unwrap_or(false)
             && position_entities_table.count_in_range(pos, 1) == 0
         {

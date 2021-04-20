@@ -10,6 +10,8 @@ pub struct GameConfig {
     pub target_tick_ms: u64,
     /// Unique ID of this world instance
     pub queen_tag: String,
+    /// maximum number of steps pathfinding can test
+    pub path_finding_limit: u32,
 }
 
 impl Default for GameConfig {
@@ -20,6 +22,7 @@ impl Default for GameConfig {
             queen_tag: uuid::Uuid::new_v4().to_string(),
             world_radius: 32,
             room_radius: 50,
+            path_finding_limit: 1000
         }
     }
 }

@@ -96,7 +96,7 @@ fn main() {
         world
             .view::<caolo_sim::indices::ConfigKey, caolo_sim::components::RoomProperties>()
             .unwrap_value()
-            .radius as i32, // world.config.room_properties.unwrap_value().radius as i32,
+            .radius as i32,
     );
 
     // TODO: if we're feeling ballsy we could just use an UnsafeView, because terrain data does not

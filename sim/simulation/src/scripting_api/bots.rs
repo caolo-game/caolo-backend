@@ -1,6 +1,6 @@
 use super::*;
 use crate::{
-    components::{self, PathCacheComponent, Resource, TerrainComponent, PATH_CACHE_LEN},
+    components::{self, Resource},
     indices::{EntityId, UserId, WorldPosition},
     intents::{
         check_dropoff_intent, check_melee_intent, check_mine_intent, check_move_intent,
@@ -226,6 +226,8 @@ fn move_to_pos(
     user_id: UserId,
     storage: &World,
 ) -> Result<Option<MoveToPosIntent>, OperationResult> {
+    use crate::prelude::*;
+
     profile!("move_to_pos");
 
     let botpos = storage
@@ -273,11 +275,8 @@ fn move_to_pos(
     }
     trace!("Bot {:?} path cache miss", bot);
 
-    // TODO: config omponent and read from there
-    let max_pathfinding_iter: u32 = std::env::var("MAX_PATHFINDING_ITER")
-        .ok()
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(2000);
+    let conf = UnwrapView::<ConfigKey, GameConfig>::new(storage);
+    let max_pathfinding_iter = conf.path_finding_limit;
 
     let mut path = Vec::with_capacity(max_pathfinding_iter as usize);
     let mut rooms_path = Vec::with_capacity(to.room.hex_distance(botpos.0.room) as usize);

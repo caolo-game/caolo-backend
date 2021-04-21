@@ -14,17 +14,21 @@ use super::{is_walkable, Node, PathFindingError};
 const VISITED_FROM: u8 = 1 << 0;
 const VISITED_TO: u8 = 1 << 1;
 
+/// The goal of the pathfinder to approach `end` at a distance of `distance`.
+///
+/// So we'll initialize a ring of nodes with the center `end` and radius `distance`.
 fn init_end(
     begin: Axial,
     end: Axial,
     distance: u32,
+    entities: View<Axial, EntityComponent>,
     terrain: View<Axial, TerrainComponent>,
     open_set: &mut BinaryHeap<Node>,
     visited: &mut HexGrid<u8>,
     closed_set: &mut HexGrid<Node>,
 ) -> Result<(), PathFindingError> {
-    let bounds = Hexagon::new(end, distance as i32);
     if distance == 0 {
+        // `iter_edge` returns empty if radius is 0 so push the pos here
         let pos = end;
         if let Some(v) = visited.at_mut(pos) {
             *v |= VISITED_TO;
@@ -33,11 +37,13 @@ fn init_end(
             closed_set[pos] = n;
         }
     } else {
+        let bounds = Hexagon::new(end, distance as i32);
         for pos in bounds.iter_edge().filter(|pos| {
             terrain
                 .at(*pos)
                 .map(|TerrainComponent(t)| t.is_walkable())
                 .unwrap_or(false)
+                && !entities.contains_key(*pos)
         }) {
             debug_assert_eq!(pos.hex_distance(end), distance);
             if let Some(v) = visited.at_mut(pos) {
@@ -60,12 +66,12 @@ fn reconstruct_path(
     closed_set_f: &HexGrid<Node>,
     closed_set_t: &HexGrid<Node>,
 ) {
-    // done
-    // reconstruct path
-
     // reconstruct 'to'
+    //
+    // parents move towards `end`
     {
         let i = path.len();
+        // copy current
         let mut current = current;
         // 'current' will be pushed by the second loop
         while current.hex_distance(end) > distance {
@@ -76,6 +82,8 @@ fn reconstruct_path(
     }
 
     // reconstruct 'from'
+    //
+    // parents move towards `start`
     let mut current = current;
     while current != start {
         path.push(RoomPosition(current));
@@ -84,7 +92,10 @@ fn reconstruct_path(
 }
 
 /// Returns the remaining steps.
-/// Uses the A* algorithm
+///
+/// The algorithm is a two-way A*, where we start A* from both the `from` and the `to` points and
+/// exit when they meet.
+/// This should reduce the size of the graph we need to traverse in the general case.
 pub fn find_path_in_room(
     from: Axial,
     to: Axial,
@@ -119,6 +130,7 @@ pub fn find_path_in_room(
         from,
         end,
         distance,
+        positions,
         terrain,
         &mut open_set_t,
         &mut open_set_visited,
@@ -132,6 +144,7 @@ pub fn find_path_in_room(
     open_set_f.push(current_f.clone());
 
     while !open_set_f.is_empty() && !open_set_t.is_empty() && remaining_steps > 0 {
+        // if we find this position in the other set
         if closed_set_t[current_f.pos].g_cost != 0 {
             reconstruct_path(
                 current_f.pos,
@@ -183,6 +196,7 @@ pub fn find_path_in_room(
             closed_set_t
                 .insert(current_t.pos, current_t.clone())
                 .unwrap();
+            // if we find this position in the other set
             if closed_set_f[current_t.pos].g_cost != 0 {
                 reconstruct_path(
                     current_t.pos,
@@ -202,14 +216,14 @@ pub fn find_path_in_room(
             }
             for point in &current_t.pos.hex_neighbours() {
                 let point = *point;
-                if open_set_visited.at(point).copied().unwrap_or(VISITED_TO) & VISITED_TO != 0
+                if point.hex_distance(end) <= distance
+                    || open_set_visited.at(point).copied().unwrap_or(VISITED_TO) & VISITED_TO != 0
                     || !is_walkable(point, terrain)
                     || positions.contains_key(point)
                     || closed_set_t
                         .at(point)
                         .map(|node| node.g_cost != 0)
                         .unwrap_or(false)
-                    || point.hex_distance(end) <= distance
                 {
                     continue;
                 }
@@ -223,7 +237,7 @@ pub fn find_path_in_room(
                 open_set_t.push(node);
             }
         }
-        remaining_steps -= 2;
+        remaining_steps -= 1;
     }
     // failed
 

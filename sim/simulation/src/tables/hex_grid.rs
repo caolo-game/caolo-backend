@@ -28,10 +28,9 @@ impl<T> HexGrid<T> {
         let diameter = diameter(radius) as usize;
         let area = diameter * diameter;
         let bounds = Hexagon::from_radius(radius);
-        Self {
-            bounds,
-            values: vec![Default::default(); area],
-        }
+        let mut values = Vec::with_capacity(area);
+        values.resize(area, Default::default());
+        Self { bounds, values }
     }
 
     #[inline]

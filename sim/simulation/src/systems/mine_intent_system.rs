@@ -20,13 +20,7 @@ pub fn update((mut energy_table, mut carry_table): Mut, (resource_table, intents
     profile!("MineSystem update");
 
     for intent in intents.iter() {
-        let s = tracing::span!(
-            tracing::Level::INFO,
-            "mine system update",
-            bot = intent.bot.0
-        );
-        let _e = s.enter();
-        trace!("Bot is mining [{:?}]", intent.resource);
+        trace!("Bot {:?} is mining [{:?}]", intent.bot, intent.resource);
         match resource_table.get_by_id(intent.resource) {
             Some(ResourceComponent(Resource::Energy)) => {
                 let resource_energy = match energy_table.get_by_id_mut(intent.resource) {
@@ -45,7 +39,7 @@ pub fn update((mut energy_table, mut carry_table): Mut, (resource_table, intents
                 let carry = match carry_table.get_by_id_mut(intent.bot) {
                     Some(x) => x,
                     None => {
-                        warn!("MineIntent bot has no carry component");
+                        warn!("MineIntent bot {:?} has no carry component", intent.bot);
                         continue;
                     }
                 };
@@ -62,7 +56,9 @@ pub fn update((mut energy_table, mut carry_table): Mut, (resource_table, intents
                     resource_energy
                 );
             }
-            Some(ResourceComponent(_)) | None => warn!("Resource not found"),
+            Some(ResourceComponent(Resource::Empty)) | None => {
+                warn!("Resource ({:?}) not found", intent.resource)
+            }
         }
     }
 }

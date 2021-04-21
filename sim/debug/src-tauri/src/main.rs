@@ -24,7 +24,7 @@ pub fn create_world(world_radius: u32, room_radius: u32) -> std::pin::Pin<Box<Wo
 }
 
 lazy_static::lazy_static! {
-    static ref WORLD: Mutex<Pin<Box<World>>> = Mutex::new(create_world(8, 8));
+    static ref WORLD: Mutex<Pin<Box<World>>> = Mutex::new(create_world(8, 29));
 }
 
 fn main() {

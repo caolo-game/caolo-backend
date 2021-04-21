@@ -38,12 +38,8 @@ pub fn execute_scripts(
 
     let n_scripts = workload.len();
     let n_threads = rayon::current_num_threads();
-    // the +1 handles edge cases, where n_script < n_threads
-    // this way in practice 1 thread will have a bit less work to perform than the others,
-    // but it should be fine.
-    // Also if the programs call engine functions that have internal parallelisation, then
-    // load balancing should be even less of a problem...
-    let chunk_size = (n_scripts / n_threads) + 1;
+
+    let chunk_size = (n_scripts / n_threads).clamp(8, 256); //256.max(n_scripts / n_threads);
 
     debug!(
         "Executing {} scripts on {} threads in chunks of {}",

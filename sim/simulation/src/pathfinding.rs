@@ -3,7 +3,15 @@ mod tests;
 
 pub mod pathfinding_room;
 
-use crate::{components::{EntityComponent, RoomConnections, RoomProperties, TerrainComponent}, geometry::Axial, indices::{ConfigKey, Room, RoomPosition, WorldPosition}, map_generation::room::iter_edge, profile, storage::views::View, terrain::{self, TileTerrainType}};
+use crate::{
+    components::{EntityComponent, RoomConnections, RoomProperties, TerrainComponent},
+    geometry::Axial,
+    indices::{ConfigKey, Room, RoomPosition, WorldPosition},
+    map_generation::room::iter_edge,
+    profile,
+    storage::views::View,
+    terrain::{self, TileTerrainType},
+};
 use arrayvec::ArrayVec;
 use std::cmp::{Ord, Ordering, PartialOrd};
 use std::collections::BinaryHeap;

@@ -1,7 +1,6 @@
 use caolo_sim::indices::EntityId;
-use caolo_sim::tables::{dense::DenseVecTable, Table};
+use caolo_sim::tables::dense::DenseVecTable;
 use criterion::{black_box, criterion_group, BenchmarkId, Criterion};
-use rand::seq::SliceRandom;
 use rand::{rngs::SmallRng, Rng, SeedableRng};
 use rayon::iter::ParallelIterator;
 use std::convert::TryFrom;
@@ -194,34 +193,6 @@ fn override_update_all_parallel(c: &mut Criterion) {
     group.finish();
 }
 
-fn delete_by_id_random(c: &mut Criterion) {
-    c.bench_function("vec_table delete_by_id_random", |b| {
-        let mut rng = get_rand();
-        let mut table = DenseVecTable::<EntityId, i32>::new();
-        let mut ids = Vec::with_capacity(1 << 12);
-        for i in 0..1 << 12 {
-            let mut res = false;
-            let mut id = Default::default();
-            while !res {
-                id = EntityId(rng.gen_range(0, 1 << 25));
-                res = table.insert_or_update(id, i);
-            }
-            ids.push(id);
-        }
-        ids.as_mut_slice().shuffle(&mut rng);
-        let mut i = 0;
-        let mask = (1 << 12) - 1;
-        b.iter(|| {
-            i = (i + 1) & mask;
-            let id = ids[i];
-            let res = table.delete(id);
-            debug_assert!(res.is_some());
-            table.insert_or_update(id, 123);
-            res
-        });
-    });
-}
-
 criterion_group!(
     vec_benches,
     insert_at_random,
@@ -231,6 +202,5 @@ criterion_group!(
     override_update_random,
     override_update_all_serial,
     override_update_all_parallel,
-    delete_by_id_random,
     insert_at_random_w_reserve
 );

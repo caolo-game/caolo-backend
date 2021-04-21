@@ -288,6 +288,7 @@ where
     }
 
     /// Returns the first item with given id, if any
+    #[inline]
     pub fn at(&self, id: Axial) -> Option<&Row> {
         if !self.intersects(id) {
             return None;
@@ -297,6 +298,7 @@ where
     }
 
     /// Returns the first item with given id, if any
+    #[inline]
     pub fn at_mut(&mut self, id: Axial) -> Option<&mut Row> {
         if !self.intersects(id) {
             return None;
@@ -307,6 +309,7 @@ where
             .ok()
     }
 
+    #[inline]
     pub fn contains_key(&self, id: Axial) -> bool {
         if !self.intersects(id) {
             return false;
@@ -316,6 +319,7 @@ where
 
     /// Find the position of `id` or the position where it needs to be inserted to keep the
     /// container sorted
+    #[inline]
     fn find_key(&self, id: Axial) -> Result<usize, usize> {
         let [x, y] = id.as_array();
         let key = MortonKey::new(x as u16, y as u16);
@@ -533,6 +537,7 @@ where
     }
 
     /// Return wether point is within the bounds of this node
+    #[inline]
     pub fn intersects(&self, point: Axial) -> bool {
         Self::is_valid_pos(point)
     }

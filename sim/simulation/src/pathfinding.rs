@@ -1,10 +1,12 @@
-use crate::components::{EntityComponent, RoomConnections, RoomProperties, TerrainComponent};
-use crate::geometry::Axial;
-use crate::indices::{ConfigKey, Room, RoomPosition, WorldPosition};
-use crate::map_generation::room::iter_edge;
-use crate::profile;
-use crate::storage::views::View;
-use crate::terrain::{self, TileTerrainType};
+use crate::{
+    components::{EntityComponent, RoomConnections, RoomProperties, TerrainComponent},
+    geometry::Axial,
+    indices::{ConfigKey, Room, RoomPosition, WorldPosition},
+    map_generation::room::iter_edge,
+    profile,
+    storage::views::View,
+    terrain::{self, TileTerrainType},
+};
 use arrayvec::ArrayVec;
 use std::cmp::{Ord, Ordering, PartialOrd};
 use std::collections::BinaryHeap;
@@ -59,7 +61,7 @@ pub enum PathFindingError {
     #[error("Target is unreachable")]
     Unreachable,
     #[error("Room {0:?} does not exist")]
-    RoomDoesNotExists(Axial),
+    RoomNotExists(Axial),
 
     #[error("Proposed edge {0:?} does not exist")]
     EdgeNotExists(Axial),
@@ -90,11 +92,11 @@ pub fn find_path(
     trace!("find_path from {:?} to {:?}", from, to);
     let positions = View::from_table(positions.table.at(from.room).ok_or_else(|| {
         warn!("Room of EntityComponents not found");
-        PathFindingError::RoomDoesNotExists(from.room)
+        PathFindingError::RoomNotExists(from.room)
     })?);
     let terrain = View::from_table(terrain.table.at(from.room).ok_or_else(|| {
         warn!("Room of TerrainComponents not found");
-        PathFindingError::RoomDoesNotExists(from.room)
+        PathFindingError::RoomNotExists(from.room)
     })?);
     if from.room == to.room {
         find_path_in_room(
@@ -155,7 +157,7 @@ fn find_path_multiroom(
     let edge = *next_room - from_room;
     let bridge = room_connections.at(from_room).ok_or_else(|| {
         trace!("Room of bridge not found");
-        PathFindingError::RoomDoesNotExists(from_room)
+        PathFindingError::RoomNotExists(from_room)
     })?;
 
     let bridge_ind =
@@ -174,7 +176,7 @@ fn find_path_multiroom(
         PathFindingError::EdgeNotExists(edge)
     })?;
     let mut is_bot_on_bridge = false;
-    let mut bridge = {
+    let mut bridge_points = {
         bridge
             .map(|pos| {
                 is_bot_on_bridge = is_bot_on_bridge || pos == from.pos;
@@ -189,10 +191,17 @@ fn find_path_multiroom(
         return Ok(max_steps);
     }
 
-    bridge.sort_unstable_by_key(|p| p.hex_distance(from.pos));
+    bridge_points.sort_unstable_by_key(|p| p.hex_distance(from.pos));
 
-    'a: for p in bridge {
-        match find_path_in_room(from.pos, p, distance, (positions, terrain), max_steps, path) {
+    'a: for point in bridge_points {
+        match find_path_in_room(
+            from.pos,
+            point,
+            distance,
+            (positions, terrain),
+            max_steps,
+            path,
+        ) {
             Ok(_) => {
                 break 'a;
             }
@@ -239,7 +248,7 @@ pub fn find_path_overworld(
             .at(current_pos)
             .ok_or_else(|| {
                 trace!("Room {:?} not found in RoomConnections table", current_pos);
-                PathFindingError::RoomDoesNotExists(current_pos)
+                PathFindingError::RoomNotExists(current_pos)
             })?
             .0
             .iter()
@@ -531,10 +540,11 @@ pub fn mirrored_room_position(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tables::hex_grid::HexGrid;
-    use crate::tables::morton_hierarchy::SpacialStorage;
-    use crate::terrain::TileTerrainType;
-    use crate::{prelude::Hexagon, tables::morton::MortonTable};
+    use crate::{
+        prelude::Hexagon,
+        tables::{hex_grid::HexGrid, morton::MortonTable, morton_hierarchy::SpacialStorage},
+        terrain::TileTerrainType,
+    };
 
     #[test]
     fn test_simple_wall() {

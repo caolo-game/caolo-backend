@@ -1,18 +1,17 @@
-use crate::{
-    components::{EntityComponent, RoomConnections, RoomProperties, TerrainComponent},
-    geometry::Axial,
-    indices::{ConfigKey, Room, RoomPosition, WorldPosition},
-    map_generation::room::iter_edge,
-    profile,
-    storage::views::View,
-    terrain::{self, TileTerrainType},
-};
+#[cfg(test)]
+mod tests;
+
+pub mod pathfinding_room;
+
+use crate::{components::{EntityComponent, RoomConnections, RoomProperties, TerrainComponent}, geometry::Axial, indices::{ConfigKey, Room, RoomPosition, WorldPosition}, map_generation::room::iter_edge, profile, storage::views::View, terrain::{self, TileTerrainType}};
 use arrayvec::ArrayVec;
 use std::cmp::{Ord, Ordering, PartialOrd};
 use std::collections::BinaryHeap;
 use std::collections::HashMap;
 use thiserror::Error;
 use tracing::{debug, error, trace, warn};
+
+use self::pathfinding_room::find_path_in_room;
 
 const MAX_BRIDGE_LEN: usize = 64;
 
@@ -302,90 +301,6 @@ fn is_walkable(point: Axial, terrain: View<Axial, TerrainComponent>) -> bool {
         .unwrap_or(false)
 }
 
-/// Returns the remaining steps.
-/// Uses the A* algorithm
-pub fn find_path_in_room(
-    from: Axial,
-    to: Axial,
-    distance: u32,
-    (positions, terrain): (View<Axial, EntityComponent>, View<Axial, TerrainComponent>),
-    max_steps: u32,
-    path: &mut Vec<RoomPosition>,
-) -> Result<u32, PathFindingError> {
-    use crate::tables::hex_grid::HexGrid;
-
-    profile!("find_path_in_room");
-    trace!("find_path_in_room from {:?} to {:?}", from, to);
-
-    let current = from;
-    let end = to;
-
-    let mut remaining_steps = max_steps;
-
-    let mut closed_set = HashMap::<Axial, Node>::with_capacity(remaining_steps as usize);
-    let mut open_set = BinaryHeap::with_capacity(remaining_steps as usize);
-    let mut open_set_visited = HexGrid::<bool>::new(terrain.bounds().radius as usize);
-
-    let mut current = Node::new(current, current, current.hex_distance(end) as i32, 0);
-    closed_set.insert(current.pos, current.clone());
-    open_set.push(current.clone());
-
-    while !open_set.is_empty() && remaining_steps > 0 {
-        current = open_set.pop().unwrap();
-        if current.pos.hex_distance(end) <= distance {
-            // done
-            // reconstruct path
-            let mut current = current.pos;
-            let end = from;
-            while current != end {
-                path.push(RoomPosition(current));
-                current = closed_set[&current].parent;
-            }
-            debug!(
-                "find_path_in_room succeeded, steps taken: {} remaining_steps: {}",
-                max_steps - remaining_steps,
-                remaining_steps,
-            );
-            return Ok(remaining_steps);
-        }
-        closed_set.insert(current.pos, current.clone());
-
-        for point in &current.pos.hex_neighbours() {
-            let point = *point;
-            // Filter only the free neighbours
-            // End may be in the either tables!
-            if (point != end && (positions.contains_key(point))
-                || open_set_visited.at(point).copied().unwrap_or(false)
-                || !is_walkable(point, terrain))
-                || closed_set.contains_key(&point)
-            {
-                continue;
-            }
-            open_set_visited[point] = true;
-            let node = Node::new(
-                point,
-                current.pos,
-                point.hex_distance(end) as i32,
-                current.g_cost + 1,
-            );
-            open_set.push(node);
-        }
-        remaining_steps -= 1;
-    }
-    // failed
-
-    debug!(
-        "find_path_in_room failed, steps taken: {} remaining_steps: {}",
-        max_steps - remaining_steps,
-        remaining_steps
-    );
-    if remaining_steps > 0 {
-        // we ran out of possible paths
-        return Err(PathFindingError::Unreachable);
-    }
-    Err(PathFindingError::Timeout)
-}
-
 #[derive(Debug)]
 pub enum TransitError {
     InternalError(anyhow::Error),
@@ -497,7 +412,7 @@ pub fn get_valid_transits(
 /// - Fixing the largest abs value and swapping the other two.
 /// - Inverting the position ( pos * -1 )
 /// - Translating it back to center
-pub fn mirrored_room_position(
+fn mirrored_room_position(
     current_pos: Axial,
     props: &RoomProperties,
 ) -> Result<Axial, TransitError> {
@@ -543,97 +458,4 @@ pub fn mirrored_room_position(
     };
     let pos = Axial::hex_cube_to_axial(mirror_cube);
     Ok(pos + offset)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::{
-        prelude::Hexagon,
-        tables::{hex_grid::HexGrid, morton::MortonTable, morton_hierarchy::SpacialStorage},
-        terrain::TileTerrainType,
-    };
-
-    #[test]
-    fn test_simple_wall() {
-        let from = Axial::new(2, 1);
-        let to = Axial::new(5, 2);
-
-        let positions = MortonTable::new();
-        let mut terrain = HexGrid::new(3);
-        terrain
-            .extend(
-                Hexagon::from_radius(3)
-                    .iter_points()
-                    .map(|Axial { q: x, r: y }| {
-                        let ty = if x == 3 && y <= 4 {
-                            TileTerrainType::Wall
-                        } else {
-                            TileTerrainType::Plain
-                        };
-
-                        (Axial::new(x, y), TerrainComponent(ty))
-                    }),
-            )
-            .unwrap();
-
-        let mut path = vec![];
-        find_path_in_room(
-            from,
-            to,
-            0,
-            (View::from_table(&positions), View::from_table(&terrain)),
-            512,
-            &mut path,
-        )
-        .expect("Path finding failed");
-        path.reverse();
-
-        let mut current = from;
-        for point in path.iter() {
-            let point = point.0;
-            assert_eq!(point.hex_distance(current), 1);
-            if point.q == 3 {
-                assert!(point.r > 4, "{:?}", point);
-            }
-            current = point;
-        }
-        assert_eq!(current, to);
-    }
-
-    #[test]
-    fn test_path_is_continous() {
-        let from = Axial::new(17, 6);
-        let to = Axial::new(7, 16);
-
-        let positions = MortonTable::new();
-        let mut terrain = HexGrid::new(12);
-
-        terrain.iter_mut().for_each(|(_, t)| {
-            *t = TerrainComponent(TileTerrainType::Plain);
-        });
-
-        let mut path = vec![];
-        find_path_in_room(
-            from,
-            to,
-            0,
-            (View::from_table(&positions), View::from_table(&terrain)),
-            512,
-            &mut path,
-        )
-        .expect("Path finding failed");
-        path.reverse();
-
-        let mut current = from;
-        for point in path.iter() {
-            let point = point.0;
-            assert_eq!(point.hex_distance(current), 1);
-            if point.q == 2 {
-                assert!(point.r.abs() > 5, "{:?}", point);
-            }
-            current = point;
-        }
-        assert_eq!(current, to);
-    }
 }

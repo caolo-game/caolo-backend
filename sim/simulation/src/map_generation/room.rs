@@ -615,7 +615,7 @@ fn print_terrain(from: Axial, to: Axial, terrain: View<Axial, TerrainComponent>)
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pathfinding::find_path_in_room;
+    use crate::pathfinding::pathfinding_room::find_path_in_room;
     use crate::storage::views::View;
     use crate::{components::EntityComponent, tables::morton::MortonTable};
 

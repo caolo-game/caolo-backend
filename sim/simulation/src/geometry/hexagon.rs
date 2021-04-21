@@ -8,6 +8,10 @@ pub struct Hexagon {
 }
 
 impl Hexagon {
+    pub fn new(center: Axial, radius: i32) -> Self {
+        Self { center, radius }
+    }
+
     pub fn from_radius(radius: i32) -> Self {
         debug_assert!(radius >= 0);
         Self {
@@ -22,6 +26,34 @@ impl Hexagon {
         let r = self.radius;
         debug_assert!(r >= 0);
         x.abs() <= r && y.abs() <= r && z.abs() <= r
+    }
+
+    pub fn iter_edge(self) -> impl Iterator<Item = Axial> {
+        debug_assert!(self.radius >= 0, "negative radius will not work as expected");
+        let radius = self.radius;
+        let starts = [
+            self.center + Axial::new(0, -radius),
+            self.center + Axial::new(radius, -radius),
+            self.center + Axial::new(radius, 0),
+            self.center + Axial::new(0, radius),
+            self.center + Axial::new(-radius, radius),
+            self.center + Axial::new(-radius, 0),
+        ];
+        let deltas = [
+            Axial::new(1, 0),
+            Axial::new(0, 1),
+            Axial::new(-1, 1),
+            Axial::new(-1, 0),
+            Axial::new(0, -1),
+            Axial::new(1, -1),
+        ];
+        (0..6).flat_map(move |di| {
+            // iterating over `deltas` is a compile error because they're freed at the end of this
+            // funciton...
+            let delta = deltas[di];
+            let pos = starts[di];
+            (0..radius).map(move |j| pos + delta * j)
+        })
     }
 
     pub fn iter_points(self) -> impl Iterator<Item = Axial> {
@@ -63,6 +95,29 @@ mod tests {
 
         for p in hex.iter_points() {
             assert!(hex.contains(p));
+        }
+    }
+
+    #[test]
+    fn test_iter_edge() {
+        let pos = Axial::new(0, 0);
+        let radius = 4;
+        let hex = Hexagon::new(pos, radius);
+
+        let edge: Vec<_> = hex.iter_edge().collect();
+
+        dbg!(hex, &edge);
+
+        assert_eq!(edge.len(), 6 * radius as usize);
+
+        for (i, p) in edge.iter().copied().enumerate() {
+            assert_eq!(
+                p.hex_distance(pos),
+                radius as u32,
+                "Hex #{} {:?} is out of range",
+                i,
+                p
+            );
         }
     }
 }

@@ -45,7 +45,7 @@ pub fn check_melee_intent(
         // if not owner or the bot has no owner
         return OperationResult::NotOwner;
     }
-    if !melee_table.contains(intent.attacker) {
+    if !melee_table.contains_id(intent.attacker) {
         debug!("attacker has no MeleeAttackComponent");
         return OperationResult::InvalidInput;
     }

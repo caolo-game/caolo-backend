@@ -113,7 +113,7 @@ impl FindConstant {
                 let owner = storage.view::<EntityId, components::OwnedEntity>();
                 let spawns = storage.view::<EntityId, components::SpawnComponent>();
                 find_closest_entity_impl(storage, position, |id| {
-                    spawns.contains(id)
+                    spawns.contains_id(id)
                         && owner.get_by_id(id).map(|owner_id| owner_id.owner_id) == user_id
                 })
             }

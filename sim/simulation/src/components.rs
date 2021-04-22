@@ -79,8 +79,8 @@ pub struct EnergyComponent {
     pub energy: u16,
     pub energy_max: u16,
 }
-impl<Id: TableId> Component<Id> for EnergyComponent {
-    type Table = BTreeTable<Id, Self>;
+impl Component<EntityId> for EnergyComponent {
+    type Table = DenseVecTable<EntityId, Self>;
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -92,8 +92,8 @@ pub struct SpawnComponent {
     pub spawning: Option<EntityId>,
 }
 
-impl<Id: TableId> Component<Id> for SpawnComponent {
-    type Table = BTreeTable<Id, Self>;
+impl Component<EntityId> for SpawnComponent {
+    type Table = DenseVecTable<EntityId, Self>;
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -103,8 +103,8 @@ pub struct SpawnQueueComponent {
     pub queue: VecDeque<EntityId>,
 }
 
-impl<Id: TableId> Component<Id> for SpawnQueueComponent {
-    type Table = BTreeTable<Id, Self>;
+impl Component<EntityId> for SpawnQueueComponent {
+    type Table = DenseVecTable<EntityId, Self>;
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
@@ -122,8 +122,8 @@ impl Component<EntityId> for HpComponent {
 pub struct EnergyRegenComponent {
     pub amount: u16,
 }
-impl<Id: TableId> Component<Id> for EnergyRegenComponent {
-    type Table = BTreeTable<Id, Self>;
+impl Component<EntityId> for EnergyRegenComponent {
+    type Table = DenseVecTable<EntityId, Self>;
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -132,8 +132,8 @@ pub struct SpawnBotComponent {
     pub bot: Bot,
 }
 
-impl<Id: TableId> Component<Id> for SpawnBotComponent {
-    type Table = BTreeTable<Id, Self>;
+impl Component<EntityId> for SpawnBotComponent {
+    type Table = DenseVecTable<EntityId, Self>;
 }
 
 // TODO:

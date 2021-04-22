@@ -1,4 +1,4 @@
-use crate::tables::{btree::BTreeTable, dense::DenseVecTable, Component, TableId};
+use crate::tables::{btree::BTreeTable, dense::DenseVecTable, Component};
 use crate::{
     indices::{EntityId, RoomPosition, ScriptId, UserId, WorldPosition},
     tables::flag::SparseFlagTable,
@@ -12,14 +12,14 @@ use serde::{Deserialize, Serialize};
 pub struct MeleeAttackComponent {
     pub strength: u16,
 }
-impl<Id: TableId> Component<Id> for MeleeAttackComponent {
-    type Table = BTreeTable<Id, Self>;
+impl Component<EntityId> for MeleeAttackComponent {
+    type Table = DenseVecTable<EntityId, Self>;
 }
 
 /// Has a body so it's not `null` when serializing
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
-pub struct Bot {}
+pub struct Bot;
 
 impl Component<EntityId> for Bot {
     type Table = SparseFlagTable<EntityId, Self>;
@@ -34,8 +34,8 @@ pub struct DecayComponent {
     pub interval: u8,
     pub time_remaining: u8,
 }
-impl<Id: TableId> Component<Id> for DecayComponent {
-    type Table = BTreeTable<Id, Self>;
+impl Component<EntityId> for DecayComponent {
+    type Table = DenseVecTable<EntityId, Self>;
 }
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
@@ -44,8 +44,8 @@ pub struct CarryComponent {
     pub carry: u16,
     pub carry_max: u16,
 }
-impl<Id: TableId> Component<Id> for CarryComponent {
-    type Table = BTreeTable<Id, Self>;
+impl Component<EntityId> for CarryComponent {
+    type Table = DenseVecTable<EntityId, Self>;
 }
 
 /// Entity - Script join table
@@ -68,6 +68,6 @@ pub struct PathCacheComponent {
     pub target: WorldPosition,
     pub path: ArrayVec<RoomPosition, PATH_CACHE_LEN>,
 }
-impl<Id: TableId> Component<Id> for PathCacheComponent {
-    type Table = BTreeTable<Id, Self>;
+impl Component<EntityId> for PathCacheComponent {
+    type Table = DenseVecTable<EntityId, Self>;
 }

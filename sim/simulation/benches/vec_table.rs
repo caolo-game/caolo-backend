@@ -2,7 +2,6 @@ use caolo_sim::indices::EntityId;
 use caolo_sim::tables::dense_table::DenseTable;
 use criterion::{black_box, criterion_group, BenchmarkId, Criterion};
 use rand::{rngs::SmallRng, Rng, SeedableRng};
-use rayon::iter::ParallelIterator;
 use std::convert::TryFrom;
 
 fn get_rand() -> impl rand::Rng {
@@ -166,33 +165,6 @@ fn override_update_all_serial(c: &mut Criterion) {
     group.finish();
 }
 
-fn override_update_all_parallel(c: &mut Criterion) {
-    let mut group = c.benchmark_group("vec_table override_update_all_parallel");
-    for size in (8..20).step_by(2) {
-        let size = 1 << size;
-
-        group.bench_with_input(BenchmarkId::from_parameter(size), &size, |b, &size| {
-            let mut rng = get_rand();
-            let mut table = DenseTable::<EntityId, usize>::with_capacity(size);
-            let mut ids = Vec::with_capacity(size);
-            for i in 0..size {
-                let mut id = Default::default();
-                while table.contains_id(id) {
-                    id = EntityId(
-                        rng.gen_range(0, u32::try_from(size * 2).expect("max len to fit into u32")),
-                    );
-                }
-                table.insert_or_update(id, i);
-                ids.push((id, i));
-            }
-            b.iter(|| {
-                table.par_iter_mut().for_each(|(_, v)| *v += 1);
-            });
-        });
-    }
-    group.finish();
-}
-
 criterion_group!(
     vec_benches,
     insert_at_random,
@@ -201,6 +173,5 @@ criterion_group!(
     get_by_id_random_2_pow_16,
     override_update_random,
     override_update_all_serial,
-    override_update_all_parallel,
     insert_at_random_w_reserve
 );

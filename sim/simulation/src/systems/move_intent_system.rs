@@ -4,7 +4,6 @@ use crate::intents::{Intents, MoveIntent};
 use crate::profile;
 use crate::storage::views::{UnsafeView, UnwrapViewMut, View};
 use crate::tables::traits::Table;
-use rayon::prelude::*;
 use tracing::trace;
 
 type Mut = (
@@ -56,7 +55,7 @@ fn pre_process_move_intents(move_intents: &mut Vec<MoveIntent>) {
         // 0 and 1 long vectors do not have duplicates
         return;
     }
-    move_intents.par_sort_unstable_by_key(|intent| intent.position);
+    move_intents.sort_unstable_by_key(|intent| intent.position);
     // move in reverse order because we want to remove invalid intents as we move,
     // swap_remove would change the last position, screwing with the ordering
     for current in (0..=len - 2).rev() {

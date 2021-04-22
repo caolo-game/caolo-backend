@@ -11,9 +11,8 @@ pub fn init_world_entities(storage: &mut World, n_fake_users: usize) {
     let mut rng = rand::thread_rng();
 
     let mining_script_id = ScriptId(Uuid::new_v4());
-    let script: CaoIr =
-        serde_yaml::from_str(include_str!("./programs/mining_program.yaml"))
-            .expect("deserialize example program");
+    let script: CaoIr = serde_yaml::from_str(include_str!("./programs/mining_program.yaml"))
+        .expect("deserialize example program");
     debug!("compiling default program");
     let compiled =
         compile(script, CompileOptions::new()).expect("failed to compile example program");
@@ -187,13 +186,11 @@ mod tests {
     #[test]
     fn can_init_the_game() {
         let mut exc = SimpleExecutor;
-        let mut world = exc
-            .initialize(crate::executor::GameConfig {
-                world_radius: 2,
-                room_radius: 10,
-                ..Default::default()
-            })
-            .unwrap();
+        let mut world = exc.initialize(crate::executor::GameConfig {
+            world_radius: 2,
+            room_radius: 10,
+            ..Default::default()
+        });
 
         // smoke test: can the game be even initialized?
         init_world_entities(&mut *world, 12);

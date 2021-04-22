@@ -24,7 +24,6 @@ use self::litmax_bigmin::round_down_to_one_less_than_pow_two;
 use super::*;
 use crate::geometry::Axial;
 use litmax_bigmin::litmax_bigmin;
-use rayon::prelude::*;
 use std::convert::{TryFrom, TryInto};
 use thiserror::Error;
 
@@ -74,17 +73,6 @@ where
             keys: Default::default(),
             values: Default::default(),
         }
-    }
-}
-
-impl<'a, Row> MortonTable<Row>
-where
-    Row: TableRow + Send,
-    (Axial, Row): Send,
-    // if the underlying vector implements par_iter_mut...
-{
-    pub fn par_iter_mut(&'a mut self) -> impl ParallelIterator<Item = (Axial, &'a mut Row)> + 'a {
-        self.values[..].par_iter_mut().map(move |(k, v)| (*k, v))
     }
 }
 

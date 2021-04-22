@@ -9,7 +9,7 @@ mod world_service;
 use crate::protos::cao_commands::command_server::CommandServer;
 use crate::protos::cao_script::scripting_server::ScriptingServer;
 use crate::protos::cao_world::world_server::WorldServer;
-use caolo_sim::{executor::Executor, executor::SimpleExecutor};
+use caolo_sim::executor::SimpleExecutor;
 use std::{
     env,
     sync::Arc,
@@ -69,14 +69,12 @@ fn main() {
     info!("Creating cao executor with tag {}", tag);
     let mut executor = SimpleExecutor;
     info!("Init storage");
-    let mut world = executor
-        .initialize(caolo_sim::executor::GameConfig {
-            world_radius: game_conf.world_radius,
-            room_radius: game_conf.room_radius,
-            queen_tag: tag,
-            ..Default::default()
-        })
-        .expect("Initialize executor");
+    let mut world = executor.initialize(caolo_sim::executor::GameConfig {
+        world_radius: game_conf.world_radius,
+        room_radius: game_conf.room_radius,
+        queen_tag: tag,
+        ..Default::default()
+    });
 
     info!("Starting with {} actors", game_conf.n_actors);
 
@@ -136,8 +134,7 @@ fn main() {
             {
                 // free the world mutex at the end of this scope
                 let mut world = world.lock().await;
-
-                executor.forward(&mut *world).unwrap();
+                executor.forward(&mut *world).await.unwrap();
 
                 pl.update(world.time(), &world);
             }

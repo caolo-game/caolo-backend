@@ -7,7 +7,7 @@ build = "build.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [features]
-default = ["tokio"]
+default = []
 
 [dependencies]
 cao-lang = { git = "https://github.com/caolo-game/cao-lang.git" }
@@ -15,7 +15,6 @@ cao_storage_derive = { path = "../cao-storage-derive" }
 cao-profile = { git = "https://github.com/caolo-game/cao-profile.git", optional = true, features = [
     "http"
 ] }
-rayon = { version = "1" }
 rand = { version = "0.7", features = ["small_rng"] }
 chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "0.8", features = ["serde", "v4"] }
@@ -25,8 +24,9 @@ serde_derive = "1"
 thiserror = "1"
 anyhow = "1"
 serde_yaml = "0.8"
-tokio = { version = "1", optional = true, features = ["rt-multi-thread"] }
+tokio = { version = "1", features = ["rt-multi-thread"] }
 tracing = { version = "0.1", features = ["release_max_level_info"] }
+futures = "0.3"
 
 [dev-dependencies]
 criterion = { version = "0.3", features = ["html_reports"] }

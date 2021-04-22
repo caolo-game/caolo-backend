@@ -8,9 +8,12 @@ use crate::{
     storage::views::{FromWorld, UnwrapView},
 };
 use cao_lang::prelude::*;
-use rayon::prelude::*;
-use std::fmt::{self, Display, Formatter};
+use futures::StreamExt;
 use std::mem::replace;
+use std::{
+    convert::Infallible,
+    fmt::{self, Display, Formatter},
+};
 use thiserror::Error;
 use tracing::{debug, trace, warn};
 
@@ -28,22 +31,21 @@ pub enum ExecutionError {
     },
 }
 
-pub fn execute_scripts(
+pub async fn execute_scripts(
     workload: &[(EntityId, EntityScript)],
     storage: &mut World,
-) -> Vec<BotIntents> {
+) -> Result<Vec<BotIntents>, Infallible> {
     profile!("execute_scripts");
 
     let owners_table = storage.view::<EntityId, OwnedEntity>().reborrow();
 
     let n_scripts = workload.len();
-    let n_threads = rayon::current_num_threads();
 
-    let chunk_size = (n_scripts / n_threads).clamp(8, 256); //256.max(n_scripts / n_threads);
+    let chunk_size = n_scripts.clamp(8, 256);
 
     debug!(
-        "Executing {} scripts on {} threads in chunks of {}",
-        n_scripts, n_threads, chunk_size
+        "Executing {} scripts in chunks of {}",
+        n_scripts, chunk_size
     );
 
     #[derive(Default)]
@@ -53,73 +55,66 @@ pub fn execute_scripts(
         num_scripts_errored: u64,
     }
 
-    let run_result: Option<RunResult> = workload
-        .par_chunks(chunk_size)
-        .fold(
-            || RunResult {
+    let run_result = futures::stream::iter(workload)
+        .chunks(chunk_size)
+        .map(|entity_scripts| {
+            let mut results = RunResult {
                 intents: Vec::with_capacity(chunk_size),
                 num_scripts_ran: 0,
                 num_scripts_errored: 0,
-            },
-            |mut results, entity_scripts| {
-                let data = ScriptExecutionData::unsafe_default();
+            };
+            let data = ScriptExecutionData::unsafe_default();
 
-                let conf = UnwrapView::<ConfigKey, GameConfig>::new(storage);
-                let mut vm = Vm::new(data).expect("Failed to initialize VM");
-                vm.runtime_data.set_memory_limit(40 * 1024 * 1024);
-                vm.max_instr = conf.execution_limit as u64;
-                crate::scripting_api::make_import().execute_imports(&mut vm);
+            let conf = UnwrapView::<ConfigKey, GameConfig>::new(storage);
+            let mut vm = Vm::new(data).expect("Failed to initialize VM");
+            vm.runtime_data.set_memory_limit(40 * 1024 * 1024);
+            vm.max_instr = conf.execution_limit as u64;
+            crate::scripting_api::make_import().execute_imports(&mut vm);
 
-                for (entity_id, script) in entity_scripts {
-                    let owner_id = owners_table
-                        .get_by_id(*entity_id)
-                        .map(|OwnedEntity { owner_id }| *owner_id);
+            for (entity_id, script) in entity_scripts {
+                let owner_id = owners_table
+                    .get_by_id(*entity_id)
+                    .map(|OwnedEntity { owner_id }| *owner_id);
 
-                    let s = tracing::error_span!("script_execution", entity_id = entity_id.0);
-                    let _e = s.enter();
+                let s = tracing::error_span!("script_execution", entity_id = entity_id.0);
+                let _e = s.enter();
 
-                    vm.clear();
-                    match execute_single_script(*entity_id, script.0, owner_id, storage, &mut vm) {
-                        Ok(ints) => results.intents.push(ints),
-                        Err(err) => {
-                            results.num_scripts_errored += 1;
-                            debug!(
-                                "Execution failure in {:?} of {:?}:\n{:?}",
-                                script, entity_id, err
-                            );
-                        }
+                vm.clear();
+                match execute_single_script(*entity_id, script.0, owner_id, storage, &mut vm) {
+                    Ok(ints) => results.intents.push(ints),
+                    Err(err) => {
+                        results.num_scripts_errored += 1;
+                        debug!(
+                            "Execution failure in {:?} of {:?}:\n{:?}",
+                            script, entity_id, err
+                        );
                     }
-                    results.num_scripts_ran += 1;
                 }
-                results
-            },
-        )
-        .reduce_with(|mut res, intermediate| {
+                results.num_scripts_ran += 1;
+            }
+            results
+        })
+        .fold(RunResult::default(), |mut res, intermediate| async move {
             res.intents.extend(intermediate.intents);
             res.num_scripts_ran += intermediate.num_scripts_ran;
             res.num_scripts_errored += intermediate.num_scripts_errored;
             res
-        });
+        })
+        .await;
 
     debug!(
         "Executing scripts done. Returning {:?} intents",
-        run_result.as_ref().map(|i| i.intents.len())
+        run_result.intents.len()
     );
 
     let mut diag = storage.unsafe_view::<EmptyKey, Diagnostics>();
     let diag: &mut Diagnostics = diag.unwrap_mut_or_default();
 
-    diag.number_of_intents = run_result
-        .as_ref()
-        .map(|i| i.intents.len() as u64)
-        .unwrap_or(0);
-    diag.number_of_scripts_ran = run_result.as_ref().map(|i| i.num_scripts_ran).unwrap_or(0);
-    diag.number_of_scripts_errored = run_result
-        .as_ref()
-        .map(|i| i.num_scripts_errored)
-        .unwrap_or(0);
+    diag.number_of_intents = run_result.intents.len() as u64;
+    diag.number_of_scripts_ran = run_result.num_scripts_ran;
+    diag.number_of_scripts_errored = run_result.num_scripts_errored;
 
-    run_result.map(|i| i.intents).unwrap_or_else(Vec::default)
+    Ok(run_result.intents)
 }
 
 fn prepare_script_data(

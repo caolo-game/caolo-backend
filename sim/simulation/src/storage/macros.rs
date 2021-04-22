@@ -18,7 +18,7 @@
 ///     room_radius: 10,
 ///     ..Default::default()
 /// },
-/// ).unwrap();
+/// );
 ///
 /// let entity_1 = store.insert_entity();
 /// let entity_2 = store.insert_entity();
@@ -74,7 +74,7 @@ macro_rules! query {
 ///     room_radius: 10,
 ///     ..Default::default()
 /// },
-/// ).unwrap();
+/// );
 ///
 /// let entity_1 = store.insert_entity();
 /// let entity_2 = store.insert_entity();
@@ -138,7 +138,7 @@ macro_rules! query {
 ///     room_radius: 10,
 ///     ..Default::default()
 /// },
-/// ).unwrap();
+/// );
 ///
 /// let entity_1 = store.insert_entity();
 /// let entity_2 = store.insert_entity();

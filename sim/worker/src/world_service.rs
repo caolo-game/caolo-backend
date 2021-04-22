@@ -192,18 +192,14 @@ mod tests {
     /// test the bare minimum
     #[test]
     fn can_update_payload() {
-        use caolo_sim::prelude::Executor;
-
         let mut pl = Payload::default();
 
         let mut exc = caolo_sim::prelude::SimpleExecutor;
-        let mut w = exc
-            .initialize(caolo_sim::executor::GameConfig {
-                world_radius: 2,
-                room_radius: 10,
-                ..Default::default()
-            })
-            .unwrap();
+        let mut w = exc.initialize(caolo_sim::executor::GameConfig {
+            world_radius: 2,
+            room_radius: 10,
+            ..Default::default()
+        });
         caolo_sim::init::init_world_entities(&mut *w, 12);
 
         pl.update(w.time(), &w);

@@ -1,4 +1,4 @@
-use std::{convert::Infallible, fmt::Debug, pin::Pin};
+use std::{convert::Infallible, pin::Pin};
 
 use tracing::{debug, info};
 
@@ -18,25 +18,13 @@ use crate::{
 
 pub use crate::components::game_config::GameConfig;
 
-/// Execute world state updates
-pub trait Executor {
-    type Error: Debug;
-
-    /// Initialize this executor's state and return the initial world state
-    fn initialize(&mut self, config: GameConfig) -> Result<Pin<Box<World>>, Self::Error>;
-    /// Forward the world state by 1 tick
-    fn forward(&mut self, world: &mut World) -> Result<(), Self::Error>;
-}
-
 /// The simplest executor.
 ///
 /// Just runs a world update
 pub struct SimpleExecutor;
 
-impl Executor for SimpleExecutor {
-    type Error = Infallible;
-
-    fn forward(&mut self, world: &mut World) -> Result<(), Self::Error> {
+impl SimpleExecutor {
+    pub async fn forward(&mut self, world: &mut World) -> Result<(), Infallible> {
         let start = chrono::Utc::now();
         profile!("world_forward");
 
@@ -56,7 +44,9 @@ impl Executor for SimpleExecutor {
         let intents = {
             debug!("Executing scripts");
             let start = chrono::Utc::now();
-            let intents = execute_scripts(executions.as_slice(), world);
+            let intents = execute_scripts(executions.as_slice(), world)
+                .await
+                .expect("script execution");
             let end = chrono::Utc::now();
             let duration = end - start;
             diag.scripts_execution_ms = duration.num_milliseconds();
@@ -91,14 +81,14 @@ impl Executor for SimpleExecutor {
         Ok(())
     }
 
-    fn initialize(&mut self, config: GameConfig) -> Result<Pin<Box<World>>, Self::Error> {
+    pub fn initialize(&mut self, config: GameConfig) -> Pin<Box<World>> {
         let mut world = World::new();
 
         execute_map_generation(&mut *world, &config).expect("Failed to generate world map");
 
         world.config.game_config.value = Some(config);
 
-        Ok(world)
+        world
     }
 }
 

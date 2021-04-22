@@ -3,7 +3,6 @@ use crate::indices::*;
 use crate::intents::*;
 use crate::profile;
 use crate::storage::views::{UnsafeView, UnwrapViewMut, View};
-use rayon::prelude::*;
 use tracing::{debug, error};
 
 type Mut = (
@@ -43,7 +42,7 @@ fn pre_process(intents: &mut Vec<MeleeIntent>) {
         return;
     }
     // dedupe
-    intents.par_sort_unstable_by_key(|intent| intent.attacker);
+    intents.sort_unstable_by_key(|intent| intent.attacker);
     for current in (0..len).rev() {
         let last = current + 1;
         let a = &intents[last];

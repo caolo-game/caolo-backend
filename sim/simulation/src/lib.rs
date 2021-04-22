@@ -39,16 +39,9 @@ impl<Id: TableId> Component<Id> for Time {
     type Table = UniqueTable<Id, Time>;
 }
 
-// use phantomdata member to disallow crate users the creation of runtimes directly
-#[cfg(not(feature = "tokio"))]
-#[derive(Clone, Default)]
-pub struct RuntimeGuard(std::marker::PhantomData<()>);
-
-#[cfg(feature = "tokio")]
 #[derive(Clone)]
 pub struct RuntimeGuard(std::sync::Arc<tokio::runtime::Runtime>);
 
-#[cfg(feature = "tokio")]
 impl Default for RuntimeGuard {
     fn default() -> Self {
         Self::new()
@@ -56,17 +49,10 @@ impl Default for RuntimeGuard {
 }
 
 impl RuntimeGuard {
-    #[cfg(not(feature = "tokio"))]
-    pub fn new() -> RuntimeGuard {
-        RuntimeGuard(Default::default())
-    }
-
-    #[cfg(feature = "tokio")]
     pub fn new() -> RuntimeGuard {
         use std::sync::Arc;
 
         let rt = tokio::runtime::Builder::new_multi_thread()
-            .worker_threads(3.max(rayon::current_num_threads() / 4)) // leave more resources for our boi rayon.
             .enable_all()
             .build()
             .expect("Failed to init tokio runtime");
@@ -74,7 +60,6 @@ impl RuntimeGuard {
     }
 }
 
-#[cfg(feature = "tokio")]
 impl RuntimeGuard {
     pub fn block_on<F>(&self, f: F) -> F::Output
     where

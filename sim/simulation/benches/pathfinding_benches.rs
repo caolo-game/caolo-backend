@@ -1,6 +1,6 @@
 use caolo_sim::{
     components::{EntityComponent, TerrainComponent},
-    executor::{Executor, GameConfig, SimpleExecutor},
+    executor::{GameConfig, SimpleExecutor},
     indices::WorldPosition,
     pathfinding::find_path,
     prelude::{FromWorld, World},
@@ -15,13 +15,11 @@ fn get_rand() -> impl rand::Rng {
 
 fn create_world(room_radius: u32) -> std::pin::Pin<Box<World>> {
     let mut exc = SimpleExecutor;
-    let world = exc
-        .initialize(GameConfig {
-            world_radius: 6,
-            room_radius,
-            ..Default::default()
-        })
-        .unwrap();
+    let world = exc.initialize(GameConfig {
+        world_radius: 6,
+        room_radius,
+        ..Default::default()
+    });
 
     world
 }

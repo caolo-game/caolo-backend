@@ -6,7 +6,6 @@ mod serde_impl;
 
 use super::*;
 use mem::MaybeUninit;
-use rayon::prelude::*;
 use std::mem;
 
 #[derive(Default, Debug)]
@@ -49,41 +48,6 @@ where
             // drop the data
             let _data = unsafe { data.assume_init() };
         }
-    }
-}
-
-impl<'a, Id, Row> DenseTable<Id, Row>
-where
-    // TODO: this `Sync` requirement is bullshit, get rid of it
-    Id: SerialId + Send + Sync,
-    Row: TableRow + Send + Sync,
-{
-    pub fn par_iter_mut(&'a mut self) -> impl ParallelIterator<Item = (Id, &'a mut Row)> + 'a {
-        let keys = self.ids.as_slice();
-        self.data[..]
-            .par_iter_mut()
-            .enumerate()
-            .filter_map(move |(i, k)| unsafe {
-                let id = *keys.as_ptr().add(i);
-                id.map(|id| (id, &mut *k.as_mut_ptr()))
-            })
-    }
-}
-
-impl<'a, Id, Row> DenseTable<Id, Row>
-where
-    Id: SerialId + Send + Sync,
-    Row: TableRow + Send + Sync,
-{
-    pub fn par_iter(&'a self) -> impl ParallelIterator<Item = (Id, &'a Row)> + 'a {
-        let keys = self.ids.as_slice();
-        self.data[..]
-            .par_iter()
-            .enumerate()
-            .filter_map(move |(i, k)| unsafe {
-                let id = *keys.as_ptr().add(i);
-                id.map(|id| (id, &*k.as_ptr()))
-            })
     }
 }
 

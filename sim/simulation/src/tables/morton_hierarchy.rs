@@ -3,7 +3,6 @@ use super::morton_table::{MortonKey, MortonTable};
 use super::*;
 use crate::geometry::Axial;
 use crate::indices::{Room, WorldPosition};
-use rayon::prelude::*;
 use serde_derive::{Deserialize, Serialize};
 use std::{convert::TryFrom, marker::PhantomData};
 use thiserror::Error;
@@ -199,7 +198,7 @@ where
         }
 
         self.table
-            .par_iter_mut()
+            .iter_mut()
             .try_for_each(move |(room_id, room)| {
                 let items = match groups.get(&room_id) {
                     Some(i) => i,

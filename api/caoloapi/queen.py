@@ -5,7 +5,7 @@ from .util import aio_with_backoff
 _QUEEN_CHANNEL_CACHE = {}
 
 
-@aio_with_backoff(retries=10, max_sleep=60)
+@aio_with_backoff(retries=1000, max_sleep=10)
 async def queen_channel(queen_url=QUEEN_URL):
     global _QUEEN_CHANNEL_CACHE
     if queen_url not in _QUEEN_CHANNEL_CACHE:

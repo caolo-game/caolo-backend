@@ -17,7 +17,7 @@ def aio_with_backoff(*, retries=None, max_sleep=None):
                 except:
                     if retries is not None and i > retries:
                         raise
-                    sleep_dur = 1 << i
+                    sleep_dur = 0.3 * (1 << i)
                     if max_sleep is not None:
                         sleep_dur = min(sleep_dur, max_sleep)
                     i += 1

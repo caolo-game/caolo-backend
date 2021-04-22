@@ -111,7 +111,7 @@ class GameStateManager:
         except ValueError:
             pass
 
-    @aio_with_backoff(retries=None, max_sleep=60)
+    @aio_with_backoff(retries=None, max_sleep=10)
     async def _listener(self, queen_url: str):
         try:
             logging.info("Subscribing to world updates at %s", queen_url)

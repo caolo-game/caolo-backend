@@ -1,11 +1,11 @@
 use super::TableRow;
-use super::{DenseVecTable, SerialId};
+use super::{DenseTable, SerialId};
 use serde::de::{self, Deserialize, Deserializer, MapAccess, Visitor};
 use serde::ser::{Serialize, SerializeStruct, Serializer};
 use std::fmt;
 use std::marker::PhantomData;
 
-impl<Id, Row> Serialize for DenseVecTable<Id, Row>
+impl<Id, Row> Serialize for DenseTable<Id, Row>
 where
     Id: SerialId + Serialize,
     Row: TableRow + Serialize,
@@ -14,7 +14,7 @@ where
     where
         S: Serializer,
     {
-        let mut state = serializer.serialize_struct("DenseVecTable", 1)?;
+        let mut state = serializer.serialize_struct("DenseTable", 1)?;
 
         let mut data = Vec::with_capacity(self.ids.len());
         for i in 0..self.ids.len() {
@@ -43,7 +43,7 @@ where
     Id: SerialId + Send + Deserialize<'de>,
     Row: TableRow + Send + Deserialize<'de>,
 {
-    type Value = DenseVecTable<Id, Row>;
+    type Value = DenseTable<Id, Row>;
 
     fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
         formatter.write_str("'data' field containing a list of [usize, Id, Row] tuples")
@@ -63,12 +63,12 @@ where
             }
         }
         let values = values.ok_or_else(|| de::Error::missing_field("data"))?;
-        DenseVecTable::from_sorted_vec(values)
-            .map_err(|e| de::Error::custom(format!("Failed to build DenseVecTable {:?}", e)))
+        DenseTable::from_sorted_vec(values)
+            .map_err(|e| de::Error::custom(format!("Failed to build DenseTable {:?}", e)))
     }
 }
 
-impl<'de, Id, Row> Deserialize<'de> for DenseVecTable<Id, Row>
+impl<'de, Id, Row> Deserialize<'de> for DenseTable<Id, Row>
 where
     Id: SerialId + Send + Deserialize<'de>,
     Row: TableRow + Send + Deserialize<'de>,
@@ -79,7 +79,7 @@ where
     {
         const FIELDS: &[&str] = &["data"];
         deserializer.deserialize_struct(
-            "DenseVecTable",
+            "DenseTable",
             FIELDS,
             VecTableVisitor::<Id, Row> {
                 _m: Default::default(),
@@ -108,11 +108,11 @@ mod tests {
             })
             .collect::<Vec<_>>();
 
-        let table = DenseVecTable::from_sorted_vec(points.clone()).unwrap();
+        let table = DenseTable::from_sorted_vec(points.clone()).unwrap();
 
         let s = serde_json::to_string(&table).unwrap();
         dbg!(&s);
-        let res: DenseVecTable<EntityId, f32> = serde_json::from_str(s.as_str()).unwrap();
+        let res: DenseTable<EntityId, f32> = serde_json::from_str(s.as_str()).unwrap();
 
         table
             .iter()

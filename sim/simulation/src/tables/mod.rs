@@ -1,15 +1,15 @@
 //! The game state is represented by a relational model.
 //! Tables are generic collections that store game data split by [shape] components.
 //!
-pub mod btree;
-pub mod dense;
-pub mod flag;
+pub mod btree_table;
+pub mod dense_table;
+pub mod flag_table;
 pub mod hex_grid;
 pub mod iterators;
-pub mod morton;
 pub mod morton_hierarchy;
+pub mod morton_table;
 pub mod traits;
-pub mod unique;
+pub mod unique_table;
 
 pub use self::iterators::*;
 pub use self::morton_hierarchy::*;
@@ -17,7 +17,7 @@ pub use self::traits::*;
 
 #[cfg(test)]
 mod tests {
-    use super::btree::*;
+    use super::btree_table::*;
     use super::*;
     use std::convert::TryInto;
 

@@ -10,7 +10,7 @@
 mod find_key_partition;
 mod litmax_bigmin;
 mod morton_key;
-mod serde;
+mod serde_impl;
 mod skiplist;
 pub mod sorting;
 #[cfg(test)]
@@ -18,7 +18,6 @@ mod tests;
 
 pub use self::litmax_bigmin::msb_de_bruijn;
 pub use self::morton_key::*;
-pub use self::serde::*;
 pub use self::skiplist::*;
 
 use self::litmax_bigmin::round_down_to_one_less_than_pow_two;

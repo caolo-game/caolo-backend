@@ -2,7 +2,7 @@ use super::pathfinding_room::find_path_in_room;
 use super::*;
 use crate::{
     prelude::Hexagon,
-    tables::{hex_grid::HexGrid, morton::MortonTable, morton_hierarchy::SpacialStorage},
+    tables::{hex_grid::HexGrid, morton_table::MortonTable, morton_hierarchy::SpacialStorage},
     terrain::TileTerrainType,
 };
 

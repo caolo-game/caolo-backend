@@ -21,7 +21,7 @@ pub use self::spawn_intent::*;
 use crate::components::ScriptHistoryEntry;
 use crate::indices::{EmptyKey, EntityId};
 use crate::prelude::World;
-use crate::tables::{unique::UniqueTable, Component};
+use crate::tables::{unique_table::UniqueTable, Component};
 use serde::{Deserialize, Serialize};
 
 impl BotIntents {

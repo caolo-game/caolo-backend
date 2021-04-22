@@ -1,4 +1,4 @@
-use crate::tables::{btree::BTreeTable, Component, TableId};
+use crate::tables::{btree_table::BTreeTable, Component, TableId};
 use cao_lang::prelude::Value;
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;

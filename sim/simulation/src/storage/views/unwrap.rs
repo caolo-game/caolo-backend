@@ -1,6 +1,6 @@
 use super::super::HasTable;
 use super::{Component, FromWorld, View, World};
-use crate::tables::unique::UniqueTable;
+use crate::tables::unique_table::UniqueTable;
 use crate::tables::TableId;
 use std::ops::Deref;
 

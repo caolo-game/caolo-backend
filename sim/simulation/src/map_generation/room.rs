@@ -8,7 +8,7 @@ use crate::geometry::{Axial, Hexagon};
 use crate::indices::WorldPosition;
 use crate::storage::views::{UnsafeView, View};
 use crate::tables::morton_hierarchy::SpacialStorage;
-use crate::tables::{hex_grid::HexGrid, morton::msb_de_bruijn};
+use crate::tables::{hex_grid::HexGrid, morton_table::msb_de_bruijn};
 use crate::terrain::TileTerrainType;
 use crate::{
     components::{RoomConnection, TerrainComponent},
@@ -617,7 +617,7 @@ mod tests {
     use super::*;
     use crate::pathfinding::pathfinding_room::find_path_in_room;
     use crate::storage::views::View;
-    use crate::{components::EntityComponent, tables::morton::MortonTable};
+    use crate::{components::EntityComponent, tables::morton_table::MortonTable};
 
     #[test]
     fn maps_are_not_homogeneous() {

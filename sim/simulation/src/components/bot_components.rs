@@ -1,7 +1,7 @@
-use crate::tables::{btree::BTreeTable, dense::DenseVecTable, Component};
+use crate::tables::{btree_table::BTreeTable, dense_table::DenseTable, Component};
 use crate::{
     indices::{EntityId, RoomPosition, ScriptId, UserId, WorldPosition},
-    tables::flag::SparseFlagTable,
+    tables::flag_table::SparseFlagTable,
 };
 use arrayvec::ArrayVec;
 
@@ -13,7 +13,7 @@ pub struct MeleeAttackComponent {
     pub strength: u16,
 }
 impl Component<EntityId> for MeleeAttackComponent {
-    type Table = DenseVecTable<EntityId, Self>;
+    type Table = DenseTable<EntityId, Self>;
 }
 
 /// Has a body so it's not `null` when serializing
@@ -35,7 +35,7 @@ pub struct DecayComponent {
     pub time_remaining: u8,
 }
 impl Component<EntityId> for DecayComponent {
-    type Table = DenseVecTable<EntityId, Self>;
+    type Table = DenseTable<EntityId, Self>;
 }
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
@@ -45,7 +45,7 @@ pub struct CarryComponent {
     pub carry_max: u16,
 }
 impl Component<EntityId> for CarryComponent {
-    type Table = DenseVecTable<EntityId, Self>;
+    type Table = DenseTable<EntityId, Self>;
 }
 
 /// Entity - Script join table
@@ -55,7 +55,7 @@ pub struct EntityScript(pub ScriptId);
 
 unsafe impl Send for EntityScript {}
 impl Component<EntityId> for EntityScript {
-    type Table = DenseVecTable<EntityId, Self>;
+    type Table = DenseTable<EntityId, Self>;
 }
 impl Component<UserId> for EntityScript {
     type Table = BTreeTable<UserId, Self>;
@@ -69,5 +69,5 @@ pub struct PathCacheComponent {
     pub path: ArrayVec<RoomPosition, PATH_CACHE_LEN>,
 }
 impl Component<EntityId> for PathCacheComponent {
-    type Table = DenseVecTable<EntityId, Self>;
+    type Table = DenseTable<EntityId, Self>;
 }

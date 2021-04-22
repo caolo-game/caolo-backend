@@ -2,7 +2,7 @@ use crate::geometry::Axial;
 use crate::indices::ConfigKey;
 use crate::indices::WorldPosition;
 use crate::tables::{
-    hex_grid::HexGrid, morton::MortonTable, unique::UniqueTable, Component, MortonGridTable,
+    hex_grid::HexGrid, morton_table::MortonTable, unique_table::UniqueTable, Component, MortonGridTable,
 };
 use crate::terrain::TileTerrainType;
 use serde::{Deserialize, Serialize};

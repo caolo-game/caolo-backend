@@ -11,7 +11,7 @@ use crate::{
     indices::{EntityId, Room, UserId, WorldPosition},
     prelude::Axial,
     tables::{
-        btree::BTreeTable, dense::DenseVecTable, flag::SparseFlagTable, morton::MortonTable,
+        btree_table::BTreeTable, dense_table::DenseTable, flag_table::SparseFlagTable, morton_table::MortonTable,
         Component, MortonMortonTable, TableId,
     },
 };
@@ -30,7 +30,7 @@ pub struct ScriptHistoryEntry {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ScriptHistory(());
 impl Component<EntityId> for ScriptHistory {
-    type Table = DenseVecTable<EntityId, Self>;
+    type Table = DenseTable<EntityId, Self>;
 }
 
 /// For tables that store entity ids as values
@@ -59,7 +59,7 @@ pub struct OwnedEntity {
 }
 
 impl Component<EntityId> for OwnedEntity {
-    type Table = DenseVecTable<EntityId, Self>;
+    type Table = DenseTable<EntityId, Self>;
 }
 
 impl Component<Axial> for OwnedEntity {
@@ -70,7 +70,7 @@ impl Component<Axial> for OwnedEntity {
 #[serde(rename_all = "camelCase")]
 pub struct PositionComponent(pub WorldPosition);
 impl Component<EntityId> for PositionComponent {
-    type Table = DenseVecTable<EntityId, Self>;
+    type Table = DenseTable<EntityId, Self>;
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
@@ -80,7 +80,7 @@ pub struct EnergyComponent {
     pub energy_max: u16,
 }
 impl Component<EntityId> for EnergyComponent {
-    type Table = DenseVecTable<EntityId, Self>;
+    type Table = DenseTable<EntityId, Self>;
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -93,7 +93,7 @@ pub struct SpawnComponent {
 }
 
 impl Component<EntityId> for SpawnComponent {
-    type Table = DenseVecTable<EntityId, Self>;
+    type Table = DenseTable<EntityId, Self>;
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -104,7 +104,7 @@ pub struct SpawnQueueComponent {
 }
 
 impl Component<EntityId> for SpawnQueueComponent {
-    type Table = DenseVecTable<EntityId, Self>;
+    type Table = DenseTable<EntityId, Self>;
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
@@ -114,7 +114,7 @@ pub struct HpComponent {
     pub hp_max: u16,
 }
 impl Component<EntityId> for HpComponent {
-    type Table = DenseVecTable<EntityId, Self>;
+    type Table = DenseTable<EntityId, Self>;
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
@@ -123,7 +123,7 @@ pub struct EnergyRegenComponent {
     pub amount: u16,
 }
 impl Component<EntityId> for EnergyRegenComponent {
-    type Table = DenseVecTable<EntityId, Self>;
+    type Table = DenseTable<EntityId, Self>;
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -133,7 +133,7 @@ pub struct SpawnBotComponent {
 }
 
 impl Component<EntityId> for SpawnBotComponent {
-    type Table = DenseVecTable<EntityId, Self>;
+    type Table = DenseTable<EntityId, Self>;
 }
 
 // TODO:

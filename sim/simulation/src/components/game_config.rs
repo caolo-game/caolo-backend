@@ -1,5 +1,5 @@
 use crate::indices::ConfigKey;
-use crate::tables::{unique::UniqueTable, Component};
+use crate::tables::{unique_table::UniqueTable, Component};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

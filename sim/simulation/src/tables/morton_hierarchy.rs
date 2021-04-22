@@ -1,5 +1,5 @@
 use super::hex_grid::HexGrid;
-use super::morton::{MortonKey, MortonTable};
+use super::morton_table::{MortonKey, MortonTable};
 use super::*;
 use crate::geometry::Axial;
 use crate::indices::{Room, WorldPosition};
@@ -11,7 +11,7 @@ use thiserror::Error;
 #[derive(Debug, Clone, Error)]
 pub enum ExtendFailure {
     #[error("Failed to extend the room level {0:?}")]
-    RoomExtendFailure(super::morton::ExtendFailure),
+    RoomExtendFailure(super::morton_table::ExtendFailure),
     #[error("Failed to insert poision {0:?}")]
     InvalidPosition(WorldPosition),
     #[error("Room {0:?} does not exist")]
@@ -174,7 +174,7 @@ where
                 .collect::<Vec<_>>();
 
             // use the morton sorting to sort these values by their rooms
-            morton::sorting::sort(&mut keys, values);
+            morton_table::sorting::sort(&mut keys, values);
         }
 
         // values no longer has to be mutable

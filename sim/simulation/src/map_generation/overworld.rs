@@ -6,7 +6,7 @@ pub use params::*;
 use crate::components::{RoomComponent, RoomConnection, RoomConnections};
 use crate::geometry::{Axial, Hexagon};
 use crate::storage::views::UnsafeView;
-use crate::tables::morton::{ExtendFailure, MortonTable};
+use crate::tables::morton_table::{ExtendFailure, MortonTable};
 use rand::Rng;
 use thiserror::Error;
 use tracing::{debug, error};

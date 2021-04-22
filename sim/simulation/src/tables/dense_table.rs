@@ -2,9 +2,7 @@
 //! The storage will allocate memory for N items where `N = the largest id inserted`.
 //! Because of this one should use this if the domain of the ids is small or dense.
 //!
-mod serde;
-
-pub use self::serde::*;
+mod serde_impl;
 
 use super::*;
 use mem::MaybeUninit;
@@ -12,7 +10,7 @@ use rayon::prelude::*;
 use std::mem;
 
 #[derive(Default, Debug)]
-pub struct DenseVecTable<Id, Row>
+pub struct DenseTable<Id, Row>
 where
     Id: SerialId,
     Row: TableRow,
@@ -34,7 +32,7 @@ pub enum VecTableError<Id: std::fmt::Debug> {
     UnsortedValues,
 }
 
-impl<Id, Row> Drop for DenseVecTable<Id, Row>
+impl<Id, Row> Drop for DenseTable<Id, Row>
 where
     Id: SerialId,
     Row: TableRow,
@@ -54,7 +52,7 @@ where
     }
 }
 
-impl<'a, Id, Row> DenseVecTable<Id, Row>
+impl<'a, Id, Row> DenseTable<Id, Row>
 where
     // TODO: this `Sync` requirement is bullshit, get rid of it
     Id: SerialId + Send + Sync,
@@ -72,7 +70,7 @@ where
     }
 }
 
-impl<'a, Id, Row> DenseVecTable<Id, Row>
+impl<'a, Id, Row> DenseTable<Id, Row>
 where
     Id: SerialId + Send + Sync,
     Row: TableRow + Send + Sync,
@@ -89,7 +87,7 @@ where
     }
 }
 
-impl<Id, Row> DenseVecTable<Id, Row>
+impl<Id, Row> DenseTable<Id, Row>
 where
     Id: SerialId,
     Row: TableRow,
@@ -260,7 +258,7 @@ where
     }
 }
 
-impl<Id, Row> Table for DenseVecTable<Id, Row>
+impl<Id, Row> Table for DenseTable<Id, Row>
 where
     Id: SerialId,
     Row: TableRow,
@@ -282,7 +280,7 @@ where
     }
 
     fn get_by_id(&self, id: Id) -> Option<&Row> {
-        DenseVecTable::get_by_id(self, id)
+        DenseTable::get_by_id(self, id)
     }
 }
 
@@ -309,7 +307,7 @@ mod tests {
 
         let mut foos = vec![0; 128];
 
-        let mut table = DenseVecTable::new();
+        let mut table = DenseTable::new();
         let mut next_entity = EntityId(1);
 
         for i in 0..128 {

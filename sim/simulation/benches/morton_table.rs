@@ -1,7 +1,7 @@
 use caolo_sim::components::EntityComponent;
 use caolo_sim::geometry::Axial;
 use caolo_sim::indices::EntityId;
-use caolo_sim::tables::morton::MortonTable;
+use caolo_sim::tables::morton_table::MortonTable;
 use criterion::{black_box, criterion_group, BenchmarkId, Criterion};
 use rand::RngCore;
 use rand::{rngs::SmallRng, Rng, SeedableRng};

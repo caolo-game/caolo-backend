@@ -1,6 +1,6 @@
 mod serde_impl;
 
-use crate::prelude::{tables::unique::UniqueTable, Component, EmptyKey};
+use crate::prelude::{tables::unique_table::UniqueTable, Component, EmptyKey};
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 

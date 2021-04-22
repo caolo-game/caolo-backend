@@ -1,5 +1,5 @@
 use caolo_sim::indices::EntityId;
-use caolo_sim::tables::btree::BTreeTable;
+use caolo_sim::tables::btree_table::BTreeTable;
 use criterion::{black_box, criterion_group, Criterion};
 use rand::{rngs::SmallRng, Rng, SeedableRng};
 use std::convert::TryFrom;

@@ -1,5 +1,5 @@
 use prelude::{Component, World};
-use tables::{unique::UniqueTable, TableId};
+use tables::{unique_table::UniqueTable, TableId};
 
 pub mod components;
 pub mod diagnostics;

@@ -12,13 +12,11 @@ use std::sync::Mutex;
 
 pub fn create_world(world_radius: u32, room_radius: u32) -> std::pin::Pin<Box<World>> {
     let mut exc = SimpleExecutor;
-    let world = exc
-        .initialize(GameConfig {
-            world_radius,
-            room_radius,
-            ..Default::default()
-        })
-        .unwrap();
+    let world = exc.initialize(GameConfig {
+        world_radius,
+        room_radius,
+        ..Default::default()
+    });
 
     world
 }
@@ -72,8 +70,9 @@ fn main() {
                             move || {
                                 let mut world = WORLD.lock().unwrap();
                                 *world = create_world(world_radius, room_radius);
+                                let rt = caolo_sim::RuntimeGuard::new();
                                 let mut exc = caolo_sim::prelude::SimpleExecutor;
-                                exc.forward(&mut *world).unwrap(); // run system updates
+                                rt.block_on(exc.forward(&mut *world)).unwrap(); // run system updates
                                 let w = cmd::map_gen::render_terrain(&*world);
                                 Ok(w)
                             },

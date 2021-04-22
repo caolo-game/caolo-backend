@@ -165,7 +165,7 @@ pub fn generate_room(
 
 fn fill_edges(
     edges: &[RoomConnection],
-    terrain: UnsafeView<Axial, TerrainComponent>,
+    mut terrain: UnsafeView<Axial, TerrainComponent>,
     rng: &mut impl Rng,
 ) -> Result<(), RoomGenerationError> {
     trace!("Filling edges");
@@ -185,6 +185,10 @@ fn fill_edges(
             terrain,
             chunk_metadata.chunks.last_mut().unwrap(),
         )?;
+    }
+    // first fill with walls
+    for p in Hexagon::new(center, radius).iter_edge() {
+        terrain[p] = TerrainComponent(TileTerrainType::Wall);
     }
     // fill bridge neighbours
     for mut edge in edges.iter().copied() {

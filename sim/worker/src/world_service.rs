@@ -5,10 +5,13 @@ mod ser_structures;
 use caolo_sim::prelude::{Axial, Hexagon, TerrainComponent, World};
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::{broadcast::Sender, mpsc};
+use tokio::sync::{
+    broadcast::{error::RecvError, Sender},
+    mpsc,
+};
 use tokio_stream::wrappers::ReceiverStream;
 use tonic::Status;
-use tracing::info;
+use tracing::{info, log::warn};
 
 use crate::protos::cao_common;
 use crate::protos::cao_world;
@@ -112,12 +115,22 @@ impl cao_world::world_server::World for WorldService {
         let mut entities_rx = self.entities.subscribe();
         let mut last_sent = -1;
         tokio::spawn(async move {
-            loop {
-                let w = entities_rx.recv().await.expect("world receive failed");
+            'main_send: loop {
+                let w = match entities_rx.recv().await {
+                    Ok(w) => w,
+                    Err(RecvError::Lagged(l)) => {
+                        warn!("Entities stream is lagging behind by {} messages", l);
+                        continue 'main_send;
+                    }
+                    Err(RecvError::Closed) => {
+                        warn!("Entities channel was closed");
+                        break 'main_send;
+                    }
+                };
                 if w.payload.world_time != last_sent {
                     if tx.send(Ok(w.payload.clone())).await.is_err() {
                         info!("World entities client lost {:?}", addr);
-                        break;
+                        break 'main_send;
                     }
                     last_sent = w.payload.world_time;
                 }

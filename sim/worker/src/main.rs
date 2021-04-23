@@ -97,8 +97,6 @@ fn main() {
             .radius as i32,
     );
 
-    // TODO: if we're feeling ballsy we could just use an UnsafeView, because terrain data does not
-    // change
     let terrain = world
         .view::<caolo_sim::prelude::WorldPosition, caolo_sim::prelude::TerrainComponent>()
         .iter_rooms()

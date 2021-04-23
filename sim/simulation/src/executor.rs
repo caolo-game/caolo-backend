@@ -18,6 +18,8 @@ use crate::{
 
 pub use crate::components::game_config::GameConfig;
 
+const STATS_INTERVAL: u64 = 64;
+
 /// The simplest executor.
 ///
 /// Just runs a world update
@@ -29,13 +31,18 @@ impl SimpleExecutor {
         profile!("world_forward");
 
         let tick = world.time();
-        let s = tracing::info_span!("", tick = tick);
+        let s = tracing::error_span!("", tick = tick);
         let _e = s.enter();
 
         debug!("Tick starting");
 
         let mut diag = world.unsafe_view::<EmptyKey, Diagnostics>();
         let diag: &mut Diagnostics = diag.unwrap_mut_or_default();
+
+        if tick % STATS_INTERVAL == 1 {
+            debug!("Clearing stats");
+            diag.clear();
+        }
 
         let scripts_table = world.view::<EntityId, EntityScript>();
         let executions: Vec<(EntityId, EntityScript)> =
@@ -73,10 +80,13 @@ impl SimpleExecutor {
 
         diag.update_latency_stats(tick, start, end);
         debug!("Tick done");
-        info!(
-            "Latency | Current {:.4}ms | Mean {:.4}ms | STD {:.4}ms",
-            diag.tick_latency_ms, diag.tick_latency_mean, diag.tick_latency_std,
-        );
+        if tick % STATS_INTERVAL == 0 {
+            info!(
+                "Latency | Last {} ticks mean {:.4}ms | std {:.4}ms",
+                STATS_INTERVAL, diag.tick_latency_mean, diag.tick_latency_std,
+            );
+        }
+        debug!("Latency | Current {:.4}ms", diag.tick_latency_ms);
 
         Ok(())
     }

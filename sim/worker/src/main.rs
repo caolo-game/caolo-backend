@@ -87,7 +87,7 @@ fn main() {
 
     info!("Starting the game loop. Starting the service on {:?}", addr);
 
-    let (outtx, _) = tokio::sync::broadcast::channel(8);
+    let (outtx, _) = tokio::sync::broadcast::channel(3);
     let outpayload = Arc::new(outtx);
 
     let room_bounds = caolo_sim::prelude::Hexagon::from_radius(

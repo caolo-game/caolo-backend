@@ -1,3 +1,4 @@
+import copy
 import json
 from dataclasses import dataclass
 from typing import Dict, Callable, Optional, List
@@ -111,60 +112,63 @@ class GameStateManager:
         except ValueError:
             pass
 
+    async def _on_new_world_state(self, msg):
+        payload = {
+            "bots": {},
+            "resources": {},
+            "structures": {},
+            "diagnostics": None,
+        }
+        for room_bots in msg.bots:
+            room_id = make_room_id(room_bots.roomId.q, room_bots.roomId.r)
+            payload["bots"][room_id] = room_bots
+        for room_resources in msg.resources:
+            room_id = make_room_id(room_resources.roomId.q, room_resources.roomId.r)
+            payload["resources"][room_id] = room_resources
+        for room_structures in msg.structures:
+            room_id = make_room_id(room_structures.roomId.q, room_structures.roomId.r)
+            payload["structures"][room_id] = room_structures
+
+        if msg.diagnostics:
+            payload["diagnostics"] = MessageToDict(
+                msg.diagnostics, preserving_proto_field_name=False
+            )
+
+        assert self.game_state is not None
+        self.game_state.world_time = msg.worldTime
+        self.game_state.created = dt.datetime.now()
+        self.game_state.entities = payload
+
+        async def send_gamestate(gs, callbacks):
+            for cb in callbacks:
+                try:
+                    cb(gs)
+                except:
+                    logging.exception("Callback failed")
+
+        gs = copy.copy(self.game_state)
+        asyncio.create_task(send_gamestate(gs, self.on_new_state_callbacks))
+
     @aio_with_backoff(retries=None, max_sleep=10)
     async def _listener(self, queen_url: str):
         try:
-            logging.info("Subscribing to world updates at %s", queen_url)
+            logging.info("Attempting to subscribe to world updates at %s", queen_url)
             channel = await queen_channel(queen_url)
-            stub = cao_world_pb2_grpc.WorldStub(channel)
+            logging.info("Successfully subscribed to world updates at %s", queen_url)
 
+            stub = cao_world_pb2_grpc.WorldStub(channel)
             self.game_state = await load_initial_game_state(channel)
             async for msg in stub.Entities(cao_world_pb2.Empty()):
-                payload = {
-                    "bots": {},
-                    "resources": {},
-                    "structures": {},
-                    "diagnostics": None,
-                }
-                for room_bots in msg.bots:
-                    room_id = make_room_id(room_bots.roomId.q, room_bots.roomId.r)
-                    payload["bots"][room_id] = room_bots
-                for room_resources in msg.resources:
-                    room_id = make_room_id(
-                        room_resources.roomId.q, room_resources.roomId.r
-                    )
-                    payload["resources"][room_id] = room_resources
-                for room_structures in msg.structures:
-                    room_id = make_room_id(
-                        room_structures.roomId.q, room_structures.roomId.r
-                    )
-                    payload["structures"][room_id] = room_structures
-
-                if msg.diagnostics:
-                    payload["diagnostics"] = MessageToDict(
-                        msg.diagnostics, preserving_proto_field_name=False
-                    )
-
-                assert self.game_state is not None
-                self.game_state.world_time = msg.worldTime
-                self.game_state.created = dt.datetime.now()
-                self.game_state.entities = payload
-
-                for cb in self.on_new_state_callbacks:
-                    try:
-                        cb(self.game_state)
-                    except:
-                        logging.exception("Callback failed")
+                await self._on_new_world_state(msg)
 
             logging.warn("Queen stream ended. Retrying...")
             raise EOFError("queen stream ended.")
         except grpc.aio.AioRpcError as err:
             if err.code() in (grpc.StatusCode.UNAVAILABLE, grpc.StatusCode.UNKNOWN):
                 logging.warn("Cao-Queen is unavailable.")
-                raise
             else:
                 logging.exception("gRPC error in GameState listener")
-                raise
+            raise
         except:
             logging.exception("Error in GameState listener")
             raise

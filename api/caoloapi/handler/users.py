@@ -52,7 +52,7 @@ async def get_current_user_id(token: str = Depends(oauth2_scheme)):
     try:
         payload = decode_access_token(token)
     except (AssertionError, JWTError) as err:
-        logging.exception("Failed to validate JWT")
+        logging.warn("Failed to validate JWT", err)
         raise credentials_exception() from err
     return payload.get("sub")
 

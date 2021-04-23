@@ -120,15 +120,22 @@ async def object_stream(
     logging.info("Client is attempting to connect to object stream")
     await ws.accept()
     client = WorldClient(ws=ws, room_id=None)
-    await manager.connect(client)
     logging.info("Client connected to object stream")
     try:
         while 1:
             room_id = await ws.receive_text()
+            # on new room_id disconnect first, as the the terrain sending may take some time to complete 
+            # and clients may receive entities for the incorrect room
+            try:
+                await manager.disconnect(client)
+            except:
+                logging.debug("Failed to disconnect client")
             client.room_id = room_id
             # on new room_id send a state immediately
             await manager.send_terrain(client)
             await manager.send_entities(client)
+            # subscribe to updates
+            await manager.connect(client)
     except WebSocketDisconnect:
         pass
     except:

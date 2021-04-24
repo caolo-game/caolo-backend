@@ -378,7 +378,7 @@ where
         max: MortonKey,
         op: &mut impl FnMut(Axial, &'a Row),
     ) {
-        let (imin, pmin) = self
+        let (min_ind, min_point) = self
             .find_key_morton(min)
             .map(|mut i| {
                 // find_key_morton might not return the first index of a 'duplicate group'
@@ -393,7 +393,7 @@ where
                 (i, [x as i32, y as i32])
             });
 
-        let (imax, pmax) = self
+        let (max_ind, max_point) = self
             .find_key_morton(max)
             .map(|i| {
                 let mut j = i;
@@ -412,16 +412,16 @@ where
             });
 
         debug_assert!(
-            imin <= imax,
+            min_ind <= max_ind,
             "find_key_morton returned bad indices: (min,max): ({}, {})",
-            imin,
-            imax
+            min_ind,
+            max_ind
         );
 
-        if imax - imin > MAX_BRUTE_ITERS {
-            let [x, y] = pmin;
+        if max_ind - min_ind > MAX_BRUTE_ITERS {
+            let [x, y] = min_point;
             let pmin = [x as u32, y as u32];
-            let [x, y] = pmax;
+            let [x, y] = max_point;
             let pmax = [x as u32, y as u32];
             let [litmax, bigmin] = litmax_bigmin(min.0, pmin, max.0, pmax);
             // split and recurse
@@ -430,7 +430,7 @@ where
             return;
         }
 
-        for (id, val) in self.values[imin..imax].iter() {
+        for (id, val) in self.values[min_ind..max_ind].iter() {
             if center.dist(*id) <= radius {
                 op(*id, val);
             }

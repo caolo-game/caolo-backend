@@ -57,16 +57,20 @@ pub fn update_program(storage: &mut World, msg: &UpdateScriptCommand) -> UpdateR
         .value
         .as_slice();
 
-    let compilation_unit =
+    let compilation_unit: cao_lang::compiler::CaoIr =
         serde_json::from_slice(cu).map_err(UpdateProgramError::CuDeserializationError)?;
 
-    let program = cao_lang::prelude::compile(compilation_unit, None)
+    let program = cao_lang::prelude::compile(compilation_unit.clone(), None)
         .map_err(UpdateProgramError::CompilationError)?;
 
-    let program = ScriptComponent(program);
+    let program = CompiledScriptComponent(program);
     storage
-        .unsafe_view::<ScriptId, ScriptComponent>()
+        .unsafe_view::<ScriptId, CompiledScriptComponent>()
         .insert_or_update(script_id, program);
+    // store the raw CaoIr to be queried by clients
+    storage
+        .unsafe_view::<ScriptId, CaoIrComponent>()
+        .insert_or_update(script_id, CaoIrComponent(compilation_unit));
 
     update_user_bot_scripts(
         script_id,

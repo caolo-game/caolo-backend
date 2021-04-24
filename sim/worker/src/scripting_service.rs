@@ -1,8 +1,10 @@
 use crate::input::script_update;
 use crate::protos::cao_common;
 use crate::protos::cao_script;
+use caolo_sim::{components::CaoIrComponent, indices::ScriptId};
 use std::convert::TryInto;
 use tonic::{Response, Status};
+use tracing::debug;
 
 #[derive(Clone)]
 pub struct ScriptingService {
@@ -23,6 +25,56 @@ impl ScriptingService {
 
 #[tonic::async_trait]
 impl cao_script::scripting_server::Scripting for ScriptingService {
+    async fn list_scripts(
+        &self,
+        _request: tonic::Request<cao_script::Empty>,
+    ) -> Result<tonic::Response<cao_script::ScriptList>, tonic::Status> {
+        let ids;
+        {
+            let w = self.world.lock().await;
+            let scripts_table = w.view::<ScriptId, CaoIrComponent>();
+            ids = scripts_table.iter().map(|(id, _)| id.0).collect::<Vec<_>>();
+            // free the world lock asap
+        }
+        let payload = cao_script::ScriptList {
+            script_ids: ids
+                .into_iter()
+                .map(|id: uuid::Uuid| cao_common::Uuid {
+                    data: id.as_bytes().to_vec(),
+                })
+                .collect(),
+        };
+        Ok(Response::new(payload))
+    }
+
+    async fn get_script(
+        &self,
+        request: tonic::Request<cao_common::Uuid>,
+    ) -> Result<tonic::Response<cao_script::CompilationUnit>, tonic::Status> {
+        let msg: &cao_common::Uuid = request.get_ref();
+        let id = msg.data.as_slice();
+        let id = uuid::Uuid::from_slice(id).map_err(|err| {
+            debug!("Failed to parse uuid {:?}", err);
+            tonic::Status::invalid_argument("Script id is malformed, expected UUID")
+        })?;
+        let payload;
+        {
+            let w = self.world.lock().await;
+            let scripts_table = w.view::<ScriptId, CaoIrComponent>();
+            let ir = &scripts_table
+                .get_by_id(ScriptId(id))
+                .ok_or_else(|| tonic::Status::not_found("Script not found"))?
+                .0;
+            payload = serde_json::to_vec(ir).unwrap();
+        }
+
+        let payload = cao_script::CompilationUnit {
+            encoded: Some(cao_common::Json { value: payload }),
+        };
+
+        Ok(tonic::Response::new(payload))
+    }
+
     async fn update_entity_script(
         &self,
         request: tonic::Request<cao_script::UpdateEntityScriptCommand>,
@@ -92,18 +144,8 @@ impl cao_script::scripting_server::Scripting for ScriptingService {
             .iter()
             .map(|card| SchemaCard {
                 ty: "Call".to_string(),
-                properties: card
-                    .desc
-                    .properties
-                    .iter()
-                    .map(|x| x.to_string())
-                    .collect(),
-                outputs: card
-                    .desc
-                    .output
-                    .iter()
-                    .map(|x| x.to_string())
-                    .collect(),
+                properties: card.desc.properties.iter().map(|x| x.to_string()).collect(),
+                outputs: card.desc.output.iter().map(|x| x.to_string()).collect(),
                 inputs: card.desc.input.iter().map(|x| x.to_string()).collect(),
                 name: card.desc.name.to_string(),
                 description: card.desc.description.to_string(),

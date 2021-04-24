@@ -93,6 +93,12 @@ archetype!(
     attr serde(skip) table EntityComponent = point_entity
 );
 
+archetype!(
+    module script_store key ScriptId,
+    table CompiledScriptComponent = compiled_script,
+    table CaoIrComponent = cao_ir
+);
+
 #[derive(Debug, Serialize)]
 pub struct World {
     pub entities: entity_store::Archetype,
@@ -100,8 +106,8 @@ pub struct World {
     pub user: user_store::Archetype,
     pub config: config_store::Archetype,
     pub resources: resource_store::Archetype,
+    pub scripts: script_store::Archetype,
     pub entity_logs: <LogEntry as Component<EntityTime>>::Table,
-    pub scripts: <ScriptComponent as Component<ScriptId>>::Table,
     pub positions: positions_store::Archetype,
 
     #[serde(skip)]
@@ -134,6 +140,7 @@ impl_hastable!(user_store, user);
 impl_hastable!(config_store, config);
 impl_hastable!(positions_store, positions);
 impl_hastable!(resource_store, resources);
+impl_hastable!(script_store, scripts);
 
 impl storage::HasTable<EntityTime, LogEntry> for World {
     fn view(&self) -> View<EntityTime, LogEntry> {
@@ -142,16 +149,6 @@ impl storage::HasTable<EntityTime, LogEntry> for World {
 
     fn unsafe_view(&mut self) -> UnsafeView<EntityTime, LogEntry> {
         UnsafeView::from_table(&mut self.entity_logs)
-    }
-}
-
-impl storage::HasTable<ScriptId, ScriptComponent> for World {
-    fn view(&self) -> View<ScriptId, ScriptComponent> {
-        View::from_table(&self.scripts)
-    }
-
-    fn unsafe_view(&mut self) -> UnsafeView<ScriptId, ScriptComponent> {
-        UnsafeView::from_table(&mut self.scripts)
     }
 }
 

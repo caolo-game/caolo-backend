@@ -1,5 +1,5 @@
 use crate::{
-    components::{game_config::GameConfig, EntityScript, OwnedEntity, ScriptComponent},
+    components::{game_config::GameConfig, EntityScript, OwnedEntity, CompiledScriptComponent},
     diagnostics::Diagnostics,
     indices::{ConfigKey, EntityId, ScriptId, UserId},
     intents::*,
@@ -137,7 +137,7 @@ pub fn execute_single_script<'a>(
     vm: &mut Vm<'a, ScriptExecutionData>,
 ) -> ExecutionResult {
     let program = storage
-        .view::<ScriptId, ScriptComponent>()
+        .view::<ScriptId, CompiledScriptComponent>()
         .reborrow()
         .get_by_id(script_id)
         .ok_or_else(|| {

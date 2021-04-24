@@ -53,11 +53,18 @@ message CommandResult
 {
 }
 
+message ScriptList
+{
+    repeated cao_common.Uuid scriptIds = 1;
+}
+
 message Empty { }
 
 service Scripting
 {
     rpc GetBotScriptId(EntityId) returns (cao_common.Uuid) { }
+    rpc GetScript(cao_common.Uuid) returns (cao_script.CompilationUnit) { }
+    rpc ListScripts(Empty) returns (ScriptList) { }
     rpc UpdateEntityScript(UpdateEntityScriptCommand) returns (CommandResult) { }
     rpc UpdateScript(UpdateScriptCommand) returns (CommandResult) { }
     rpc SetDefaultScript(SetDefaultScriptCommand) returns (CommandResult) { }

@@ -22,8 +22,8 @@ pub fn init_world_entities(storage: &mut World, n_fake_users: usize) {
         mutate
         storage
         {
-            ScriptId, ScriptComponent,
-                .insert_or_update(mining_script_id, ScriptComponent(compiled));
+            ScriptId, CompiledScriptComponent,
+                .insert_or_update(mining_script_id, CompiledScriptComponent(compiled));
         }
     );
 

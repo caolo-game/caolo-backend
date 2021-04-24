@@ -1,9 +1,11 @@
 pub mod game_config;
 
+mod script_components;
 mod bot_components;
 mod resources;
 mod rooms;
 pub use bot_components::*;
+pub use script_components::*;
 pub use resources::*;
 pub use rooms::*;
 
@@ -15,23 +17,8 @@ use crate::{
         Component, MortonMortonTable, TableId,
     },
 };
-use cao_lang::prelude::CaoProgram;
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
-
-/// Currently does nothing as Cao-Lang not yet supports history
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct ScriptHistoryEntry {
-    pub entity_id: EntityId,
-    pub time: u64,
-}
-
-/// Currently does nothing as Cao-Lang not yet supports history
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct ScriptHistory(());
-impl Component<EntityId> for ScriptHistory {
-    type Table = DenseTable<EntityId, Self>;
-}
 
 /// For tables that store entity ids as values
 #[derive(Debug, Clone, Serialize, Deserialize, Copy, Default, Ord, PartialOrd, Eq, PartialEq)]
@@ -147,13 +134,6 @@ impl<Id: TableId> Component<Id> for LogEntry {
     type Table = BTreeTable<Id, Self>;
 }
 
-/// Entities with Scripts
-#[derive(Debug, Serialize, Deserialize, Default)]
-#[serde(rename_all = "camelCase")]
-pub struct ScriptComponent(pub CaoProgram);
-impl<Id: TableId> Component<Id> for ScriptComponent {
-    type Table = BTreeTable<Id, Self>;
-}
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]

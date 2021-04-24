@@ -13,7 +13,7 @@ from fastapi import (
 )
 
 
-from websockets.exceptions import ConnectionClosedError
+from websockets.exceptions import ConnectionClosedError, ConnectionClosedOK
 
 
 from ..model.game_state import (
@@ -90,7 +90,7 @@ class WorldMessenger:
         for client in self.connections:
             try:
                 await self.send_entities(client)
-            except (WebSocketDisconnect, ConnectionClosedError):
+            except (WebSocketDisconnect, ConnectionClosedError, ConnectionClosedOK):
                 dc.append(client)
             except:
                 logging.exception("Sending game state failed")
@@ -115,29 +115,43 @@ async def object_stream(
     """
     Streams game objects of a room.
 
-    Send in the room_id in the form 'q;r' to receive objects of the given room
+    Incoming messages should be json, having a `ty` field describing the message type.
+
+    Valid message types:
+    - 'room_id': payload = { "room_id": "q;r" } subscribe to a new room.
+      e.g.
+      ```json
+      {
+        "ty": "room_id",
+        "room_id": "15;12"
+      }
+      ```
     """
-    logging.info("Client is attempting to connect to object stream")
+    logging.debug("Client is attempting to connect to object stream")
     await ws.accept()
     client = WorldClient(ws=ws, room_id=None)
-    logging.info("Client connected to object stream")
+    logging.debug("Client connected to object stream")
     try:
         while 1:
-            room_id = await ws.receive_text()
-            # on new room_id disconnect first, as the the terrain sending may take some time to complete 
-            # and clients may receive entities for the incorrect room
-            try:
-                await manager.disconnect(client)
-            except:
-                logging.debug("Failed to disconnect client")
-            client.room_id = room_id
-            # on new room_id send a state immediately
-            await manager.send_terrain(client)
-            await manager.send_entities(client)
-            # subscribe to updates
-            await manager.connect(client)
-    except WebSocketDisconnect:
-        pass
+            msg = await ws.receive_json()
+            if msg.get("ty", None) == "room_id":
+                room_id = msg["room_id"]
+                # on new room_id disconnect first, as the the terrain sending may take some time to complete
+                # and clients may receive entities for the incorrect room
+                try:
+                    await manager.disconnect(client)
+                except:
+                    logging.debug("Failed to disconnect client")
+                client.room_id = room_id
+                # on new room_id send a state immediately
+                await manager.send_terrain(client)
+                await manager.send_entities(client)
+                # subscribe to updates
+                await manager.connect(client)
+            else:
+                raise ValueError("Unprocessable message", msg)
+    except (WebSocketDisconnect, ConnectionClosedError, ConnectionClosedOK):
+        logging.debug("Client disconnected")
     except:
         logging.exception("Error in object streaming to client")
     finally:

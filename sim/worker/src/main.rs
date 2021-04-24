@@ -15,7 +15,7 @@ use std::{
     sync::Arc,
     time::{Duration, Instant},
 };
-use tracing::{debug, info, warn};
+use tracing::{debug, info, warn, Instrument};
 use uuid::Uuid;
 
 #[cfg(not(target_env = "msvc"))]
@@ -33,6 +33,42 @@ fn init() {
         .with_env_filter(tracing_subscriber::filter::EnvFilter::from_default_env())
         .finish();
     tracing::subscriber::set_global_default(collector).unwrap();
+}
+
+async fn game_loop(
+    world: Arc<tokio::sync::Mutex<World>>,
+    mut executor: SimpleExecutor,
+    outpayload: Arc<tokio::sync::broadcast::Sender<Arc<world_service::Payload>>>,
+    tick_latency: Duration,
+) {
+    loop {
+        let start = Instant::now();
+        let mut pl = world_service::Payload::default();
+        {
+            // free the world mutex at the end of this scope
+            let mut world = world.lock().await;
+            executor.forward(&mut *world).await.unwrap();
+
+            pl.update(world.time(), &world);
+        }
+
+        if outpayload.receiver_count() > 0 {
+            debug!("Sending world entities to subscribers");
+            // while we're sending to the database, also update the outbound payload
+
+            if outpayload.send(Arc::new(pl)).is_err() {
+                // happens if the subscribers disconnect while we prepared the payload
+                warn!("Lost all world subscribers");
+            }
+        }
+
+        let sleep_duration = tick_latency
+            .checked_sub(Instant::now() - start)
+            .unwrap_or_else(|| Duration::from_millis(0));
+
+        debug!("Sleeping for {:?}", sleep_duration);
+        tokio::time::sleep(sleep_duration).await;
+    }
 }
 
 fn main() {
@@ -63,8 +99,8 @@ fn main() {
     );
 
     let tag = env::var("CAO_QUEEN_TAG").unwrap_or_else(|_| Uuid::new_v4().to_string());
-    let s = tracing::error_span!("main", queen_tag = tag.as_str());
-    let _e = s.enter();
+    let world_span = tracing::error_span!("world-service", queen_tag = tag.as_str());
+    let game_loop_span = tracing::error_span!("game-loop", queen_tag = tag.as_str());
 
     info!("Creating cao executor with tag {}", tag);
     let mut executor = SimpleExecutor;
@@ -110,7 +146,6 @@ fn main() {
 
     let world = Arc::new(tokio::sync::Mutex::new(world));
 
-    let world_span = tracing::error_span!("world-service", queen_tag = tag.as_str());
     let server = tonic::transport::Server::builder()
         .trace_fn(move |_| tracing::error_span!("service", queen_tag = tag.as_str()))
         .add_service(CommandServer::new(
@@ -127,43 +162,10 @@ fn main() {
         )))
         .serve(addr);
 
-    let game_loop = async move {
-        loop {
-            let start = Instant::now();
-            let mut pl = world_service::Payload::default();
-            {
-                // free the world mutex at the end of this scope
-                let mut world = world.lock().await;
-                executor.forward(&mut *world).await.unwrap();
-
-                pl.update(world.time(), &world);
-            }
-
-            if outpayload.receiver_count() > 0 {
-                debug!("Sending world entities to subsribers");
-                // while we're sending to the database, also update the outbound payload
-
-                if outpayload.send(Arc::new(pl)).is_err() {
-                    // happens if the subscribers disconnect while we prepared the payload
-                    warn!("Lost all world subscribers");
-                }
-            }
-
-            let sleep_duration = tick_latency
-                .checked_sub(Instant::now() - start)
-                .unwrap_or_else(|| Duration::from_millis(0));
-
-            debug!("Sleeping for {:?}", sleep_duration);
-            tokio::time::sleep(sleep_duration).await;
-        }
-        // using this for a type hint
-        #[allow(unreachable_code)]
-        Ok::<_, ()>(())
-    };
+    let game_loop = game_loop(world, executor, outpayload, tick_latency).instrument(game_loop_span);
 
     sim_rt.block_on(async move {
-        let (a, b) = futures::join!(server, game_loop);
+        let (a, _) = futures::join!(server, game_loop);
         a.unwrap();
-        b.unwrap();
     });
 }

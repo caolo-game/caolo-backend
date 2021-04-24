@@ -31,7 +31,7 @@ impl SimpleExecutor {
         profile!("world_forward");
 
         let tick = world.time();
-        let s = tracing::error_span!("", tick = tick);
+        let s = tracing::error_span!("world-forward", tick = tick);
         let _e = s.enter();
 
         debug!("Tick starting");

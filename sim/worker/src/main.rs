@@ -63,7 +63,7 @@ fn main() {
     );
 
     let tag = env::var("CAO_QUEEN_TAG").unwrap_or_else(|_| Uuid::new_v4().to_string());
-    let s = tracing::error_span!("", queen_tag = tag.as_str());
+    let s = tracing::error_span!("main", queen_tag = tag.as_str());
     let _e = s.enter();
 
     info!("Creating cao executor with tag {}", tag);
@@ -72,7 +72,7 @@ fn main() {
     let mut world = executor.initialize(caolo_sim::executor::GameConfig {
         world_radius: config.world_radius,
         room_radius: config.room_radius,
-        queen_tag: tag,
+        queen_tag: tag.clone(),
         ..Default::default()
     });
 
@@ -111,7 +111,7 @@ fn main() {
     let world = Arc::new(tokio::sync::Mutex::new(world));
 
     let server = tonic::transport::Server::builder()
-        .trace_fn(|_| tracing::info_span!(""))
+        .trace_fn(move |_| tracing::error_span!("service", queen_tag = tag.as_str()))
         .add_service(CommandServer::new(
             crate::command_service::CommandService::new(Arc::clone(&world)),
         ))

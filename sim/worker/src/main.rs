@@ -39,7 +39,7 @@ fn main() {
     init();
     let sim_rt = caolo_sim::RuntimeGuard::new();
 
-    let game_conf = config::GameConfig::load();
+    let config = config::Config::load();
 
     let _sentry = env::var("SENTRY_URI")
         .ok()
@@ -48,14 +48,14 @@ fn main() {
             eprintln!("Sentry URI was not provided");
         });
 
-    info!("Loaded game config {:?}", game_conf);
+    info!("Loaded config {:?}", config);
 
     let script_chunk_size = env::var("CAO_QUEEN_SCRIPT_CHUNK_SIZE")
         .ok()
         .and_then(|x| x.parse().ok())
         .unwrap_or(1024);
 
-    let tick_latency = Duration::from_millis(game_conf.target_tick_ms);
+    let tick_latency = Duration::from_millis(config.target_tick_ms);
 
     info!(
         "Loaded Queen params:\nScript chunk size: {}\nTick latency: {:?}",
@@ -70,15 +70,15 @@ fn main() {
     let mut executor = SimpleExecutor;
     info!("Init storage");
     let mut world = executor.initialize(caolo_sim::executor::GameConfig {
-        world_radius: game_conf.world_radius,
-        room_radius: game_conf.room_radius,
+        world_radius: config.world_radius,
+        room_radius: config.room_radius,
         queen_tag: tag,
         ..Default::default()
     });
 
-    info!("Starting with {} actors", game_conf.n_actors);
+    info!("Starting with {} actors", config.n_actors);
 
-    caolo_sim::init::init_world_entities(&mut world, game_conf.n_actors as usize);
+    caolo_sim::init::init_world_entities(&mut world, config.n_actors as usize);
 
     let addr = env::var("CAO_SERVICE_ADDR")
         .ok()
@@ -87,7 +87,7 @@ fn main() {
 
     info!("Starting the game loop. Starting the service on {:?}", addr);
 
-    let (outtx, _) = tokio::sync::broadcast::channel(3);
+    let (outtx, _) = tokio::sync::broadcast::channel(config.world_buff_size as usize);
     let outpayload = Arc::new(outtx);
 
     let room_bounds = caolo_sim::prelude::Hexagon::from_radius(

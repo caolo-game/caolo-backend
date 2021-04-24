@@ -359,12 +359,6 @@ where
     where
         Op: FnMut(Axial, &'a Row),
     {
-        debug_assert!(
-            radius & 0xefff == radius,
-            "Radius must fit into 31 bits!; {} != {}",
-            radius,
-            radius & 0xefff
-        );
         let r = i32::try_from(radius).expect("radius to fit into 31 bits");
 
         let [x, y] = center.as_array();

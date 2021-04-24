@@ -11,7 +11,7 @@ use tokio::sync::{
 };
 use tokio_stream::wrappers::ReceiverStream;
 use tonic::Status;
-use tracing::{info, log::warn};
+use tracing::{info, log::warn, Instrument};
 
 use crate::protos::cao_common;
 use crate::protos::cao_world;
@@ -21,6 +21,7 @@ pub struct WorldService {
     entities: WorldPayloadSender,
     room_bounds: Hexagon,
     terrain: Arc<HashMap<Axial, Vec<TerrainComponent>>>,
+    tracing_span: tracing::Span,
 }
 
 impl std::fmt::Debug for WorldService {
@@ -41,11 +42,13 @@ impl WorldService {
         entities: WorldPayloadSender,
         room_bounds: Hexagon,
         terrain: Arc<HashMap<Axial, Vec<TerrainComponent>>>,
+        span: tracing::Span,
     ) -> Self {
         Self {
             entities,
             room_bounds,
             terrain,
+            tracing_span: span,
         }
     }
 }
@@ -114,28 +117,31 @@ impl cao_world::world_server::World for WorldService {
 
         let mut entities_rx = self.entities.subscribe();
         let mut last_sent = -1;
-        tokio::spawn(async move {
-            'main_send: loop {
-                let w = match entities_rx.recv().await {
-                    Ok(w) => w,
-                    Err(RecvError::Lagged(l)) => {
-                        warn!("Entities stream is lagging behind by {} messages", l);
-                        continue 'main_send;
+        tokio::spawn(
+            async move {
+                'main_send: loop {
+                    let w = match entities_rx.recv().await {
+                        Ok(w) => w,
+                        Err(RecvError::Lagged(l)) => {
+                            warn!("Entities stream is lagging behind by {} messages", l);
+                            continue 'main_send;
+                        }
+                        Err(RecvError::Closed) => {
+                            warn!("Entities channel was closed");
+                            break 'main_send;
+                        }
+                    };
+                    if w.payload.world_time != last_sent {
+                        if tx.send(Ok(w.payload.clone())).await.is_err() {
+                            info!("World entities client lost {:?}", addr);
+                            break 'main_send;
+                        }
+                        last_sent = w.payload.world_time;
                     }
-                    Err(RecvError::Closed) => {
-                        warn!("Entities channel was closed");
-                        break 'main_send;
-                    }
-                };
-                if w.payload.world_time != last_sent {
-                    if tx.send(Ok(w.payload.clone())).await.is_err() {
-                        info!("World entities client lost {:?}", addr);
-                        break 'main_send;
-                    }
-                    last_sent = w.payload.world_time;
                 }
             }
-        });
+            .instrument(self.tracing_span.clone()),
+        );
 
         Ok(tonic::Response::new(ReceiverStream::new(rx)))
     }

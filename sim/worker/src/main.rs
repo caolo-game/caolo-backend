@@ -110,6 +110,7 @@ fn main() {
 
     let world = Arc::new(tokio::sync::Mutex::new(world));
 
+    let world_span = tracing::error_span!("world-service", queen_tag = tag.as_str());
     let server = tonic::transport::Server::builder()
         .trace_fn(move |_| tracing::error_span!("service", queen_tag = tag.as_str()))
         .add_service(CommandServer::new(
@@ -122,6 +123,7 @@ fn main() {
             Arc::clone(&outpayload),
             room_bounds,
             Arc::new(terrain),
+            world_span,
         )))
         .serve(addr);
 

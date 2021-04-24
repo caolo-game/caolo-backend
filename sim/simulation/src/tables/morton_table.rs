@@ -175,12 +175,6 @@ where
         Ok(())
     }
 
-    //    /// Extend the map by the items provided.
-    //    /// Note that `Row`s are cloned!
-    // pub fn extend_from_slice(&mut self, items: &[(Axial, Row)]) -> Result<(), ExtendFailure> {
-    //     self.extend(items.iter().map(|(pos, row)| (*pos, *row)))
-    // }
-
     fn rebuild_skip_list(&mut self) {
         #[cfg(debug_assertions)]
         self.assert_keys_are_sorted();

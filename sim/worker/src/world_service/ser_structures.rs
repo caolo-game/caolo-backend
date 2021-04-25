@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+
+use super::util::push_room_pl;
 use crate::protos::cao_common;
 use crate::protos::cao_world;
 use caolo_sim::prelude::*;
@@ -15,7 +18,7 @@ type StructureTables<'a> = (
 );
 
 pub fn structure_payload(
-    out: &mut ::prost::alloc::vec::Vec<cao_world::WorldEntities>,
+    out: &mut HashMap<Axial, cao_world::RoomEntities>,
     (room_entities, structures, hp, owner, energy, energy_regen, spawn, spawn_q, WorldTime(time)): StructureTables,
 ) {
     let room_entities = room_entities.iter_rooms();
@@ -27,16 +30,13 @@ pub fn structure_payload(
         // push the accumulator
         if Some(r) != room {
             if !accumulator.is_empty() {
-                out.push(cao_world::WorldEntities {
-                    world_time: time as i64,
-
-                    payload: Some(cao_world::world_entities::Payload::Structures(
-                        cao_world::RoomStructures {
-                            room_id: room.map(|Room(Axial { q, r })| cao_common::Axial { q, r }),
-                            structures: std::mem::take(&mut accumulator),
-                        },
-                    )),
-                });
+                push_room_pl(
+                    out,
+                    r.0,
+                    |pl| &mut pl.structures,
+                    std::mem::take(&mut accumulator),
+                    time as i64,
+                );
             }
             room = Some(r);
             accumulator.clear();
@@ -103,14 +103,12 @@ pub fn structure_payload(
     }
     // push the last accumulator
     if room.is_some() && !accumulator.is_empty() {
-        out.push(cao_world::WorldEntities {
-            world_time: time as i64,
-            payload: Some(cao_world::world_entities::Payload::Structures(
-                cao_world::RoomStructures {
-                    room_id: room.map(|Room(Axial { q, r })| cao_common::Axial { q, r }),
-                    structures: std::mem::take(&mut accumulator),
-                },
-            )),
-        });
+        push_room_pl(
+            out,
+            room.unwrap().0,
+            |pl| &mut pl.structures,
+            accumulator,
+            time as i64,
+        );
     }
 }

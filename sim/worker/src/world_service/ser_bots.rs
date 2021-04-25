@@ -1,6 +1,10 @@
+use std::collections::HashMap;
+
 use crate::protos::cao_common;
 use crate::protos::cao_world;
 use caolo_sim::prelude::*;
+
+use super::util::push_room_pl;
 
 type BotTables<'a> = (
     View<'a, WorldPosition, EntityComponent>,
@@ -16,7 +20,7 @@ type BotTables<'a> = (
 );
 
 pub fn bot_payload(
-    out: &mut ::prost::alloc::vec::Vec<cao_world::WorldEntities>,
+    out: &mut HashMap<Axial, cao_world::RoomEntities>,
     (room_entities, bots, carry, hp, melee, decay, owner, script, logs, WorldTime(time)): BotTables,
 ) {
     let room_entities = room_entities.iter_rooms();
@@ -28,15 +32,13 @@ pub fn bot_payload(
         // push the accumulator
         if Some(r) != room {
             if !accumulator.is_empty() {
-                out.push(cao_world::WorldEntities {
-                    world_time: time as i64,
-                    payload: Some(cao_world::world_entities::Payload::Bots(
-                        cao_world::RoomBots {
-                            room_id: room.map(|Room(Axial { q, r })| cao_common::Axial { q, r }),
-                            bots: std::mem::take(&mut accumulator),
-                        },
-                    )),
-                });
+                push_room_pl(
+                    out,
+                    r.0,
+                    |pl| &mut pl.bots,
+                    std::mem::take(&mut accumulator),
+                    time as i64,
+                );
             }
             room = Some(r);
             accumulator.clear();
@@ -103,14 +105,12 @@ pub fn bot_payload(
     }
     // push the last accumulator
     if room.is_some() && !accumulator.is_empty() {
-        out.push(cao_world::WorldEntities {
-            world_time: time as i64,
-            payload: Some(cao_world::world_entities::Payload::Bots(
-                cao_world::RoomBots {
-                    room_id: room.map(|Room(Axial { q, r })| cao_common::Axial { q, r }),
-                    bots: std::mem::take(&mut accumulator),
-                },
-            )),
-        });
+        push_room_pl(
+            out,
+            room.unwrap().0,
+            |pl| &mut pl.bots,
+            accumulator,
+            time as i64,
+        );
     }
 }

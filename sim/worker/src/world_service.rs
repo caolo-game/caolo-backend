@@ -34,7 +34,7 @@ type WorldPayloadSender = Arc<Sender<Arc<Payload>>>;
 
 #[derive(Default, Debug)]
 pub struct Payload {
-    pub payload: cao_world::WorldEntities,
+    pub payload: Vec<cao_world::WorldEntities>,
 }
 
 impl WorldService {
@@ -55,49 +55,17 @@ impl WorldService {
 
 impl Payload {
     /// Transform the usual json serialized world into Payload
-    pub fn update(&mut self, time: u64, world: &World) {
-        self.payload.world_time = time as i64;
-        self.payload.bots.clear();
-        self.payload.structures.clear();
-        self.payload.resources.clear();
-
-        ser_bots::bot_payload(
-            &mut self.payload.bots,
-            caolo_sim::prelude::FromWorld::new(world),
-        );
+    pub fn update(&mut self, world: &World) {
+        self.payload.clear();
+        ser_bots::bot_payload(&mut self.payload, caolo_sim::prelude::FromWorld::new(world));
         ser_structures::structure_payload(
-            &mut self.payload.structures,
+            &mut self.payload,
             caolo_sim::prelude::FromWorld::new(world),
         );
         ser_resources::resource_payload(
-            &mut self.payload.resources,
+            &mut self.payload,
             caolo_sim::prelude::FromWorld::new(world),
         );
-
-        if let Some(diag) = world
-            .view::<caolo_sim::prelude::EmptyKey, caolo_sim::diagnostics::Diagnostics>()
-            .value
-            .as_ref()
-        {
-            self.payload.diagnostics = Some(cao_world::Diagnostics {
-                current: Some(cao_world::diagnostics::Current {
-                    number_of_intents: diag.number_of_intents,
-                    number_of_scripts_ran: diag.number_of_scripts_ran,
-                    number_of_scripts_errored: diag.number_of_scripts_errored,
-                    systems_update_ms: diag.systems_update_ms,
-                    scripts_execution_ms: diag.scripts_execution_ms,
-                    tick: diag.tick,
-                    tick_latency_ms: diag.tick_latency_ms,
-                }),
-                accumulated: Some(cao_world::diagnostics::Accumulated {
-                    tick_latency_count: diag.tick_latency_count,
-                    tick_latency_max: diag.tick_latency_max,
-                    tick_latency_min: diag.tick_latency_min,
-                    tick_latency_mean: diag.tick_latency_mean,
-                    tick_latency_std: diag.tick_latency_std,
-                }),
-            });
-        }
     }
 }
 
@@ -116,7 +84,6 @@ impl cao_world::world_server::World for WorldService {
         let (tx, rx) = mpsc::channel(4);
 
         let mut entities_rx = self.entities.subscribe();
-        let mut last_sent = -1;
         tokio::spawn(
             async move {
                 'main_send: loop {
@@ -131,12 +98,11 @@ impl cao_world::world_server::World for WorldService {
                             break 'main_send;
                         }
                     };
-                    if w.payload.world_time != last_sent {
-                        if tx.send(Ok(w.payload.clone())).await.is_err() {
+                    for pl in w.payload.iter() {
+                        if tx.send(Ok(pl.clone())).await.is_err() {
                             info!("World entities client lost {:?}", addr);
                             break 'main_send;
                         }
-                        last_sent = w.payload.world_time;
                     }
                 }
             }

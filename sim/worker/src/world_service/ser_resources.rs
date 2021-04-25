@@ -6,11 +6,12 @@ type ResourceTables<'a> = (
     View<'a, WorldPosition, EntityComponent>,
     View<'a, EntityId, ResourceComponent>,
     View<'a, EntityId, EnergyComponent>,
+    WorldTime,
 );
 
 pub fn resource_payload(
-    out: &mut ::prost::alloc::vec::Vec<cao_world::RoomResources>,
-    (room_entities, resource, energy): ResourceTables,
+    out: &mut ::prost::alloc::vec::Vec<cao_world::WorldEntities>,
+    (room_entities, resource, energy, WorldTime(time)): ResourceTables,
 ) {
     let room_entities = room_entities.iter_rooms();
 
@@ -21,9 +22,14 @@ pub fn resource_payload(
         // push the accumulator
         if Some(r) != room {
             if !accumulator.is_empty() {
-                out.push(cao_world::RoomResources {
-                    room_id: room.map(|Room(Axial { q, r })| cao_common::Axial { q, r }),
-                    resources: std::mem::take(&mut accumulator),
+                out.push(cao_world::WorldEntities {
+                    world_time: time as i64,
+                    payload: Some(cao_world::world_entities::Payload::Resources(
+                        cao_world::RoomResources {
+                            room_id: room.map(|Room(Axial { q, r })| cao_common::Axial { q, r }),
+                            resources: std::mem::take(&mut accumulator),
+                        },
+                    )),
                 });
             }
             room = Some(r);
@@ -57,9 +63,14 @@ pub fn resource_payload(
     }
     // push the last accumulator
     if room.is_some() && !accumulator.is_empty() {
-        out.push(cao_world::RoomResources {
-            room_id: room.map(|Room(Axial { q, r })| cao_common::Axial { q, r }),
-            resources: accumulator,
+        out.push(cao_world::WorldEntities {
+            world_time: time as i64,
+            payload: Some(cao_world::world_entities::Payload::Resources(
+                cao_world::RoomResources {
+                    room_id: room.map(|Room(Axial { q, r })| cao_common::Axial { q, r }),
+                    resources: std::mem::take(&mut accumulator),
+                },
+            )),
         });
     }
 }

@@ -137,10 +137,12 @@ message Diagnostics
 message WorldEntities
 {
     int64 worldTime = 1;
-    repeated RoomBots bots = 2;
-    repeated RoomStructures structures = 3;
-    repeated RoomResources resources = 4;
-    Diagnostics diagnostics = 5;
+    oneof Payload
+    {
+        RoomBots bots = 2;
+        RoomStructures structures = 3;
+        RoomResources resources = 4;
+    }
 }
 
 message Empty { }

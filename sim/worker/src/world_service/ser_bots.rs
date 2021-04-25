@@ -16,7 +16,7 @@ type BotTables<'a> = (
 );
 
 pub fn bot_payload(
-    out: &mut ::prost::alloc::vec::Vec<cao_world::RoomBots>,
+    out: &mut ::prost::alloc::vec::Vec<cao_world::WorldEntities>,
     (room_entities, bots, carry, hp, melee, decay, owner, script, logs, WorldTime(time)): BotTables,
 ) {
     let room_entities = room_entities.iter_rooms();
@@ -28,9 +28,14 @@ pub fn bot_payload(
         // push the accumulator
         if Some(r) != room {
             if !accumulator.is_empty() {
-                out.push(cao_world::RoomBots {
-                    room_id: room.map(|Room(Axial { q, r })| cao_common::Axial { q, r }),
-                    bots: std::mem::take(&mut accumulator),
+                out.push(cao_world::WorldEntities {
+                    world_time: time as i64,
+                    payload: Some(cao_world::world_entities::Payload::Bots(
+                        cao_world::RoomBots {
+                            room_id: room.map(|Room(Axial { q, r })| cao_common::Axial { q, r }),
+                            bots: std::mem::take(&mut accumulator),
+                        },
+                    )),
                 });
             }
             room = Some(r);
@@ -89,7 +94,7 @@ pub fn bot_payload(
                             data: script_id.as_bytes().to_vec(),
                         }),
                     logs: logs
-                        .get_by_id(EntityTime(entity_id, time-1)) // send the logs of the last tick
+                        .get_by_id(EntityTime(entity_id, time - 1)) // send the logs of the last tick
                         .map(|logs| logs.payload.clone())
                         .unwrap_or_default(),
                 });
@@ -98,9 +103,14 @@ pub fn bot_payload(
     }
     // push the last accumulator
     if room.is_some() && !accumulator.is_empty() {
-        out.push(cao_world::RoomBots {
-            room_id: room.map(|Room(Axial { q, r })| cao_common::Axial { q, r }),
-            bots: accumulator,
+        out.push(cao_world::WorldEntities {
+            world_time: time as i64,
+            payload: Some(cao_world::world_entities::Payload::Bots(
+                cao_world::RoomBots {
+                    room_id: room.map(|Room(Axial { q, r })| cao_common::Axial { q, r }),
+                    bots: std::mem::take(&mut accumulator),
+                },
+            )),
         });
     }
 }

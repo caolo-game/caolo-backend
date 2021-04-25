@@ -3,6 +3,8 @@ package cao_script;
 
 import "cao_common.proto";
 
+option go_package = "github.com/caolo-game/cao-rt/cao_script_pb";
+
 message SchemaCard
 {
     string name = 1;

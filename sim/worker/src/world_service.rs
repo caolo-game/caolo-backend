@@ -187,12 +187,8 @@ mod tests {
         });
         caolo_sim::init::init_world_entities(&mut *w, 12);
 
-        pl.update(w.time(), &w);
+        pl.update(&w);
 
-        // note:
-        // with the current initialization there might not be any bots alive at this time...
-        // assert!(!pl.payload.bots.is_empty());
-        // assert!(!pl.payload.structures.is_empty());
-        assert!(!pl.payload.resources.is_empty());
+        assert!(!pl.payload.is_empty());
     }
 }

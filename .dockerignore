@@ -2,6 +2,7 @@
 !migrations
 !diesel.toml
 !api
+!rt
 !sim
 !protos
 !.cargo

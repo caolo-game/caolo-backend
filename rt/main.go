@@ -33,10 +33,10 @@ func main() {
 			break
 		}
 		if err != nil {
-			log.Fatalf("%v.Etities = %v", client, err)
+			log.Fatalf("%v.Entities = %v", client, err)
 		}
 
-		log.Printf("pog %d rooms w/ bots received", len(entitites.Bots))
+        log.Printf("pog message with time: %d", entitites.WorldTime)
 
 	}
 

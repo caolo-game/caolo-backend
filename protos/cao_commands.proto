@@ -2,7 +2,8 @@ syntax = "proto3";
 package cao_commands;
 
 import "cao_common.proto";
-import "cao_script.proto";
+
+option go_package = "github.com/caolo-game/cao-rt/cao_commands_pb";
 
 enum StructureType {
     SPAWN = 0;

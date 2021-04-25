@@ -1,6 +1,8 @@
 syntax = "proto3";
 package cao_common;
 
+option go_package = "github.com/caolo-game/cao-rt/cao_common_pb";
+
 message Axial
 {
   int32 q = 1;

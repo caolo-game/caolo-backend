@@ -4,6 +4,8 @@ package cao_world;
 
 import "cao_common.proto";
 
+option go_package = "github.com/caolo-game/cao-rt/cao_world_pb";
+
 message Bounded
 {
     int64 value = 1;

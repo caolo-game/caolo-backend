@@ -1,4 +1,4 @@
-.DEFAULT_GOAL := buildall
+.DEFAULT_GOAL := all
 .PHONY: api sim rt
 
 test-sim:
@@ -24,8 +24,16 @@ release:
 
 all: api sim release rt
 
-push: all
+push_api:api
 	docker push frenetiq/caolo-api:bleeding
+
+push_sim:sim
 	docker push frenetiq/caolo-sim:bleeding
+
+push_rt:rt
 	docker push frenetiq/caolo-rt:bleeding
+
+push_release:release
 	docker push frenetiq/caolo-release:bleeding
+
+push: push_api push_release push_rt push_sim

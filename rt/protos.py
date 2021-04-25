@@ -4,7 +4,6 @@ import sys
 
 HERE = Path(__file__).parent
 
-# manifest.in should copy the protos dir into this directory
 PROTO_DIR = Path(os.getenv("CAO_PROTOS_PATH", HERE / ".." / "protos"))
 try:
     os.listdir(PROTO_DIR)

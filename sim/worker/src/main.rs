@@ -49,7 +49,7 @@ async fn game_loop(
             let mut world = world.lock().await;
             executor.forward(&mut *world).await.unwrap();
 
-            pl.update(world.time(), &world);
+            pl.update(&world);
         }
 
         if outpayload.receiver_count() > 0 {

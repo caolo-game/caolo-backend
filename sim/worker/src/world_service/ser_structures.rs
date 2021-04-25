@@ -11,11 +11,12 @@ type StructureTables<'a> = (
     View<'a, EntityId, EnergyRegenComponent>,
     View<'a, EntityId, SpawnComponent>,
     View<'a, EntityId, SpawnQueueComponent>,
+    WorldTime,
 );
 
 pub fn structure_payload(
-    out: &mut ::prost::alloc::vec::Vec<cao_world::RoomStructures>,
-    (room_entities, structures, hp, owner, energy, energy_regen, spawn, spawn_q): StructureTables,
+    out: &mut ::prost::alloc::vec::Vec<cao_world::WorldEntities>,
+    (room_entities, structures, hp, owner, energy, energy_regen, spawn, spawn_q, WorldTime(time)): StructureTables,
 ) {
     let room_entities = room_entities.iter_rooms();
 
@@ -26,9 +27,15 @@ pub fn structure_payload(
         // push the accumulator
         if Some(r) != room {
             if !accumulator.is_empty() {
-                out.push(cao_world::RoomStructures {
-                    room_id: room.map(|Room(Axial { q, r })| cao_common::Axial { q, r }),
-                    structures: std::mem::take(&mut accumulator),
+                out.push(cao_world::WorldEntities {
+                    world_time: time as i64,
+
+                    payload: Some(cao_world::world_entities::Payload::Structures(
+                        cao_world::RoomStructures {
+                            room_id: room.map(|Room(Axial { q, r })| cao_common::Axial { q, r }),
+                            structures: std::mem::take(&mut accumulator),
+                        },
+                    )),
                 });
             }
             room = Some(r);
@@ -96,9 +103,14 @@ pub fn structure_payload(
     }
     // push the last accumulator
     if room.is_some() && !accumulator.is_empty() {
-        out.push(cao_world::RoomStructures {
-            room_id: room.map(|Room(Axial { q, r })| cao_common::Axial { q, r }),
-            structures: accumulator,
+        out.push(cao_world::WorldEntities {
+            world_time: time as i64,
+            payload: Some(cao_world::world_entities::Payload::Structures(
+                cao_world::RoomStructures {
+                    room_id: room.map(|Room(Axial { q, r })| cao_common::Axial { q, r }),
+                    structures: std::mem::take(&mut accumulator),
+                },
+            )),
         });
     }
 }

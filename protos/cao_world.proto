@@ -37,23 +37,6 @@ message RoomList
     repeated cao_common.Axial room_ids = 1;
 }
 
-message RoomBots
-{
-    cao_common.Axial roomId = 1;
-    repeated Bot bots = 2;
-}
-
-message RoomStructures
-{
-    cao_common.Axial roomId = 1;
-    repeated Structure structures = 2;
-}
-
-message RoomResources
-{
-    cao_common.Axial roomId = 1;
-    repeated Resource resources = 2;
-}
 
 message Bot
 {
@@ -134,15 +117,13 @@ message Diagnostics
     }
 }
 
-message WorldEntities
+message RoomEntities
 {
     int64 worldTime = 1;
-    oneof Payload
-    {
-        RoomBots bots = 2;
-        RoomStructures structures = 3;
-        RoomResources resources = 4;
-    }
+    cao_common.Axial roomId = 2;
+    repeated Bot bots = 3;
+    repeated Structure structures = 4;
+    repeated Resource resources = 5;
 }
 
 message Empty { }
@@ -150,7 +131,7 @@ message Empty { }
 service World
 {
     /// Stream the entities on updates
-    rpc Entities(Empty) returns (stream WorldEntities) { }
+    rpc Entities(Empty) returns (stream RoomEntities) { }
     rpc GetRoomLayout(Empty) returns (RoomLayout) { }
     rpc GetRoomList(Empty) returns (RoomList) { }
 

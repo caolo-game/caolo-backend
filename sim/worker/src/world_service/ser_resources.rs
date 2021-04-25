@@ -1,6 +1,9 @@
+use std::collections::HashMap;
+
 use crate::protos::cao_common;
 use crate::protos::cao_world;
 use caolo_sim::prelude::*;
+use super::util::push_room_pl;
 
 type ResourceTables<'a> = (
     View<'a, WorldPosition, EntityComponent>,
@@ -10,7 +13,7 @@ type ResourceTables<'a> = (
 );
 
 pub fn resource_payload(
-    out: &mut ::prost::alloc::vec::Vec<cao_world::WorldEntities>,
+    out: &mut HashMap<Axial, cao_world::RoomEntities>,
     (room_entities, resource, energy, WorldTime(time)): ResourceTables,
 ) {
     let room_entities = room_entities.iter_rooms();
@@ -22,15 +25,13 @@ pub fn resource_payload(
         // push the accumulator
         if Some(r) != room {
             if !accumulator.is_empty() {
-                out.push(cao_world::WorldEntities {
-                    world_time: time as i64,
-                    payload: Some(cao_world::world_entities::Payload::Resources(
-                        cao_world::RoomResources {
-                            room_id: room.map(|Room(Axial { q, r })| cao_common::Axial { q, r }),
-                            resources: std::mem::take(&mut accumulator),
-                        },
-                    )),
-                });
+                push_room_pl(
+                    out,
+                    r.0,
+                    |pl| &mut pl.resources,
+                    std::mem::take(&mut accumulator),
+                    time as i64,
+                );
             }
             room = Some(r);
             accumulator.clear();
@@ -63,14 +64,6 @@ pub fn resource_payload(
     }
     // push the last accumulator
     if room.is_some() && !accumulator.is_empty() {
-        out.push(cao_world::WorldEntities {
-            world_time: time as i64,
-            payload: Some(cao_world::world_entities::Payload::Resources(
-                cao_world::RoomResources {
-                    room_id: room.map(|Room(Axial { q, r })| cao_common::Axial { q, r }),
-                    resources: std::mem::take(&mut accumulator),
-                },
-            )),
-        });
+        push_room_pl(out, room.unwrap().0, |pl| &mut pl.resources, accumulator, time as i64);
     }
 }

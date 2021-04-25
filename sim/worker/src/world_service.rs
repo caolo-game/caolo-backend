@@ -1,6 +1,7 @@
 mod ser_bots;
 mod ser_resources;
 mod ser_structures;
+mod util;
 
 use caolo_sim::prelude::{Axial, Hexagon, TerrainComponent, World};
 use std::collections::HashMap;
@@ -34,7 +35,7 @@ type WorldPayloadSender = Arc<Sender<Arc<Payload>>>;
 
 #[derive(Default, Debug)]
 pub struct Payload {
-    pub payload: Vec<cao_world::WorldEntities>,
+    pub payload_by_room: HashMap<Axial, cao_world::RoomEntities>,
 }
 
 impl WorldService {
@@ -56,14 +57,17 @@ impl WorldService {
 impl Payload {
     /// Transform the usual json serialized world into Payload
     pub fn update(&mut self, world: &World) {
-        self.payload.clear();
-        ser_bots::bot_payload(&mut self.payload, caolo_sim::prelude::FromWorld::new(world));
+        self.payload_by_room.clear();
+        ser_bots::bot_payload(
+            &mut self.payload_by_room,
+            caolo_sim::prelude::FromWorld::new(world),
+        );
         ser_structures::structure_payload(
-            &mut self.payload,
+            &mut self.payload_by_room,
             caolo_sim::prelude::FromWorld::new(world),
         );
         ser_resources::resource_payload(
-            &mut self.payload,
+            &mut self.payload_by_room,
             caolo_sim::prelude::FromWorld::new(world),
         );
     }
@@ -71,7 +75,7 @@ impl Payload {
 
 #[tonic::async_trait]
 impl cao_world::world_server::World for WorldService {
-    type EntitiesStream = ReceiverStream<Result<cao_world::WorldEntities, Status>>;
+    type EntitiesStream = ReceiverStream<Result<cao_world::RoomEntities, Status>>;
 
     async fn entities(
         &self,
@@ -98,7 +102,7 @@ impl cao_world::world_server::World for WorldService {
                             break 'main_send;
                         }
                     };
-                    for pl in w.payload.iter() {
+                    for (_, pl) in w.payload_by_room.iter() {
                         if tx.send(Ok(pl.clone())).await.is_err() {
                             info!("World entities client lost {:?}", addr);
                             break 'main_send;
@@ -189,6 +193,6 @@ mod tests {
 
         pl.update(&w);
 
-        assert!(!pl.payload.is_empty());
+        assert!(!pl.payload_by_room.is_empty());
     }
 }

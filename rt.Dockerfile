@@ -28,8 +28,7 @@ COPY --from=protos /caolo/rt/ ./
 
 RUN go build
 
-
-FROM ubuntu:latest
+FROM ubuntu
 
 WORKDIR /caolo
 COPY --from=build /caolo/rt/cao-rt ./

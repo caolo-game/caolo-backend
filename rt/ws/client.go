@@ -110,6 +110,11 @@ func (c *client) writePump() {
 			if err != nil {
 				return
 			}
+			entities := c.hub.Entities[roomId]
+			err = sendJson(c.conn, "entities", entities)
+			if err != nil {
+				return
+			}
 		case entities, ok := <-c.entities:
 			c.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
 			if !ok {

@@ -14,7 +14,8 @@ import (
 	"github.com/caolo-game/cao-rt/ws"
 )
 
-var addr = flag.String("addr", ":8080", "http service address")
+var addr = flag.String("addr", "localhost:8080", "http service address")
+var simAddr = flag.String("simAddr", "localhost:50051", "address of the Simulation Service")
 
 func listenToWorld(conn *grpc.ClientConn, worldState chan *cao_world.RoomEntities) {
 	client := cao_world.NewWorldClient(conn)
@@ -65,12 +66,14 @@ func initTerrain(conn *grpc.ClientConn, hub *ws.GameStateHub) {
 }
 
 func main() {
+	flag.Parse()
+
 	var opts []grpc.DialOption
 	opts = append(opts, grpc.WithInsecure())
 
 	log.Println("Starting")
 
-	conn, err := grpc.Dial("localhost:50051", opts...)
+	conn, err := grpc.Dial(*simAddr, opts...)
 	if err != nil {
 		log.Fatalf("failed to connect %v", err)
 	}
@@ -78,8 +81,6 @@ func main() {
 	hub := ws.NewGameStateHub()
 
 	go listenToWorld(conn, hub.WorldState)
-
-	flag.Parse()
 
 	go hub.Run()
 
@@ -89,5 +90,6 @@ func main() {
 		ws.ServeWs(hub, w, r)
 	})
 
+	log.Printf("Init done. Listening on %s", *addr)
 	log.Fatal(http.ListenAndServe(*addr, nil))
 }

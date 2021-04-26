@@ -55,7 +55,7 @@ func (c *client) readPump() {
 		var pl InputMsg
 		err = json.Unmarshal(msg, &pl)
 		if err != nil {
-			log.Panicf("Invalid message %v", err)
+			log.Printf("Invalid message %v", err)
 			return
 		}
 		switch pl.Ty {

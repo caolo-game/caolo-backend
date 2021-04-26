@@ -45,13 +45,7 @@ pub fn resource_payload(
                     Resource::Energy => {
                         accumulator.push(cao_world::Resource {
                             id: entity_id.0.into(),
-                            pos: Some(cao_common::WorldPosition {
-                                room: Some(cao_common::Axial {
-                                    q: next_room.0.q,
-                                    r: next_room.0.r,
-                                }),
-                                pos: Some(cao_common::Axial { q: pos.q, r: pos.r }),
-                            }),
+                            pos: Some(cao_common::Axial { q: pos.q, r: pos.r }),
                             resource_type: energy.get_by_id(entity_id).copied().map(
                                 |EnergyComponent { energy, energy_max }: EnergyComponent| {
                                     cao_world::resource::ResourceType::Energy(cao_world::Bounded {

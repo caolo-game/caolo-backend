@@ -10,13 +10,13 @@ import (
 	cao_world "github.com/caolo-game/cao-rt/cao_world_pb"
 	"google.golang.org/grpc"
 
-	"github.com/caolo-game/cao-rt/hub"
+	"github.com/caolo-game/cao-rt/ws"
 )
 
 var addr = flag.String("addr", ":8080", "http service address")
 
 func listenToWorld(conn *grpc.ClientConn, worldState chan *cao_world.RoomEntities) {
-	var client = cao_world.NewWorldClient(conn)
+	client := cao_world.NewWorldClient(conn)
 
 	for {
 		stream, err := client.Entities(context.Background(), &cao_world.Empty{})
@@ -52,7 +52,7 @@ func main() {
 		log.Fatalf("failed to connect %v", err)
 	}
 	defer conn.Close()
-	hub := hub.NewGameStateHub()
+	hub := ws.NewGameStateHub()
 
 	go listenToWorld(conn, hub.WorldState)
 
@@ -61,6 +61,7 @@ func main() {
 	go hub.Run()
 
 	http.HandleFunc("/object-stream", func(w http.ResponseWriter, r *http.Request) {
+		ws.ServeWs(hub, w, r)
 	})
 
 	log.Fatal(http.ListenAndServe(*addr, nil))

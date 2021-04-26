@@ -1,19 +1,11 @@
 from typing import Dict, List, Tuple
+import logging
+
 from fastapi import FastAPI, Response, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 import asyncpg
-
-import logging
-import json
-import os
-import asyncio
-import sys
-
 from .config import QUEEN_TAG, DB_URL, QUEEN_URL
-
-from .api_schema import RoomObjects, Axial, make_room_id, parse_room_id
-from .model import game_state
 
 from . import handler
 
@@ -76,19 +68,11 @@ async def health():
 app.include_router(handler.world.router)
 app.include_router(handler.scripting.router)
 app.include_router(handler.admin.router)
-app.include_router(handler.world_ws.router)
 app.include_router(handler.commands.router)
 app.include_router(handler.users.router)
-
-
-async def _broadcast_gamestate():
-    pool = await db_pool()
-    async with pool.acquire() as con:
-        await game_state.manager.start(QUEEN_TAG, QUEEN_URL, con)
 
 
 @app.on_event("startup")
 async def on_start():
     # force connections on startup instead of at the first request
     await db_pool()
-    await _broadcast_gamestate()

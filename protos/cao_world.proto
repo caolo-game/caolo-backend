@@ -37,11 +37,11 @@ message RoomList
     repeated cao_common.Axial room_ids = 1;
 }
 
-
 message Bot
 {
     int64 id = 1;
-    cao_common.WorldPosition pos = 2;
+    // Assume that roomId is part of the context
+    cao_common.Axial pos = 2;
     Bounded carry = 3;
     Bounded hp = 4;
     cao_common.Uuid script = 5;
@@ -61,7 +61,8 @@ message Bot
 message Structure
 {
     int64 id = 1;
-    cao_common.WorldPosition pos = 2;
+    // Assume that roomId is part of the context
+    cao_common.Axial pos = 2;
     Bounded hp = 3;
     Bounded energy = 4;
     int64 energyRegen = 5;
@@ -83,7 +84,8 @@ message Structure
 message Resource
 {
     int64 id = 1;
-    cao_common.WorldPosition pos = 2;
+    // Assume that roomId is part of the context
+    cao_common.Axial pos = 2;
 
     oneof resource_type
     {

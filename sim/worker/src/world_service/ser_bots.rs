@@ -28,19 +28,20 @@ pub fn bot_payload(
     let mut room = None;
     let mut accumulator = Vec::with_capacity(128);
 
-    for (r, entities) in room_entities {
+    for (next_room, entities) in room_entities {
         // push the accumulator
-        if Some(r) != room {
+        if Some(next_room) != room {
             if !accumulator.is_empty() {
+                debug_assert!(room.is_some());
                 push_room_pl(
                     out,
-                    r.0,
+                    room.unwrap().0,
                     |pl| &mut pl.bots,
                     std::mem::take(&mut accumulator),
                     time as i64,
                 );
             }
-            room = Some(r);
+            room = Some(next_room);
             accumulator.clear();
         }
         for (pos, EntityComponent(entity_id)) in entities.iter() {
@@ -49,7 +50,7 @@ pub fn bot_payload(
                 accumulator.push(cao_world::Bot {
                     id: entity_id.0.into(),
                     pos: Some(cao_common::WorldPosition {
-                        room: Some(cao_common::Axial { q: r.0.q, r: r.0.r }),
+                        room: Some(cao_common::Axial { q: next_room.0.q, r: next_room.0.r }),
                         pos: Some(cao_common::Axial { q: pos.q, r: pos.r }),
                     }),
                     hp: hp

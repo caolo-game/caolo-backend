@@ -194,5 +194,24 @@ mod tests {
         pl.update(&w);
 
         assert!(!pl.payload_by_room.is_empty());
+
+        // test that the correct entities are sent per room
+        for (room_id, pl) in pl.payload_by_room.iter() {
+            for entity in pl.bots.iter() {
+                let p = entity.pos.as_ref().unwrap().room.as_ref().unwrap();
+                assert_eq!(room_id.q, p.q);
+                assert_eq!(room_id.r, p.r);
+            }
+            for entity in pl.structures.iter() {
+                let p = entity.pos.as_ref().unwrap().room.as_ref().unwrap();
+                assert_eq!(room_id.q, p.q);
+                assert_eq!(room_id.r, p.r);
+            }
+            for entity in pl.resources.iter() {
+                let p = entity.pos.as_ref().unwrap().room.as_ref().unwrap();
+                assert_eq!(room_id.q, p.q);
+                assert_eq!(room_id.r, p.r);
+            }
+        }
     }
 }

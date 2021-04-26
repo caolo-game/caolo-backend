@@ -33,4 +33,4 @@ FROM ubuntu
 WORKDIR /caolo
 COPY --from=build /caolo/rt/cao-rt ./
 
-ENTRYPOINT ["./cao-rt"]
+ENTRYPOINT ./cao-rt -addr :${PORT:-8080} -simAddr ${CAO_QUEEN_URL}

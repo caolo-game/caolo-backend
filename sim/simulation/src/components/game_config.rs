@@ -1,5 +1,3 @@
-use crate::indices::ConfigKey;
-use crate::tables::{unique_table::UniqueTable, Component};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -22,11 +20,7 @@ impl Default for GameConfig {
             queen_tag: uuid::Uuid::new_v4().to_string(),
             world_radius: 32,
             room_radius: 50,
-            path_finding_limit: 1000
+            path_finding_limit: 1000,
         }
     }
-}
-
-impl Component<ConfigKey> for GameConfig {
-    type Table = UniqueTable<ConfigKey, Self>;
 }

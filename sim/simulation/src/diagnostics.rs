@@ -1,6 +1,5 @@
 mod serde_impl;
 
-use crate::prelude::{tables::unique_table::UniqueTable, Component, EmptyKey};
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -91,8 +90,4 @@ impl Diagnostics {
         self.tick_latency_std = (self.__tick_latency_std_aggregator / tick).sqrt();
         self.tick_latency_count += 1;
     }
-}
-
-impl Component<EmptyKey> for Diagnostics {
-    type Table = UniqueTable<EmptyKey, Diagnostics>;
 }

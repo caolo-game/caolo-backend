@@ -1,9 +1,4 @@
 use crate::geometry::Axial;
-use crate::indices::ConfigKey;
-use crate::indices::WorldPosition;
-use crate::tables::{
-    hex_grid::HexGrid, morton_table::MortonTable, unique_table::UniqueTable, Component, MortonGridTable,
-};
 use crate::terrain::TileTerrainType;
 use serde::{Deserialize, Serialize};
 
@@ -23,19 +18,10 @@ pub struct RoomConnection {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct RoomConnections(pub [Option<RoomConnection>; 6]);
-impl Component<Axial> for RoomConnections {
-    type Table = MortonTable<Self>;
-}
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, Default, Copy)]
 #[serde(rename_all = "camelCase")]
 pub struct TerrainComponent(pub TileTerrainType);
-impl Component<WorldPosition> for TerrainComponent {
-    type Table = MortonGridTable<Self>;
-}
-impl Component<Axial> for TerrainComponent {
-    type Table = HexGrid<Self>;
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
@@ -43,14 +29,7 @@ pub struct RoomProperties {
     pub radius: u32,
     pub center: Axial,
 }
-impl Component<ConfigKey> for RoomProperties {
-    type Table = UniqueTable<ConfigKey, Self>;
-}
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct RoomComponent;
-
-impl Component<Axial> for RoomComponent {
-    type Table = MortonTable<Self>;
-}

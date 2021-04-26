@@ -1,4 +1,3 @@
-use crate::tables::{btree_table::BTreeTable, Component, TableId};
 use cao_lang::prelude::Value;
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
@@ -38,9 +37,6 @@ impl TryFrom<Value> for Resource {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ResourceComponent(pub Resource);
-impl<Id: TableId> Component<Id> for ResourceComponent {
-    type Table = BTreeTable<Id, Self>;
-}
 
 impl Default for ResourceComponent {
     fn default() -> Self {

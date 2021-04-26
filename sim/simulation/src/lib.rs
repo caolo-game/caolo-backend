@@ -1,5 +1,4 @@
-use prelude::{Component, World};
-use tables::{unique_table::UniqueTable, TableId};
+use prelude::World;
 
 pub mod components;
 pub mod diagnostics;
@@ -33,10 +32,6 @@ impl<'a> storage::views::FromWorld<'a> for Time {
     fn new(w: &'a World) -> Self {
         Time(w.time())
     }
-}
-
-impl<Id: TableId> Component<Id> for Time {
-    type Table = UniqueTable<Id, Time>;
 }
 
 #[derive(Clone)]

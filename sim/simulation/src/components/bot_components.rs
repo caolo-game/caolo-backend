@@ -1,8 +1,4 @@
-use crate::tables::{btree_table::BTreeTable, dense_table::DenseTable, Component};
-use crate::{
-    indices::{EntityId, RoomPosition, ScriptId, UserId, WorldPosition},
-    tables::flag_table::SparseFlagTable,
-};
+use crate::indices::{RoomPosition, ScriptId, WorldPosition};
 use arrayvec::ArrayVec;
 
 use serde::{Deserialize, Serialize};
@@ -12,18 +8,11 @@ use serde::{Deserialize, Serialize};
 pub struct MeleeAttackComponent {
     pub strength: u16,
 }
-impl Component<EntityId> for MeleeAttackComponent {
-    type Table = DenseTable<EntityId, Self>;
-}
 
 /// Has a body so it's not `null` when serializing
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct Bot;
-
-impl Component<EntityId> for Bot {
-    type Table = SparseFlagTable<EntityId, Self>;
-}
 
 /// Represent time to decay of bots
 /// On decay the bot will loose hp
@@ -34,18 +23,12 @@ pub struct DecayComponent {
     pub interval: u8,
     pub time_remaining: u8,
 }
-impl Component<EntityId> for DecayComponent {
-    type Table = DenseTable<EntityId, Self>;
-}
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CarryComponent {
     pub carry: u16,
     pub carry_max: u16,
-}
-impl Component<EntityId> for CarryComponent {
-    type Table = DenseTable<EntityId, Self>;
 }
 
 /// Entity - Script join table
@@ -54,12 +37,6 @@ impl Component<EntityId> for CarryComponent {
 pub struct EntityScript(pub ScriptId);
 
 unsafe impl Send for EntityScript {}
-impl Component<EntityId> for EntityScript {
-    type Table = DenseTable<EntityId, Self>;
-}
-impl Component<UserId> for EntityScript {
-    type Table = BTreeTable<UserId, Self>;
-}
 
 pub const PATH_CACHE_LEN: usize = 64;
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -67,7 +44,4 @@ pub const PATH_CACHE_LEN: usize = 64;
 pub struct PathCacheComponent {
     pub target: WorldPosition,
     pub path: ArrayVec<RoomPosition, PATH_CACHE_LEN>,
-}
-impl Component<EntityId> for PathCacheComponent {
-    type Table = DenseTable<EntityId, Self>;
 }

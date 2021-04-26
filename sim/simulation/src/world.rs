@@ -1,4 +1,3 @@
-use crate::archetype;
 use crate::components::*;
 use crate::diagnostics::Diagnostics;
 use crate::indices::*;
@@ -7,18 +6,27 @@ use crate::storage::{
     self,
     views::{UnsafeView, View},
 };
+use crate::tables::btree_table::BTreeTable;
+use crate::tables::dense_table::DenseTable;
+use crate::tables::flag_table::SparseFlagTable;
 use crate::tables::morton_hierarchy::ExtendFailure;
-use crate::tables::{Component, TableId};
+use crate::tables::morton_hierarchy::MortonGridTable;
+use crate::tables::morton_hierarchy::MortonMortonTable;
+use crate::tables::morton_table::MortonTable;
+use crate::tables::unique_table::UniqueTable;
+use crate::tables::Component;
+use crate::tables::TableId;
 use crate::Time;
+use crate::{archetype, tables::hex_grid::HexGrid};
 use crate::{components::game_config::GameConfig, prelude::Axial};
 use serde::Serialize;
 use std::pin::Pin;
 
 archetype!(
     module pos2_store key Axial,
-    table RoomConnections = room_connections,
-    table RoomComponent = rooms,
-    table OwnedEntity = owner
+    table RoomConnections : MortonTable<RoomConnections> = room_connections,
+    table RoomComponent : MortonTable<RoomComponent> = rooms,
+    table OwnedEntity : MortonTable<OwnedEntity> = owner
 
     iterby rooms
 );
@@ -26,24 +34,24 @@ archetype!(
 archetype!(
     module entity_store key EntityId,
 
-    table Bot = bot,
-    table PositionComponent = pos,
-    table SpawnBotComponent = spawnbot,
-    table CarryComponent = carry,
-    table Structure = structure,
-    table HpComponent = hp,
-    table EnergyRegenComponent = energyregen,
-    table EnergyComponent = energy,
-    table ResourceComponent = resource,
-    table DecayComponent = decay,
-    table EntityScript = script,
-    table SpawnComponent = spawn,
-    table SpawnQueueComponent = spawnqueue,
-    table OwnedEntity = owner,
-    table MeleeAttackComponent = melee,
+    table Bot : SparseFlagTable<EntityId, Bot>  = bot,
+    table PositionComponent : DenseTable<EntityId, PositionComponent> = pos,
+    table SpawnBotComponent : DenseTable<EntityId, SpawnBotComponent> = spawnbot,
+    table CarryComponent  : DenseTable<EntityId, CarryComponent> = carry,
+    table Structure  : SparseFlagTable<EntityId, Structure> = structure,
+    table HpComponent  : DenseTable<EntityId, HpComponent> = hp,
+    table EnergyRegenComponent  : DenseTable<EntityId, EnergyRegenComponent> = energyregen,
+    table EnergyComponent  : DenseTable<EntityId, EnergyComponent> = energy,
+    table ResourceComponent  : BTreeTable<EntityId, ResourceComponent> = resource,
+    table DecayComponent  : DenseTable<EntityId, DecayComponent> = decay,
+    table EntityScript  : DenseTable<EntityId, EntityScript> = script,
+    table SpawnComponent  : DenseTable<EntityId, SpawnComponent> = spawn,
+    table SpawnQueueComponent  : DenseTable<EntityId, SpawnQueueComponent> = spawnqueue,
+    table OwnedEntity  : DenseTable<EntityId, OwnedEntity> = owner,
+    table MeleeAttackComponent  : DenseTable<EntityId, MeleeAttackComponent> = melee,
 
-    attr serde(skip) table PathCacheComponent = pathcache,
-    attr serde(skip) table ScriptHistory = script_history
+    attr serde(skip) table PathCacheComponent  : DenseTable<EntityId,PathCacheComponent>= pathcache,
+    attr serde(skip) table ScriptHistory  : DenseTable<EntityId,ScriptHistory>= script_history
 
     iterby bot
     iterby structure
@@ -53,10 +61,10 @@ archetype!(
 archetype!(
     module user_store key UserId,
 
-    table UserComponent = user,
-    table EntityScript = user_default_script,
-    table Rooms = user_rooms,
-    table UserProperties = user_props
+    table UserComponent : SparseFlagTable<UserId, UserComponent> = user,
+    table EntityScript: BTreeTable<UserId, EntityScript> = user_default_script,
+    table Rooms : BTreeTable<UserId, Rooms>= user_rooms,
+    table UserProperties : BTreeTable<UserId, UserProperties> = user_props
 
     iterby user
 );
@@ -64,40 +72,50 @@ archetype!(
 archetype!(
     module resource_store key EmptyKey,
 
-    table Time = time,
-    table Intents<MoveIntent> = move_intents,
-    table Intents<SpawnIntent> = spawn_intents,
-    table Intents<MineIntent> = mine_intents,
-    table Intents<DropoffIntent> = dropoff_intents,
-    table Intents<LogIntent> = log_intents,
-    table Intents<CachePathIntent> = update_path_cache_intents,
-    table Intents<MutPathCacheIntent> = mut_path_cache_intents,
-    table Intents<MeleeIntent> = melee_intents,
-    table Intents<ScriptHistoryEntry> = script_history_intents,
-    table Intents<DeleteEntityIntent> = delete_entity_intents,
+    table Time : UniqueTable<EmptyKey, Time> = time,
+    table Intents<MoveIntent> : UniqueTable<EmptyKey, Intents<MoveIntent>> = move_intents,
+    table Intents<SpawnIntent> : UniqueTable<EmptyKey, Intents<SpawnIntent>> = spawn_intents,
+    table Intents<MineIntent> : UniqueTable<EmptyKey, Intents<MineIntent>> = mine_intents,
+    table Intents<DropoffIntent> : UniqueTable<EmptyKey, Intents<DropoffIntent>> = dropoff_intents,
+    table Intents<LogIntent> : UniqueTable<EmptyKey, Intents<LogIntent>> = log_intents,
+    table Intents<CachePathIntent> : UniqueTable<EmptyKey, Intents<CachePathIntent>> = update_path_cache_intents,
+    table Intents<MutPathCacheIntent> : UniqueTable<EmptyKey, Intents<MutPathCacheIntent>> = mut_path_cache_intents,
+    table Intents<MeleeIntent> : UniqueTable<EmptyKey, Intents<MeleeIntent>> = melee_intents,
+    table Intents<ScriptHistoryEntry> : UniqueTable<EmptyKey, Intents<ScriptHistoryEntry>> = script_history_intents,
+    table Intents<DeleteEntityIntent> : UniqueTable<EmptyKey, Intents<DeleteEntityIntent>> = delete_entity_intents,
 
-    table Diagnostics = diagnostics
+    table Diagnostics : UniqueTable<EmptyKey, Diagnostics> = diagnostics
 );
 
 archetype!(
     module config_store key ConfigKey,
 
-    table RoomProperties = room_properties,
-    table GameConfig = game_config
+    table RoomProperties : UniqueTable<ConfigKey, RoomProperties> = room_properties,
+    table GameConfig  : UniqueTable<ConfigKey, GameConfig>= game_config
 );
 
 archetype!(
     module positions_store key WorldPosition,
     // don't forget to implement these in `reset_world_storage`
-    table TerrainComponent = point_terrain,
-    attr serde(skip) table EntityComponent = point_entity
+    table TerrainComponent : MortonGridTable<TerrainComponent> = point_terrain,
+    attr serde(skip) table EntityComponent : MortonMortonTable<EntityComponent> = point_entity
 );
 
 archetype!(
     module script_store key ScriptId,
-    table CompiledScriptComponent = compiled_script,
-    table CaoIrComponent = cao_ir
+    table CompiledScriptComponent : BTreeTable<ScriptId, CompiledScriptComponent> = compiled_script,
+    table CaoIrComponent : BTreeTable<ScriptId, CaoIrComponent> = cao_ir
 );
+
+impl<Id: TableId> Component<Id> for LogEntry {
+    type Table = BTreeTable<Id, Self>;
+}
+impl Component<Axial> for TerrainComponent {
+    type Table = HexGrid<Self>;
+}
+impl Component<Axial> for EntityComponent {
+    type Table = MortonTable<Self>;
+}
 
 #[derive(Debug, Serialize)]
 pub struct World {

@@ -298,7 +298,7 @@ macro_rules! archetype {
         module $module: ident
         key $id: ty,
         $(
-            $(primary)* $(attr $attr: meta )* table $row: ty = $name: ident
+            $(attr $attr: meta )* table $row: ty : $table_ty: ty = $name: ident
         ),*
 
         $(
@@ -307,7 +307,7 @@ macro_rules! archetype {
     ) => {
         pub mod $module {
             use super::*;
-            use crate::tables::Table;
+            use crate::tables::{Table, Component};
             use crate::storage::views::{UnsafeView, View};
             use crate::storage::{HasTable, DeleteById, DeferredDeleteById};
             use serde::{Serialize, Deserialize};
@@ -326,7 +326,7 @@ macro_rules! archetype {
                 +,
             }
 
-            archetype!(@implement_tables $($name, $id,  $row )*);
+            archetype!(@implement_tables $($name, $id,  $row, $table_ty )*);
 
             impl Archetype {
                 #[allow(unused)]
@@ -346,9 +346,13 @@ macro_rules! archetype {
 
     (
         @implement_tables
-        $($name: ident, $id: ty,  $row: ty )*
+        $($name: ident, $id: ty, $row: ty, $table_ty: ty )*
     ) => {
         $(
+            impl Component<$id> for $row {
+                type Table=$table_ty;
+            }
+
             impl HasTable<$id, $row> for Archetype {
                 fn view(&'_ self) -> View<'_, $id, $row>{
                     View::from_table(&self.$name)

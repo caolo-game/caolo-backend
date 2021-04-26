@@ -21,7 +21,6 @@ pub use self::spawn_intent::*;
 use crate::components::ScriptHistoryEntry;
 use crate::indices::{EmptyKey, EntityId};
 use crate::prelude::World;
-use crate::tables::{unique_table::UniqueTable, Component};
 use serde::{Deserialize, Serialize};
 
 impl BotIntents {
@@ -76,11 +75,6 @@ macro_rules! intents {
         /// Newtype wrapper on intents to implement Component
         #[derive(Debug, Clone, Default, Serialize, Deserialize)]
         pub struct Intents<T> (pub Vec<T>);
-        $(
-            impl Component<EmptyKey> for Intents<$type> {
-                type Table = UniqueTable<EmptyKey, Self>;
-            }
-        )*
 
         impl<T> std::ops::DerefMut for Intents<T> {
             fn deref_mut(&mut self) -> &mut Self::Target {

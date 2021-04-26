@@ -1,25 +1,24 @@
 package ws
 
 import (
-	"encoding/json"
-	"log"
-
 	cao_world "github.com/caolo-game/cao-rt/cao_world_pb"
 
 	"github.com/caolo-game/cao-rt/world"
 )
 
 type GameStateHub struct {
-	Rooms   map[world.RoomId]RoomState
-	Clients map[*Client]bool
+	Entities map[world.RoomId]RoomState
+	Terrain  map[world.RoomId]*cao_world.RoomTerrain
+
+	clients map[*client]bool
 
 	// push new worldState to hub
 	WorldState chan *cao_world.RoomEntities
 
 	/// register new Clients
-	Register chan *Client
+	register chan *client
 	/// un-register new Clients
-	Unregister chan *Client
+	unregister chan *client
 }
 
 type RoomState struct {
@@ -32,10 +31,12 @@ type RoomState struct {
 
 func NewGameStateHub() *GameStateHub {
 	return &GameStateHub{
-		Rooms:      map[world.RoomId]RoomState{},
-		Clients:    map[*Client]bool{},
+		Entities:   map[world.RoomId]RoomState{},
+		Terrain:    map[world.RoomId]*cao_world.RoomTerrain{},
+		clients:    map[*client]bool{},
 		WorldState: make(chan *cao_world.RoomEntities),
-		Register:   make(chan *Client),
+		register:   make(chan *client),
+		unregister: make(chan *client),
 	}
 }
 
@@ -51,7 +52,7 @@ func (hub *GameStateHub) Run() {
 			}
 
 			var state RoomState
-			if s, ok := hub.Rooms[roomId]; ok {
+			if s, ok := hub.Entities[roomId]; ok {
 				state = s
 				state.Time = time
 				state.RoomId = roomId
@@ -68,28 +69,24 @@ func (hub *GameStateHub) Run() {
 			state.Structures = newEntities.Structures
 			state.Resources = newEntities.Resources
 
-			hub.Rooms[roomId] = state
+			hub.Entities[roomId] = state
 
-			pl, err := json.Marshal(state)
-			if err != nil {
-				log.Fatalf("failed to json marshal gamestate %v", err)
-			}
-			for client := range hub.Clients {
-				if client.RoomId != roomId {
+			for client := range hub.clients {
+				if client.roomId != roomId {
 					continue
 				}
 				select {
-				case client.Send <- pl:
+				case client.entities <- &state:
 				default:
-					delete(hub.Clients, client)
-					close(client.Send)
+					delete(hub.clients, client)
+					close(client.entities)
 				}
 			}
-		case newClient := <-hub.Register:
-			hub.Clients[newClient] = true
-		case ex := <-hub.Unregister:
-			if _, ok := hub.Clients[ex]; ok {
-				delete(hub.Clients, ex)
+		case newClient := <-hub.register:
+			hub.clients[newClient] = true
+		case ex := <-hub.unregister:
+			if _, ok := hub.clients[ex]; ok {
+				delete(hub.clients, ex)
 			}
 		}
 	}

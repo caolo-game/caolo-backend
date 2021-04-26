@@ -1,6 +1,7 @@
 ## Requirements
 
 - Python
+- Go
 
 ```sh
 $ export GO111MODULE=on  # Enable module mode
@@ -13,4 +14,10 @@ $ go get google.golang.org/protobuf/cmd/protoc-gen-go \
 
 ```sh
 python protos.py
+```
+
+## Run
+
+```sh
+go run main.go
 ```

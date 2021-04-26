@@ -46,8 +46,8 @@ impl<'a, Id: TableId, C: Default + Component<Id, Table = UniqueTable<Id, C>>> Fr
 where
     crate::world::World: HasTable<Id, C>,
 {
-    fn new(w: &'a World) -> Self {
-        let table: &UniqueTable<Id, C> = View::new(w).reborrow();
+    fn from_world(w: &'a World) -> Self {
+        let table: &UniqueTable<Id, C> = View::from_world(w).reborrow();
         UnwrapView(table)
     }
 }

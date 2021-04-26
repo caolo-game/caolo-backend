@@ -75,8 +75,8 @@ pub fn update_program(storage: &mut World, msg: &UpdateScriptCommand) -> UpdateR
     update_user_bot_scripts(
         script_id,
         user_id,
-        FromWorldMut::new(storage as &mut _),
-        FromWorld::new(storage as &_),
+        FromWorldMut::from_world_mut(storage as &mut _),
+        FromWorld::from_world(storage as &_),
     );
 
     debug!("Updating program done");

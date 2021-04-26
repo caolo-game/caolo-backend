@@ -54,7 +54,7 @@ macro_rules! intents {
             use crate::storage::views::{UnwrapViewMut, FromWorldMut, UnsafeView};
             // reset the intent tables
             $(
-                let mut ints = UnsafeView::<EmptyKey, Intents<$type>>::new(s);
+                let mut ints = UnsafeView::<EmptyKey, Intents<$type>>::from_world_mut(s);
                 match ints.value.as_mut() {
                     Some(ints) => ints.0.clear(),
                     None => {
@@ -65,7 +65,7 @@ macro_rules! intents {
             for intent in intents {
             $(
                 if let Some(intent) = intent.$name {
-                    let mut ints = UnwrapViewMut::<EmptyKey, Intents<$type>>::new(s);
+                    let mut ints = UnwrapViewMut::<EmptyKey, Intents<$type>>::from_world_mut(s);
                     ints.0.push(intent);
                 }
             )*

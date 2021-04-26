@@ -65,7 +65,7 @@ pub async fn execute_scripts(
             };
             let data = ScriptExecutionData::unsafe_default();
 
-            let conf = UnwrapView::<ConfigKey, GameConfig>::new(storage);
+            let conf = UnwrapView::<ConfigKey, GameConfig>::from_world(storage);
             let mut vm = Vm::new(data).expect("Failed to initialize VM");
             vm.runtime_data.set_memory_limit(40 * 1024 * 1024);
             vm.max_instr = conf.execution_limit as u64;

@@ -29,7 +29,7 @@ pub mod version {
 pub struct Time(pub u64);
 
 impl<'a> storage::views::FromWorld<'a> for Time {
-    fn new(w: &'a World) -> Self {
+    fn from_world(w: &'a World) -> Self {
         Time(w.time())
     }
 }

@@ -50,8 +50,8 @@ impl<'a, Id: TableId, C: Default + Component<Id, Table = UniqueTable<Id, C>>> Fr
 where
     crate::world::World: HasTable<Id, C>,
 {
-    fn new(w: &mut World) -> Self {
-        let table = UnsafeView::new(w).as_ptr();
+    fn from_world_mut(w: &mut World) -> Self {
+        let table = UnsafeView::from_world_mut(w).as_ptr();
         UnwrapViewMut(NonNull::new(table).unwrap())
     }
 }

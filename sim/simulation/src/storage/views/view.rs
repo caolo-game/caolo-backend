@@ -39,7 +39,7 @@ impl<'a, Id: TableId, C: Component<Id>> FromWorld<'a> for View<'a, Id, C>
 where
     crate::world::World: HasTable<Id, C>,
 {
-    fn new(w: &'a World) -> Self {
+    fn from_world(w: &'a World) -> Self {
         <World as HasTable<Id, C>>::view(w)
     }
 }

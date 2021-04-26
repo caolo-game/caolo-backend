@@ -20,7 +20,7 @@
 //! }
 //!
 //! let mut storage = World::new();
-//! update_minerals(FromWorldMut::new(&mut storage), FromWorld::new(&storage));
+//! update_minerals(FromWorldMut::from_world_mut(&mut storage), FromWorld::from_world(&storage));
 //! ```
 //!
 mod unsafe_view;
@@ -39,11 +39,11 @@ use crate::prelude::World;
 use std::ptr::NonNull;
 
 pub trait FromWorld<'a> {
-    fn new(w: &'a World) -> Self;
+    fn from_world(w: &'a World) -> Self;
 }
 
 pub trait FromWorldMut {
-    fn new(w: &mut World) -> Self;
+    fn from_world_mut(w: &mut World) -> Self;
 }
 
 #[derive(Clone, Copy)]
@@ -70,7 +70,7 @@ where
 }
 
 impl FromWorldMut for DeferredDeleteEntityView {
-    fn new(w: &mut World) -> Self {
+    fn from_world_mut(w: &mut World) -> Self {
         Self {
             world: unsafe { NonNull::new_unchecked(w) },
         }
@@ -99,7 +99,7 @@ where
 }
 
 impl FromWorldMut for DeleteEntityView {
-    fn new(w: &mut World) -> Self {
+    fn from_world_mut(w: &mut World) -> Self {
         Self {
             storage: unsafe { NonNull::new_unchecked(w) },
         }
@@ -115,7 +115,7 @@ unsafe impl Send for InsertEntityView {}
 unsafe impl Sync for InsertEntityView {}
 
 impl FromWorldMut for InsertEntityView {
-    fn new(w: &mut World) -> Self {
+    fn from_world_mut(w: &mut World) -> Self {
         Self {
             storage: unsafe { NonNull::new_unchecked(w) },
         }
@@ -136,7 +136,7 @@ impl InsertEntityView {
 #[derive(Clone, Copy)]
 pub struct WorldTime(pub u64);
 impl<'a> FromWorld<'a> for WorldTime {
-    fn new(w: &'a World) -> Self {
+    fn from_world(w: &'a World) -> Self {
         Self(w.time())
     }
 }
@@ -147,9 +147,9 @@ macro_rules! implement_tuple {
             FromWorld <'a> for ( $v, )
             {
                 #[allow(unused)]
-                fn new(storage: &'a World) -> Self {
+                fn from_world(storage: &'a World) -> Self {
                     (
-                        $v::new(storage) ,
+                        $v::from_world(storage) ,
                     )
                 }
             }
@@ -158,9 +158,9 @@ macro_rules! implement_tuple {
             FromWorldMut  for ( $v, )
             {
                 #[allow(unused)]
-                fn new(storage: &mut World) -> Self {
+                fn from_world_mut(storage: &mut World) -> Self {
                     (
-                        $v::new(storage),
+                        $v::from_world_mut(storage),
                     )
                 }
 
@@ -172,9 +172,9 @@ macro_rules! implement_tuple {
             FromWorld <'a> for ( $($vv),* )
             {
                 #[allow(unused)]
-                fn new(storage: &'a World) -> Self {
+                fn from_world(storage: &'a World) -> Self {
                     (
-                        $($vv::new(storage)),*
+                        $($vv::from_world(storage)),*
                     )
                 }
             }
@@ -183,9 +183,9 @@ macro_rules! implement_tuple {
             FromWorldMut  for ( $($vv),* )
             {
                 #[allow(unused)]
-                fn new(storage: &mut World) -> Self {
+                fn from_world_mut(storage: &mut World) -> Self {
                     (
-                        $($vv::new(storage)),*
+                        $($vv::from_world_mut(storage)),*
                     )
                 }
             }

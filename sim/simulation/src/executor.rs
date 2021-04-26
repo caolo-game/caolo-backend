@@ -122,7 +122,7 @@ fn execute_map_generation(world: &mut World, config: &GameConfig) -> Result<(), 
         .unwrap();
     debug!("generating map {:#?} {:#?}", params, room_params);
 
-    generate_full_map(&params, &room_params, None, FromWorldMut::new(world))?;
+    generate_full_map(&params, &room_params, None, FromWorldMut::from_world_mut(world))?;
 
     debug!("world generation done");
     Ok(())

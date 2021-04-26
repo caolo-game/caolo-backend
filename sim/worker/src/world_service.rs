@@ -60,15 +60,15 @@ impl Payload {
         self.payload_by_room.clear();
         ser_bots::bot_payload(
             &mut self.payload_by_room,
-            caolo_sim::prelude::FromWorld::new(world),
+            caolo_sim::prelude::FromWorld::from_world(world),
         );
         ser_structures::structure_payload(
             &mut self.payload_by_room,
-            caolo_sim::prelude::FromWorld::new(world),
+            caolo_sim::prelude::FromWorld::from_world(world),
         );
         ser_resources::resource_payload(
             &mut self.payload_by_room,
-            caolo_sim::prelude::FromWorld::new(world),
+            caolo_sim::prelude::FromWorld::from_world(world),
         );
     }
 }

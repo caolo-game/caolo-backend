@@ -27,7 +27,7 @@ pub fn init_world_entities(storage: &mut World, n_fake_users: usize) {
         }
     );
 
-    let config = UnwrapView::<ConfigKey, GameConfig>::new(storage);
+    let config = UnwrapView::<ConfigKey, GameConfig>::from_world(storage);
 
     let radius = config.room_radius;
     debug!("Reset position storage");
@@ -74,8 +74,8 @@ pub fn init_world_entities(storage: &mut World, n_fake_users: usize) {
             id,
             Room(room),
             &mut rng,
-            FromWorldMut::new(storage),
-            FromWorld::new(storage),
+            FromWorldMut::from_world_mut(storage),
+            FromWorld::from_world(storage),
         );
         trace!("initializing room #{} done", i);
     }

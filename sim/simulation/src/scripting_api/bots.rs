@@ -34,7 +34,7 @@ pub fn melee_attack(vm: &mut Vm<ScriptExecutionData>, target: i64) -> Result<(),
         defender: target,
     };
 
-    let res = check_melee_intent(&intent, user_id, FromWorld::new(storage));
+    let res = check_melee_intent(&intent, user_id, FromWorld::from_world(storage));
 
     if let OperationResult::Ok = res {
         vm.get_aux_mut().intents.melee_attack_intent = Some(intent);
@@ -81,7 +81,7 @@ pub fn unload(
         structure: target,
     };
 
-    let checkresult = check_dropoff_intent(&dropoff_intent, user_id, FromWorld::new(storage));
+    let checkresult = check_dropoff_intent(&dropoff_intent, user_id, FromWorld::from_world(storage));
     if let OperationResult::Ok = checkresult {
         vm.get_aux_mut().intents.dropoff_intent = Some(dropoff_intent);
     }
@@ -112,7 +112,7 @@ pub fn mine_resource(vm: &mut Vm<ScriptExecutionData>, target: i64) -> Result<()
         resource: target,
     };
 
-    let checkresult = check_mine_intent(&intent, user_id, FromWorld::new(storage));
+    let checkresult = check_mine_intent(&intent, user_id, FromWorld::from_world(storage));
     vm.stack_push(checkresult)?;
     trace!("result: {:?}", checkresult);
     if let OperationResult::Ok = checkresult {
@@ -256,7 +256,7 @@ fn move_to_pos(
                     },
                 };
                 if let OperationResult::Ok =
-                    check_move_intent(&intent, user_id, FromWorld::new(storage))
+                    check_move_intent(&intent, user_id, FromWorld::from_world(storage))
                 {
                     trace!("Bot {:?} path cache hit", bot);
                     let result = (
@@ -275,7 +275,7 @@ fn move_to_pos(
     }
     trace!("Bot {:?} path cache miss", bot);
 
-    let conf = UnwrapView::<ConfigKey, GameConfig>::new(storage);
+    let conf = UnwrapView::<ConfigKey, GameConfig>::from_world(storage);
     let max_pathfinding_iter = conf.path_finding_limit;
 
     let mut path = Vec::with_capacity(max_pathfinding_iter as usize);
@@ -284,7 +284,7 @@ fn move_to_pos(
         botpos.0,
         to,
         1,
-        FromWorld::new(storage),
+        FromWorld::from_world(storage),
         max_pathfinding_iter,
         &mut path,
         &mut rooms_path,
@@ -303,7 +303,7 @@ fn move_to_pos(
                 },
             };
 
-            let checkresult = check_move_intent(&intent, user_id, FromWorld::new(storage));
+            let checkresult = check_move_intent(&intent, user_id, FromWorld::from_world(storage));
             match checkresult {
                 OperationResult::Ok => {
                     let cache_intent = if !path.is_empty() {
@@ -345,7 +345,7 @@ fn move_to_pos(
                     let target_pos = match pathfinding::get_valid_transits(
                         botpos.0,
                         to_room,
-                        FromWorld::new(storage),
+                        FromWorld::from_world(storage),
                     ) {
                         Ok(candidates) => candidates[0],
                         Err(pathfinding::TransitError::NotFound) => {

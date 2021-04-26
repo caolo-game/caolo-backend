@@ -70,7 +70,7 @@ fn bench_find_path_in_room(c: &mut Criterion) {
                 WorldPosition { room, pos: from },
                 WorldPosition { room, pos: to },
                 1,
-                FromWorld::new(&*world),
+                FromWorld::from_world(&*world),
                 2000,
                 &mut path,
                 &mut rooms2visit,

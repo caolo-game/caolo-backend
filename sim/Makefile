@@ -1,7 +1,6 @@
 .PHONY: test
 
 test:
-	cargo test --tests --all
-	cargo test --benches
+	cargo test --tests --all --benches
 	cargo test --doc
 

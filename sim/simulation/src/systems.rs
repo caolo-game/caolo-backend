@@ -61,7 +61,7 @@ where
     M: FromWorldMut + Clone + 'a,
     C: FromWorld<'a> + 'a,
 {
-    let m = M::new(storage);
-    let c = C::new(storage as &_);
+    let m = M::from_world_mut(storage);
+    let c = C::from_world(storage as &_);
     sys(M::clone(&m), c);
 }

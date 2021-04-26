@@ -11,20 +11,22 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// Single Client handler
-type Client struct {
-	Conn   *websocket.Conn
-	Hub    *GameStateHub
-	RoomId world.RoomId
-	Send   chan []byte
+// Single client handler
+type client struct {
+	conn        *websocket.Conn
+	hub         *GameStateHub
+	roomId      world.RoomId
+	entities    chan *RoomState
+	onNewRoomId chan world.RoomId
 }
 
-func NewClient(conn *websocket.Conn, hub *GameStateHub) Client {
-	return Client{
-		Conn:   conn,
-		Hub:    hub,
-		RoomId: world.RoomId{Q: -1, R: -1},
-		Send:   make(chan []byte),
+func NewClient(conn *websocket.Conn, hub *GameStateHub) client {
+	return client{
+		conn:        conn,
+		hub:         hub,
+		roomId:      world.RoomId{Q: -1, R: -1},
+		entities:    make(chan *RoomState),
+		onNewRoomId: make(chan world.RoomId),
 	}
 }
 
@@ -33,16 +35,16 @@ type InputMsg struct {
 	RoomId world.RoomId `json:"room_id,omitempty"`
 }
 
-func (c *Client) readPump() {
+func (c *client) readPump() {
 	defer func() {
-		c.Hub.Unregister <- c
-		c.Conn.Close()
+		c.hub.unregister <- c
+		c.conn.Close()
 	}()
-	c.Conn.SetReadLimit(256)
-	c.Conn.SetReadDeadline(time.Now().Add(60 * time.Second))
-	c.Conn.SetPongHandler(func(string) error { c.Conn.SetReadDeadline(time.Now().Add(60 * time.Second)); return nil })
+	c.conn.SetReadLimit(256)
+	c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(60 * time.Second)); return nil })
 	for {
-		_, msg, err := c.Conn.ReadMessage()
+		_, msg, err := c.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("Client going away: %v", err)
@@ -58,37 +60,70 @@ func (c *Client) readPump() {
 		}
 		switch pl.Ty {
 		case "room_id":
-			c.RoomId = pl.RoomId
+			c.roomId = pl.RoomId
+			c.onNewRoomId <- pl.RoomId
 		default:
 			log.Printf("Unhandled msg type %v", pl.Ty)
 		}
 	}
 }
 
-func (c *Client) writePump() {
+type Response struct {
+	Ty      string      `json:"ty"`
+	Payload interface{} `json:"payload"`
+}
+
+func sendJson(conn *websocket.Conn, ty string, payload interface{}) error {
+	response := Response{
+		Ty:      ty,
+		Payload: payload,
+	}
+	pl, err := json.Marshal(response)
+	if err != nil {
+		log.Fatalf("Failed to serialize terrain payload: %v", err)
+	}
+	w, err := conn.NextWriter(websocket.TextMessage)
+	if err != nil {
+		return err
+	}
+	w.Write(pl)
+
+	return nil
+}
+
+func (c *client) writePump() {
 	ticker := time.NewTicker(50 * time.Second)
 	defer func() {
 		ticker.Stop()
-		c.Conn.Close()
+		c.conn.Close()
 	}()
 
 	for {
 		select {
-		case message, ok := <-c.Send:
-			c.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+		case roomId, ok := <-c.onNewRoomId:
 			if !ok {
-				// hub closed this channel
-				c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
+				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
-			w, err := c.Conn.NextWriter(websocket.TextMessage)
+			terrain := c.hub.Terrain[roomId]
+			err := sendJson(c.conn, "terrain", terrain)
 			if err != nil {
 				return
 			}
-			w.Write(message)
+		case entities, ok := <-c.entities:
+			c.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+			if !ok {
+				// hub closed this channel
+				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				return
+			}
+			err := sendJson(c.conn, "entities", entities)
+			if err != nil {
+				return
+			}
 		case <-ticker.C:
-			c.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
-			if err := c.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+			c.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}
 		}
@@ -109,7 +144,7 @@ func ServeWs(hub *GameStateHub, w http.ResponseWriter, r *http.Request) {
 		log.Printf("Failed to upgrade ws connection %v", err)
 	}
 	client := NewClient(conn, hub)
-	hub.Register <- &client
+	hub.register <- &client
 
 	log.Println("New client")
 

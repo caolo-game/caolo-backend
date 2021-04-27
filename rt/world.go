@@ -1,4 +1,4 @@
-package world
+package main
 
 type RoomId struct {
 	Q int32 `json:"q"`

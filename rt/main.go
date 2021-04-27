@@ -8,10 +8,7 @@ import (
 	"net/http"
 
 	cao_world "github.com/caolo-game/cao-rt/cao_world_pb"
-	"github.com/caolo-game/cao-rt/world"
 	"google.golang.org/grpc"
-
-	"github.com/caolo-game/cao-rt/ws"
 )
 
 var addr = flag.String("addr", "localhost:8080", "http service address")
@@ -43,7 +40,7 @@ func listenToWorld(conn *grpc.ClientConn, worldState chan *cao_world.RoomEntitie
 	}
 }
 
-func initTerrain(conn *grpc.ClientConn, hub *ws.GameStateHub) {
+func initTerrain(conn *grpc.ClientConn, hub *GameStateHub) {
 	client := cao_world.NewWorldClient(conn)
 
 	roomList, err := client.GetRoomList(context.Background(), &cao_world.Empty{})
@@ -57,7 +54,7 @@ func initTerrain(conn *grpc.ClientConn, hub *ws.GameStateHub) {
 		if err != nil {
 			log.Fatalf("Failed to query terrain of room %v: %v", roomId, err)
 		}
-		rid := world.RoomId{
+		rid := RoomId{
 			Q: roomId.Q,
 			R: roomId.R,
 		}
@@ -78,7 +75,7 @@ func main() {
 		log.Fatalf("failed to connect %v", err)
 	}
 	defer conn.Close()
-	hub := ws.NewGameStateHub()
+	hub := NewGameStateHub()
 
 	go listenToWorld(conn, hub.WorldState)
 
@@ -87,7 +84,7 @@ func main() {
 	initTerrain(conn, hub)
 
 	http.HandleFunc("/object-stream", func(w http.ResponseWriter, r *http.Request) {
-		ws.ServeWs(hub, w, r)
+		ServeWs(hub, w, r)
 	})
 
 	log.Printf("Init done. Listening on %s", *addr)

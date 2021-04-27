@@ -1,14 +1,12 @@
-package ws
+package main
 
 import (
 	cao_world "github.com/caolo-game/cao-rt/cao_world_pb"
-
-	"github.com/caolo-game/cao-rt/world"
 )
 
 type GameStateHub struct {
-	Entities map[world.RoomId]RoomState
-	Terrain  map[world.RoomId]*cao_world.RoomTerrain
+	Entities map[RoomId]RoomState
+	Terrain  map[RoomId]*cao_world.RoomTerrain
 
 	clients map[*client]bool
 
@@ -23,7 +21,7 @@ type GameStateHub struct {
 
 type RoomState struct {
 	Time       int64                  `json:"time"`
-	RoomId     world.RoomId           `json:"roomId"`
+	RoomId     RoomId                 `json:"roomId"`
 	Bots       []*cao_world.Bot       `json:"bots"`
 	Structures []*cao_world.Structure `json:"structures"`
 	Resources  []*cao_world.Resource  `json:"resources"`
@@ -31,8 +29,8 @@ type RoomState struct {
 
 func NewGameStateHub() *GameStateHub {
 	return &GameStateHub{
-		Entities:   map[world.RoomId]RoomState{},
-		Terrain:    map[world.RoomId]*cao_world.RoomTerrain{},
+		Entities:   map[RoomId]RoomState{},
+		Terrain:    map[RoomId]*cao_world.RoomTerrain{},
 		clients:    map[*client]bool{},
 		WorldState: make(chan *cao_world.RoomEntities),
 		register:   make(chan *client),
@@ -46,7 +44,7 @@ func (hub *GameStateHub) Run() {
 		case newEntities := <-hub.WorldState:
 			time := newEntities.WorldTime
 			rid := newEntities.GetRoomId()
-			roomId := world.RoomId{
+			roomId := RoomId{
 				Q: rid.Q,
 				R: rid.R,
 			}

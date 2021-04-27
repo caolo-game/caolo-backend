@@ -1,4 +1,4 @@
-package ws
+package main
 
 import (
 	"bytes"
@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/caolo-game/cao-rt/world"
 	"github.com/gorilla/websocket"
 )
 
@@ -15,24 +14,24 @@ import (
 type client struct {
 	conn        *websocket.Conn
 	hub         *GameStateHub
-	roomId      world.RoomId
+	roomId      RoomId
 	entities    chan *RoomState
-	onNewRoomId chan world.RoomId
+	onNewRoomId chan RoomId
 }
 
 func NewClient(conn *websocket.Conn, hub *GameStateHub) client {
 	return client{
 		conn:        conn,
 		hub:         hub,
-		roomId:      world.RoomId{Q: -1, R: -1},
+		roomId:      RoomId{Q: -1, R: -1},
 		entities:    make(chan *RoomState),
-		onNewRoomId: make(chan world.RoomId),
+		onNewRoomId: make(chan RoomId),
 	}
 }
 
 type InputMsg struct {
 	Ty     string       `json:"ty"`
-	RoomId world.RoomId `json:"room_id,omitempty"`
+	RoomId RoomId `json:"room_id,omitempty"`
 }
 
 func (c *client) readPump() {

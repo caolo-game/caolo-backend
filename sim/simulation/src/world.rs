@@ -37,21 +37,21 @@ archetype!(
     table Bot : SparseFlagTable<EntityId, Bot>  = bot,
     table PositionComponent : DenseTable<EntityId, PositionComponent> = pos,
     table SpawnBotComponent : DenseTable<EntityId, SpawnBotComponent> = spawnbot,
-    table CarryComponent  : DenseTable<EntityId, CarryComponent> = carry,
-    table Structure  : SparseFlagTable<EntityId, Structure> = structure,
-    table HpComponent  : DenseTable<EntityId, HpComponent> = hp,
-    table EnergyRegenComponent  : DenseTable<EntityId, EnergyRegenComponent> = energyregen,
-    table EnergyComponent  : DenseTable<EntityId, EnergyComponent> = energy,
-    table ResourceComponent  : BTreeTable<EntityId, ResourceComponent> = resource,
-    table DecayComponent  : DenseTable<EntityId, DecayComponent> = decay,
-    table EntityScript  : DenseTable<EntityId, EntityScript> = script,
-    table SpawnComponent  : DenseTable<EntityId, SpawnComponent> = spawn,
-    table SpawnQueueComponent  : DenseTable<EntityId, SpawnQueueComponent> = spawnqueue,
-    table OwnedEntity  : DenseTable<EntityId, OwnedEntity> = owner,
-    table MeleeAttackComponent  : DenseTable<EntityId, MeleeAttackComponent> = melee,
+    table CarryComponent : DenseTable<EntityId, CarryComponent> = carry,
+    table Structure : SparseFlagTable<EntityId, Structure> = structure,
+    table HpComponent : DenseTable<EntityId, HpComponent> = hp,
+    table EnergyRegenComponent : DenseTable<EntityId, EnergyRegenComponent> = energyregen,
+    table EnergyComponent : DenseTable<EntityId, EnergyComponent> = energy,
+    table ResourceComponent : BTreeTable<EntityId, ResourceComponent> = resource,
+    table DecayComponent : DenseTable<EntityId, DecayComponent> = decay,
+    table EntityScript : DenseTable<EntityId, EntityScript> = script,
+    table SpawnComponent : DenseTable<EntityId, SpawnComponent> = spawn,
+    table SpawnQueueComponent : DenseTable<EntityId, SpawnQueueComponent> = spawnqueue,
+    table OwnedEntity : DenseTable<EntityId, OwnedEntity> = owner,
+    table MeleeAttackComponent : DenseTable<EntityId, MeleeAttackComponent> = melee,
 
-    attr serde(skip) table PathCacheComponent  : DenseTable<EntityId,PathCacheComponent>= pathcache,
-    attr serde(skip) table ScriptHistory  : DenseTable<EntityId,ScriptHistory>= script_history
+    attr serde(skip) table PathCacheComponent : DenseTable<EntityId,PathCacheComponent>= pathcache,
+    attr serde(skip) table ScriptHistory : DenseTable<EntityId,ScriptHistory>= script_history
 
     iterby bot
     iterby structure
@@ -91,7 +91,7 @@ archetype!(
     module config_store key ConfigKey,
 
     table RoomProperties : UniqueTable<ConfigKey, RoomProperties> = room_properties,
-    table GameConfig  : UniqueTable<ConfigKey, GameConfig>= game_config
+    table GameConfig : UniqueTable<ConfigKey, GameConfig>= game_config
 );
 
 archetype!(

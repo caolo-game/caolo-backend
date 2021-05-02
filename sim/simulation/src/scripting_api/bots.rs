@@ -81,7 +81,8 @@ pub fn unload(
         structure: target,
     };
 
-    let checkresult = check_dropoff_intent(&dropoff_intent, user_id, FromWorld::from_world(storage));
+    let checkresult =
+        check_dropoff_intent(&dropoff_intent, user_id, FromWorld::from_world(storage));
     if let OperationResult::Ok = checkresult {
         vm.get_aux_mut().intents.dropoff_intent = Some(dropoff_intent);
     }

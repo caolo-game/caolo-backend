@@ -77,7 +77,10 @@ mod tests {
             ],
         );
 
-        update(FromWorldMut::from_world_mut(&mut *store), FromWorld::from_world(&mut *store));
+        update(
+            FromWorldMut::from_world_mut(&mut *store),
+            FromWorld::from_world(&mut *store),
+        );
         store.post_process();
 
         let entities: Vec<_> = store
@@ -118,7 +121,10 @@ mod tests {
 
         assert_eq!(entities, vec![entity_1, entity_2]);
 
-        update(FromWorldMut::from_world_mut(&mut *store), FromWorld::from_world(&mut *store));
+        update(
+            FromWorldMut::from_world_mut(&mut *store),
+            FromWorld::from_world(&mut *store),
+        );
         store.post_process();
 
         let entities: Vec<_> = store

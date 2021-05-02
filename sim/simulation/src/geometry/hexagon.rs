@@ -29,7 +29,10 @@ impl Hexagon {
     }
 
     pub fn iter_edge(self) -> impl Iterator<Item = Axial> {
-        debug_assert!(self.radius >= 0, "negative radius will not work as expected");
+        debug_assert!(
+            self.radius >= 0,
+            "negative radius will not work as expected"
+        );
         let radius = self.radius;
         let starts = [
             self.center + Axial::new(0, -radius),

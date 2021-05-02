@@ -1,5 +1,5 @@
 use crate::{
-    components::{game_config::GameConfig, EntityScript, OwnedEntity, CompiledScriptComponent},
+    components::{game_config::GameConfig, CompiledScriptComponent, EntityScript, OwnedEntity},
     diagnostics::Diagnostics,
     indices::{ConfigKey, EntityId, ScriptId, UserId},
     intents::*,
@@ -36,6 +36,8 @@ pub async fn execute_scripts(
     storage: &mut World,
 ) -> Result<Vec<BotIntents>, Infallible> {
     profile!("execute_scripts");
+
+    let start = chrono::Utc::now();
 
     let owners_table = storage.view::<EntityId, OwnedEntity>().reborrow();
 
@@ -110,9 +112,11 @@ pub async fn execute_scripts(
     let mut diag = storage.unsafe_view::<EmptyKey, Diagnostics>();
     let diag: &mut Diagnostics = diag.unwrap_mut_or_default();
 
-    diag.number_of_intents = run_result.intents.len() as u64;
-    diag.number_of_scripts_ran = run_result.num_scripts_ran;
-    diag.number_of_scripts_errored = run_result.num_scripts_errored;
+    diag.update_scripts(
+        chrono::Utc::now() - start,
+        run_result.num_scripts_ran,
+        run_result.num_scripts_errored,
+    );
 
     Ok(run_result.intents)
 }

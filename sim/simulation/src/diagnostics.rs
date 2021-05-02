@@ -1,93 +1,156 @@
 mod serde_impl;
 
-use chrono::{DateTime, Duration, Utc};
+use chrono::Duration;
 use serde::{Deserialize, Serialize};
+use tracing::Level;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct DiagDur(pub Duration);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+struct StatsField {
+    name: String,
+    count: u64,
+    current: f64,
+    min: f64,
+    max: f64,
+    mean: f64,
+    /// std = (std_aggregator / count).sqrt()
+    std_aggregator: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Diagnostics {
-    /// start time of diagnostics collection
-    pub start: DateTime<Utc>,
-    /// current tick
-    pub tick: u64,
-
-    /// total latency of the current tick
-    pub tick_latency_ms: i64,
-    pub scripts_execution_ms: i64,
-    pub systems_update_ms: i64,
-
-    // aggregated stats
-    pub tick_latency_min: i64,
-    pub tick_latency_max: i64,
-    pub tick_latency_mean: f64,
-    pub tick_latency_std: f64,
-    pub tick_latency_count: u64,
-
-    pub number_of_scripts_ran: u64,
-    pub number_of_scripts_errored: u64,
-    pub number_of_intents: u64,
-
-    /// total time since the beginning of stats collection. a.k.a [start](Diagnostics::start)
-    ///
-    /// Note that during serialization fidelity is lost, this is only ment to be used as an
-    /// estimate of uptime
-    pub uptime: DiagDur,
-
-    pub __tick_latency_std_aggregator: f64,
+    tick_stats: StatsField,
+    scripts_execution_time: StatsField,
+    scripts_ran: StatsField,
+    scripts_error: StatsField,
+    systems: StatsField,
 }
 
 impl Default for Diagnostics {
     fn default() -> Self {
-        let now = Utc::now();
         Self {
-            tick: 0,
-            tick_latency_ms: 0,
-            number_of_scripts_ran: 0,
-            number_of_scripts_errored: 0,
-            number_of_intents: 0,
-            start: now,
-            systems_update_ms: 0,
-            scripts_execution_ms: 0,
-            uptime: DiagDur(Duration::microseconds(0)),
-
-            tick_latency_min: std::i64::MAX,
-            tick_latency_max: 0,
-            tick_latency_count: 0,
-            tick_latency_mean: 0.0,
-            tick_latency_std: 0.0,
-            __tick_latency_std_aggregator: 0.0,
+            tick_stats: StatsField::new("tick_time".to_string()),
+            scripts_execution_time: StatsField::new("scripts_time".to_string()),
+            scripts_ran: StatsField::new("scripts_ran".to_string()),
+            scripts_error: StatsField::new("scripts_error".to_string()),
+            systems: StatsField::new("systems_time".to_string()),
         }
     }
 }
 
-impl Diagnostics {
-    pub fn clear(&mut self) {
-        *self = Self::default();
+impl StatsField {
+    pub fn new(name: String) -> Self {
+        Self {
+            name,
+            count: 0,
+            current: std::f64::NAN,
+            min: std::f64::MAX,
+            max: std::f64::MIN,
+            mean: 0.0,
+            std_aggregator: 0.0,
+        }
     }
 
-    pub fn update_latency_stats(&mut self, tick: u64, start: DateTime<Utc>, end: DateTime<Utc>) {
-        let duration = end - start;
+    pub fn clear(&mut self) {
+        self.count = 0;
+        self.current = std::f64::NAN;
+        self.min = std::f64::MAX;
+        self.max = std::f64::MIN;
+        self.mean = 0.0;
+        self.std_aggregator = 0.0;
+    }
 
+    pub fn update(&mut self, value: f64) {
+        self.current = value;
+        self.min = self.min.min(value);
+        self.max = self.max.max(value);
+
+        let tmp = value - self.mean;
+        self.mean += tmp / (self.count as f64 + 1.0);
+        self.std_aggregator += tmp * (value - self.mean);
+        self.count += 1;
+    }
+
+    #[allow(unused)]
+    pub fn current(&self) -> f64 {
+        self.current
+    }
+
+    pub fn std(&self) -> f64 {
+        (self.std_aggregator / self.count as f64).sqrt()
+    }
+
+    #[allow(unused)]
+    pub fn mean(&self) -> f64 {
+        self.mean
+    }
+
+    #[allow(unused)]
+    pub fn min_max(&self) -> [f64; 2] {
+        [self.min, self.max]
+    }
+
+    #[allow(unused)]
+    pub fn count(&self) -> u64 {
+        self.count
+    }
+}
+
+impl StatsField {
+    /// emits an INFO event
+    pub fn emit_tracing_event(&self) {
+        tracing::event!(
+            Level::INFO,
+            name = %self.name,
+            current = %self.current,
+            min = %self.min,
+            max = %self.max,
+            mean = %self.mean,
+            count = %self.count,
+            std = %self.std(),
+        );
+    }
+}
+
+impl Diagnostics {
+    /// emits an INFO event
+    pub fn emit_tracing_event(&self) {
+        self.tick_stats.emit_tracing_event();
+        self.scripts_execution_time.emit_tracing_event();
+        self.systems.emit_tracing_event();
+        self.scripts_ran.emit_tracing_event();
+        self.scripts_error.emit_tracing_event();
+    }
+
+    pub fn clear(&mut self) {
+        self.tick_stats.clear();
+        self.scripts_execution_time.clear();
+        self.scripts_ran.clear();
+        self.scripts_error.clear();
+        self.systems.clear();
+    }
+
+    pub fn update_latency(&mut self, duration: Duration) {
         let latency = duration.num_milliseconds();
+        self.tick_stats.update(latency as f64);
+    }
 
-        self.uptime = DiagDur(end - self.start);
+    pub fn update_systems(&mut self, duration: Duration) {
+        let latency = duration.num_milliseconds();
+        self.systems.update(latency as f64);
+    }
 
-        self.tick_latency_ms = latency;
-        self.tick = tick;
-
-        self.tick_latency_min = self.tick_latency_min.min(latency);
-        self.tick_latency_max = self.tick_latency_max.max(latency);
-
-        let latency = latency as f64;
-
-        let tick = self.tick_latency_count as f64;
-        let tmp = latency - self.tick_latency_mean;
-        self.tick_latency_mean += tmp / (tick + 1.0);
-        self.__tick_latency_std_aggregator += tmp * (latency - self.tick_latency_mean);
-
-        self.tick_latency_std = (self.__tick_latency_std_aggregator / tick).sqrt();
-        self.tick_latency_count += 1;
+    pub fn update_scripts(
+        &mut self,
+        duration: Duration,
+        number_executed: u64,
+        number_errored: u64,
+    ) {
+        let latency = duration.num_milliseconds();
+        self.scripts_execution_time.update(latency as f64);
+        self.scripts_error.update(number_errored as f64);
+        self.scripts_ran.update(number_executed as f64);
     }
 }

@@ -1,6 +1,6 @@
 use std::{convert::Infallible, pin::Pin};
 
-use tracing::{debug, info};
+use tracing::debug;
 
 use crate::{
     components::EntityScript,
@@ -50,13 +50,9 @@ impl SimpleExecutor {
 
         let intents = {
             debug!("Executing scripts");
-            let start = chrono::Utc::now();
             let intents = execute_scripts(executions.as_slice(), world)
                 .await
                 .expect("script execution");
-            let end = chrono::Utc::now();
-            let duration = end - start;
-            diag.scripts_execution_ms = duration.num_milliseconds();
             debug!("Executing scripts Done");
             intents
         };
@@ -73,20 +69,15 @@ impl SimpleExecutor {
             world.post_process();
 
             let end = chrono::Utc::now();
-            let duration = end - start;
-            diag.systems_update_ms = duration.num_milliseconds();
+            diag.update_systems(end - start);
         }
         let end = chrono::Utc::now();
 
-        diag.update_latency_stats(tick, start, end);
+        diag.update_latency(end - start);
         debug!("Tick done");
         if tick % STATS_INTERVAL == 0 {
-            info!(
-                "Latency | Last {} ticks mean {:.4}ms | std {:.4}ms",
-                STATS_INTERVAL, diag.tick_latency_mean, diag.tick_latency_std,
-            );
+            diag.emit_tracing_event();
         }
-        debug!("Latency | Current {:.4}ms", diag.tick_latency_ms);
 
         Ok(())
     }
@@ -122,7 +113,12 @@ fn execute_map_generation(world: &mut World, config: &GameConfig) -> Result<(), 
         .unwrap();
     debug!("generating map {:#?} {:#?}", params, room_params);
 
-    generate_full_map(&params, &room_params, None, FromWorldMut::from_world_mut(world))?;
+    generate_full_map(
+        &params,
+        &room_params,
+        None,
+        FromWorldMut::from_world_mut(world),
+    )?;
 
     debug!("world generation done");
     Ok(())

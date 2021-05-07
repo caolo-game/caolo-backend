@@ -83,6 +83,10 @@ func main() {
 
 	initTerrain(conn, hub)
 
+	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
+
 	http.HandleFunc("/object-stream", func(w http.ResponseWriter, r *http.Request) {
 		ServeWs(hub, w, r)
 	})

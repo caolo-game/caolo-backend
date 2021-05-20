@@ -2,6 +2,10 @@ lanes:
   - name: "main"
     cards:
       - ty: StringLiteral
+        val: "role: miner"
+      - ty: CallNative
+        val: "console_log"
+      - ty: StringLiteral
         val: "RESOURCE"
       - ty: CallNative
         val: "parse_find_constant"
@@ -39,13 +43,11 @@ lanes:
       - ty: ReadVar
         val: "resource"
       - ty: StringLiteral
-        val: "Work work...\nMove Result: "
+        val: "Work work..."
       - ty: CallNative
-        val: "console_log"
+        val: "say"
       - ty: CallNative
         val: "approach_entity"
-      - ty: CallNative
-        val: "console_log"
 
   - name: "resource-error"
     cards:
@@ -60,4 +62,4 @@ lanes:
       - ty: StringLiteral
         val: "I be mining baws"
       - ty: CallNative
-        val: "console_log"
+        val: "say"

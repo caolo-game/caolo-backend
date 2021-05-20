@@ -172,6 +172,7 @@ macro_rules! implement_tuple {
             FromWorld <'a> for ( $($vv),* )
             {
                 #[allow(unused)]
+                #[allow(clippy::unused_unit)]
                 fn from_world(storage: &'a World) -> Self {
                     (
                         $($vv::from_world(storage)),*

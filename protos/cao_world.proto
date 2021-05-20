@@ -49,6 +49,7 @@ message Bot
     uint32 meleeStrength = 7;
     Decay decay = 8;
     string logs = 9;
+    string say = 10;
 
     message Decay
     {

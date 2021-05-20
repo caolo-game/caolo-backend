@@ -10,6 +10,7 @@ pub mod mineral_system;
 pub mod move_intent_system;
 pub mod path_cache_intent_system;
 pub mod positions_system;
+pub mod say_intent_system;
 pub mod script_execution;
 pub mod script_history_system;
 pub mod spawn_system;
@@ -39,6 +40,7 @@ fn execute_intents(storage: &mut World) {
     execute_update(log_intent_system::update, storage);
     execute_update(path_cache_intent_system::update, storage);
     execute_update(script_history_system::update, storage);
+    execute_update(say_intent_system::update, storage);
 }
 
 /// Execute systems that run regardless of player actions

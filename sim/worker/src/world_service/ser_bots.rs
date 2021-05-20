@@ -15,13 +15,14 @@ type BotTables<'a> = (
     View<'a, EntityId, DecayComponent>,
     View<'a, EntityId, OwnedEntity>,
     View<'a, EntityId, EntityScript>,
+    View<'a, EntityId, SayComponent>,
     View<'a, EntityTime, LogEntry>,
     WorldTime,
 );
 
 pub fn bot_payload(
     out: &mut HashMap<Axial, cao_world::RoomEntities>,
-    (room_entities, bots, carry, hp, melee, decay, owner, script, logs, WorldTime(time)): BotTables,
+    (room_entities, bots, carry, hp, melee, decay, owner, script, say, logs, WorldTime(time)): BotTables,
 ) {
     let room_entities = room_entities.iter_rooms();
 
@@ -96,6 +97,10 @@ pub fn bot_payload(
                     logs: logs
                         .get_by_id(EntityTime(entity_id, time - 1)) // send the logs of the last tick
                         .map(|logs| logs.payload.clone())
+                        .unwrap_or_default(),
+                    say: say
+                        .get_by_id(entity_id)
+                        .map(|SayComponent(pl)| pl.to_string())
                         .unwrap_or_default(),
                 });
             }

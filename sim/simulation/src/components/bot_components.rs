@@ -1,5 +1,5 @@
 use crate::indices::{RoomPosition, ScriptId, WorldPosition};
-use arrayvec::ArrayVec;
+use arrayvec::{ArrayString, ArrayVec};
 
 use serde::{Deserialize, Serialize};
 
@@ -45,3 +45,9 @@ pub struct PathCacheComponent {
     pub target: WorldPosition,
     pub path: ArrayVec<RoomPosition, PATH_CACHE_LEN>,
 }
+
+pub const SAY_MAX_LEN: usize = 64;
+pub type SayPayload = ArrayString<SAY_MAX_LEN>;
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct SayComponent(pub SayPayload);

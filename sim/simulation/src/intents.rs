@@ -109,4 +109,5 @@ intents!(
     script_history_intent: ScriptHistoryEntry,
     melee_attack_intent: MeleeIntent,
     delete_entity_intent: DeleteEntityIntent,
+    say_intent: SayIntent,
 );

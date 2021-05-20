@@ -81,3 +81,67 @@ lanes:
 
     vm.run(&program).unwrap();
 }
+
+#[test]
+fn test_say() {
+    let mut storage = World::new();
+
+    let entity_id = storage.insert_entity();
+
+    let mut vm = Vm::new(ScriptExecutionData::new(
+        &*storage.as_ref(),
+        Default::default(),
+        entity_id,
+        Default::default(),
+    ))
+    .unwrap();
+
+    const PROGRAM: &str = r#"
+lanes:
+    - cards:
+        - ty: StringLiteral
+          val: "pog"
+        - ty: CallNative
+          val: "say"
+    "#;
+
+    let program = serde_yaml::from_str(PROGRAM).unwrap();
+    let program = compile(program, None).unwrap();
+
+    vm.register_function("say", into_f1(say));
+    vm.run(&program).unwrap();
+
+    let intent = vm.unwrap_aux().intents.say_intent.unwrap();
+    assert_eq!(intent.entity, entity_id);
+    assert_eq!(intent.payload.as_str(), "pog");
+}
+
+#[test]
+fn test_say_bad_len() {
+    let mut storage = World::new();
+
+    let entity_id = storage.insert_entity();
+
+    let mut vm = Vm::new(ScriptExecutionData::new(
+        &*storage.as_ref(),
+        Default::default(),
+        entity_id,
+        Default::default(),
+    ))
+    .unwrap();
+
+    const PROGRAM: &str = r#"
+lanes:
+    - cards:
+        - ty: StringLiteral
+          val: "pog"
+        - ty: CallNative
+          val: "sayasdsdadasdadasdasdasdasdsdsdsdsdsldkjskdjdlsjdklsjdklsjdklsjdaldasljdsldjkldsldjsldjkljaldjaldsljsljdsljd"
+    "#;
+
+    let program = serde_yaml::from_str(PROGRAM).unwrap();
+    let program = compile(program, None).unwrap();
+
+    vm.register_function("say", into_f1(say));
+    vm.run(&program).unwrap_err();
+}

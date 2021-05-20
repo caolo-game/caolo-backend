@@ -7,11 +7,14 @@ mod tests;
 
 pub mod bots;
 pub mod find_api;
-use crate::components;
 use crate::geometry::Axial;
 use crate::indices::{EntityId, WorldPosition};
 use crate::profile;
 use crate::systems::script_execution::ScriptExecutionData;
+use crate::{
+    components::{self, SayPayload},
+    intents::SayIntent,
+};
 use cao_lang::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -72,11 +75,11 @@ pub struct Script {
 pub fn console_log(vm: &mut Vm<ScriptExecutionData>, message: Value) -> Result<(), ExecutionError> {
     profile!("console_log");
     trace!("console_log");
-    let message = value_to_string(vm, message)?;
+    let mut payload = String::with_capacity(256);
+    write_value(vm, message, &mut payload)?;
     let entity_id = vm.get_aux().entity_id;
     let time = vm.get_aux().storage().time();
 
-    let payload = message.to_string();
     trace!("{:?} says {}", entity_id, payload);
     vm.get_aux_mut()
         .intents
@@ -124,6 +127,67 @@ fn value_to_string(vm: &Vm<ScriptExecutionData>, value: Value) -> Result<String,
         Value::Floating(f) => f.to_string(),
     };
     Ok(pl)
+}
+
+pub fn write_value<W: std::fmt::Write>(
+    vm: &Vm<ScriptExecutionData>,
+    value: Value,
+    mut out: W,
+) -> Result<(), ExecutionError> {
+    let invalid_arg = |err: std::fmt::Error| {
+        ExecutionError::invalid_argument(format!("Failed to serialize value {}", err))
+    };
+    let res = match value {
+        Value::String(p) => {
+            let s = unsafe {
+                vm.get_str(p).ok_or_else(|| {
+                    ExecutionError::invalid_argument("Can't read string argument".to_string())
+                })?
+            };
+            write!(out, "{}", s)
+        }
+        Value::Object(p) => {
+            // my kingdom for a try block
+            out.write_char('{').map_err(invalid_arg)?;
+            let has_value = unsafe {
+                let table = &*p;
+                for (hash, value) in table.iter() {
+                    write!(out, "\n\t{:?} {}", hash, value_to_string(vm, *value)?)
+                        .map_err(invalid_arg)?;
+                }
+                !table.is_empty()
+            };
+            if has_value {
+                out.write_char(' ').map_err(invalid_arg)?
+            } else {
+                out.write_char('\n').map_err(invalid_arg)?;
+            }
+            out.write_char('}')
+        }
+        Value::Nil => write!(out, "Nil"),
+        Value::Integer(i) => write!(out, "{}", i),
+        Value::Floating(f) => write!(out, "{}", f),
+    };
+    res.map_err(|err| ExecutionError::invalid_argument(format!("Failed to stringify {}", err)))?;
+    Ok(())
+}
+
+pub fn say(vm: &mut Vm<ScriptExecutionData>, value: Value) -> Result<(), ExecutionError> {
+    profile!("say");
+    let aux = vm.get_aux();
+    let entity_id = aux.entity_id;
+
+    let mut payload = SayPayload::new();
+    write_value(vm, value, &mut payload)?;
+
+    let intent = SayIntent {
+        entity: entity_id,
+        payload,
+    };
+
+    vm.get_aux_mut().intents.say_intent = Some(intent);
+
+    Ok(())
 }
 
 /// Holds data about a function
@@ -280,6 +344,17 @@ pub fn make_import() -> Schema {
                     []
                 ),
                 fo: Box::new(into_f1(bots::melee_attack)),
+            },
+            FunctionRow {
+                desc: subprogram_description!(
+                    "say",
+                    "Says a given short message",
+                    SubProgramType::Function,
+                    ["Text"],
+                    [],
+                    []
+                ),
+                fo: Box::new(into_f1(say)),
             },
         ],
     }

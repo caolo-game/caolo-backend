@@ -61,10 +61,10 @@ pub fn resource_payload(
         }
     }
     // push the last accumulator
-    if room.is_some() && !accumulator.is_empty() {
+    if let Some(room) = &&(!accumulator.is_empty()).then(|| ()).and(room) {
         push_room_pl(
             out,
-            room.unwrap().0,
+            room.0,
             |pl| &mut pl.resources,
             accumulator,
             time as i64,

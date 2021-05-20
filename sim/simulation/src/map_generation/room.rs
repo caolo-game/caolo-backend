@@ -528,14 +528,13 @@ pub fn iter_edge(
     Ok(it)
 }
 
-struct ChunkMeta {
-    pub chungus_mass: usize,
+struct TerrainChunks {
     pub chunks: Vec<HashSet<Axial>>,
 }
 
 /// Find the connecting `Plain` chunks.
 /// The first one will be the largest chunk
-fn calculate_plain_chunks(terrain: View<Axial, TerrainComponent>) -> ChunkMeta {
+fn calculate_plain_chunks(terrain: View<Axial, TerrainComponent>) -> TerrainChunks {
     trace!("calculate_plain_chunks");
     let mut visited = HashSet::new();
     let mut todo = VecDeque::new();
@@ -591,10 +590,7 @@ fn calculate_plain_chunks(terrain: View<Axial, TerrainComponent>) -> ChunkMeta {
             .any(|(a, b)| !a.is_disjoint(b)),
         "Internal error: chunks must be disjoint!"
     );
-    ChunkMeta {
-        chungus_mass,
-        chunks,
-    }
+    TerrainChunks { chunks }
 }
 
 /// Print a 2D TerrainComponent map to the console, intended for debugging small maps.

@@ -183,6 +183,7 @@ macro_rules! implement_tuple {
             FromWorldMut  for ( $($vv),* )
             {
                 #[allow(unused)]
+                #[allow(clippy::unused_unit)]
                 fn from_world_mut(storage: &mut World) -> Self {
                     (
                         $($vv::from_world_mut(storage)),*

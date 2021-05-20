@@ -13,20 +13,20 @@ use super::{is_walkable, Node, PathFindingError};
 
 const VISITED_FROM: u8 = 1 << 0;
 const VISITED_TO: u8 = 1 << 1;
+type Bounds = [Axial; 2];
 
 /// The goal of the pathfinder to approach `end` at a distance of `distance`.
 ///
 /// So we'll initialize a ring of nodes with the center `end` and radius `distance`.
 fn init_end(
-    begin: Axial,
-    end: Axial,
+    [begin, end]: Bounds,
     distance: u32,
     entities: View<Axial, EntityComponent>,
     terrain: View<Axial, TerrainComponent>,
     open_set: &mut BinaryHeap<Node>,
     visited: &mut HexGrid<u8>,
     closed_set: &mut HexGrid<Node>,
-) -> Result<(), PathFindingError> {
+) {
     if distance == 0 {
         // `iter_edge` returns empty if radius is 0 so push the pos here
         let pos = end;
@@ -54,7 +54,6 @@ fn init_end(
             }
         }
     }
-    Ok(())
 }
 
 fn reconstruct_path(
@@ -127,15 +126,14 @@ pub fn find_path_in_room(
     let mut open_set_visited = HexGrid::<u8>::new(room_radius as usize);
 
     init_end(
-        from,
-        end,
+        [from, end],
         distance,
         positions,
         terrain,
         &mut open_set_t,
         &mut open_set_visited,
         &mut closed_set_t,
-    )?;
+    );
 
     let mut current_f = Node::new(from, from, from.hex_distance(end) as i32, 0);
     closed_set_f

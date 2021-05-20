@@ -107,13 +107,7 @@ pub fn bot_payload(
         }
     }
     // push the last accumulator
-    if room.is_some() && !accumulator.is_empty() {
-        push_room_pl(
-            out,
-            room.unwrap().0,
-            |pl| &mut pl.bots,
-            accumulator,
-            time as i64,
-        );
+    if let Some(room) = (!accumulator.is_empty()).then(|| ()).and(room) {
+        push_room_pl(out, room.0, |pl| &mut pl.bots, accumulator, time as i64);
     }
 }

@@ -30,7 +30,7 @@ func NewClient(conn *websocket.Conn, hub *GameStateHub) client {
 }
 
 type InputMsg struct {
-	Ty     string       `json:"ty"`
+	Ty     string `json:"ty"`
 	RoomId RoomId `json:"room_id,omitempty"`
 }
 
@@ -45,9 +45,7 @@ func (c *client) readPump() {
 	for {
 		_, msg, err := c.conn.ReadMessage()
 		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				log.Printf("Client going away: %v", err)
-			}
+			log.Printf("Client going away: %v", err)
 			return
 		}
 		msg = bytes.TrimSpace(bytes.Replace(msg, []byte{'\n'}, []byte{' '}, -1))

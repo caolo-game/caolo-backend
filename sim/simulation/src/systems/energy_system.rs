@@ -5,7 +5,7 @@ use crate::profile;
 use crate::storage::views::{UnsafeView, View};
 use crate::tables::JoinIterator;
 
-pub fn update(
+pub fn energy_update(
     mut energy: UnsafeView<EntityId, EnergyComponent>,
     energy_regen: View<EntityId, EnergyRegenComponent>,
 ) {

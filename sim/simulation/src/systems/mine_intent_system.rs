@@ -16,7 +16,10 @@ type Const<'a> = (
     UnwrapView<'a, EmptyKey, Intents<MineIntent>>,
 );
 
-pub fn update((mut energy_table, mut carry_table): Mut, (resource_table, intents): Const) {
+pub fn mine_intents_update(
+    (mut energy_table, mut carry_table): Mut,
+    (resource_table, intents): Const,
+) {
     profile!("MineSystem update");
 
     for intent in intents.iter() {

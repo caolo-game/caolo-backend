@@ -8,7 +8,7 @@ type Mut = UnsafeView<WorldPosition, EntityComponent>;
 type Const<'a> = (View<'a, EntityId, PositionComponent>,);
 
 /// Reset the entity positions table
-pub fn update(mut position_entities: Mut, (entity_positions,): Const) {
+pub fn positions_update(mut position_entities: Mut, (entity_positions,): Const) {
     profile!("PositionSystem update");
     debug!("update positions system called");
 

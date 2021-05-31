@@ -11,7 +11,7 @@ type Mut = (
     UnwrapViewMut<EmptyKey, Intents<SayIntent>>,
 );
 
-pub fn update((mut say_table, mut intents): Mut, (): ()) {
+pub fn say_intents_update((mut say_table, mut intents): Mut, (): ()) {
     profile!("SayIntentSystem update");
 
     let intents = take(&mut intents.0);

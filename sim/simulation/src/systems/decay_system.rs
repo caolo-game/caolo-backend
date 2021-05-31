@@ -6,7 +6,7 @@ use crate::storage::views::UnsafeView;
 use crate::tables::JoinIterator;
 use tracing::{debug, trace};
 
-pub fn update(
+pub fn decay_update(
     (mut hps, mut decays): (
         UnsafeView<EntityId, HpComponent>,
         UnsafeView<EntityId, DecayComponent>,

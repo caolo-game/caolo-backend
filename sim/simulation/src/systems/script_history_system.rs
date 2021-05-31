@@ -10,7 +10,7 @@ type Mut = (
 );
 type Const<'a> = ();
 
-pub fn update((mut history_intents, mut history_table): Mut, _: Const) {
+pub fn script_history_update((mut history_intents, mut history_table): Mut, _: Const) {
     profile!("ScriptHistorySystem update");
 
     let Intents(intents) = mem::take(&mut *history_intents);

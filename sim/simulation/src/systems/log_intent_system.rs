@@ -12,7 +12,7 @@ type Mut = (
     UnwrapViewMut<EmptyKey, Intents<LogIntent>>,
 );
 
-pub fn update((mut log_table, mut intents): Mut, (): ()) {
+pub fn log_intents_update((mut log_table, mut intents): Mut, (): ()) {
     profile!("LogIntentSystem update");
 
     let intents = take(&mut intents.0);

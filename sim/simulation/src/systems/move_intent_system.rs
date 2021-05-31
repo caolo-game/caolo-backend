@@ -16,7 +16,10 @@ type Const<'a> = (
     View<'a, WorldPosition, TerrainComponent>,
 );
 
-pub fn update((mut positions, mut intents): Mut, (bots, pos_entities, _terrain): Const) {
+pub fn move_intents_update(
+    (mut positions, mut intents): Mut,
+    (bots, pos_entities, _terrain): Const,
+) {
     profile!(" MoveSystem update");
 
     pre_process_move_intents(&mut intents.0);

@@ -8,7 +8,7 @@ use crate::{
 };
 use tracing::{debug, trace};
 
-pub fn update(
+pub fn death_update(
     mut delete: DeferredDeleteEntityView,
     (hps, delete_intents): (
         View<EntityId, HpComponent>,
@@ -77,7 +77,7 @@ mod tests {
             ],
         );
 
-        update(
+        death_update(
             FromWorldMut::from_world_mut(&mut *store),
             FromWorld::from_world(&mut *store),
         );
@@ -121,7 +121,7 @@ mod tests {
 
         assert_eq!(entities, vec![entity_1, entity_2]);
 
-        update(
+        death_update(
             FromWorldMut::from_world_mut(&mut *store),
             FromWorld::from_world(&mut *store),
         );

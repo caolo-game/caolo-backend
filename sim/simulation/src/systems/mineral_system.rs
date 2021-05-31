@@ -18,7 +18,7 @@ type Const<'a> = (
     View<'a, EntityId, comp::ResourceComponent>,
 );
 
-pub fn update(
+pub fn mineral_update(
     (mut entity_positions, mut energy, mut delete_entity_deferred): Mut,
     (position_entities, terrain_table, resources): Const,
 ) {

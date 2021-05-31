@@ -6,7 +6,7 @@ use crate::storage::views::{UnsafeView, UnwrapView, UnwrapViewMut, View};
 use crate::tables::Table;
 use std::mem::take;
 
-pub fn update(
+pub fn path_cache_intents_update(
     (mut path_cache_table, mut cache_intents): (
         UnsafeView<EntityId, PathCacheComponent>,
         UnwrapViewMut<EmptyKey, Intents<CachePathIntent>>,

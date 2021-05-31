@@ -8,7 +8,7 @@ use crate::Time;
 type Mut = UnsafeView<EntityTime, LogEntry>;
 type Const = Time;
 
-pub fn update(mut logs: Mut, time: Const) {
+pub fn log_update(mut logs: Mut, time: Const) {
     profile!("LogSystem update");
     // clear the old logs
     let changeset = logs

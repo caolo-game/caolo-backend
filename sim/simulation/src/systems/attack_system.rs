@@ -11,7 +11,7 @@ type Mut = (
 );
 type Const<'a> = (View<'a, EntityId, MeleeAttackComponent>,);
 
-pub fn update((mut hp_table, mut intents): Mut, (attack_table,): Const) {
+pub fn attack_system_update((mut hp_table, mut intents): Mut, (attack_table,): Const) {
     profile!("AttackSystem update");
 
     pre_process(&mut intents.0);

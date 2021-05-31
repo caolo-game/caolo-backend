@@ -11,7 +11,7 @@ type Mut = (
 );
 type Const<'a> = (UnwrapView<'a, EmptyKey, Intents<DropoffIntent>>,);
 
-pub fn update((mut energy_table, mut carry_table): Mut, (intents,): Const) {
+pub fn dropoff_intents_update((mut energy_table, mut carry_table): Mut, (intents,): Const) {
     profile!("DropoffSystem update");
 
     for intent in intents.iter() {

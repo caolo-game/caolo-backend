@@ -6,9 +6,11 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"time"
 
 	cao_world "github.com/caolo-game/cao-rt/cao_world_pb"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/backoff"
 )
 
 var addr = flag.String("addr", "localhost:8080", "http service address")
@@ -66,7 +68,15 @@ func main() {
 	flag.Parse()
 
 	var opts []grpc.DialOption
-	opts = append(opts, grpc.WithInsecure())
+	opts = append(opts, grpc.WithInsecure(), grpc.WithConnectParams(grpc.ConnectParams{
+		Backoff: backoff.Config{
+			BaseDelay:  time.Second * 2,
+			Multiplier: 1.2,
+			Jitter:     0.4,
+			MaxDelay:   time.Second * 5,
+		},
+		MinConnectTimeout: time.Second * 10,
+	}))
 
 	log.Println("Starting")
 

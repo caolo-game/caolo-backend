@@ -61,7 +61,7 @@ pub fn resource_payload(
         }
     }
     // push the last accumulator
-    if let Some(room) = &&(!accumulator.is_empty()).then(|| ()).and(room) {
+    if let Some(ref room) = (!accumulator.is_empty()).then(|| ()).and(room) {
         push_room_pl(
             out,
             room.0,

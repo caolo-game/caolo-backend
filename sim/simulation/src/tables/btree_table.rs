@@ -64,6 +64,10 @@ where
     pub fn is_empty(&self) -> bool {
         self.data.is_empty()
     }
+
+    pub fn clear(&mut self) {
+        self.data.clear();
+    }
 }
 
 impl<Id, Row> Table for BTreeTable<Id, Row>

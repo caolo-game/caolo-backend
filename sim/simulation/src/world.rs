@@ -50,6 +50,8 @@ archetype!(
     table OwnedEntity : DenseTable<EntityId, OwnedEntity> = owner,
     table MeleeAttackComponent : DenseTable<EntityId, MeleeAttackComponent> = melee,
     table SayComponent : DenseTable<EntityId, SayComponent> = say,
+    table MineEventComponent : BTreeTable<EntityId, MineEventComponent> = mine_intents,
+    table DropoffEventComponent : BTreeTable<EntityId, DropoffEventComponent> = dropoff_intents,
 
     attr serde(skip) table PathCacheComponent : DenseTable<EntityId,PathCacheComponent>= pathcache,
     attr serde(skip) table ScriptHistory : DenseTable<EntityId,ScriptHistory>= script_history

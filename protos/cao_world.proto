@@ -3,6 +3,7 @@ syntax = "proto3";
 package cao_world;
 
 import "cao_common.proto";
+import "cao_intents.proto";
 
 option go_package = "github.com/caolo-game/cao-rt/cao_world_pb";
 
@@ -50,6 +51,9 @@ message Bot
     Decay decay = 8;
     string logs = 9;
     string say = 10;
+
+    cao_intents.MineIntent mineIntent = 11;
+    cao_intents.DropoffIntent dropoffIntent = 12;
 
     message Decay
     {

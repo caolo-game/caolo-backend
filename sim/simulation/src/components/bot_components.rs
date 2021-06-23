@@ -1,4 +1,4 @@
-use crate::indices::{RoomPosition, ScriptId, WorldPosition};
+use crate::indices::{EntityId, RoomPosition, ScriptId, WorldPosition};
 use arrayvec::{ArrayString, ArrayVec};
 
 use serde::{Deserialize, Serialize};
@@ -51,3 +51,11 @@ pub type SayPayload = ArrayString<SAY_MAX_LEN>;
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct SayComponent(pub SayPayload);
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct MineEventComponent(pub EntityId);
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct DropoffEventComponent(pub EntityId);

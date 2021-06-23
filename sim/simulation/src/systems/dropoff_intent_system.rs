@@ -1,4 +1,4 @@
-use crate::components::{CarryComponent, EnergyComponent};
+use crate::components::{CarryComponent, DropoffEventComponent, EnergyComponent};
 use crate::indices::*;
 use crate::intents::*;
 use crate::profile;
@@ -8,12 +8,17 @@ use tracing::{trace, warn};
 type Mut = (
     UnsafeView<EntityId, EnergyComponent>,
     UnsafeView<EntityId, CarryComponent>,
+    UnsafeView<EntityId, DropoffEventComponent>,
 );
 type Const<'a> = (UnwrapView<'a, EmptyKey, Intents<DropoffIntent>>,);
 
-pub fn dropoff_intents_update((mut energy_table, mut carry_table): Mut, (intents,): Const) {
+pub fn dropoff_intents_update(
+    (mut energy_table, mut carry_table, mut events): Mut,
+    (intents,): Const,
+) {
     profile!("DropoffSystem update");
 
+    events.clear();
     for intent in intents.iter() {
         let s = tracing::span!(
             tracing::Level::INFO,
@@ -44,5 +49,7 @@ pub fn dropoff_intents_update((mut energy_table, mut carry_table): Mut, (intents
 
         store_component.energy += dropoff;
         carry_component.carry -= dropoff;
+
+        events.insert_or_update(intent.bot, DropoffEventComponent(intent.structure));
     }
 }

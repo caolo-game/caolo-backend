@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use crate::protos::cao_common;
+use crate::protos::cao_intents;
 use crate::protos::cao_world;
 use caolo_sim::prelude::*;
 
@@ -16,13 +17,29 @@ type BotTables<'a> = (
     View<'a, EntityId, OwnedEntity>,
     View<'a, EntityId, EntityScript>,
     View<'a, EntityId, SayComponent>,
+    View<'a, EntityId, DropoffEventComponent>,
+    View<'a, EntityId, MineEventComponent>,
     View<'a, EntityTime, LogEntry>,
     WorldTime,
 );
 
 pub fn bot_payload(
     out: &mut HashMap<Axial, cao_world::RoomEntities>,
-    (room_entities, bots, carry, hp, melee, decay, owner, script, say, logs, WorldTime(time)): BotTables,
+    (
+        room_entities,
+        bots,
+        carry,
+        hp,
+        melee,
+        decay,
+        owner,
+        script,
+        say,
+        dropoff,
+        mine,
+        logs,
+        WorldTime(time),
+    ): BotTables,
 ) {
     let room_entities = room_entities.iter_rooms();
 
@@ -102,6 +119,16 @@ pub fn bot_payload(
                         .get_by_id(entity_id)
                         .map(|SayComponent(pl)| pl.to_string())
                         .unwrap_or_default(),
+                    dropoff_intent: dropoff.get_by_id(entity_id).map(
+                        |DropoffEventComponent(pl)| cao_intents::DropoffIntent {
+                            target_id: pl.0 as i64,
+                        },
+                    ),
+                    mine_intent: mine.get_by_id(entity_id).map(|MineEventComponent(pl)| {
+                        cao_intents::MineIntent {
+                            target_id: pl.0 as i64,
+                        }
+                    }),
                 });
             }
         }

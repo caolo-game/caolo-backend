@@ -13,3 +13,7 @@ pub mod cao_commands {
 pub mod cao_world {
     tonic::include_proto!("cao_world");
 }
+
+pub mod cao_intents {
+    tonic::include_proto!("cao_intents");
+}

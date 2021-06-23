@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package cao_intents;
+
+import "cao_common.proto";
+
+option go_package = "github.com/caolo-game/cao-rt/cao_intents_pb";
+
+message MineIntent
+{
+    int64 targetId = 1;
+}
+
+message DropoffIntent
+{
+    int64 targetId = 1;
+}

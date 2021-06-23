@@ -1,4 +1,6 @@
-use crate::components::{CarryComponent, EnergyComponent, Resource, ResourceComponent};
+use crate::components::{
+    CarryComponent, EnergyComponent, MineEventComponent, Resource, ResourceComponent,
+};
 use crate::indices::*;
 use crate::intents::{Intents, MineIntent};
 use crate::profile;
@@ -10,6 +12,7 @@ pub const MINE_AMOUNT: u16 = 10; // TODO: get from bot body
 type Mut = (
     UnsafeView<EntityId, EnergyComponent>,
     UnsafeView<EntityId, CarryComponent>,
+    UnsafeView<EntityId, MineEventComponent>,
 );
 type Const<'a> = (
     View<'a, EntityId, ResourceComponent>,
@@ -17,10 +20,12 @@ type Const<'a> = (
 );
 
 pub fn mine_intents_update(
-    (mut energy_table, mut carry_table): Mut,
+    (mut energy_table, mut carry_table, mut event): Mut,
     (resource_table, intents): Const,
 ) {
     profile!("MineSystem update");
+
+    event.clear();
 
     for intent in intents.iter() {
         trace!("Bot {:?} is mining [{:?}]", intent.bot, intent.resource);
@@ -52,6 +57,8 @@ pub fn mine_intents_update(
 
                 carry.carry += mined;
                 resource_energy.energy -= mined;
+
+                event.insert_or_update(intent.bot, MineEventComponent(intent.resource));
 
                 trace!(
                     "Mine succeeded new bot carry {:?} new resource energy {:?}",

@@ -101,3 +101,6 @@ impl Default for UserProperties {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Rooms(pub Vec<Room>);
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct RespawnTimer(pub i32);

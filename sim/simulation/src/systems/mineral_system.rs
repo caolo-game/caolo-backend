@@ -10,6 +10,7 @@ use tracing::{debug, error, trace};
 type Mut = (
     UnsafeView<EntityId, comp::PositionComponent>,
     UnsafeView<EntityId, comp::EnergyComponent>,
+    UnsafeView<EntityId, comp::RespawnTimer>,
     DeferredDeleteEntityView,
 );
 type Const<'a> = (
@@ -19,7 +20,7 @@ type Const<'a> = (
 );
 
 pub fn mineral_update(
-    (mut entity_positions, mut energy, mut delete_entity_deferred): Mut,
+    (mut entity_positions, mut energy, mut respawn_timer, mut delete_entity_deferred): Mut,
     (position_entities, terrain_table, resources): Const,
 ) {
     profile!("Mineral System update");
@@ -32,23 +33,33 @@ pub fn mineral_update(
         .filter(|(_, r)| matches!(r.0, comp::Resource::Energy));
     let entity_positions_it = entity_positions.iter_mut();
     let energy_iter = energy.iter_mut();
+    let respawn_timer = respawn_timer.iter_mut();
 
     // in case of an error we need to clean up the mineral
     // however best not to clean it inside the iterator, hmmm???
-    join!([minerals_it, entity_positions_it, energy_iter]).for_each(
-        |(id, (_resource, position, energy))| {
+    join!([minerals_it, entity_positions_it, energy_iter, respawn_timer]).for_each(
+        |(id, (_resource, position, energy, respawn))| {
             trace!(
-                "updating {:?} {:?} {:?} {:?}",
+                "updating {:?} {:?} {:?} {:?} {:?}",
                 id,
                 _resource,
                 position,
-                energy
+                energy,
+                respawn
             );
 
             if energy.energy > 0 {
                 return;
             }
+
+            respawn.0 -= 1;
+            if respawn.0 > 0 {
+                return;
+            }
+
             trace!("Respawning mineral {:?}", id);
+
+            respawn.0 = 2;
 
             let position_entities = position_entities
                 .table

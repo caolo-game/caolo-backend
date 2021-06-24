@@ -109,6 +109,7 @@ type InitResourceMuts = (
     UnsafeView<EntityId, PositionComponent>,
     UnsafeView<EntityId, ResourceComponent>,
     UnsafeView<EntityId, EnergyComponent>,
+    UnsafeView<EntityId, RespawnTimer>,
     UnsafeView<WorldPosition, EntityComponent>,
 );
 
@@ -119,7 +120,13 @@ fn init_resource(
     id: EntityId,
     room: Room,
     rng: &mut impl Rng,
-    (mut positions_table, mut resources_table, mut energy_table, mut entities_by_pos, ): InitResourceMuts,
+    (
+        mut positions_table,
+        mut resources_table,
+        mut energy_table,
+        mut respawn_timer,
+        mut entities_by_pos,
+    ): InitResourceMuts,
     (terrain,): InitResourceConst,
 ) {
     resources_table.insert_or_update(id, ResourceComponent(Resource::Energy));
@@ -130,6 +137,7 @@ fn init_resource(
             energy_max: 100,
         },
     );
+    respawn_timer.insert_or_update(id, RespawnTimer(2));
 
     let pos = uncontested_pos(room, bounds, &*entities_by_pos, &*terrain, rng);
 

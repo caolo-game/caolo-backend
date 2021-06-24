@@ -168,6 +168,7 @@ fn impl_iterators<'a>(
                 }
             });
             quote! {
+               #[allow(non_camel_case_types)]
                #[derive(serde::Serialize)]
                pub struct #ty_name <'boi> {
                    pub __id: #key,

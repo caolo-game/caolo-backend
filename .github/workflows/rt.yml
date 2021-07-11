@@ -33,6 +33,9 @@ jobs:
           sudo apt-get install protobuf-compiler python3 -y
           protoc --version
           python --version
+          go get google.golang.org/protobuf/cmd/protoc-gen-go google.golang.org/grpc/cmd/protoc-gen-go-grpc
+        env:
+          GO111MODULE: on
 
       - name: Compile protos
         run: |

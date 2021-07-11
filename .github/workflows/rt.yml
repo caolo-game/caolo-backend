@@ -11,22 +11,12 @@ jobs:
     runs-on: ubuntu-latest
     name: Test suite
 
-    continue-on-error: ${{ matrix.experimental }}
-    strategy:
-      fail-fast: false
-      matrix:
-        rust: [stable]
-        experimental: [false]
-        include:
-          - rust: nightly
-            experimental: true
-
     steps:
       - uses: actions/checkout@v2
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
+      - name: Install Go
+        uses: actions/setup-go@v2
         with:
-          toolchain: ${{ matrix.rust }}
+          go-version: 1.16.x
 
       - name: Install deps
         run: |

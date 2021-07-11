@@ -79,6 +79,10 @@ func (c *client) readPump() {
 		}
 		switch pl.Ty {
 		case "room_id":
+			if len(c.roomIds) > 100 {
+				log.Print("Client is listening to too many roomIds")
+				continue
+			}
 			c.roomIds = append(c.roomIds, pl.RoomId)
 			c.onNewRoomId <- pl.RoomId
 		case "unsubscribe_room_id":

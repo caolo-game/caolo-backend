@@ -20,9 +20,9 @@ func roomIdsNE(a []RoomId, b []RoomId) bool {
 
 func TestRemoveRoomId(t *testing.T) {
 	arr := []RoomId{
-		RoomId{Q: 1, R: 1},
-		RoomId{Q: 2, R: 4},
-		RoomId{Q: 1, R: 4},
+		{Q: 1, R: 1},
+		{Q: 2, R: 4},
+		{Q: 1, R: 4},
 	}
 
 	res := RemoveRoomId(arr, RoomId{Q: 2, R: 4})
@@ -32,9 +32,23 @@ func TestRemoveRoomId(t *testing.T) {
 	}
 
 	if roomIdsNE(res, []RoomId{
-		RoomId{Q: 1, R: 1},
-		RoomId{Q: 1, R: 4},
+		{Q: 1, R: 1},
+		{Q: 1, R: 4},
 	}) {
 		t.Errorf("Result array mismatch: %v", res)
+	}
+}
+
+func TestRemoveRoomIdNotInArrayDoesNothing(t *testing.T) {
+	arr := []RoomId{
+		{Q: 1, R: 1},
+		{Q: 2, R: 4},
+		{Q: 1, R: 4},
+	}
+
+	res := RemoveRoomId(arr, RoomId{Q: 2, R: -10})
+
+	if !roomIdsEQ(arr, res) {
+		t.Error("Array was modified, expected the same array")
 	}
 }

@@ -87,6 +87,8 @@ func (c *client) readPump() {
 			c.onNewRoomId <- pl.RoomId
 		case "unsubscribe_room_id":
 			c.roomIds = RemoveRoomId(c.roomIds, pl.RoomId)
+		case "clear_room_ids":
+			c.roomIds = []RoomId{}
 		default:
 			log.Printf("Unhandled msg type %v", pl.Ty)
 		}

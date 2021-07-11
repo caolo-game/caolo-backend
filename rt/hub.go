@@ -70,7 +70,8 @@ func (hub *GameStateHub) Run() {
 			hub.Entities[roomId] = state
 
 			for client := range hub.clients {
-				if client.roomId != roomId {
+				ind := FindRoomIdIndex(client.roomIds, roomId)
+				if ind < 0 {
 					continue
 				}
 				select {

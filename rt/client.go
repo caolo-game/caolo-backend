@@ -14,7 +14,7 @@ import (
 type client struct {
 	conn        *websocket.Conn
 	hub         *GameStateHub
-	roomId      RoomId
+	roomIds     []RoomId
 	entities    chan *RoomState
 	onNewRoomId chan RoomId
 }
@@ -23,7 +23,7 @@ func NewClient(conn *websocket.Conn, hub *GameStateHub) client {
 	return client{
 		conn:        conn,
 		hub:         hub,
-		roomId:      RoomId{Q: -1, R: -1},
+		roomIds:     []RoomId{},
 		entities:    make(chan *RoomState),
 		onNewRoomId: make(chan RoomId),
 	}
@@ -32,6 +32,28 @@ func NewClient(conn *websocket.Conn, hub *GameStateHub) client {
 type InputMsg struct {
 	Ty     string `json:"ty"`
 	RoomId RoomId `json:"room_id,omitempty"`
+}
+
+func FindRoomIdIndex(arr []RoomId, key RoomId) int {
+	for i := range arr {
+		if arr[i] == key {
+			return i
+		}
+	}
+	return -1
+}
+
+/// Might move the last item so delete doesn't trigger a reordering of elements
+func RemoveRoomId(arr []RoomId, key RoomId) []RoomId {
+	index := FindRoomIdIndex(arr, key)
+	if index < 0 {
+		return arr
+	}
+
+	// swap with the last
+	arr[index] = arr[len(arr)-1]
+
+	return arr[:len(arr)-1]
 }
 
 func (c *client) readPump() {
@@ -57,8 +79,10 @@ func (c *client) readPump() {
 		}
 		switch pl.Ty {
 		case "room_id":
-			c.roomId = pl.RoomId
+			c.roomIds = append(c.roomIds, pl.RoomId)
 			c.onNewRoomId <- pl.RoomId
+		case "unsubscribe_room_id":
+			c.roomIds = RemoveRoomId(c.roomIds, pl.RoomId)
 		default:
 			log.Printf("Unhandled msg type %v", pl.Ty)
 		}

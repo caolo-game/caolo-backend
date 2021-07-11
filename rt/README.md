@@ -19,5 +19,6 @@ python protos.py
 ## Run
 
 ```sh
-go run main.go
+go build
+./cao-rt
 ```

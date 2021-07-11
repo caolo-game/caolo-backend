@@ -4,7 +4,11 @@
 test-sim:
 	@${MAKE} -C sim test
 
-test: test-sim
+test-rt:
+	@${MAKE} -C rt test
+
+
+test: test-sim test-rt
 
 start:
 	docker-compose up -d

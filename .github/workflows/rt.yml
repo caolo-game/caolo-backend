@@ -1,0 +1,45 @@
+name: RT
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: Test suite
+
+    continue-on-error: ${{ matrix.experimental }}
+    strategy:
+      fail-fast: false
+      matrix:
+        rust: [stable]
+        experimental: [false]
+        include:
+          - rust: nightly
+            experimental: true
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.rust }}
+
+      - name: Install deps
+        run: |
+          sudo apt-get install protobuf-compiler python3 -y
+          protoc --version
+          python --version
+
+      - name: Compile protos
+        run: |
+          python3 protos.py
+        working-directory: rt
+
+      - name: Run tests
+        run: |
+          go test
+        working-directory: rt

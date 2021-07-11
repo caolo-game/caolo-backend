@@ -1,4 +1,4 @@
-name: Worker
+name: Queen
 
 on:
   push:
